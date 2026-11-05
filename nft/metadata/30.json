@@ -1,29 +1,29 @@
 {
-  "name": "Kumoryu · Gremlet #30",
-  "description": "A coral sky-dragon that coils up like a cinnamon roll to nap.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kumoryu in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Wombloom · Gremlet #30",
+  "description": "A wombat so still and sunny that a little meadow grows on its back.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wombloom in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/30.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kumoryu",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kumoryu",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wombloom",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wombloom",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dragon"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Cloud"
+      "value": "Meadow"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Clouds"
+      "value": "Petals"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Kumoryu"
+      "value": "Wombloom"
     }
   ]
 }

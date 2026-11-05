@@ -1,21 +1,21 @@
 {
-  "name": "Woolybit · Gremlet #25",
-  "description": "A woolly bear caterpillar. The width of its orange band predicts the winter, supposedly.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Woolybit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Selkip · Gremlet #25",
+  "description": "A selkie pup: a seal on the beach, a story by the fire. Mostly it just naps on warm rocks.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Selkip in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/25.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=woolybit",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=woolybit",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=selkip",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=selkip",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Mythical Beast"
     },
     {
       "trait_type": "Element",
-      "value": "Weather"
+      "value": "Tide"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Woolybit"
+      "value": "Selkip"
     }
   ]
 }

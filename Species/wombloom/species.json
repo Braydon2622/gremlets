@@ -1,0 +1,13 @@
+{
+  "description" : "A wombat so still and sunny that a little meadow grows on its back.",
+  "element" : "meadow",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.75,
+  "name" : "Wombloom",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "petals",
+  "walkSpeed" : 40
+}

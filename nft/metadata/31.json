@@ -1,21 +1,21 @@
 {
-  "name": "Mintwyrm · Gremlet #31",
-  "description": "A tiny mint-green wyrm that smells faintly of jasmine tea.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mintwyrm in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Calicat · Gremlet #31",
+  "description": "A calico kitten that naps in every sunbeam and chases every dust mote.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Calicat in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/31.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dragon"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Jasmine"
+      "value": "Hearth"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Steam"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Mintwyrm"
+      "value": "Calicat"
     }
   ]
 }

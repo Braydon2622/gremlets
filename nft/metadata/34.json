@@ -1,29 +1,29 @@
 {
-  "name": "Pipwyrn · Gremlet #34",
-  "description": "A pocket wyvern with a fang-y grin. Hides things, then helps you look for them.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Pipwyrn in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Billet · Gremlet #34",
+  "description": "A goat kid that climbs everything, especially the things it shouldn't.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Billet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/34.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pipwyrn",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pipwyrn",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=billet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=billet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dragon"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Mischief"
+      "value": "Hillside"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Smoke"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Pipwyrn"
+      "value": "Billet"
     }
   ]
 }

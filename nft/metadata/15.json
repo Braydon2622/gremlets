@@ -1,29 +1,29 @@
 {
-  "name": "Dozel · Gremlet #15",
-  "description": "A mossy sloth so slow that tiny plants grow in its fur.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dozel in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Silkwing · Gremlet #15",
+  "description": "A fuzzy butterfly with stained-glass wings that glitter in the light.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Silkwing in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/15.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dozel",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dozel",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=silkwing",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=silkwing",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Insect & Bug"
     },
     {
       "trait_type": "Element",
-      "value": "Canopy"
+      "value": "Silk"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Petals"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Dozel"
+      "value": "Silkwing"
     }
   ]
 }

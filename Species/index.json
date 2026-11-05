@@ -49,12 +49,6 @@
       "name" : "Rustle"
     },
     {
-      "element" : "sky",
-      "family" : "animal",
-      "id" : "nimbuss",
-      "name" : "Nimbuss"
-    },
-    {
       "element" : "pond",
       "family" : "animal",
       "id" : "lilypip",
@@ -73,22 +67,10 @@
       "name" : "Duskwing"
     },
     {
-      "element" : "river",
-      "family" : "animal",
-      "id" : "tidepaw",
-      "name" : "Tidepaw"
-    },
-    {
       "element" : "eucalyptus",
       "family" : "animal",
       "id" : "gumleaf",
       "name" : "Gumleaf"
-    },
-    {
-      "element" : "canopy",
-      "family" : "animal",
-      "id" : "dozel",
-      "name" : "Dozel"
     },
     {
       "element" : "sea",
@@ -115,54 +97,6 @@
       "name" : "Zipwing"
     },
     {
-      "element" : "pollen",
-      "family" : "insect",
-      "id" : "bumbuzz",
-      "name" : "Bumbuzz"
-    },
-    {
-      "element" : "luck",
-      "family" : "insect",
-      "id" : "spotsy",
-      "name" : "Spotsy"
-    },
-    {
-      "element" : "dusk",
-      "family" : "insect",
-      "id" : "prayla",
-      "name" : "Prayla"
-    },
-    {
-      "element" : "glow",
-      "family" : "insect",
-      "id" : "lumbug",
-      "name" : "Lumbug"
-    },
-    {
-      "element" : "moon",
-      "family" : "insect",
-      "id" : "lunette",
-      "name" : "Lunette"
-    },
-    {
-      "element" : "weather",
-      "family" : "insect",
-      "id" : "woolybit",
-      "name" : "Woolybit"
-    },
-    {
-      "element" : "display",
-      "family" : "insect",
-      "id" : "peacockle",
-      "name" : "Peacockle"
-    },
-    {
-      "element" : "song",
-      "family" : "insect",
-      "id" : "fiddlet",
-      "name" : "Fiddlet"
-    },
-    {
       "element" : "prism",
       "family" : "insect",
       "id" : "prismite",
@@ -175,100 +109,10 @@
       "name" : "Snipleaf"
     },
     {
-      "element" : "cloud",
-      "family" : "dragon",
-      "id" : "kumoryu",
-      "name" : "Kumoryu"
-    },
-    {
       "element" : "jasmine",
       "family" : "dragon",
       "id" : "mintwyrm",
       "name" : "Mintwyrm"
-    },
-    {
-      "element" : "crystal",
-      "family" : "dragon",
-      "id" : "gemscale",
-      "name" : "Gemscale"
-    },
-    {
-      "element" : "ancient",
-      "family" : "dragon",
-      "id" : "mossmaw",
-      "name" : "Mossmaw"
-    },
-    {
-      "element" : "mischief",
-      "family" : "dragon",
-      "id" : "pipwyrn",
-      "name" : "Pipwyrn"
-    },
-    {
-      "element" : "ember",
-      "family" : "dragon",
-      "id" : "ashlet",
-      "name" : "Ashlet"
-    },
-    {
-      "element" : "stone",
-      "family" : "dino",
-      "id" : "trikit",
-      "name" : "Trikit"
-    },
-    {
-      "element" : "fern",
-      "family" : "dino",
-      "id" : "stegglet",
-      "name" : "Stegglet"
-    },
-    {
-      "element" : "thunder",
-      "family" : "dino",
-      "id" : "rexlet",
-      "name" : "Rexlet"
-    },
-    {
-      "element" : "meadow",
-      "family" : "dino",
-      "id" : "brontle",
-      "name" : "Brontle"
-    },
-    {
-      "element" : "updraft",
-      "family" : "dino",
-      "id" : "pteribit",
-      "name" : "Pteribit"
-    },
-    {
-      "element" : "pinecone",
-      "family" : "dino",
-      "id" : "ankylet",
-      "name" : "Ankylet"
-    },
-    {
-      "element" : "boulder",
-      "family" : "dino",
-      "id" : "bonkle",
-      "name" : "Bonkle"
-    },
-    {
-      "element" : "gale",
-      "family" : "mythic",
-      "id" : "griffet",
-      "name" : "Griffet"
-    },
-    {
-      "element" : "folklore",
-      "family" : "mythic",
-      "id" : "wolpy",
-      "name" : "Wolpy"
-    },
-    {
-      "element" : "blizzard",
-      "family" : "mythic",
-      "id" : "yetini",
-      "name" : "Yetini"
     },
     {
       "element" : "loch",
@@ -277,28 +121,184 @@
       "name" : "Nessle"
     },
     {
+      "element" : "gale",
+      "family" : "mythic",
+      "id" : "griffet",
+      "name" : "Griffet"
+    },
+    {
+      "element" : "blizzard",
+      "family" : "mythic",
+      "id" : "yetini",
+      "name" : "Yetini"
+    },
+    {
       "element" : "deep",
       "family" : "mythic",
       "id" : "inklet",
       "name" : "Inklet"
     },
     {
-      "element" : "underworld",
+      "element" : "auspice",
       "family" : "mythic",
-      "id" : "tripup",
-      "name" : "Tripup"
+      "id" : "qiru",
+      "name" : "Qiru"
     },
     {
-      "element" : "riddle",
+      "element" : "tide",
       "family" : "mythic",
-      "id" : "sphinxie",
-      "name" : "Sphinxie"
+      "id" : "selkip",
+      "name" : "Selkip"
     },
     {
-      "element" : "basilisk",
+      "element" : "breeze",
       "family" : "mythic",
-      "id" : "cockatrix",
-      "name" : "Cockatrix"
+      "id" : "skyfoal",
+      "name" : "Skyfoal"
+    },
+    {
+      "element" : "prairie",
+      "family" : "mythic",
+      "id" : "hopalope",
+      "name" : "Hopalope"
+    },
+    {
+      "element" : "hedgerow",
+      "family" : "animal",
+      "id" : "dormie",
+      "name" : "Dormie"
+    },
+    {
+      "element" : "rain",
+      "family" : "animal",
+      "id" : "drizzlefox",
+      "name" : "Drizzlefox"
+    },
+    {
+      "element" : "meadow",
+      "family" : "animal",
+      "id" : "wombloom",
+      "name" : "Wombloom"
+    },
+    {
+      "element" : "hearth",
+      "family" : "animal",
+      "id" : "calicat",
+      "name" : "Calicat"
+    },
+    {
+      "element" : "village",
+      "family" : "animal",
+      "id" : "shibun",
+      "name" : "Shibun"
+    },
+    {
+      "element" : "woodland",
+      "family" : "animal",
+      "id" : "truffet",
+      "name" : "Truffet"
+    },
+    {
+      "element" : "hillside",
+      "family" : "animal",
+      "id" : "billet",
+      "name" : "Billet"
+    },
+    {
+      "element" : "millpond",
+      "family" : "animal",
+      "id" : "honklet",
+      "name" : "Honklet"
+    },
+    {
+      "element" : "hedgerow",
+      "family" : "animal",
+      "id" : "bramblet",
+      "name" : "Bramblet"
+    },
+    {
+      "element" : "sky",
+      "family" : "animal",
+      "id" : "skyfin",
+      "name" : "Skyfin"
+    },
+    {
+      "element" : "winter",
+      "family" : "animal",
+      "id" : "ermelin",
+      "name" : "Ermelin"
+    },
+    {
+      "element" : "thicket",
+      "family" : "animal",
+      "id" : "wrenlet",
+      "name" : "Wrenlet"
+    },
+    {
+      "element" : "summit",
+      "family" : "animal",
+      "id" : "snowpaw",
+      "name" : "Snowpaw"
+    },
+    {
+      "element" : "pinewood",
+      "family" : "animal",
+      "id" : "lynxie",
+      "name" : "Lynxie"
+    },
+    {
+      "element" : "fen",
+      "family" : "animal",
+      "id" : "moosling",
+      "name" : "Moosling"
+    },
+    {
+      "element" : "creek",
+      "family" : "animal",
+      "id" : "paddlebill",
+      "name" : "Paddlebill"
+    },
+    {
+      "element" : "savanna",
+      "family" : "animal",
+      "id" : "pangle",
+      "name" : "Pangle"
+    },
+    {
+      "element" : "island",
+      "family" : "animal",
+      "id" : "quokkly",
+      "name" : "Quokkly"
+    },
+    {
+      "element" : "garden",
+      "family" : "animal",
+      "id" : "thrumlet",
+      "name" : "Thrumlet"
+    },
+    {
+      "element" : "lagoon",
+      "family" : "animal",
+      "id" : "mellow",
+      "name" : "Mellow"
+    },
+    {
+      "element" : "bush",
+      "family" : "animal",
+      "id" : "kiwibit",
+      "name" : "Kiwibit"
+    },
+    {
+      "element" : "orchard",
+      "family" : "animal",
+      "id" : "possumkin",
+      "name" : "Possumkin"
+    },
+    {
+      "element" : "alpine",
+      "family" : "animal",
+      "id" : "whistlet",
+      "name" : "Whistlet"
     }
   ]
 }

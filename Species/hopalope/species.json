@@ -1,0 +1,13 @@
+{
+  "description" : "A jackalope: a rabbit with tiny antlers. Shy, fast, and absolutely real.",
+  "element" : "prairie",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.3,
+  "name" : "Hopalope",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 80
+}

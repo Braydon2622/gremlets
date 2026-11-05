@@ -1,21 +1,21 @@
 {
-  "name": "Tripup · Gremlet #48",
-  "description": "A three-headed puppy that guards nothing in particular. All three heads want belly rubs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Tripup in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Kiwibit · Gremlet #48",
+  "description": "A round kiwi chick with no wings to speak of and a very long nose for finding worms.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kiwibit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tripup",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tripup",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kiwibit",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kiwibit",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Underworld"
+      "value": "Bush"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bark"
+      "value": "Seeds"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Tripup"
+      "value": "Kiwibit"
     }
   ]
 }

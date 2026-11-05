@@ -1,29 +1,29 @@
 {
-  "name": "Lumbug · Gremlet #23",
-  "description": "A firefly whose lantern glows brighter when it's excited and dims to a nightlight when it sleeps.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Lumbug in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Inklet · Gremlet #23",
+  "description": "A baby kraken that squirts a little ink when it gets startled.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Inklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/23.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lumbug",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lumbug",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Mythical Beast"
     },
     {
       "trait_type": "Element",
-      "value": "Glow"
+      "value": "Deep"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Glow"
+      "value": "Ink"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Lumbug"
+      "value": "Inklet"
     }
   ]
 }

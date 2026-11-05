@@ -1,0 +1,13 @@
+{
+  "description" : "An opossum joey that plays dead whenever it's surprised, then peeks to see if it worked.",
+  "element" : "orchard",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Possumkin",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 55
+}

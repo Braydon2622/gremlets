@@ -1,29 +1,29 @@
 {
-  "name": "Ashlet · Gremlet #35",
-  "description": "A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Ashlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Honklet · Gremlet #35",
+  "description": "A fluffy gosling that follows whoever it saw first. Today that's you.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Honklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/35.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ashlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ashlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=honklet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=honklet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dragon"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Ember"
+      "value": "Millpond"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Fire"
+      "value": "Notes"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Ashlet"
+      "value": "Honklet"
     }
   ]
 }

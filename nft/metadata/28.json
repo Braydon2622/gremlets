@@ -1,21 +1,21 @@
 {
-  "name": "Prismite · Gremlet #28",
-  "description": "A jewel beetle whose shell throws tiny rainbows on the wall whenever the sun hits it.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Prismite in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Dormie · Gremlet #28",
+  "description": "A golden dormouse that sleeps curled in its own tail for most of the year.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dormie in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/28.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prismite",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prismite",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dormie",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dormie",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Prism"
+      "value": "Hedgerow"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Seeds"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Prismite"
+      "value": "Dormie"
     }
   ]
 }

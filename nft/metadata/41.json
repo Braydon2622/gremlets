@@ -1,21 +1,21 @@
 {
-  "name": "Ankylet · Gremlet #41",
-  "description": "An armoured ankylosaur covered in pinecone scales. Its tail club makes a great drum.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Ankylet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Lynxie · Gremlet #41",
+  "description": "A lynx kit with fancy ear tufts and enormous paws it hasn't grown into yet.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Lynxie in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/41.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ankylet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ankylet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lynxie",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lynxie",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dinosaur"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Pinecone"
+      "value": "Pinewood"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Stomp"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Ankylet"
+      "value": "Lynxie"
     }
   ]
 }

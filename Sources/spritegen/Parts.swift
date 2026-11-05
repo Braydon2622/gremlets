@@ -314,7 +314,7 @@ func shellWings(_ shell: UInt32, _ wing: UInt32) -> Draw {
 
 // MARK: - Tails and back extras
 
-enum TailTip { case none, spade(UInt32), ember, club(UInt32), leaf(UInt32), spikes(UInt32), tuft(UInt32) }
+enum TailTip { case none, spade(UInt32), ember, club(UInt32), leaf(UInt32), spikes(UInt32), tuft(UInt32), fluke(UInt32) }
 
 func lizardTail(_ col: UInt32? = nil, tip: TailTip = .none, thick: Double = 1, len: Double = 1) -> Draw {
     return { cv, c in
@@ -343,6 +343,9 @@ func lizardTail(_ col: UInt32? = nil, tip: TailTip = .none, thick: Double = 1, l
             }
         case .tuft(let t):
             cv.ellipse(b.0 - 0.5, b.1 - 0.8, 1.8, 1.8, Ramp(t))
+        case .fluke(let t):
+            cv.ellipse(b.0 - 1.2, b.1 - 1.8, 2.6, 1.2, Ramp(t), rot: -0.9)
+            cv.ellipse(b.0 - 1.6, b.1 + 0.6, 2.6, 1.2, Ramp(t), rot: 0.5)
         }
     }
 }
@@ -357,12 +360,15 @@ func thinTail(_ col: UInt32? = nil, tuft: UInt32? = nil) -> Draw {
     }
 }
 
-func bushyTail(_ col: UInt32? = nil, ring: UInt32? = nil, big: Double = 1) -> Draw {
+func bushyTail(_ col: UInt32? = nil, ring: UInt32? = nil, big: Double = 1, tip: UInt32? = nil) -> Draw {
     return { cv, c in
         let r = Ramp(col ?? c.sp.main), sway = c.p.tail
         let es = curve((c.cx - c.rx * 0.6, c.cy + c.ry * 0.5), (c.cx - c.rx - 6 * big, c.cy + c.ry * 0.5),
                        (c.cx - c.rx - 3.5 * big, c.cy - c.ry * 0.75 + sway), r0: 2.6 * big, r1: 3.2 * big, steps: 8)
         cv.blob(es, r)
+        if let tip = tip, let last = es.last {
+            cv.blob([Ell(cx: last.cx, cy: last.cy, rx: last.rx * 0.95, ry: last.ry * 0.95)], Ramp(tip), outline: false)
+        }
         if let ring = ring {
             let rr = Ramp(ring)
             for (i, e) in es.enumerated() where i % 3 == 1 {
@@ -749,7 +755,7 @@ func bigSnout(_ col: UInt32) -> Draw {
     }
 }
 
-enum BeakKind { case short, long, puffin, hook }
+enum BeakKind { case short, long, puffin, hook, bill, needle }
 
 func beak(_ col: UInt32, _ kind: BeakKind = .short) -> Draw {
     return { cv, c in
@@ -757,6 +763,10 @@ func beak(_ col: UInt32, _ kind: BeakKind = .short) -> Draw {
         let r = Ramp(col)
         switch kind {
         case .short: cv.poly([(x - 1.9, y), (x + 1.9, y), (x + 0.3, y + 2.9)], r)
+        case .needle:
+            cv.line(x, y + 1.2, x + 7, y + 2.6, r.base); cv.line(x, y + 2.0, x + 6, y + 3.2, r.shade)
+            cv.plot(x - 0.6, y + 1.6, r.outline)
+        case .bill: cv.blob([Ell(cx: x + 1.2, cy: y + 2.6, rx: 3.0, ry: 1.4)], r)
         case .hook: cv.poly([(x - 1.9, y), (x + 2.2, y), (x + 1.4, y + 2.8), (x + 0.2, y + 1.8)], r)
         case .long: cv.poly([(x - 1.6, y - 0.2), (x + 1.6, y - 0.2), (x + 6.5, y + 1.8), (x + 0.5, y + 2.6)], r)
         case .puffin:
@@ -1079,6 +1089,52 @@ func swirlShell(_ col: UInt32, _ line: UInt32) -> Draw {
             let rr = 0.6 + a / (4.2 * Double.pi) * (r - 1.6)
             cv.plot(sx + cos(a) * rr, sy + sin(a) * rr, l)
             a += 0.18
+        }
+    }
+}
+
+/// Little fur tufts on top of pointed ears (lynx).
+func earTufts(_ col: UInt32, spread: Double = 0.5) -> Draw {
+    return { cv, c in
+        for side in sides {
+            let x = c.hx + side * c.hrx * spread + side * (1 + max(0, c.p.ear) * 2) - max(0, -c.p.ear) * 1.5
+            let y = c.headTop - 4.5 + max(0, c.p.ear) * 2
+            cv.line(x, y, x + side * 0.6, y - 2.5, Ramp(col).base)
+        }
+    }
+}
+
+/// White face with two dark stripes running up through the eyes (badger).
+func badgerStripes(_ face: UInt32, _ stripe: UInt32) -> Draw {
+    return { cv, c in
+        cv.ellipse(c.faceCX, Double(c.eyeY) + 0.5, c.hrx * 0.72, c.hry * 0.75, Ramp(face), outline: false)
+        for x in [Double(c.lx) + 0.5, Double(c.rxp) + 0.5] {
+            cv.blob([Ell(cx: x, cy: Double(c.eyeY) - 1.5, rx: 1.7, ry: 4.2)], Ramp(stripe), outline: false, flat: true)
+        }
+    }
+}
+
+/// Small chin tuft (goat kid).
+func beard(_ col: UInt32) -> Draw {
+    return { cv, c in cv.ellipse(c.faceCX + 0.5, Double(c.mouthY) + 3.2, 1.3, 2.0, Ramp(col)) }
+}
+
+/// Soft fins along the back of a long neck (lake monster).
+func neckFins(_ col: UInt32) -> Draw {
+    return { cv, c in
+        for t in [0.25, 0.5, 0.75] {
+            let x = c.cx + c.rx * (0.3 + 0.35 * (1 - t)) - 2.2, y = c.cy + c.ry * (0.15 - 1.0 * t)
+            cv.ellipse(x, y, 1.6, 1.0, Ramp(col), rot: -0.6)
+        }
+    }
+}
+
+/// Raindrop / snowflake / freckle dots in a fixed pattern on the cheeks and back.
+func freckles(_ col: UInt32) -> Draw {
+    return { cv, c in
+        for (u, v) in [(-0.62, -0.35), (0.58, -0.45), (-0.45, -0.7), (0.72, -0.05)] {
+            cv.plot(c.cx + u * c.rx, c.cy + v * c.ry, Ramp(col).base)
+            cv.plot(c.cx + u * c.rx, c.cy + v * c.ry + 1, Ramp(col).light)
         }
     }
 }

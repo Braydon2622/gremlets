@@ -1,21 +1,21 @@
 {
-  "name": "Wolpy · Gremlet #44",
-  "description": "A squirrel that grew tiny antlers. Nobody believes it exists.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wolpy in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Pangle · Gremlet #44",
+  "description": "A baby pangolin covered in pinecone scales. Rolls into a ball when it's shy.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Pangle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/44.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wolpy",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wolpy",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pangle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pangle",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Folklore"
+      "value": "Savanna"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Wolpy"
+      "value": "Pangle"
     }
   ]
 }

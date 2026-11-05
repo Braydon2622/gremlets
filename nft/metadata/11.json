@@ -1,9 +1,9 @@
 {
-  "name": "Swirlby · Gremlet #11",
-  "description": "A snail with a perfectly round swirl shell. It's never late, just taking the scenic route.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Swirlby in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Duskwing · Gremlet #11",
+  "description": "A golden flying fox that sleeps all day and flutters out at dusk.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Duskwing in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/11.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=swirlby",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=swirlby",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=duskwing",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=duskwing",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Dew"
+      "value": "Night"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Swirlby"
+      "value": "Duskwing"
     }
   ]
 }

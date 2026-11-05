@@ -1,0 +1,13 @@
+{
+  "description" : "A round kiwi chick with no wings to speak of and a very long nose for finding worms.",
+  "element" : "bush",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Kiwibit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "seeds",
+  "walkSpeed" : 60
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A lynx kit with fancy ear tufts and enormous paws it hasn't grown into yet.",
+  "element" : "pinewood",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Lynxie",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 70
+}

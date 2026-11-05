@@ -1,21 +1,21 @@
 {
-  "name": "Puffling · Gremlet #16",
-  "description": "A puffin chick with a beak too big for its face and a lot of confidence.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Puffling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Zipwing · Gremlet #16",
+  "description": "A dragonfly with huge shiny eyes. Zips everywhere, stops for nothing.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Zipwing in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/16.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffling",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffling",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=zipwing",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=zipwing",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Insect & Bug"
     },
     {
       "trait_type": "Element",
-      "value": "Sea"
+      "value": "Breeze"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Puffling"
+      "value": "Zipwing"
     }
   ]
 }

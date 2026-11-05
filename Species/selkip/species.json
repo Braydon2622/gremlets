@@ -1,0 +1,13 @@
+{
+  "description" : "A selkie pup: a seal on the beach, a story by the fire. Mostly it just naps on warm rocks.",
+  "element" : "tide",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Selkip",
+  "scale" : 3,
+  "sleepiness" : 1.3999999999999999,
+  "special" : "bubbles",
+  "walkSpeed" : 40
+}

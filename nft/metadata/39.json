@@ -1,29 +1,29 @@
 {
-  "name": "Brontle · Gremlet #39",
-  "description": "A long-necked dinosaur who can see over every window. Very gentle, always chewing.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Brontle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Wrenlet · Gremlet #39",
+  "description": "A round little wren with its tail cocked high. Sings far too loudly for its size.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wrenlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/39.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brontle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brontle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wrenlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wrenlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dinosaur"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Meadow"
+      "value": "Thicket"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Notes"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Brontle"
+      "value": "Wrenlet"
     }
   ]
 }

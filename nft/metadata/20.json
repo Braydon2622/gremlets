@@ -1,29 +1,29 @@
 {
-  "name": "Bumbuzz · Gremlet #20",
-  "description": "A round, fuzzy bumblebee whose wings are far too small. It flies anyway.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bumbuzz in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Nessle · Gremlet #20",
+  "description": "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Nessle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/20.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bumbuzz",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bumbuzz",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Mythical Beast"
     },
     {
       "trait_type": "Element",
-      "value": "Pollen"
+      "value": "Loch"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Pollen"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Bumbuzz"
+      "value": "Nessle"
     }
   ]
 }

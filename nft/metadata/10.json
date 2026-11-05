@@ -1,9 +1,9 @@
 {
-  "name": "Lilypip · Gremlet #10",
-  "description": "A round pond frog that hops much higher than anyone expects.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Lilypip in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Swirlby · Gremlet #10",
+  "description": "A snail with a perfectly round swirl shell. It's never late, just taking the scenic route.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Swirlby in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/10.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lilypip",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lilypip",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=swirlby",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=swirlby",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,7 +11,7 @@
     },
     {
       "trait_type": "Element",
-      "value": "Pond"
+      "value": "Dew"
     },
     {
       "trait_type": "Signature Move",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Lilypip"
+      "value": "Swirlby"
     }
   ]
 }

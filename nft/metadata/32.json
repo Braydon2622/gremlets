@@ -1,29 +1,29 @@
 {
-  "name": "Gemscale · Gremlet #32",
-  "description": "A moonstone dragon that grows crystals instead of spikes. They chime when it runs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gemscale in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Shibun · Gremlet #32",
+  "description": "A shiba pup with a curly tail and a smile that never quite turns off.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Shibun in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/32.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gemscale",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gemscale",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=shibun",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=shibun",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dragon"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Crystal"
+      "value": "Village"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Bark"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Gemscale"
+      "value": "Shibun"
     }
   ]
 }

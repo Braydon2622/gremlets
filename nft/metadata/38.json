@@ -1,21 +1,21 @@
 {
-  "name": "Rexlet · Gremlet #38",
-  "description": "A tiny tyrannosaur with a huge roar and arms too short to hug. It tries anyway.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rexlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Ermelin · Gremlet #38",
+  "description": "A stoat in its white winter coat. Only the tip of its tail stays black.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Ermelin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/38.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rexlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rexlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ermelin",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ermelin",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Dinosaur"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Thunder"
+      "value": "Winter"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Roar"
+      "value": "Snow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Rexlet"
+      "value": "Ermelin"
     }
   ]
 }

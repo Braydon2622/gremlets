@@ -1,29 +1,29 @@
 {
-  "name": "Peacockle · Gremlet #26",
-  "description": "A peacock spider. It unfurls a rainbow fan and dances for anyone who'll watch.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Peacockle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Skyfoal · Gremlet #26",
+  "description": "A pegasus foal still learning to fly. Mostly it does very tall hops.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Skyfoal in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/26.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peacockle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peacockle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=skyfoal",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=skyfoal",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Mythical Beast"
     },
     {
       "trait_type": "Element",
-      "value": "Display"
+      "value": "Breeze"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Notes"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Peacockle"
+      "value": "Skyfoal"
     }
   ]
 }

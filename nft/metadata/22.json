@@ -1,21 +1,21 @@
 {
-  "name": "Prayla · Gremlet #22",
-  "description": "A periwinkle mantis that folds its arms and says grace before every single snack.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Prayla in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Yetini · Gremlet #22",
+  "description": "A yeti cub with big soft feet. Leaves tiny footprints nobody can explain.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Yetini in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/22.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prayla",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prayla",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yetini",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yetini",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Insect & Bug"
+      "value": "Mythical Beast"
     },
     {
       "trait_type": "Element",
-      "value": "Dusk"
+      "value": "Blizzard"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Snow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Prayla"
+      "value": "Yetini"
     }
   ]
 }

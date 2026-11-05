@@ -1,21 +1,21 @@
 {
-  "name": "Inklet · Gremlet #47",
-  "description": "A baby kraken that squirts a little ink when it gets startled.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Inklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Mellow · Gremlet #47",
+  "description": "A manatee calf that drifts wherever the current goes and greets everyone with a gentle bump.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mellow in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/47.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mellow",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mellow",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Deep"
+      "value": "Lagoon"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Ink"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Inklet"
+      "value": "Mellow"
     }
   ]
 }

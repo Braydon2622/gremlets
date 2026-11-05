@@ -1,9 +1,9 @@
 {
-  "name": "Duskwing · Gremlet #12",
-  "description": "A golden flying fox that sleeps all day and flutters out at dusk.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Duskwing in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Gumleaf · Gremlet #12",
+  "description": "A very fluffy koala who insists on being called Your Fluffiness.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gumleaf in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/12.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=duskwing",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=duskwing",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gumleaf",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gumleaf",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Night"
+      "value": "Eucalyptus"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Petals"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Duskwing"
+      "value": "Gumleaf"
     }
   ]
 }

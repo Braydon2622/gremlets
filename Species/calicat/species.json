@@ -1,0 +1,13 @@
+{
+  "description" : "A calico kitten that naps in every sunbeam and chases every dust mote.",
+  "element" : "hearth",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.25,
+  "name" : "Calicat",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 75
+}

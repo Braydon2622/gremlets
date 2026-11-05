@@ -1,21 +1,21 @@
 {
-  "name": "Cockatrix · Gremlet #50",
-  "description": "A cockatrice chick: half chick, half lizard, all attitude. Its glare is mostly bluff.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Cockatrix in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Whistlet · Gremlet #50",
+  "description": "A marmot that whistles a warning for everything: hawks, clouds, falling leaves.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Whistlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/50.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=cockatrix",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=cockatrix",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=whistlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=whistlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Basilisk"
+      "value": "Alpine"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Notes"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Cockatrix"
+      "value": "Whistlet"
     }
   ]
 }

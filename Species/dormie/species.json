@@ -1,0 +1,13 @@
+{
+  "description" : "A golden dormouse that sleeps curled in its own tail for most of the year.",
+  "element" : "hedgerow",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Dormie",
+  "scale" : 3,
+  "sleepiness" : 2,
+  "special" : "seeds",
+  "walkSpeed" : 65
+}

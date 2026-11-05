@@ -299,24 +299,6 @@
       "family" : "spirit",
       "id" : "frostmote",
       "name" : "Frostmote"
-    },
-    {
-      "element" : "riverbank",
-      "family" : "spirit",
-      "id" : "skipstone",
-      "name" : "Skipstone"
-    },
-    {
-      "element" : "shore",
-      "family" : "spirit",
-      "id" : "seaglass",
-      "name" : "Seaglass"
-    },
-    {
-      "element" : "old forest",
-      "family" : "spirit",
-      "id" : "amberdrop",
-      "name" : "Amberdrop"
     }
   ]
 }

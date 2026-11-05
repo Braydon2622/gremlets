@@ -267,7 +267,7 @@ let roster: [Species] = [
         $0.special = "sparkle"; $0.walkSpeed = 75; $0.jumpPower = 1.4
     },
 
-    // ---------------------------------------------------------------- More motes and stones
+    // ---------------------------------------------------------------- Motes
     species("pondhead", "Pondhead", "rainwater", "guardian", main: 0xB8C4B0, "A squat old machine with a dent in its head that filled with rain. A lily pad and a little flower live there now.") {
         $0.rx = 8.5; $0.ry = 6.2; $0.eye = 0x1A3A2A; $0.eyeStyle = .glow(0x9AF0B0); $0.limb = 0x96A290; $0.restMouth = Mouth.none; $0.faceV = 0.05
         $0.bodyDraw = pondHeadBody(0xB8C4B0, 0x8FD3F0, 0x7CC46A)
@@ -292,20 +292,5 @@ let roster: [Species] = [
         $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x1A2A4A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xB8D0FF
         $0.bodyDraw = lightBody(0xEAF6FF, 0xA8D8FF)
         $0.flies = true; $0.special = "snow"; $0.walkSpeed = 55
-    },
-    species("skipstone", "Skipstone", "riverbank", "spirit", main: 0xA8B4BC, "A perfectly flat river stone. It can skip seven times, and it will tell you about it.") {
-        $0.rx = 8.5; $0.ry = 5; $0.eye = 0x1E2A30; $0.eyeStyle = .dot; $0.faceV = 0.35; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = skipStoneBody(0xA8B4BC)
-        $0.special = "bubbles"; $0.walkSpeed = 45; $0.jumpPower = 1.5
-    },
-    species("seaglass", "Seaglass", "shore", "spirit", main: 0x9ADCC4, "A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun.") {
-        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x14302A; $0.eyeStyle = .dot; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = seaglassBody(0x9ADCC4)
-        $0.special = "sparkle"; $0.walkSpeed = 45
-    },
-    species("amberdrop", "Amberdrop", "old forest", "spirit", main: 0xF2A94A, "A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does.") {
-        $0.rx = 6.2; $0.ry = 6.5; $0.eye = 0x3A1A08; $0.eyeStyle = .dot; $0.glossy = true; $0.limb = 0xD08A30
-        $0.bodyDraw = amberBody(0xF2A94A, 0x6A8A3A)
-        $0.special = "glow"; $0.walkSpeed = 50
     },
 ]

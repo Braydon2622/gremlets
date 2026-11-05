@@ -1,9 +1,9 @@
 {
-  "name": "Seaglass · Gremlet #49",
-  "description": "A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Seaglass in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Emberglow · Gremlet #49",
+  "description": "The last warm glow from a campfire, still wandering around after everyone went to bed.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Emberglow in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/49.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seaglass",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seaglass",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Shore"
+      "value": "Ember"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Seaglass"
+      "value": "Emberglow"
     }
   ]
 }

@@ -24,7 +24,7 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 14 | **Calicat** | hearth | sparkle |  | A calico kitten that naps in every sunbeam and chases every dust mote. |
 | 15 | **Shibun** | village | bark |  | A shiba pup with a curly tail and a smile that never quite turns off. |
 
-## Spirits (18)
+## Spirits (15)
 
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
@@ -43,24 +43,24 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 28 | **Pebblin** | earth | sparkle |  | A stack of river stones that balanced itself one day and has been very careful ever since. |
 | 29 | **Emberglow** | ember | glow | ✓ | The last warm glow from a campfire, still wandering around after everyone went to bed. |
 | 30 | **Frostmote** | frost | snow | ✓ | A mote of winter light that paints frost on windows when nobody is looking. |
-| 31 | **Skipstone** | riverbank | bubbles |  | A perfectly flat river stone. It can skip seven times, and it will tell you about it. |
-| 32 | **Seaglass** | shore | sparkle |  | A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun. |
-| 33 | **Amberdrop** | old forest | glow |  | A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does. |
 
-## Guardians (10)
+## Guardians (13)
 
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
-| 34 | **Mosswarden** | patina | petals |  | An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now. |
-| 35 | **Sproutbolt** | enamel | leaves |  | A little machine whose antenna fell off. A sapling grew in the socket and it's been gardening ever since. |
-| 36 | **Orbwarden** | sky patrol | sparkle | ✓ | A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it. |
-| 37 | **Trundle** | rust | stomp |  | A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall. |
-| 38 | **Boilerbit** | steam | steam |  | A brass boiler machine that puffs a little steam whenever it's thinking hard. |
-| 39 | **Listenling** | signal | notes |  | A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong. |
-| 40 | **Bloomcore** | blossom | petals |  | Its chest panel fell open years ago and a flower grew where its core used to be. |
-| 41 | **Slumberbolt** | dormant | sparkle |  | An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock. |
-| 42 | **Rotorlet** | breeze | leaves | ✓ | A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass. |
-| 43 | **Stridelet** | outpost | sparkle |  | A round lookout machine on springy legs. It tiptoes around sleeping animals. |
+| 31 | **Mosswarden** | patina | petals |  | An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now. |
+| 32 | **Sproutbolt** | enamel | leaves |  | A little machine whose antenna fell off. A sapling grew in the socket and it's been gardening ever since. |
+| 33 | **Orbwarden** | sky patrol | sparkle | ✓ | A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it. |
+| 34 | **Trundle** | rust | stomp |  | A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall. |
+| 35 | **Boilerbit** | steam | steam |  | A brass boiler machine that puffs a little steam whenever it's thinking hard. |
+| 36 | **Listenling** | signal | notes |  | A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong. |
+| 37 | **Bloomcore** | blossom | petals |  | Its chest panel fell open years ago and a flower grew where its core used to be. |
+| 38 | **Slumberbolt** | dormant | sparkle |  | An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock. |
+| 39 | **Rotorlet** | breeze | leaves | ✓ | A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass. |
+| 40 | **Stridelet** | outpost | sparkle |  | A round lookout machine on springy legs. It tiptoes around sleeping animals. |
+| 41 | **Pondhead** | rainwater | bubbles |  | A squat old machine with a dent in its head that filled with rain. A lily pad and a little flower live there now. |
+| 42 | **Ivybolt** | overgrowth | leaves |  | A tall machine so wrapped in ivy that only its eyes peek out. It moves slowly so the leaves don't fall. |
+| 43 | **Beaconbit** | lighthouse | glow |  | A little machine with a beacon on its head. It lights the way home for anything lost after dark. |
 
 ## Mythical Beasts (2)
 

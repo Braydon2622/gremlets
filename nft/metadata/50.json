@@ -1,9 +1,9 @@
 {
-  "name": "Amberdrop · Gremlet #50",
-  "description": "A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Amberdrop in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Frostmote · Gremlet #50",
+  "description": "A mote of winter light that paints frost on windows when nobody is looking.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Frostmote in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/50.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=amberdrop",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=amberdrop",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Old Forest"
+      "value": "Frost"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Glow"
+      "value": "Snow"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Amberdrop"
+      "value": "Frostmote"
     }
   ]
 }

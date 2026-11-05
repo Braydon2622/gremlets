@@ -12,9 +12,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 
 | Family | Count | Some of them |
 |---|---|---|
-| Spirits | 18 | Glowmote, Pebblin the stone stack, Marimoss the lake moss ball, Sakurin the cherry blossom, Puffcloud, Seaglass |
 | Animals | 15 | Flurrie the frost bunny, Dandelet the dandelion lion cub, Capyzen the hot-spring capybara, Calicat the calico kitten |
-| Guardians | 10 | Mosswarden with a meadow on its head, Sproutbolt the gardening machine, Slumberbolt the century-long napper, Rotorlet the scout |
+| Spirits | 15 | Glowmote, Pebblin the stone stack, Marimoss the lake moss ball, Sakurin the cherry blossom, Puffcloud |
+| Guardians | 13 | Mosswarden with a meadow on its head, Pondhead with a rain pond on its head, Ivybolt, Beaconbit, Slumberbolt |
 | Insects & Bugs | 4 | Silkwing the butterfly, Zipwing the dragonfly, Prismite the jewel beetle, Snipleaf the leafcutter ant |
 | Mythical | 2 | Kindlet the candle spirit, Inklet the baby kraken |
 | Dragons | 1 | Mintwyrm the jasmine dragon |

@@ -1,29 +1,29 @@
 {
-  "name": "Emberglow · Gremlet #46",
-  "description": "The last warm glow from a campfire, still wandering around after everyone went to bed.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Emberglow in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Pondhead · Gremlet #46",
+  "description": "A squat old machine with a dent in its head that filled with rain. A lily pad and a little flower live there now.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Pondhead in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/46.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pondhead",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pondhead",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Ember"
+      "value": "Rainwater"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Glow"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Emberglow"
+      "value": "Pondhead"
     }
   ]
 }

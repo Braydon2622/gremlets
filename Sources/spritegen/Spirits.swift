@@ -836,3 +836,53 @@ func amberBody(_ col: UInt32, _ leaf: UInt32) -> Draw {
         cv.plot(c.cx - c.rx * 0.3 + 1.4, c.cy + c.ry * 0.55 + 1, L.shade)
     }
 }
+
+// MARK: - Round 6: three more guardian machines
+
+/// Wide squat machine whose dented top filled with rainwater; a lily pad and a flower live in its head-pond.
+func pondHeadBody(_ metal: UInt32, _ water: UInt32, _ lily: UInt32) -> Draw {
+    return { cv, c in
+        cv.poly(roundedRect(c.cx, c.cy + 0.5, c.rx * 2, c.ry * 1.9, 3.0), Ramp(metal))
+        let top = c.cy + 0.5 - c.ry * 0.95
+        cv.blob([Ell(cx: c.cx, cy: top + 1.2, rx: c.rx * 0.8, ry: 1.6)], Ramp(water), outline: false, glossy: true)
+        cv.ellipse(c.cx - c.rx * 0.35 + c.p.tilt * 0.4, top + 0.8, 2.0, 1.0, Ramp(lily), outline: true)
+        cv.plot(c.cx - c.rx * 0.35 + c.p.tilt * 0.4 + 1.2, top + 0.6, Ramp(lily).outline)
+        cv.plot(c.cx + c.rx * 0.4, top - 0.4, 0xFF9EC4); cv.plot(c.cx + c.rx * 0.4 - 1, top - 0.4, 0xFFD0E2); cv.plot(c.cx + c.rx * 0.4, top - 1.4, 0xFFD0E2)
+        cv.line(c.cx + c.rx * 0.65, top + 1, c.cx + c.rx * 0.7 + c.p.tail * 0.5, top - 3, Ramp(lily).shade)
+        rivets(&cv, [(c.cx - c.rx + 1.5, c.cy + c.ry * 0.6), (c.cx + c.rx - 2.5, c.cy + c.ry * 0.6)], metal)
+    }
+}
+
+/// Tall machine wrapped in ivy, with a leafy tuft on top.
+func ivyBody(_ metal: UInt32, _ ivy: UInt32) -> Draw {
+    return { cv, c in
+        let I = Ramp(ivy)
+        cv.poly(roundedRect(c.cx, c.cy, c.rx * 1.8, c.ry * 2.0, 3.0), Ramp(metal))
+        let onto = tones(Ramp(metal))
+        for k in 0..<3 {
+            let y0 = c.cy + c.ry * (0.2 + Double(k) * 0.3)
+            lineInside(&cv, c.cx - c.rx, y0 + 2, c.cx + c.rx, y0 - 2, I.base, onto: onto)
+        }
+        for (u, v) in [(-0.6, 0.35), (0.3, 0.45), (-0.2, 0.75), (0.65, 0.15), (0.55, 0.8)] {
+            cv.ellipse(c.cx + u * c.rx, c.cy + v * c.ry, 1.3, 0.8, I, outline: false, rot: 0.5)
+        }
+        for (dx, rot) in [(-1.6, -0.6), (0.4, 0.0), (2.2, 0.6)] {
+            cv.ellipse(c.cx + dx + c.p.tilt * 0.4, c.cy - c.ry - 1.0, 1.3, 2.4, I, rot: rot)
+        }
+    }
+}
+
+/// Small machine with a glass beacon dome on its head that glows warmly.
+func beaconBody(_ metal: UInt32, _ glass: UInt32, _ glow: UInt32) -> Draw {
+    return { cv, c in
+        let G = Ramp(glow)
+        let dy = c.cy - c.ry - 2.6
+        if c.p.acc == 2 || c.p.acc == 1 {
+            for (dx, ddy) in [(-5.0, 0.0), (5.0, 0.0), (-3.6, -3.2), (3.6, -3.2), (0.0, -5.0)] { cv.plot(c.cx + dx, dy + ddy, G.light) }
+        }
+        cv.poly(roundedRect(c.cx, c.cy - c.ry * 0.95, 4.4, 2.0, 0.6), Ramp(Ramp(metal).shade))
+        cv.blob([Ell(cx: c.cx, cy: dy, rx: 3.0, ry: 3.0)], Ramp(c.p.acc == 3 ? glass : glow), glossy: true, clipMaxY: dy + 1.2)
+        cv.poly(roundedRect(c.cx, c.cy + 0.6, c.rx * 1.9, c.ry * 1.8, 3.5), Ramp(metal))
+        rivets(&cv, [(c.cx - c.rx + 1.5, c.cy + c.ry * 0.55), (c.cx + c.rx - 2.5, c.cy + c.ry * 0.55)], metal)
+    }
+}

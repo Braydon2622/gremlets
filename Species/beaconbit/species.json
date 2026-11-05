@@ -1,0 +1,13 @@
+{
+  "description" : "A little machine with a beacon on its head. It lights the way home for anything lost after dark.",
+  "element" : "lighthouse",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Beaconbit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 55
+}

@@ -268,6 +268,21 @@ let roster: [Species] = [
     },
 
     // ---------------------------------------------------------------- More motes and stones
+    species("pondhead", "Pondhead", "rainwater", "guardian", main: 0xB8C4B0, "A squat old machine with a dent in its head that filled with rain. A lily pad and a little flower live there now.") {
+        $0.rx = 8.5; $0.ry = 6.2; $0.eye = 0x1A3A2A; $0.eyeStyle = .glow(0x9AF0B0); $0.limb = 0x96A290; $0.restMouth = Mouth.none; $0.faceV = 0.05
+        $0.bodyDraw = pondHeadBody(0xB8C4B0, 0x8FD3F0, 0x7CC46A)
+        $0.special = "bubbles"; $0.walkSpeed = 35; $0.jumpPower = 0.75
+    },
+    species("ivybolt", "Ivybolt", "overgrowth", "guardian", main: 0xD8CFC0, "A tall machine so wrapped in ivy that only its eyes peek out. It moves slowly so the leaves don't fall.") {
+        $0.rx = 6.2; $0.ry = 8.2; $0.eye = 0x1A3A2A; $0.eyeStyle = .glow(0xFFE08A); $0.faceV = -0.5; $0.limb = 0xB8AE9E; $0.restMouth = Mouth.none
+        $0.bodyDraw = ivyBody(0xD8CFC0, 0x6FAF4A)
+        $0.special = "leaves"; $0.walkSpeed = 35
+    },
+    species("beaconbit", "Beaconbit", "lighthouse", "guardian", main: 0xE8E2D4, "A little machine with a beacon on its head. It lights the way home for anything lost after dark.") {
+        $0.rx = 6.4; $0.ry = 6.2; $0.eye = 0x1A3A4A; $0.eyeStyle = .glow(0x7FD8FF); $0.limb = 0xC8C0AE; $0.restMouth = Mouth.none
+        $0.bodyDraw = beaconBody(0xE8E2D4, 0xBFE4F2, 0xFFE08A)
+        $0.special = "glow"; $0.walkSpeed = 55
+    },
     species("emberglow", "Emberglow", "ember", "spirit", main: 0xFFD0A0, "The last warm glow from a campfire, still wandering around after everyone went to bed.") {
         $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x5A2A10; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xFF9A7A
         $0.bodyDraw = lightBody(0xFFD0A0, 0xFF9A5A)

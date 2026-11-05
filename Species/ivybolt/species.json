@@ -1,0 +1,13 @@
+{
+  "description" : "A tall machine so wrapped in ivy that only its eyes peek out. It moves slowly so the leaves don't fall.",
+  "element" : "overgrowth",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Ivybolt",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 35
+}

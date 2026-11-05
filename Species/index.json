@@ -271,6 +271,24 @@
       "name" : "Stridelet"
     },
     {
+      "element" : "rainwater",
+      "family" : "guardian",
+      "id" : "pondhead",
+      "name" : "Pondhead"
+    },
+    {
+      "element" : "overgrowth",
+      "family" : "guardian",
+      "id" : "ivybolt",
+      "name" : "Ivybolt"
+    },
+    {
+      "element" : "lighthouse",
+      "family" : "guardian",
+      "id" : "beaconbit",
+      "name" : "Beaconbit"
+    },
+    {
       "element" : "ember",
       "family" : "spirit",
       "id" : "emberglow",

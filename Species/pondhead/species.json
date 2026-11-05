@@ -1,0 +1,13 @@
+{
+  "description" : "A squat old machine with a dent in its head that filled with rain. A lily pad and a little flower live there now.",
+  "element" : "rainwater",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.75,
+  "name" : "Pondhead",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 35
+}

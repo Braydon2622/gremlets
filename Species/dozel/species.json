@@ -1,0 +1,13 @@
+{
+  "description" : "A sloth carrying a flower it picked last week. It's still deciding who to give it to.",
+  "element" : "canopy",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.69999999999999996,
+  "name" : "Dozel",
+  "scale" : 3,
+  "sleepiness" : 2.3999999999999999,
+  "special" : "petals",
+  "walkSpeed" : 22
+}

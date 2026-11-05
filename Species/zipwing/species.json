@@ -1,0 +1,13 @@
+{
+  "description" : "A dragonfly with huge shiny eyes. Zips everywhere, stops for nothing.",
+  "element" : "breeze",
+  "family" : "insect",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Zipwing",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 90
+}

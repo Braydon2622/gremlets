@@ -1,0 +1,13 @@
+{
+  "description" : "A firefly whose lantern glows brighter when it's excited and dims to a nightlight when it sleeps.",
+  "element" : "glow",
+  "family" : "insect",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Lumbug",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 65
+}

@@ -1,9 +1,0 @@
-{
-  "description" : "A velvet mole in a nightcap. Has a moon on its tummy and naps whenever it can.",
-  "element" : "dusk",
-  "jumpPower" : 0.84999999999999998,
-  "name" : "Snoozle",
-  "scale" : 3,
-  "sleepiness" : 2,
-  "walkSpeed" : 40
-}

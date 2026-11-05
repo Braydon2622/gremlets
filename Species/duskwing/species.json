@@ -1,0 +1,13 @@
+{
+  "description" : "A fruit bat who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk.",
+  "element" : "night",
+  "family" : "animal",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Duskwing",
+  "scale" : 3,
+  "sleepiness" : 1.3999999999999999,
+  "special" : "sparkle",
+  "walkSpeed" : 65
+}

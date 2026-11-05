@@ -1,9 +1,13 @@
 {
   "description" : "A melting-candle sprite whose flame flares when it's happy and dims to an ember when it naps.",
   "element" : "ember",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
   "jumpPower" : 1,
   "name" : "Kindlet",
   "scale" : 3,
   "sleepiness" : 0.80000000000000004,
+  "special" : "fire",
   "walkSpeed" : 70
 }

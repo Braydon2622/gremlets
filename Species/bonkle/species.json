@@ -1,0 +1,13 @@
+{
+  "description" : "A dome-headed dinosaur that greets friends with a gentle bonk.",
+  "element" : "boulder",
+  "family" : "dino",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Bonkle",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bonk",
+  "walkSpeed" : 60
+}

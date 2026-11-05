@@ -1,9 +1,0 @@
-{
-  "description" : "A chubby night moth with a fluffy collar and lantern-tipped feelers.",
-  "element" : "glow",
-  "jumpPower" : 1.3,
-  "name" : "Glimmoth",
-  "scale" : 3,
-  "sleepiness" : 0.69999999999999996,
-  "walkSpeed" : 55
-}

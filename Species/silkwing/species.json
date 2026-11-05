@@ -1,0 +1,13 @@
+{
+  "description" : "A fuzzy butterfly with stained-glass wings that glitter in the light.",
+  "element" : "silk",
+  "family" : "insect",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1.2,
+  "name" : "Silkwing",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 65
+}

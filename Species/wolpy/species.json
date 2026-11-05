@@ -1,0 +1,13 @@
+{
+  "description" : "A wolpertinger: a squirrel with tiny antlers and duck wings. Nobody believes it exists.",
+  "element" : "folklore",
+  "family" : "mythic",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Wolpy",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 80
+}

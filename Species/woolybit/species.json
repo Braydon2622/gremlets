@@ -1,0 +1,13 @@
+{
+  "description" : "A woolly bear caterpillar. The width of its orange band predicts the winter, supposedly.",
+  "element" : "weather",
+  "family" : "insect",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Woolybit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 30
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A pocket wyvern with a fang-y grin. Hides things, then helps you look for them.",
+  "element" : "mischief",
+  "family" : "dragon",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Pipwyrn",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "smoke",
+  "walkSpeed" : 85
+}

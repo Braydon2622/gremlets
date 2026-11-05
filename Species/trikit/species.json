@@ -1,0 +1,13 @@
+{
+  "description" : "A baby triceratops whose frill blushes orange when it gets excited.",
+  "element" : "stone",
+  "family" : "dino",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Trikit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "stomp",
+  "walkSpeed" : 55
+}

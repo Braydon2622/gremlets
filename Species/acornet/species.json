@@ -1,9 +1,0 @@
-{
-  "description" : "An acorn that refused to stay a seed. Wears its cap like a beloved hat.",
-  "element" : "grove",
-  "jumpPower" : 1,
-  "name" : "Acornet",
-  "scale" : 3,
-  "sleepiness" : 1,
-  "walkSpeed" : 65
-}

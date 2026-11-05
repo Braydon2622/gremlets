@@ -1,0 +1,13 @@
+{
+  "description" : "A sphinx kitten in a royal headdress. Asks riddles, forgets the answers.",
+  "element" : "riddle",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Sphinxie",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 60
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs.",
+  "element" : "ember",
+  "family" : "dragon",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Smolder",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "fire",
+  "walkSpeed" : 65
+}

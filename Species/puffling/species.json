@@ -1,0 +1,13 @@
+{
+  "description" : "A puffin chick with a beak too big for its face and a lot of confidence.",
+  "element" : "sea",
+  "family" : "animal",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Puffling",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 65
+}

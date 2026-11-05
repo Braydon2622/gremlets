@@ -1,0 +1,13 @@
+{
+  "description" : "A kitten made of cloud fluff. It drizzles a little when it's sad and floats when it's happy.",
+  "element" : "sky",
+  "family" : "animal",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1.1000000000000001,
+  "name" : "Nimbuss",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "rain",
+  "walkSpeed" : 65
+}

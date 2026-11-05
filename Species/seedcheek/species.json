@@ -1,0 +1,13 @@
+{
+  "description" : "A hamster that stuffs its cheeks with sunflower seeds and never quite finishes eating.",
+  "element" : "harvest",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Seedcheek",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "seeds",
+  "walkSpeed" : 80
+}

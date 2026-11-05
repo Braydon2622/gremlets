@@ -1,0 +1,13 @@
+{
+  "description" : "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.",
+  "element" : "loch",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Nessle",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 45
+}

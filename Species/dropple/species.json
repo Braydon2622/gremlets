@@ -1,9 +1,0 @@
-{
-  "description" : "A springy raindrop with a curling tip. Best jumper of the bunch.",
-  "element" : "tide",
-  "jumpPower" : 1.25,
-  "name" : "Dropple",
-  "scale" : 3,
-  "sleepiness" : 0.59999999999999998,
-  "walkSpeed" : 85
-}

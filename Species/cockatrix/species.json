@@ -1,0 +1,13 @@
+{
+  "description" : "A cockatrice chick: half chick, half lizard, all attitude. Its glare is mostly bluff.",
+  "element" : "basilisk",
+  "family" : "mythic",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Cockatrix",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 70
+}

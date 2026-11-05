@@ -1,0 +1,13 @@
+{
+  "description" : "A pot-bellied tanuki who keeps a leaf on its head for luck and drums its tummy when happy.",
+  "element" : "trickster",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Pomble",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 55
+}

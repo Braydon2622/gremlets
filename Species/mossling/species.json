@@ -1,9 +1,0 @@
-{
-  "description" : "A sleepy river pebble that grew a moss blanket and one stubborn sprout.",
-  "element" : "moss",
-  "jumpPower" : 0.80000000000000004,
-  "name" : "Mossling",
-  "scale" : 3,
-  "sleepiness" : 1.3999999999999999,
-  "walkSpeed" : 45
-}

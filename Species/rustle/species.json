@@ -1,0 +1,13 @@
+{
+  "description" : "A red panda with a striped autumn tail. Stands up tall to look bigger when surprised.",
+  "element" : "autumn",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Rustle",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 70
+}

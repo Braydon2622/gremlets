@@ -1,0 +1,13 @@
+{
+  "description" : "A forest fawn whose antlers sprout tiny red mushrooms after it rains.",
+  "element" : "grove",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.2,
+  "name" : "Mossfawn",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 80
+}

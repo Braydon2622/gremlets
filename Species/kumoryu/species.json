@@ -1,0 +1,13 @@
+{
+  "description" : "A coral sky-dragon who rides its own little cloud and never touches the ground.",
+  "element" : "cloud",
+  "family" : "dragon",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Kumoryu",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "clouds",
+  "walkSpeed" : 65
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A peach pterosaur chick with a swept-back crest. Glides better than it flaps.",
+  "element" : "updraft",
+  "family" : "dino",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Pteribit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 65
+}

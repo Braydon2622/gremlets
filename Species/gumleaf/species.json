@@ -1,0 +1,13 @@
+{
+  "description" : "A fluffy koala that clutches a eucalyptus sprig and naps twenty hours a day.",
+  "element" : "eucalyptus",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Gumleaf",
+  "scale" : 3,
+  "sleepiness" : 2.2000000000000002,
+  "special" : "leaves",
+  "walkSpeed" : 35
+}

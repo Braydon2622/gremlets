@@ -1,9 +1,13 @@
 {
-  "description" : "A dandelion cub with a petal mane. Its puff tail scatters seeds when it bounces.",
+  "description" : "A dandelion lion cub with a petal mane. Its puff tail scatters seeds when it bounces.",
   "element" : "bloom",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
   "jumpPower" : 1.05,
   "name" : "Dandelet",
   "scale" : 3,
   "sleepiness" : 0.80000000000000004,
+  "special" : "petals",
   "walkSpeed" : 75
 }

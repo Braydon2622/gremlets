@@ -1,0 +1,13 @@
+{
+  "description" : "A jewel scarab that rolls the morning sun up into the sky, very slowly, one push at a time.",
+  "element" : "sun",
+  "family" : "insect",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Gemscarab",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 45
+}

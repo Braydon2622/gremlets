@@ -1,0 +1,13 @@
+{
+  "description" : "A tiny tyrannosaur with a huge roar and arms too short to hug. It tries anyway.",
+  "element" : "thunder",
+  "family" : "dino",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Rexlet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "roar",
+  "walkSpeed" : 65
+}

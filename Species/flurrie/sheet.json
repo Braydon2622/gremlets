@@ -569,6 +569,266 @@
         "x" : 1792,
         "y" : 0
       }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 57.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1824,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 58.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1856,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 59.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1888,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 60.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1920,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "flurrie 61.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1952,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 62.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1984,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 200,
+      "filename" : "flurrie 63.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2016,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 260,
+      "filename" : "flurrie 64.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2048,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "flurrie 65.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2080,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 240,
+      "filename" : "flurrie 66.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2112,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 67.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2144,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 68.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2176,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 69.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2208,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 70.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2240,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 71.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2272,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "flurrie 72.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2304,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "flurrie 73.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2336,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "flurrie 74.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2368,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "flurrie 75.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2400,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "flurrie 76.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2432,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 77.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2464,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 78.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2496,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 79.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2528,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 80.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2560,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 81.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2592,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 70,
+      "filename" : "flurrie 82.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 2624,
+        "y" : 0
+      }
     }
   ],
   "meta" : {
@@ -664,13 +924,43 @@
         "from" : 55,
         "name" : "alert",
         "to" : 56
+      },
+      {
+        "direction" : "forward",
+        "from" : 57,
+        "name" : "fly",
+        "to" : 60
+      },
+      {
+        "direction" : "forward",
+        "from" : 61,
+        "name" : "special",
+        "to" : 66
+      },
+      {
+        "direction" : "forward",
+        "from" : 67,
+        "name" : "dance",
+        "to" : 72
+      },
+      {
+        "direction" : "forward",
+        "from" : 73,
+        "name" : "wave",
+        "to" : 76
+      },
+      {
+        "direction" : "forward",
+        "from" : 77,
+        "name" : "run",
+        "to" : 82
       }
     ],
     "image" : "sheet.png",
     "scale" : "1",
     "size" : {
       "h" : 32,
-      "w" : 1824
+      "w" : 2656
     }
   }
 }

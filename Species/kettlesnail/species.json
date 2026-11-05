@@ -1,0 +1,13 @@
+{
+  "description" : "A snail living in an old copper kettle. It puffs steam when it's thinking.",
+  "element" : "tea",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.59999999999999998,
+  "name" : "Kettlesnail",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "steam",
+  "walkSpeed" : 22
+}

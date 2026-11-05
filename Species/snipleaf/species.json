@@ -1,0 +1,13 @@
+{
+  "description" : "A leafcutter ant carrying a leaf ten times its size. Uses it as a blanket at night.",
+  "element" : "colony",
+  "family" : "insect",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Snipleaf",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 75
+}

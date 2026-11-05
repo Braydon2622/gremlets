@@ -1,0 +1,13 @@
+{
+  "description" : "A peacock spider. It unfurls a rainbow fan and dances for anyone who'll watch.",
+  "element" : "display",
+  "family" : "insect",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.5,
+  "name" : "Peacockle",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "notes",
+  "walkSpeed" : 85
+}

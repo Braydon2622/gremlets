@@ -1,21 +1,21 @@
 {
-  "name": "Rootling · Gremlet #40",
-  "description": "A root that wriggled up out of the garden to see the sun. Walks on its tendrils.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rootling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Boilerbit · Gremlet #40",
+  "description": "A brass boiler machine that puffs a little steam whenever it's thinking hard.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Boilerbit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/40.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rootling",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rootling",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=boilerbit",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=boilerbit",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Soil"
+      "value": "Steam"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Steam"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Rootling"
+      "value": "Boilerbit"
     }
   ]
 }

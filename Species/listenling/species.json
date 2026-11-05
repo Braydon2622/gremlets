@@ -1,0 +1,13 @@
+{
+  "description" : "A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong.",
+  "element" : "signal",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Listenling",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "notes",
+  "walkSpeed" : 50
+}

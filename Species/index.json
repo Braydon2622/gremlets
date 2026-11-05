@@ -199,10 +199,10 @@
       "name" : "Bubbit"
     },
     {
-      "element" : "water",
+      "element" : "light",
       "family" : "spirit",
-      "id" : "brooklet",
-      "name" : "Brooklet"
+      "id" : "glowmote",
+      "name" : "Glowmote"
     },
     {
       "element" : "earth",
@@ -211,94 +211,94 @@
       "name" : "Pebblin"
     },
     {
-      "element" : "lightning",
-      "family" : "spirit",
-      "id" : "sparkit",
-      "name" : "Sparkit"
+      "element" : "patina",
+      "family" : "guardian",
+      "id" : "mosswarden",
+      "name" : "Mosswarden"
     },
     {
-      "element" : "light",
-      "family" : "spirit",
-      "id" : "glowmote",
-      "name" : "Glowmote"
+      "element" : "enamel",
+      "family" : "guardian",
+      "id" : "sproutbolt",
+      "name" : "Sproutbolt"
     },
     {
-      "element" : "night",
-      "family" : "spirit",
-      "id" : "dusklet",
-      "name" : "Dusklet"
+      "element" : "sky patrol",
+      "family" : "guardian",
+      "id" : "orbwarden",
+      "name" : "Orbwarden"
     },
     {
-      "element" : "stone",
-      "family" : "spirit",
-      "id" : "bouldren",
-      "name" : "Bouldren"
+      "element" : "rust",
+      "family" : "guardian",
+      "id" : "trundle",
+      "name" : "Trundle"
     },
     {
-      "element" : "soil",
-      "family" : "spirit",
-      "id" : "rootling",
-      "name" : "Rootling"
+      "element" : "steam",
+      "family" : "guardian",
+      "id" : "boilerbit",
+      "name" : "Boilerbit"
     },
     {
-      "element" : "forest",
-      "family" : "spirit",
-      "id" : "fernwhisp",
-      "name" : "Fernwhisp"
+      "element" : "signal",
+      "family" : "guardian",
+      "id" : "listenling",
+      "name" : "Listenling"
     },
     {
-      "element" : "willow",
-      "family" : "spirit",
-      "id" : "weepling",
-      "name" : "Weepling"
+      "element" : "blossom",
+      "family" : "guardian",
+      "id" : "bloomcore",
+      "name" : "Bloomcore"
     },
     {
-      "element" : "crystal",
-      "family" : "spirit",
-      "id" : "geodle",
-      "name" : "Geodle"
+      "element" : "dormant",
+      "family" : "guardian",
+      "id" : "slumberbolt",
+      "name" : "Slumberbolt"
     },
     {
-      "element" : "sand",
-      "family" : "spirit",
-      "id" : "dunelet",
-      "name" : "Dunelet"
+      "element" : "breeze",
+      "family" : "guardian",
+      "id" : "rotorlet",
+      "name" : "Rotorlet"
     },
     {
-      "element" : "aurora",
-      "family" : "spirit",
-      "id" : "auralis",
-      "name" : "Auralis"
+      "element" : "outpost",
+      "family" : "guardian",
+      "id" : "stridelet",
+      "name" : "Stridelet"
     },
     {
-      "element" : "wind",
+      "element" : "ember",
       "family" : "spirit",
-      "id" : "gustling",
-      "name" : "Gustling"
+      "id" : "emberglow",
+      "name" : "Emberglow"
     },
     {
-      "element" : "prairie",
+      "element" : "frost",
       "family" : "spirit",
-      "id" : "tumblet",
-      "name" : "Tumblet"
+      "id" : "frostmote",
+      "name" : "Frostmote"
     },
     {
-      "element" : "seed",
+      "element" : "riverbank",
       "family" : "spirit",
-      "id" : "sproutle",
-      "name" : "Sproutle"
+      "id" : "skipstone",
+      "name" : "Skipstone"
     },
     {
-      "element" : "hearth",
+      "element" : "shore",
       "family" : "spirit",
-      "id" : "warmstone",
-      "name" : "Warmstone"
+      "id" : "seaglass",
+      "name" : "Seaglass"
     },
     {
-      "element" : "field",
+      "element" : "old forest",
       "family" : "spirit",
-      "id" : "mumbletuft",
-      "name" : "Mumbletuft"
+      "id" : "amberdrop",
+      "name" : "Amberdrop"
     }
   ]
 }

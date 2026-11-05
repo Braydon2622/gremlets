@@ -9,7 +9,7 @@ import { FX, Particles } from './effects.js';
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
 const MAX = 12;
-const FAMILIES = [['animal', 'Animals'], ['insect', 'Insects & Bugs'], ['dragon', 'Dragons'], ['dino', 'Dinosaurs'], ['mythic', 'Mythical Beasts'], ['spirit', 'Spirits']];
+const FAMILIES = [['animal', 'Animals'], ['insect', 'Insects & Bugs'], ['dragon', 'Dragons'], ['dino', 'Dinosaurs'], ['mythic', 'Mythical Beasts'], ['spirit', 'Spirits'], ['guardian', 'Guardians']];
 
 const canvas = document.getElementById('world');
 const ctx = canvas.getContext('2d');

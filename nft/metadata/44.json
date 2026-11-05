@@ -1,29 +1,29 @@
 {
-  "name": "Dunelet · Gremlet #44",
-  "description": "A small sand dune that wanders a few inches every night. Nobody ever sees it move.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dunelet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Rotorlet · Gremlet #44",
+  "description": "A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rotorlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/44.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dunelet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dunelet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rotorlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rotorlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Sand"
+      "value": "Breeze"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Pollen"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Dunelet"
+      "value": "Rotorlet"
     }
   ]
 }

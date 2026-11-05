@@ -1,0 +1,13 @@
+{
+  "description" : "A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass.",
+  "element" : "breeze",
+  "family" : "guardian",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Rotorlet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 70
+}

@@ -204,91 +204,93 @@ let roster: [Species] = [
         $0.bodyDraw = bubbleBody()
         $0.flies = true; $0.special = "bubbles"; $0.walkSpeed = 40
     },
-
-    // ---------------------------------------------------------------- Elementals, nature spirits and gentle monsters
-    species("brooklet", "Brooklet", "water", "spirit", main: 0x7CC8F0, "A little stream that got up and went for a walk. Its crest curls over when it laughs.") {
-        $0.rx = 7.5; $0.ry = 6.5; $0.eye = 0x14304A; $0.eyeStyle = .dot; $0.faceV = 0.15; $0.feet = .none; $0.limb = 0x5AB0E0
-        $0.bodyDraw = waveBody(0x7CC8F0, 0xFFFFFF)
-        $0.special = "bubbles"; $0.walkSpeed = 75
+    species("glowmote", "Glowmote", "light", "spirit", main: 0xFFF6DC, "A mote of evening light that forgot to go home with the sunset.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x5A4A20; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xFFC8A0
+        $0.bodyDraw = lightBody(0xFFF6DC, 0xFFE08A)
+        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 55
     },
     species("pebblin", "Pebblin", "earth", "spirit", main: 0xB8B4AC, "A stack of river stones that balanced itself one day and has been very careful ever since.") {
         $0.rx = 8; $0.ry = 8; $0.eye = 0x2A2620; $0.eyeStyle = .dot; $0.faceV = -0.62; $0.eyeGap = 0.3; $0.feet = .none; $0.noArms = true; $0.cheeks = false
         $0.bodyDraw = cairnBody(0xB8B4AC, 0xA4AEB4, 0x7CC46A)
         $0.special = "sparkle"; $0.walkSpeed = 35; $0.jumpPower = 0.8
     },
-    species("sparkit", "Sparkit", "lightning", "spirit", main: 0xDCEEFF, "A ball of static from a summer thunderstorm. Your hair stands up when it's near.") {
-        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x1A2A4A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xB8A8FF
-        $0.bodyDraw = staticBody(0xDCEEFF, 0x8A7AFF)
-        $0.flies = true; $0.special = "sparkle"; $0.walkSpeed = 90
+
+    // ---------------------------------------------------------------- Guardians: old machines that nature reclaimed
+    species("mosswarden", "Mosswarden", "patina", "guardian", main: 0x8FBFB0, "An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now.") {
+        $0.rx = 7.5; $0.ry = 7; $0.eye = 0x2A6A8A; $0.eyeStyle = .cyclops; $0.faceV = 0.05; $0.limb = 0x6E9A8E; $0.restMouth = Mouth.none
+        $0.bodyDraw = cogwardenBody(0x8FBFB0, 0x7CC46A, 0xFF9EC4)
+        $0.special = "petals"; $0.walkSpeed = 40; $0.jumpPower = 0.8
     },
-    species("glowmote", "Glowmote", "light", "spirit", main: 0xFFF6DC, "A mote of evening light that forgot to go home with the sunset.") {
-        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x5A4A20; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xFFC8A0
-        $0.bodyDraw = lightBody(0xFFF6DC, 0xFFE08A)
+    species("sproutbolt", "Sproutbolt", "enamel", "guardian", main: 0xEDE6D6, "A little machine whose antenna fell off. A sapling grew in the socket and it's been gardening ever since.") {
+        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x1A3A4A; $0.eyeStyle = .glow(0x7FD8FF); $0.limb = 0xC8BFAE; $0.restMouth = Mouth.none
+        $0.bodyDraw = rivetBody(0xEDE6D6, 0xC8D8E0, 0x7CC46A)
+        $0.special = "leaves"; $0.walkSpeed = 60
+    },
+    species("orbwarden", "Orbwarden", "sky patrol", "guardian", main: 0xC8D2DA, "A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it.") {
+        $0.rx = 6.2; $0.ry = 6.2; $0.eye = 0x2A6A8A; $0.eyeStyle = .cyclops; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.restMouth = Mouth.none
+        $0.bodyDraw = orbDroneBody(0xC8D2DA, 0xE8A85A, 0x6FAF4A)
+        $0.flies = true; $0.special = "sparkle"; $0.walkSpeed = 50
+    },
+    species("trundle", "Trundle", "rust", "guardian", main: 0xD9A27A, "A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall.") {
+        $0.rx = 7; $0.ry = 6.5; $0.eye = 0x3A2A10; $0.eyeStyle = .glow(0xFFE08A); $0.feet = .none; $0.limb = 0xB88460; $0.restMouth = Mouth.none
+        $0.bodyDraw = treadBody(0xD9A27A, 0x5A5A62, 0xC98A4A)
+        $0.special = "stomp"; $0.walkSpeed = 55
+    },
+    species("boilerbit", "Boilerbit", "steam", "guardian", main: 0xE0B866, "A brass boiler machine that puffs a little steam whenever it's thinking hard.") {
+        $0.rx = 6.8; $0.ry = 7; $0.eye = 0x1A3A4A; $0.eyeStyle = .glow(0x7FD8FF); $0.faceV = -0.35; $0.limb = 0xA8763A; $0.restMouth = Mouth.none
+        $0.bodyDraw = boilerBody(0xE0B866, 0xA8763A)
+        $0.special = "steam"; $0.walkSpeed = 45
+    },
+    species("listenling", "Listenling", "signal", "guardian", main: 0xB8C8D0, "A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong.") {
+        $0.rx = 6.8; $0.ry = 6.5; $0.eye = 0x1A3A2A; $0.eyeStyle = .glow(0x9AF0B0); $0.limb = 0x9AAAB2; $0.restMouth = Mouth.none
+        $0.bodyDraw = dishBody(0xB8C8D0, 0x7CC46A)
+        $0.special = "notes"; $0.walkSpeed = 50
+    },
+    species("bloomcore", "Bloomcore", "blossom", "guardian", main: 0xA8B8C8, "Its chest panel fell open years ago and a flower grew where its core used to be.") {
+        $0.rx = 7; $0.ry = 7; $0.eye = 0x3A1A2A; $0.eyeStyle = .glow(0xFFB0D0); $0.faceV = -0.45; $0.limb = 0x8A9AAA; $0.restMouth = Mouth.none
+        $0.bodyDraw = bloomChestBody(0xA8B8C8, 0xFF9EC4, 0x6FAF4A)
+        $0.special = "petals"; $0.walkSpeed = 45
+    },
+    species("slumberbolt", "Slumberbolt", "dormant", "guardian", main: 0x9AA8B0, "An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock.") {
+        $0.rx = 8.5; $0.ry = 6.2; $0.eye = 0x1A3A2A; $0.eyeStyle = .glow(0x9AF0B0); $0.restEyes = .sleepy; $0.faceV = 0.3; $0.noArms = true; $0.limb = 0x7A8890; $0.restMouth = Mouth.none
+        $0.bodyDraw = shellBotBody(0x9AA8B0, 0x7CC46A)
+        $0.special = "sparkle"; $0.walkSpeed = 30; $0.sleepiness = 2.0
+    },
+    species("rotorlet", "Rotorlet", "breeze", "guardian", main: 0xF2D6A0, "A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x1A3A4A; $0.eyeStyle = .glow(0x7FD8FF); $0.limb = 0xD2B680; $0.restMouth = Mouth.none
+        $0.bodyDraw = rotorBody(0xF2D6A0, 0xD8E8F0)
+        $0.flies = true; $0.special = "leaves"; $0.walkSpeed = 70
+    },
+    species("stridelet", "Stridelet", "outpost", "guardian", main: 0xE8EEF2, "A round lookout machine on springy legs. It tiptoes around sleeping animals.") {
+        $0.rx = 6.2; $0.ry = 6.2; $0.eye = 0x2A6A8A; $0.eyeStyle = .cyclops; $0.feet = .none; $0.noArms = true; $0.faceV = -0.85; $0.restMouth = Mouth.none
+        $0.bodyDraw = walkerBody(0xE8EEF2, 0x8A96A2)
+        $0.special = "sparkle"; $0.walkSpeed = 75; $0.jumpPower = 1.4
+    },
+
+    // ---------------------------------------------------------------- More motes and stones
+    species("emberglow", "Emberglow", "ember", "spirit", main: 0xFFD0A0, "The last warm glow from a campfire, still wandering around after everyone went to bed.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x5A2A10; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xFF9A7A
+        $0.bodyDraw = lightBody(0xFFD0A0, 0xFF9A5A)
         $0.flies = true; $0.special = "glow"; $0.walkSpeed = 55
     },
-    species("dusklet", "Dusklet", "night", "spirit", main: 0x4A4A8C, "A scrap of night sky with a few stars still in it. Gets braver after sunset.") {
-        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x14142A; $0.eyeStyle = .light; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0x8A7AD0
-        $0.bodyDraw = nightBody(0x4A4A8C)
-        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 50; $0.sleepiness = 0.6
+    species("frostmote", "Frostmote", "frost", "spirit", main: 0xEAF6FF, "A mote of winter light that paints frost on windows when nobody is looking.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x1A2A4A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xB8D0FF
+        $0.bodyDraw = lightBody(0xEAF6FF, 0xA8D8FF)
+        $0.flies = true; $0.special = "snow"; $0.walkSpeed = 55
     },
-    species("bouldren", "Bouldren", "stone", "spirit", main: 0xA8AEA8, "A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years.") {
-        $0.rx = 9.5; $0.ry = 7.2; $0.eye = 0x2A3A20; $0.eyeStyle = .glow(0xB8F07A); $0.limb = 0x8A928A; $0.feet = .big; $0.cheeks = false
-        $0.bodyDraw = boulderBody(0xA8AEA8, 0x7CC46A)
-        $0.special = "stomp"; $0.walkSpeed = 30; $0.jumpPower = 0.7; $0.sleepiness = 1.6
+    species("skipstone", "Skipstone", "riverbank", "spirit", main: 0xA8B4BC, "A perfectly flat river stone. It can skip seven times, and it will tell you about it.") {
+        $0.rx = 8.5; $0.ry = 5; $0.eye = 0x1E2A30; $0.eyeStyle = .dot; $0.faceV = 0.35; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = skipStoneBody(0xA8B4BC)
+        $0.special = "bubbles"; $0.walkSpeed = 45; $0.jumpPower = 1.5
     },
-    species("rootling", "Rootling", "soil", "spirit", main: 0xD8B48A, "A root that wriggled up out of the garden to see the sun. Walks on its tendrils.") {
-        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x2A1A0A; $0.eyeStyle = .dot; $0.feet = .none; $0.limb = 0xC09A70
-        $0.bodyDraw = rootBody(0xD8B48A, 0x7CC46A)
-        $0.special = "leaves"; $0.walkSpeed = 50
+    species("seaglass", "Seaglass", "shore", "spirit", main: 0x9ADCC4, "A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun.") {
+        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x14302A; $0.eyeStyle = .dot; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = seaglassBody(0x9ADCC4)
+        $0.special = "sparkle"; $0.walkSpeed = 45
     },
-    species("fernwhisp", "Fernwhisp", "forest", "spirit", main: 0x7CC46A, "A curled-up fern frond that unrolls a little more every morning.") {
-        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x14280F; $0.eyeStyle = .dot; $0.faceV = -0.25; $0.eyeGap = 0.3; $0.feet = .none; $0.noArms = true; $0.cheeks = false
-        $0.bodyDraw = fernBody(0x7CC46A)
-        $0.special = "leaves"; $0.walkSpeed = 45
-    },
-    species("weepling", "Weepling", "willow", "spirit", main: 0x7AA860, "A shy willow spirit that peeks out from behind its long green fronds.") {
-        $0.rx = 8; $0.ry = 6.5; $0.eye = 0x14200F; $0.eyeStyle = .dot; $0.faceV = -0.1; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = willowBody(0x5E8A4C, 0x8CC46E)
-        $0.special = "leaves"; $0.walkSpeed = 35; $0.sleepiness = 1.4
-    },
-    species("geodle", "Geodle", "crystal", "spirit", main: 0x9A8A7A, "A plain-looking stone that's full of amethyst inside. Opens up only for friends.") {
-        $0.rx = 8; $0.ry = 7.5; $0.eye = 0x2A1A40; $0.eyeStyle = .dot; $0.limb = 0x7A6A5A; $0.cheek = 0xF2A8E0
-        $0.bodyDraw = geodeBody(0x9A8A7A, 0xC8A8F0)
-        $0.special = "sparkle"; $0.walkSpeed = 40
-    },
-    species("dunelet", "Dunelet", "sand", "spirit", main: 0xEACB8E, "A small sand dune that wanders a few inches every night. Nobody ever sees it move.") {
-        $0.rx = 10; $0.ry = 5.5; $0.eye = 0x3A2A10; $0.eyeStyle = .dot; $0.faceV = 0.3; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = duneBody(0xEACB8E)
-        $0.special = "pollen"; $0.walkSpeed = 25; $0.jumpPower = 0.6
-    },
-    species("auralis", "Auralis", "aurora", "spirit", main: 0x8CEAB8, "A ribbon of northern lights that drifted south. It ripples when it's thinking.") {
-        $0.rx = 8.5; $0.ry = 5.5; $0.eye = 0x14303A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = auroraBody(0x8CEAB8, 0x7CD8E8, 0xC8A8F0)
-        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 50
-    },
-    species("gustling", "Gustling", "wind", "spirit", main: 0xE6F6EE, "A little whirlwind that carries its favourite leaves everywhere it goes.") {
-        $0.rx = 5.2; $0.ry = 5.2; $0.eye = 0x14302A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = leafSwirlBody(0xE6F6EE, 0x8FCB6A, 0xF2A65A)
-        $0.flies = true; $0.special = "leaves"; $0.walkSpeed = 85
-    },
-    species("tumblet", "Tumblet", "prairie", "spirit", main: 0xE8D6A8, "A tumbleweed that rolled in from somewhere far away. It's not in a hurry anymore.") {
-        $0.rx = 7; $0.ry = 7; $0.eye = 0x3A2A10; $0.eyeStyle = .dot; $0.feet = .none; $0.noArms = true; $0.cheeks = false
-        $0.bodyDraw = tumbleBody(0xE8D6A8, 0xA8865A)
-        $0.special = "seeds"; $0.walkSpeed = 70
-    },
-    species("sproutle", "Sproutle", "seed", "spirit", main: 0xD8C48A, "A bean seed that just split open. It's very proud of its first two leaves.") {
-        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x2A2010; $0.eyeStyle = .dot; $0.limb = 0xB8A46A
-        $0.bodyDraw = sproutBody(0xD8C48A, 0x8FCB6A)
-        $0.special = "leaves"; $0.walkSpeed = 55
-    },
-    species("warmstone", "Warmstone", "hearth", "spirit", main: 0xB8A898, "A river stone that sat in the sun so long it started glowing from the inside.") {
-        $0.rx = 7.5; $0.ry = 6; $0.eye = 0x3A2010; $0.eyeStyle = .dot; $0.faceV = 0.05; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = warmStoneBody(0xB8A898, 0xFFB46A)
-        $0.special = "steam"; $0.walkSpeed = 30; $0.sleepiness = 1.5
-    },
-    species("mumbletuft", "Mumbletuft", "field", "spirit", main: 0xE8C878, "A haystack that grumbles to itself in the field. It's actually very friendly.") {
-        $0.rx = 8.5; $0.ry = 7; $0.eye = 0x2A1A0A; $0.eyeStyle = .dot; $0.faceV = -0.35; $0.feet = .none; $0.noArms = true; $0.cheeks = false
-        $0.bodyDraw = haystackBody(0xE8C878)
-        $0.special = "seeds"; $0.walkSpeed = 40
+    species("amberdrop", "Amberdrop", "old forest", "spirit", main: 0xF2A94A, "A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does.") {
+        $0.rx = 6.2; $0.ry = 6.5; $0.eye = 0x3A1A08; $0.eyeStyle = .dot; $0.glossy = true; $0.limb = 0xD08A30
+        $0.bodyDraw = amberBody(0xF2A94A, 0x6A8A3A)
+        $0.special = "glow"; $0.walkSpeed = 50
     },
 ]

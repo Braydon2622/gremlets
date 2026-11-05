@@ -1,0 +1,13 @@
+{
+  "description" : "An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now.",
+  "element" : "patina",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.80000000000000004,
+  "name" : "Mosswarden",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "petals",
+  "walkSpeed" : 40
+}

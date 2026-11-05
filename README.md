@@ -1,8 +1,8 @@
 # Gremlets
 
 Fifty one-of-a-kind pixel creatures that live on your Mac desktop: gentle animals, a few bugs, a tiny
-dragon, a couple of friendly mythical beasts, and gentle nature spirits and elementals (a stream that went for a
-walk, a stack of river stones, a scrap of night sky, a moss-covered boulder that wakes up once a century). They walk along the Dock line, hop and fly up onto
+dragon, a couple of friendly mythical beasts, gentle nature spirits (a stack of river stones, a lake moss ball, a
+mote of evening light) and old guardian machines that nature reclaimed (one has a meadow growing on its head). They walk along the Dock line, hop and fly up onto
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
 
@@ -12,8 +12,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 
 | Family | Count | Some of them |
 |---|---|---|
-| Spirits | 28 | Brooklet the walking stream, Pebblin the stone stack, Weepling the willow spirit, Auralis the aurora, Puffcloud, Sakurin the cherry blossom |
+| Spirits | 18 | Glowmote, Pebblin the stone stack, Marimoss the lake moss ball, Sakurin the cherry blossom, Puffcloud, Seaglass |
 | Animals | 15 | Flurrie the frost bunny, Dandelet the dandelion lion cub, Capyzen the hot-spring capybara, Calicat the calico kitten |
+| Guardians | 10 | Mosswarden with a meadow on its head, Sproutbolt the gardening machine, Slumberbolt the century-long napper, Rotorlet the scout |
 | Insects & Bugs | 4 | Silkwing the butterfly, Zipwing the dragonfly, Prismite the jewel beetle, Snipleaf the leafcutter ant |
 | Mythical | 2 | Kindlet the candle spirit, Inklet the baby kraken |
 | Dragons | 1 | Mintwyrm the jasmine dragon |
@@ -24,7 +25,7 @@ Every creature has 20 animations (83 frames): idle, look-around, walk, run, crou
 a squash landing, dizzy, a big yawn, sleep with a snot bubble, a startled wake-up, a happy jump, petting bliss,
 dance, wave, dangling when dragged, an "!" alert, and its signature move.
 
-![Brooklet's key poses](Species/brooklet/preview.png)
+![Mosswarden's key poses](Species/mosswarden/preview.png)
 
 All creatures, names and art are original. The design approach borrows *principles* from classic
 creature-collecting games and gentle folk-tale nature spirits (a readable silhouette, one strong
@@ -61,7 +62,7 @@ Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools).
 
 ```bash
 swift run Gremlets                                      # dev run
-swift run Gremlets --spawn flurrie,kindlet,brooklet       # pick who shows up
+swift run Gremlets --spawn flurrie,kindlet,mosswarden       # pick who shows up
 scripts/bundle.sh && open build/Gremlets.app            # real app bundle (needed for Launch at Login)
 swift test                                              # engine tests, including a 10-minute simulated soak test
 swift run spritegen                                     # regenerate all 50 sprite sheets

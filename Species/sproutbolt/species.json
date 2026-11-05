@@ -1,0 +1,13 @@
+{
+  "description" : "A little machine whose antenna fell off. A sapling grew in the socket and it's been gardening ever since.",
+  "element" : "enamel",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Sproutbolt",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 60
+}

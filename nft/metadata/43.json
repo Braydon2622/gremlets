@@ -1,17 +1,17 @@
 {
-  "name": "Geodle · Gremlet #43",
-  "description": "A plain-looking stone that's full of amethyst inside. Opens up only for friends.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Geodle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Slumberbolt · Gremlet #43",
+  "description": "An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Slumberbolt in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/43.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=geodle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=geodle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=slumberbolt",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=slumberbolt",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Crystal"
+      "value": "Dormant"
     },
     {
       "trait_type": "Signature Move",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Geodle"
+      "value": "Slumberbolt"
     }
   ]
 }

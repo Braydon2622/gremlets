@@ -24,7 +24,7 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 14 | **Calicat** | hearth | sparkle |  | A calico kitten that naps in every sunbeam and chases every dust mote. |
 | 15 | **Shibun** | village | bark |  | A shiba pup with a curly tail and a smile that never quite turns off. |
 
-## Spirits (28)
+## Spirits (18)
 
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
@@ -39,23 +39,28 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 24 | **Puffcloud** | sky | rain | ✓ | A little cloud that came down to see what everyone was doing. Drizzles when it's moved. |
 | 25 | **Rainlet** | rain | rain |  | The first raindrop of a storm, very proud of having arrived first. |
 | 26 | **Bubbit** | soap | bubbles | ✓ | A soap bubble that refused to pop. It's very careful around anything pointy. |
-| 27 | **Brooklet** | water | bubbles |  | A little stream that got up and went for a walk. Its crest curls over when it laughs. |
+| 27 | **Glowmote** | light | glow | ✓ | A mote of evening light that forgot to go home with the sunset. |
 | 28 | **Pebblin** | earth | sparkle |  | A stack of river stones that balanced itself one day and has been very careful ever since. |
-| 29 | **Sparkit** | lightning | sparkle | ✓ | A ball of static from a summer thunderstorm. Your hair stands up when it's near. |
-| 30 | **Glowmote** | light | glow | ✓ | A mote of evening light that forgot to go home with the sunset. |
-| 31 | **Dusklet** | night | glow | ✓ | A scrap of night sky with a few stars still in it. Gets braver after sunset. |
-| 32 | **Bouldren** | stone | stomp |  | A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years. |
-| 33 | **Rootling** | soil | leaves |  | A root that wriggled up out of the garden to see the sun. Walks on its tendrils. |
-| 34 | **Fernwhisp** | forest | leaves |  | A curled-up fern frond that unrolls a little more every morning. |
-| 35 | **Weepling** | willow | leaves |  | A shy willow spirit that peeks out from behind its long green fronds. |
-| 36 | **Geodle** | crystal | sparkle |  | A plain-looking stone that's full of amethyst inside. Opens up only for friends. |
-| 37 | **Dunelet** | sand | pollen |  | A small sand dune that wanders a few inches every night. Nobody ever sees it move. |
-| 38 | **Auralis** | aurora | glow | ✓ | A ribbon of northern lights that drifted south. It ripples when it's thinking. |
-| 39 | **Gustling** | wind | leaves | ✓ | A little whirlwind that carries its favourite leaves everywhere it goes. |
-| 40 | **Tumblet** | prairie | seeds |  | A tumbleweed that rolled in from somewhere far away. It's not in a hurry anymore. |
-| 41 | **Sproutle** | seed | leaves |  | A bean seed that just split open. It's very proud of its first two leaves. |
-| 42 | **Warmstone** | hearth | steam |  | A river stone that sat in the sun so long it started glowing from the inside. |
-| 43 | **Mumbletuft** | field | seeds |  | A haystack that grumbles to itself in the field. It's actually very friendly. |
+| 29 | **Emberglow** | ember | glow | ✓ | The last warm glow from a campfire, still wandering around after everyone went to bed. |
+| 30 | **Frostmote** | frost | snow | ✓ | A mote of winter light that paints frost on windows when nobody is looking. |
+| 31 | **Skipstone** | riverbank | bubbles |  | A perfectly flat river stone. It can skip seven times, and it will tell you about it. |
+| 32 | **Seaglass** | shore | sparkle |  | A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun. |
+| 33 | **Amberdrop** | old forest | glow |  | A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does. |
+
+## Guardians (10)
+
+| # | Gremlet | Element | Signature move | Flies | |
+|---|---|---|---|---|---|
+| 34 | **Mosswarden** | patina | petals |  | An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now. |
+| 35 | **Sproutbolt** | enamel | leaves |  | A little machine whose antenna fell off. A sapling grew in the socket and it's been gardening ever since. |
+| 36 | **Orbwarden** | sky patrol | sparkle | ✓ | A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it. |
+| 37 | **Trundle** | rust | stomp |  | A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall. |
+| 38 | **Boilerbit** | steam | steam |  | A brass boiler machine that puffs a little steam whenever it's thinking hard. |
+| 39 | **Listenling** | signal | notes |  | A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong. |
+| 40 | **Bloomcore** | blossom | petals |  | Its chest panel fell open years ago and a flower grew where its core used to be. |
+| 41 | **Slumberbolt** | dormant | sparkle |  | An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock. |
+| 42 | **Rotorlet** | breeze | leaves | ✓ | A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass. |
+| 43 | **Stridelet** | outpost | sparkle |  | A round lookout machine on springy legs. It tiptoes around sleeping animals. |
 
 ## Mythical Beasts (2)
 

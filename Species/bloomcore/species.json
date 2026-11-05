@@ -1,0 +1,13 @@
+{
+  "description" : "Its chest panel fell open years ago and a flower grew where its core used to be.",
+  "element" : "blossom",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Bloomcore",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "petals",
+  "walkSpeed" : 45
+}

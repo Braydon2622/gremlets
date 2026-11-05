@@ -1,9 +1,9 @@
 {
-  "name": "Brooklet · Gremlet #34",
-  "description": "A little stream that got up and went for a walk. Its crest curls over when it laughs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Brooklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Glowmote · Gremlet #34",
+  "description": "A mote of evening light that forgot to go home with the sunset.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Glowmote in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/34.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brooklet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brooklet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=glowmote",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=glowmote",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Water"
+      "value": "Light"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Brooklet"
+      "value": "Glowmote"
     }
   ]
 }

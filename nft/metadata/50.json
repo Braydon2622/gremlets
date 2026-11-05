@@ -1,9 +1,9 @@
 {
-  "name": "Mumbletuft · Gremlet #50",
-  "description": "A haystack that grumbles to itself in the field. It's actually very friendly.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mumbletuft in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Amberdrop · Gremlet #50",
+  "description": "A drop of ancient tree resin with a tiny leaf inside. It remembers forests nobody else does.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Amberdrop in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/50.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mumbletuft",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mumbletuft",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=amberdrop",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=amberdrop",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Field"
+      "value": "Old Forest"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Seeds"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Mumbletuft"
+      "value": "Amberdrop"
     }
   ]
 }

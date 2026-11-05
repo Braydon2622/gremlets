@@ -1,9 +1,9 @@
 {
-  "name": "Tumblet · Gremlet #47",
-  "description": "A tumbleweed that rolled in from somewhere far away. It's not in a hurry anymore.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Tumblet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Frostmote · Gremlet #47",
+  "description": "A mote of winter light that paints frost on windows when nobody is looking.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Frostmote in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/47.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tumblet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tumblet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Prairie"
+      "value": "Frost"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Seeds"
+      "value": "Snow"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Tumblet"
+      "value": "Frostmote"
     }
   ]
 }

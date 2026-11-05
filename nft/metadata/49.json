@@ -1,9 +1,9 @@
 {
-  "name": "Warmstone · Gremlet #49",
-  "description": "A river stone that sat in the sun so long it started glowing from the inside.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Warmstone in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Seaglass · Gremlet #49",
+  "description": "A piece of sea glass worn smooth by a hundred tides. Glows faintly green in the sun.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Seaglass in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/49.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=warmstone",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=warmstone",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seaglass",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seaglass",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Hearth"
+      "value": "Shore"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Steam"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Warmstone"
+      "value": "Seaglass"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "description" : "A round lookout machine on springy legs. It tiptoes around sleeping animals.",
+  "element" : "outpost",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.3999999999999999,
+  "name" : "Stridelet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 75
+}

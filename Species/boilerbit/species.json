@@ -1,0 +1,13 @@
+{
+  "description" : "A brass boiler machine that puffs a little steam whenever it's thinking hard.",
+  "element" : "steam",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Boilerbit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "steam",
+  "walkSpeed" : 45
+}

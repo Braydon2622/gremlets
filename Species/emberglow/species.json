@@ -1,0 +1,13 @@
+{
+  "description" : "The last warm glow from a campfire, still wandering around after everyone went to bed.",
+  "element" : "ember",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Emberglow",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 55
+}

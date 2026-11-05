@@ -1,17 +1,17 @@
 {
-  "name": "Bouldren · Gremlet #39",
-  "description": "A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bouldren in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Trundle · Gremlet #39",
+  "description": "A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Trundle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/39.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bouldren",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bouldren",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=trundle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=trundle",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Stone"
+      "value": "Rust"
     },
     {
       "trait_type": "Signature Move",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Bouldren"
+      "value": "Trundle"
     }
   ]
 }

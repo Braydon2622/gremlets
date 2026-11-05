@@ -1,21 +1,21 @@
 {
-  "name": "Dusklet · Gremlet #38",
-  "description": "A scrap of night sky with a few stars still in it. Gets braver after sunset.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dusklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Orbwarden · Gremlet #38",
+  "description": "A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Orbwarden in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/38.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dusklet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dusklet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=orbwarden",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=orbwarden",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Spirit"
+      "value": "Guardian"
     },
     {
       "trait_type": "Element",
-      "value": "Night"
+      "value": "Sky Patrol"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Glow"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Dusklet"
+      "value": "Orbwarden"
     }
   ]
 }

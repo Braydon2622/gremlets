@@ -1,9 +1,9 @@
 {
-  "name": "Sproutle · Gremlet #48",
-  "description": "A bean seed that just split open. It's very proud of its first two leaves.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sproutle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Skipstone · Gremlet #48",
+  "description": "A perfectly flat river stone. It can skip seven times, and it will tell you about it.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Skipstone in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sproutle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sproutle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=skipstone",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=skipstone",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Seed"
+      "value": "Riverbank"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Sproutle"
+      "value": "Skipstone"
     }
   ]
 }

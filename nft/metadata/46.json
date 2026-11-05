@@ -1,9 +1,9 @@
 {
-  "name": "Gustling · Gremlet #46",
-  "description": "A little whirlwind that carries its favourite leaves everywhere it goes.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gustling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Emberglow · Gremlet #46",
+  "description": "The last warm glow from a campfire, still wandering around after everyone went to bed.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Emberglow in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/46.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gustling",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gustling",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=emberglow",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Wind"
+      "value": "Ember"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Gustling"
+      "value": "Emberglow"
     }
   ]
 }

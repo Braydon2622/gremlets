@@ -1,0 +1,13 @@
+{
+  "description" : "An armoured machine that curled up for a nap a century ago. Moss thinks it's a rock.",
+  "element" : "dormant",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Slumberbolt",
+  "scale" : 3,
+  "sleepiness" : 2,
+  "special" : "sparkle",
+  "walkSpeed" : 30
+}

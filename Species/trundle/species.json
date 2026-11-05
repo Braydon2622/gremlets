@@ -1,0 +1,13 @@
+{
+  "description" : "A tread-wheeled machine with a mushroom growing on its head. It drives very carefully so the mushroom doesn't fall.",
+  "element" : "rust",
+  "family" : "guardian",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Trundle",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "stomp",
+  "walkSpeed" : 55
+}

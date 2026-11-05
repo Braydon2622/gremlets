@@ -142,7 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sub = NSMenu()
         // Group the 50 species by family so the menu stays browsable.
         let families: [(String, String)] = [("animal", "Animals"), ("insect", "Insects & Bugs"), ("dragon", "Dragons"),
-                                            ("dino", "Dinosaurs"), ("mythic", "Mythical Beasts"), ("spirit", "Spirits")]
+                                            ("dino", "Dinosaurs"), ("mythic", "Mythical Beasts"), ("spirit", "Spirits"), ("guardian", "Guardians")]
         let known = Set(families.map(\.0))
         for (key, title) in families + [("", "Custom")] {
             let members = species.values

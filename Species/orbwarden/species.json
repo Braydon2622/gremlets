@@ -1,0 +1,13 @@
+{
+  "description" : "A round patrol drone that drifts the same slow loop every day, trailing the vines that grew on it.",
+  "element" : "sky patrol",
+  "family" : "guardian",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Orbwarden",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 50
+}

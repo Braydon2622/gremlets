@@ -1,0 +1,13 @@
+{
+  "description" : "A mote of winter light that paints frost on windows when nobody is looking.",
+  "element" : "frost",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Frostmote",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "snow",
+  "walkSpeed" : 55
+}

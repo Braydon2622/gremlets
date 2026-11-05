@@ -12,6 +12,7 @@ struct Brain {
         var choices: [Choice] = []
 
         choices.append(Choice(name: "idle", weight: 1.0) {
+            c.idleVariant = world.rng.chance(0.35) ? "look" : "idle"
             c.set(.idle, duration: world.rng.range(1.2, 3.5))
         })
 
@@ -34,8 +35,7 @@ struct Brain {
 
         if c.energy < 0.55 {
             choices.append(Choice(name: "sleep", weight: (0.55 - c.energy) * 6 * c.species.sleepiness) {
-                c.set(.sleep, duration: world.rng.range(10, 25))
-                world.emit(.fellAsleep(c.id))
+                c.set(.yawn, duration: c.animationLength(for: .yawn))
             })
         }
 
@@ -43,7 +43,8 @@ struct Brain {
             choices.append(Choice(name: "chase", weight: 0.45 * c.energy) {
                 c.targetX = cur.x
                 c.facing = cur.x > c.pos.x ? 1 : -1
-                c.set(.chase, duration: 6)
+                c.set(.alert, duration: max(0.3, c.animationLength(for: .alert)))
+                world.emit(.alert(c.id))
             })
         }
 

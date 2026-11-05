@@ -5,6 +5,8 @@ public enum WorldEvent: Equatable, Sendable {
     case fellAsleep(Int)
     case wokeUp(Int)
     case landed(Int, impact: Double)
+    case dizzy(Int)
+    case alert(Int)
 }
 
 /// The simulation: creatures, the surfaces they live on, physics and input.
@@ -16,6 +18,8 @@ public final class World {
     public var maxJumpHeight: Double = 320
     public var maxJumpDistance: Double = 420
     public var energyDrainPerSecond: Double = 0.006
+    /// Landing faster than this (pt/s) leaves a creature seeing stars.
+    public var dizzyImpact: Double = 1700
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
@@ -83,28 +87,34 @@ public final class World {
     /// Suggested simulation rate. Lets the platform layer throttle the loop to save CPU when nothing moves.
     public var desiredTickRate: Double {
         if creatures.contains(where: { $0.activity == .airborne || $0.activity == .dragged }) { return 60 }
-        if creatures.contains(where: { [.walk, .chase, .crouch].contains($0.activity) }) { return 30 }
-        return 8
+        if creatures.contains(where: { ![.idle, .sleep].contains($0.activity) }) { return 30 }
+        return 12
     }
 
     // MARK: Input
 
     public func poke(_ c: Creature) {
-        if c.activity == .sleep { emit(.wokeUp(c.id)) }
         guard c.isGrounded else { return }
+        if c.activity == .sleep || c.activity == .yawn {
+            // Startled awake: jolt, then rub eyes. A bit grumpy, so no energy bonus.
+            c.set(.wake, duration: c.animationLength(for: .wake))
+            emit(.wokeUp(c.id))
+            return
+        }
         c.energy = min(1, c.energy + 0.1)
-        c.set(.react, duration: 0.9)
+        c.set(.react, duration: c.animationLength(for: .react) + 0.15)
         emit(.poked(c.id))
     }
 
     /// Call with cursor movement over a creature; enough rubbing counts as petting.
     public func pet(_ c: Creature, distance: Double) {
-        guard c.isGrounded, c.activity != .react else { return }
+        guard c.isGrounded, ![.react, .wake, .dizzy].contains(c.activity) else { return }
         c.petAmount += distance
-        if c.petAmount > 260 {
+        if c.petAmount > 220 {
             c.petAmount = 0
             if c.activity == .sleep { return } // let sleeping gremlets lie, petting doesn't wake them
-            c.set(.react, duration: 1.2)
+            c.energy = min(1, c.energy + 0.05)
+            c.set(.pet, duration: 1.4)
             emit(.petted(c.id))
         }
     }
@@ -170,7 +180,7 @@ public final class World {
         guard let support = supportingSurface(for: c) else {
             c.groundOwner = nil
             c.vel = Vec2(c.activity == .walk || c.activity == .chase ? c.facing * c.species.walkSpeed * 0.6 : 0, 0)
-            if c.activity == .sleep { emit(.wokeUp(c.id)) }
+            if c.activity == .sleep || c.activity == .yawn { emit(.wokeUp(c.id)) }
             c.set(.airborne)
             return
         }
@@ -190,8 +200,20 @@ public final class World {
                 c.set(.airborne)
                 return
             }
+        case .yawn:
+            if c.timer <= 0 {
+                c.set(.sleep, duration: rng.range(12, 28) * c.species.sleepiness.clamped(0.6, 1.6))
+                emit(.fellAsleep(c.id))
+            }
+            return
         case .sleep:
-            if c.timer <= 0 || c.energy >= 1 { emit(.wokeUp(c.id)); Brain.decide(c, in: self) }
+            if c.timer <= 0 || c.energy >= 1 {
+                c.set(.wake, duration: c.animationLength(for: .wake))
+                emit(.wokeUp(c.id))
+            }
+            return
+        case .alert:
+            if c.timer <= 0 { c.set(.chase, duration: 6) }
             return
         default:
             break
@@ -204,7 +226,7 @@ public final class World {
             if let cur = cursor, abs(cur.y - c.pos.y) < 260 { c.targetX = cur.x }
             if let tx = c.targetX {
                 if abs(tx - c.pos.x) < 14 {
-                    c.set(.react, duration: 0.8)
+                    c.set(.react, duration: c.animationLength(for: .react) + 0.15)
                     emit(.poked(c.id))
                     return
                 }
@@ -262,8 +284,13 @@ public final class World {
                 c.vel = .zero
                 c.groundOwner = s.ownerID
                 c.edgeDecisionMade = false
-                c.set(.land, duration: impact > 900 ? 0.32 : 0.14)
                 emit(.landed(c.id, impact: impact))
+                if impact > dizzyImpact {
+                    c.set(.dizzy, duration: 1.9)
+                    emit(.dizzy(c.id))
+                } else {
+                    c.set(.land, duration: impact > 900 ? max(0.3, c.animationLength(for: .land)) : 0.14)
+                }
                 return
             }
         }

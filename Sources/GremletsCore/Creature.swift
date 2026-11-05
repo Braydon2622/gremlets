@@ -8,7 +8,12 @@ public enum Activity: Equatable, Sendable {
     case airborne     // jumping, falling or thrown
     case land         // squash after landing
     case sleep
-    case react        // happy reaction to a click or petting
+    case react        // happy reaction to a click
+    case pet          // blissful wiggle while being petted
+    case yawn         // big stretch before falling asleep
+    case wake         // startled wake-up, then rubs its eyes
+    case dizzy        // seeing stars after a hard landing
+    case alert        // "!" before chasing the cursor
     case dragged
 }
 
@@ -37,6 +42,8 @@ public final class Creature {
     var petAmount: Double = 0
     var edgeDecisionMade = false
     var grabOffset: Vec2 = .zero
+    /// Idle has variants ("idle", "look") so standing around doesn't look looped.
+    var idleVariant = "idle"
 
     init(id: Int, species: SpeciesInfo, pos: Vec2) {
         self.id = id; self.species = species; self.pos = pos
@@ -48,17 +55,26 @@ public final class Creature {
     /// Name of the animation that matches the current activity.
     public var animationName: String {
         switch activity {
-        case .idle: return "idle"
+        case .idle: return idleVariant
         case .walk, .chase: return "walk"
-        case .crouch, .land: return "land"
-        case .airborne: return vel.y > 60 ? "jump" : "fall"
+        case .crouch: return "crouch"
+        case .land: return "land"
+        case .airborne: return vel.y > -600 ? "jump" : "fall" // only real drops get the panic face
         case .sleep: return "sleep"
         case .react: return "react"
+        case .pet: return "pet"
+        case .yawn: return "yawn"
+        case .wake: return "wake"
+        case .dizzy: return "dizzy"
+        case .alert: return "alert"
         case .dragged: return "drag"
         }
     }
 
-    public var currentFrame: Int { species.frame(animationName, at: animTime) }
+    /// One-shot animations play once and hold their last frame; everything else loops.
+    var animationLoops: Bool { ![.yawn, .wake, .react, .land, .alert, .crouch].contains(activity) }
+
+    public var currentFrame: Int { species.frame(animationName, at: animTime, loop: animationLoops) }
 
     /// Axis-aligned bounds of the sprite in global points.
     public var bounds: Rect { Rect(x: pos.x - size.x / 2, y: pos.y, w: size.x, h: size.y) }
@@ -78,6 +94,14 @@ public final class Creature {
             if c >= 0, c < fw, r >= 0, r < fh, mask[r * fw + c] { return true }
         }}
         return false
+    }
+
+    /// Length of the animation that goes with an activity, so one-shot activities last exactly one play-through.
+    func animationLength(for a: Activity) -> Double {
+        let saved = activity
+        activity = a
+        defer { activity = saved }
+        return species.animation(animationName).totalDuration
     }
 
     func set(_ a: Activity, duration: Double = 0) {

@@ -65,7 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Window polling is the most expensive thing we do, so its rate adapts: fast while a window that a
         // creature stands on is moving (so riding a dragged window is smooth), slow otherwise.
         let movingRecently = now - lastWindowChange < 0.6
-        let pollInterval = movingRecently ? 1.0 / 60 : (world.desiredTickRate <= 8 ? 0.25 : 0.1)
+        // Window frames matter most for creatures standing on a window (they ride it); otherwise they only
+        // affect jump targets and landings, which tolerate a few hundred ms of staleness.
+        let anyoneOnWindow = world.creatures.contains { ($0.groundOwner ?? -1) >= 0 || $0.activity == .airborne }
+        let pollInterval = movingRecently ? 1.0 / 60 : (anyoneOnWindow ? 0.1 : 0.35)
         if now - lastWindowPoll >= pollInterval { refreshEnvironment() }
 
         world.cursor = Vec2(Double(NSEvent.mouseLocation.x), Double(NSEvent.mouseLocation.y))
@@ -140,7 +143,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)", action: #selector(addCreature(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = sp.info.id
-            item.image = NSImage(cgImage: sp.frames[0], size: NSSize(width: 18, height: 18))
+            item.image = NSImage(cgImage: sp.frames[0], size: NSSize(width: 20, height: 20))
+            item.toolTip = sp.info.blurb
             sub.addItem(item)
         }
         add.submenu = sub

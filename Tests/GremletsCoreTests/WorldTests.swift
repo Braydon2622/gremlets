@@ -139,8 +139,12 @@ func settle(_ w: World, _ seconds: Double = 2) {
         settle(w, 0.3)
         c.set(.sleep, duration: 10)
         w.poke(c)
-        #expect(c.activity == .react)
+        #expect(c.activity == .wake)
         #expect(w.drainEvents().contains(.wokeUp(c.id)))
+        // Awake poke = happy reaction.
+        c.set(.idle, duration: 5)
+        w.poke(c)
+        #expect(c.activity == .react)
     }
 
     @Test func sleepsWhenTired() {
@@ -162,6 +166,31 @@ func settle(_ w: World, _ seconds: Double = 2) {
         let c = w.spawn(testSpecies(), at: Vec2(500, 0))
         settle(w, 0.3)
         c.set(.sleep, duration: 10)
-        #expect(w.desiredTickRate == 8)
+        #expect(w.desiredTickRate == 12)
+    }
+
+    @Test func hardLandingMakesDizzy() {
+        let w = World(seed: 11)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = w.spawn(testSpecies(), at: Vec2(500, 300))
+        c.vel = Vec2(0, -2500)
+        for _ in 0..<30 { w.step(1.0 / 60) }
+        #expect(c.activity == .dizzy)
+        #expect(w.drainEvents().contains(.dizzy(c.id)))
+    }
+
+    @Test func yawnsBeforeSleeping() {
+        let w = World(seed: 12)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = w.spawn(testSpecies(), at: Vec2(500, 0))
+        c.energy = 0.0
+        var sawYawn = false
+        for _ in 0..<(60 * 60) {
+            w.step(1.0 / 60)
+            if c.activity == .yawn { sawYawn = true }
+            if c.activity == .sleep { break }
+        }
+        #expect(sawYawn)
+        #expect(c.activity == .sleep)
     }
 }

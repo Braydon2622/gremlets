@@ -113,7 +113,8 @@ enum SpriteLibrary {
             animations: animations, masks: masks,
             walkSpeed: extra["walkSpeed"] as? Double ?? 70,
             jumpPower: extra["jumpPower"] as? Double ?? 1,
-            sleepiness: extra["sleepiness"] as? Double ?? 1)
+            sleepiness: extra["sleepiness"] as? Double ?? 1,
+            blurb: extra["description"] as? String ?? "")
         return LoadedSpecies(info: info, frames: images)
     }
 

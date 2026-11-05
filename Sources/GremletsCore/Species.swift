@@ -21,11 +21,12 @@ public struct SpeciesInfo: Sendable {
     public var walkSpeed: Double
     public var jumpPower: Double
     public var sleepiness: Double
+    public var blurb: String
 
     public init(id: String, name: String, element: String, frameWidth: Int, frameHeight: Int, scale: Double,
                 animations: [String: Animation], masks: [[Bool]],
-                walkSpeed: Double = 70, jumpPower: Double = 1, sleepiness: Double = 1) {
-        self.id = id; self.name = name; self.element = element
+                walkSpeed: Double = 70, jumpPower: Double = 1, sleepiness: Double = 1, blurb: String = "") {
+        self.id = id; self.name = name; self.element = element; self.blurb = blurb
         self.frameWidth = frameWidth; self.frameHeight = frameHeight; self.scale = scale
         self.animations = animations; self.masks = masks
         self.walkSpeed = walkSpeed; self.jumpPower = jumpPower; self.sleepiness = sleepiness
@@ -37,6 +38,8 @@ public struct SpeciesInfo: Sendable {
     static let fallbacks: [String: [String]] = [
         "land": ["react", "idle"], "react": ["idle"], "drag": ["fall", "jump", "idle"],
         "fall": ["jump", "idle"], "jump": ["fall", "idle"], "sleep": ["idle"], "walk": ["idle"],
+        "look": ["idle"], "crouch": ["land", "idle"], "pet": ["react", "idle"], "yawn": ["sleep", "idle"],
+        "wake": ["react", "idle"], "dizzy": ["land", "idle"], "alert": ["react", "idle"],
     ]
 
     public func animation(_ name: String) -> Animation {

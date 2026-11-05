@@ -116,8 +116,11 @@ final class OverlayController {
                 layerScreen[c.id] = si
             }
             let origin = screens[si].frame.origin
-            layer.position = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (c.pos.y - origin.y).rounded())
-            layer.setAffineTransform(CGAffineTransform(scaleX: c.facing < 0 ? -1 : 1, y: 1))
+            // Only touch layer properties that changed; every write dirties the layer tree for the next commit.
+            let pos = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (c.pos.y - origin.y).rounded())
+            if layer.position != pos { layer.position = pos }
+            let flip: CGFloat = c.facing < 0 ? -1 : 1
+            if layer.affineTransform().a != flip { layer.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1)) }
             let f = c.currentFrame
             if shownFrame[c.id] != f, f < sp.frames.count {
                 layer.contents = sp.frames[f]
@@ -151,15 +154,118 @@ final class OverlayController {
     func handle(_ events: [WorldEvent]) {
         for e in events {
             switch e {
-            case .poked(let id), .petted(let id):
-                if let c = world.creatures.first(where: { $0.id == id }) { spawnEffect(Effects.heart, above: c, drift: 0) }
+            case .poked(let id):
+                if let c = creature(id) { spawnEffect(Effects.heart, above: c, drift: 0) }
+            case .petted(let id):
+                if let c = creature(id) {
+                    spawnEffect(Effects.heart, above: c, drift: -14)
+                    spawnEffect(Effects.smallHeart, above: c, drift: 16, delay: 0.25)
+                }
+            case .alert(let id):
+                if let c = creature(id) { spawnPop(Effects.bang, above: c) }
+            case .wokeUp(let id):
+                if let c = creature(id), c.activity == .wake { spawnPop(Effects.bang, above: c) }
+            case .dizzy(let id):
+                if let c = creature(id) { spawnStars(around: c) }
+            case .landed(let id, let impact):
+                if impact > 650, let c = creature(id) { spawnDust(at: c, strength: min(1, impact / 2000)) }
             default: break
             }
         }
     }
 
+    private func creature(_ id: Int) -> Creature? { world.creatures.first { $0.id == id } }
+
+    private func localPoint(_ c: Creature, dy: Double = 0) -> (Int, CGPoint)? {
+        guard let si = layerScreen[c.id] else { return nil }
+        let o = screens[si].frame.origin
+        return (si, CGPoint(x: c.pos.x - o.x, y: c.pos.y - o.y + dy))
+    }
+
+    private func particle(_ image: CGImage, _ si: Int, scale: Double = 3) -> CALayer {
+        let l = CALayer()
+        l.contents = image
+        l.magnificationFilter = .nearest
+        l.contentsScale = screens[si].panel.backingScaleFactor
+        l.bounds = CGRect(x: 0, y: 0, width: Double(image.width) * scale, height: Double(image.height) * scale)
+        screens[si].root.addSublayer(l)
+        return l
+    }
+
+    private func run(_ l: CALayer, _ anim: CAAnimation) {
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+        anim.isRemovedOnCompletion = false
+        anim.fillMode = .forwards
+        l.add(anim, forKey: "fx")
+        CATransaction.commit()
+    }
+
+    /// "!" that pops in with a springy overshoot above the head.
+    private func spawnPop(_ image: CGImage, above c: Creature) {
+        guard let (si, p) = localPoint(c, dy: c.size.y * 0.78) else { return }
+        let l = particle(image, si)
+        l.position = CGPoint(x: p.x + c.facing * c.size.x * 0.18, y: p.y)
+        let scale = CAKeyframeAnimation(keyPath: "transform.scale")
+        scale.values = [0.2, 1.35, 0.9, 1.0, 1.0]
+        scale.keyTimes = [0, 0.15, 0.3, 0.4, 1]
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [1, 1, 0]
+        fade.keyTimes = [0, 0.75, 1]
+        let g = CAAnimationGroup()
+        g.animations = [scale, fade]
+        g.duration = 0.9
+        run(l, g)
+    }
+
+    /// Three stars orbiting above the head (dizzy).
+    private func spawnStars(around c: Creature) {
+        guard let (si, p) = localPoint(c, dy: c.size.y * 0.72) else { return }
+        for i in 0..<3 {
+            let l = particle(i == 1 ? Effects.smallStar : Effects.star, si)
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: p.x - 22, y: p.y - 6, width: 44, height: 12))
+            let orbit = CAKeyframeAnimation(keyPath: "position")
+            orbit.path = path
+            orbit.calculationMode = .paced
+            orbit.duration = 0.8
+            orbit.repeatCount = 2.3
+            orbit.timeOffset = Double(i) * 0.8 / 3
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 1, 1, 0]
+            fade.keyTimes = [0, 0.1, 0.85, 1]
+            let g = CAAnimationGroup()
+            g.animations = [orbit, fade]
+            g.duration = 1.85
+            run(l, g)
+        }
+    }
+
+    /// Dust puffs kicked out sideways from the feet on a hard landing.
+    private func spawnDust(at c: Creature, strength: Double) {
+        guard let (si, p) = localPoint(c, dy: 4) else { return }
+        for side in [-1.0, 1.0] {
+            let l = particle(Effects.dust, si, scale: 2.5)
+            l.position = p
+            let move = CABasicAnimation(keyPath: "position")
+            move.fromValue = NSValue(point: CGPoint(x: p.x + side * 10, y: p.y))
+            move.toValue = NSValue(point: CGPoint(x: p.x + side * (26 + 26 * strength), y: p.y + 8))
+            let scale = CABasicAnimation(keyPath: "transform.scale")
+            scale.fromValue = 0.6
+            scale.toValue = 1.2 + strength * 0.5
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 0.9
+            fade.toValue = 0
+            let g = CAAnimationGroup()
+            g.animations = [move, scale, fade]
+            g.duration = 0.45
+            g.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            run(l, g)
+        }
+    }
+
     /// Small floating particle (heart, zzz). Animated entirely by Core Animation, so it costs no CPU per frame.
-    private func spawnEffect(_ image: CGImage, above c: Creature, drift: Double) {
+    private func spawnEffect(_ image: CGImage, above c: Creature, drift: Double, delay: Double = 0) {
         guard let si = layerScreen[c.id] else { return }
         let origin = screens[si].frame.origin
         let l = CALayer()
@@ -181,6 +287,9 @@ final class OverlayController {
         let group = CAAnimationGroup()
         group.animations = [move, fade]
         group.duration = 1.4
+        group.beginTime = delay > 0 ? CACurrentMediaTime() + delay : 0
+        group.fillMode = .both
+        group.isRemovedOnCompletion = false
         group.timingFunction = CAMediaTimingFunction(name: .easeOut)
         CATransaction.begin()
         CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
@@ -261,6 +370,46 @@ enum Effects {
         "..rrr..",
         "...r...",
     ], ["r": 0xFF5E7E, "R": 0xFFD1DC])
+
+    static let smallHeart = pixels([
+        "r.r",
+        "rrr",
+        ".r.",
+    ], ["r": 0xFF8FA8])
+
+    static let bang = pixels([
+        ".oo.",
+        "oYYo",
+        "oYYo",
+        "oYYo",
+        "oYYo",
+        ".oo.",
+        "....",
+        ".oo.",
+        "oYYo",
+        ".oo.",
+    ], ["o": 0x5A2A10, "Y": 0xFFD23D])
+
+    static let star = pixels([
+        "..y..",
+        ".yYy.",
+        "yYYYy",
+        ".yYy.",
+        "y...y",
+    ], ["y": 0xF5B82E, "Y": 0xFFF29A])
+
+    static let smallStar = pixels([
+        ".y.",
+        "yYy",
+        ".y.",
+    ], ["y": 0xF5B82E, "Y": 0xFFF29A])
+
+    static let dust = pixels([
+        ".ww.",
+        "wWWw",
+        "wWWw",
+        ".ww.",
+    ], ["w": 0xD9D2C5, "W": 0xF4F0E8])
 
     static let zzz = pixels([
         "zzzz",

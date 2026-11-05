@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+build/
+*.xcodeproj
+xcuserdata/
+.DS_Store
+
+# Internal coordination notes (not part of the public project)
+BRIEF.md
+STATUS.md
+PLAN.md

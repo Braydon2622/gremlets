@@ -114,10 +114,11 @@ MacBook (Apple Silicon), macOS 15:
 | Scenario | CPU |
 |---|---|
 | 3 creatures walking/jumping (30 Hz loop, 10 Hz window polling) | 1.6–2.0% |
+| 6 creatures (v2 sprites, 15 animations each, particles) | 2.0–2.4% |
 
 How it stays cheap:
 - The loop rate adapts: 60 Hz only while something is airborne or being dragged, 30 Hz while walking, 8 Hz when everyone is idle or asleep.
-- Window polling (the most expensive call) runs at 4–10 Hz and only jumps to 60 Hz while a window that a creature is standing on is moving.
+- Window polling (the most expensive call) runs at about 3 Hz when nobody stands on a window, 10 Hz when someone does, and 60 Hz only while that window is moving.
 - Sprite layers only get new `contents` when the animation frame actually changes. Hearts and Zzz particles are pure Core Animation, so they cost no per-frame CPU.
 - Timer tolerance lets macOS coalesce wakeups.
 

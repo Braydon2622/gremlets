@@ -122,6 +122,30 @@ Each of the 50 Gremlets is a one-of-a-kind collectible; owning Gremlet #N unlock
   (keys never leave the wallet; Base Sepolia testnet only). Verified end-to-end against a local `anvil` chain.
 - `nft/metadata`, `nft/images`: ERC-721 metadata with portraits, traits and a live `animation_url` into the web habitat.
 
+### Wallet-verified unlocks in the desktop app
+
+Gremlets you hold stay on your desktop as long as you like. Everyone can try any other Gremlet in a **demo**
+(3 at a time, 15-minute sessions; when time's up they wave goodbye and head home). Your own drop-in sprites are
+never gated.
+
+1. Menu bar → **Connect Wallet…** opens a small page served by the app on `127.0.0.1`.
+2. Your browser wallet signs a plain text message with a one-time nonce. That's free: no transaction, no
+   permissions, and the app never sees a private key or seed phrase.
+3. The app recovers the signer by calling the chain's `ecrecover` precompile (so no elliptic-curve code ships in
+   the app), checks it matches the wallet, then reads `ownerOf(1…50)` in one batched JSON-RPC call.
+4. Only the public address and the owned token ids are stored. Ownership is re-read every few hours, so a sold
+   Gremlet goes back to demo mode.
+
+Safety details: the app refuses any network that isn't Base Sepolia (chain id 84532). Nonces are single-use and
+expire after 10 minutes. High-s (malleable) signatures are rejected. The local server checks the `Host` header
+(blocking DNS rebinding) and sends a strict CSP on the page. Keccak-256, EIP-191 hashing and EIP-55 checksums are
+implemented in `GremletsCore` and tested against Foundry's `cast`. Verified end-to-end against a local `anvil`
+chain: a real owner proof, an impersonation attempt, nonce replay, a transferred token, and a wrong-chain node.
+
+Gating switches on once `nft/deployment.json` (chain + contract address, written by the console after deploying)
+is present. Until then the build is a preview with everything unlocked. `--visitor` previews demo mode;
+`--unlock-all` turns gating off.
+
 ## Drawing your own Gremlets
 
 1. In Aseprite, draw your frames (any size; 32×32 matches the built-ins) and add **tags** named
@@ -152,6 +176,8 @@ Sources/
     World.swift       simulation: physics, grounding, window riding, flight, bumps, stacking, input
     Social.swift      greet, follow, nap together, tag, stack, dance parties, signature moves, peeking
     Companion.swift   focus mode, signals (pass/fail/done...), bond levels
+    Ownership.swift   owned / custom / demo rules, demo session clock, Ethereum encoding (EIP-191, ABI, EIP-55)
+    Keccak.swift      dependency-free Keccak-256
     Brain.swift       utility AI: scores candidate actions and picks one by weighted random choice
     Surfaces.swift    turns screens + windows into one-way platforms, with occlusion
     Creature.swift    state (activity, energy, facing, social role), per-pixel hit testing
@@ -162,6 +188,7 @@ Sources/
     SpriteLibrary.swift  Aseprite JSON loader + alpha masks
     App.swift         adaptive game loop, menu bar, roster persistence, perf monitor
     Companion.swift   focus timer, bond storage, local control channel (127.0.0.1)
+    Wallet.swift      wallet-link page + signature check, read-only JSON-RPC ownership reads (Base Sepolia)
   spritegen/        part-based pixel-art generator for the 50 built-in species
 web/
   js/engine.js      JavaScript port of GremletsCore (tested headlessly with JavaScriptCore)
@@ -195,7 +222,7 @@ How it stays cheap:
 - [x] Web habitat (phones + live NFT view)
 - [x] NFT contract: 50 one-of-a-kind ERC-721 tokens (OpenZeppelin, 18 tests, 100% coverage), creator console, metadata + portraits. Testnet only.
 - [x] Focus buddy, coding companion (`gremlet` command), bond levels
-- [ ] Wallet-verified unlocks in the desktop app (+ demo mode for visitors)
+- [x] Wallet-verified unlocks in the desktop app (+ demo mode for visitors)
 - [ ] Host web habitat + metadata (GitHub Pages)
 - [ ] Demo GIF + signed/notarized download
 - [ ] Windows port of the platform layer (the engine is already platform-independent)

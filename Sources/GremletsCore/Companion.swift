@@ -115,3 +115,14 @@ extension World {
         for c in creatures where c.species.id == id { c.bond = strength.clamped(0, 1) }
     }
 }
+
+extension World {
+    /// A Gremlet waves goodbye (e.g. when a demo session ends). The platform layer removes it afterwards.
+    public func sayGoodbye(_ id: Int) {
+        guard let c = creature(id: id) else { return }
+        endSocial(c)
+        if c.isAsleep { emit(.wokeUp(c.id)) }
+        if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
+        if c.isGrounded { c.set(.wave, duration: 1.6) }
+    }
+}

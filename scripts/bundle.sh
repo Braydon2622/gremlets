@@ -20,6 +20,10 @@ for d in Species/*/; do
   cp "$d"sheet.png "$d"sheet.json "$d"species.json "$APP/Contents/Resources/Species/$id/"
 done
 
+# NFT ownership: token id → species, plus the contract location once it's deployed (testnet).
+cp nft/tokens.json "$APP/Contents/Resources/tokens.json"
+if [[ -f nft/deployment.json ]]; then cp nft/deployment.json "$APP/Contents/Resources/deployment.json"; fi
+
 VERSION=$(git describe --tags --always 2>/dev/null || echo "0.1.0")
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

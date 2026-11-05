@@ -174,6 +174,8 @@ async function deploy() {
   $('addr').value = r.contractAddress;
   try { localStorage.setItem('gremlets.contract', r.contractAddress); } catch {}
   log(`deployed at ${r.contractAddress}\n  ${BASE_SEPOLIA.blockExplorerUrls[0]}/address/${r.contractAddress}`);
+  // The desktop app reads this to check ownership (public info: chain + contract address only).
+  log(`save as nft/deployment.json for the desktop app:\n${JSON.stringify({ chainId: 84532, address: r.contractAddress, rpc: 'https://sepolia.base.org' })}`);
   await load();
 }
 

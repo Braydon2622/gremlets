@@ -22,6 +22,8 @@ visit all 50 in the free web habitat.
 4. **Serve the console locally:** `python3 -m http.server 8765` from the repo root, open
    `http://localhost:8765/nft/console.html`, connect your wallet and switch to Base Sepolia.
 5. **Deploy** with base URL `https://<your-host>/nft/metadata/`, then **Mint** ids 1–50 to yourself.
+   The console then prints a `deployment.json` line: save it as `nft/deployment.json` (public info only:
+   chain id + contract address) and rebuild the app (`scripts/bundle.sh`) to turn on wallet unlocks.
 6. Check the collection on a testnet marketplace/explorer (e.g. `sepolia.basescan.org`).
 7. Only after everything looks right *and* you decide to launch for real does mainnet come into play.
    The console is testnet-only by design.

@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import GremletsCore
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var species: [String: LoadedSpecies] = [:]
     private let world = World()
     private var overlay: OverlayController!
@@ -31,6 +31,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastReminder = Date()
     private var nextReminderIsWater = true
 
+    // Ownership: NFT holders keep their Gremlets; everyone else can try any Gremlet in a demo.
+    private var access = Access(tokens: [:], gatingEnabled: false)
+    private var wallet: WalletLink?
+    private var demoNotice: String?
+
     func applicationDidFinishLaunching(_ note: Notification) {
         species = SpriteLibrary.loadAll()
         guard !species.isEmpty else {
@@ -43,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         overlay = OverlayController(world: world, species: species)
         refreshEnvironment()
+        setUpAccess()
         restoreRoster()
         setUpCompanion()
         setUpMenuBar()
@@ -124,9 +130,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ids = UserDefaults.standard.stringArray(forKey: rosterKey) ?? []
         }
         ids = ids.filter { species[$0] != nil }
-        if ids.isEmpty { ids = ["kindlet", "flurrie", "dandelet"].filter { species[$0] != nil } }
+        if ids.isEmpty {
+            // First launch: your own Gremlets if you have any, otherwise the three starters as a demo.
+            let owned = access.ownedSpecies.filter { species[$0] != nil }.sorted()
+            ids = owned.isEmpty ? ["kindlet", "flurrie", "dandelet"].filter { species[$0] != nil } : Array(owned.prefix(3))
+        }
         if ids.isEmpty, let first = species.keys.sorted().first { ids = [first] }
-        for id in ids { world.spawn(species[id]!.info) }
+        ids = access.filterRestore(ids)
+        for id in ids {
+            world.spawn(species[id]!.info)
+            if access.isDemo(id) { access.noteDemoAdded(now: Date().timeIntervalSince1970) }
+        }
         saveRoster()
     }
 
@@ -148,7 +162,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        // Refresh in place so countdowns are current (swapping the menu object while it opens isn't allowed).
+        menu.removeAllItems()
+        for item in buildMenuItems() { menu.addItem(item) }
+    }
+
     private func rebuildMenu() {
+        let menu = NSMenu()
+        menu.delegate = self
+        for item in buildMenuItems() { menu.addItem(item) }
+        statusItem.menu = menu
+    }
+
+    private func buildMenuItems() -> [NSMenuItem] {
         let menu = NSMenu()
         let header = NSMenuItem(title: "Gremlets: \(world.creatures.count) out", action: nil, keyEquivalent: "")
         header.isEnabled = false
@@ -169,18 +197,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let famItem = NSMenuItem(title: "\(title) (\(members.count))", action: nil, keyEquivalent: "")
             let famMenu = NSMenu()
             for sp in members {
-                let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)", action: #selector(addCreature(_:)), keyEquivalent: "")
+                let kind = access.kind(sp.info.id)
+                let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)\(kind == .demo ? "  ·  demo" : "")", action: #selector(addCreature(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = sp.info.id
                 item.image = NSImage(cgImage: sp.frames[0], size: NSSize(width: 22, height: 22))
                 item.toolTip = sp.info.blurb
+                if kind == .owned { item.state = .on; item.toolTip = "Yours (you hold this Gremlet). " + sp.info.blurb }
                 famMenu.addItem(item)
             }
             famItem.submenu = famMenu
             sub.addItem(famItem)
         }
         sub.addItem(.separator())
-        let party = NSMenuItem(title: "Surprise Party (5 random)", action: #selector(addRandomParty), keyEquivalent: "")
+        let party = NSMenuItem(title: access.gatingEnabled ? "Surprise Party (random)" : "Surprise Party (5 random)", action: #selector(addRandomParty), keyEquivalent: "")
         party.target = self
         sub.addItem(party)
         add.submenu = sub
@@ -227,6 +257,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(mine)
         }
         menu.addItem(.separator())
+        for item in walletMenuItems() { menu.addItem(item) }
+        menu.addItem(.separator())
 
         // Focus buddy.
         if let label = focus.label {
@@ -271,11 +303,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let quit = NSMenuItem(title: "Quit Gremlets", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
-        statusItem.menu = menu
+        let items = menu.items
+        menu.removeAllItems()
+        return items
     }
 
     @objc private func addCreature(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String, let sp = species[id] else { return }
+        guard admit(id) else { return }
         // Drop in from the top of the screen the cursor is on.
         let m = NSEvent.mouseLocation
         let scr = NSScreen.screens.first { $0.frame.contains(m) } ?? NSScreen.main
@@ -292,7 +327,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) { bonds.save() }
 
     @objc private func addRandomParty() {
-        let picks = species.values.shuffled().prefix(5)
+        var picks: [LoadedSpecies] = []
+        var out = world.creatures.map(\.species.id)
+        let now = Date().timeIntervalSince1970
+        // Yours first, then demos while there's room.
+        let pool = species.values.shuffled().sorted { !access.isDemo($0.info.id) && access.isDemo($1.info.id) }
+        for sp in pool where picks.count < 5 && access.canAdd(sp.info.id, out: out, now: now) == .ok {
+            picks.append(sp); out.append(sp.info.id)
+            if access.isDemo(sp.info.id) { access.noteDemoAdded(now: now) }
+        }
+        if picks.isEmpty { _ = admit(species.values.first { access.isDemo($0.info.id) }?.info.id ?? ""); return }
         let m = NSEvent.mouseLocation
         let vf = (NSScreen.screens.first { $0.frame.contains(m) } ?? NSScreen.main)?.visibleFrame ?? .zero
         for (i, sp) in picks.enumerated() {
@@ -333,6 +377,125 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    // MARK: Ownership & demo
+
+    private func setUpAccess() {
+        let args = CommandLine.arguments, env = ProcessInfo.processInfo.environment
+        let deployment = Deployment.load()
+        var policy = DemoPolicy()
+        if let s = env["GREMLETS_DEMO_SECONDS"].flatMap(Double.init) { policy.sessionSeconds = s }   // for testing
+        // Gating starts once the collection is on testnet (deployment.json present). Until then this is a preview
+        // build with everything unlocked. --visitor previews demo mode; --unlock-all is a developer override.
+        let gated = (deployment != nil || args.contains("--visitor")) && !args.contains("--unlock-all")
+        access = Access(tokens: Resources.tokens(), ownership: args.contains("--visitor") ? Ownership() : OwnershipStore.load(),
+                        policy: policy, gatingEnabled: gated)
+        guard let deployment, gated else { return }
+        let link = WalletLink(deployment: deployment, tokenIDs: access.tokens.keys.sorted())
+        link.onOwnership = { [weak self] o in
+            guard let self else { return }
+            let before = self.access.ownedSpecies
+            self.access.ownership = o
+            OwnershipStore.save(o)
+            let gained = self.access.ownedSpecies.subtracting(before)
+            for c in self.world.creatures where gained.contains(c.species.id) { self.overlay.bondLevelUp(c) }  // hearts: it's yours now
+            self.rebuildMenu()
+        }
+        link.onStateChange = { [weak self] in self?.rebuildMenu() }
+        wallet = link
+        link.refresh(access.ownership)
+    }
+
+    /// Checks the demo rules before a Gremlet comes out; explains kindly if it can't.
+    private func admit(_ id: String) -> Bool {
+        let now = Date().timeIntervalSince1970
+        switch access.canAdd(id, out: world.creatures.map(\.species.id), now: now) {
+        case .ok:
+            if access.isDemo(id) { access.noteDemoAdded(now: now); demoNotice = nil }
+            return true
+        case .demoFull(let max):
+            let alert = NSAlert()
+            alert.messageText = "Demo Gremlets: \(max) at a time"
+            alert.informativeText = "Send one of your demo Gremlets home to try another.\n\nGremlets you own stay out as long as you like. Link your wallet from the menu bar (Connect Wallet…), or visit all 50 in the web habitat."
+            alert.runModal()
+        case .cooldown(let left):
+            let alert = NSAlert()
+            alert.messageText = "The demo Gremlets are resting"
+            alert.informativeText = "You can start another demo in \(Int(left / 60) + 1) min."
+            alert.runModal()
+        }
+        return false
+    }
+
+    /// Demo time's up: each demo Gremlet waves goodbye, then heads home.
+    private func endDemoSession() {
+        let leaving = world.creatures.filter { access.isDemo($0.species.id) }.map(\.id)
+        guard !leaving.isEmpty else { return }
+        for id in leaving { world.sayGoodbye(id) }
+        schedule(rate: 60)
+        demoNotice = "Demo over: they waved goodbye. Start another any time."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+            guard let self else { return }
+            for id in leaving where self.world.creatures.contains(where: { $0.id == id && self.access.isDemo($0.species.id) }) {
+                self.world.remove(id)
+            }
+            self.overlay.render()
+            self.saveRoster()
+            self.rebuildMenu()
+        }
+    }
+
+    private func walletMenuItems() -> [NSMenuItem] {
+        var items: [NSMenuItem] = []
+        func info(_ t: String) { let i = NSMenuItem(title: t, action: nil, keyEquivalent: ""); i.isEnabled = false; items.append(i) }
+        func action(_ t: String, _ sel: Selector) { let i = NSMenuItem(title: t, action: sel, keyEquivalent: ""); i.target = self; items.append(i) }
+
+        guard access.gatingEnabled else {
+            info("Preview build: all Gremlets unlocked")
+            return items
+        }
+        let now = Date().timeIntervalSince1970
+        if let left = access.secondsLeft(now: now) {
+            let demoOut = world.creatures.filter { access.isDemo($0.species.id) }.count
+            info(String(format: "Demo: %d:%02d left · %d/%d out", Int(left) / 60, Int(left) % 60, demoOut, access.policy.maxOut))
+        } else if let n = demoNotice {
+            info(n)
+        }
+        if let addr = access.ownership.address {
+            let n = access.ownedSpecies.count
+            info("Wallet \(Ethereum.shortAddress(addr)) · owns \(n) Gremlet\(n == 1 ? "" : "s")")
+            if wallet != nil { action("Check Ownership Again", #selector(recheckOwnership)) }
+            action("Unlink Wallet", #selector(unlinkWallet))
+        } else if wallet != nil {
+            action("Connect Wallet…", #selector(connectWallet))
+            items.last?.toolTip = "Prove you hold Gremlets with a free signature in your browser wallet. No transaction, no seed phrase."
+        } else {
+            info("Visitor preview (no collection configured)")
+        }
+        switch wallet?.state {
+        case .waiting?: info("Waiting for your browser wallet…")
+        case .checking?: info("Checking ownership on Base Sepolia…")
+        case .failed(let m)?: info(m)
+        default: break
+        }
+        return items
+    }
+
+    @objc private func connectWallet() { wallet?.begin() }
+
+    @objc private func recheckOwnership() { wallet?.refresh(access.ownership, force: true) }
+
+    @objc private func unlinkWallet() {
+        access.ownership = Ownership()
+        OwnershipStore.save(access.ownership)
+        // Anything that was yours is now a demo; trim to the demo limit right away.
+        let demos = world.creatures.filter { access.isDemo($0.species.id) }
+        for c in demos.dropFirst(access.policy.maxOut) { world.remove(c.id) }
+        if !demos.isEmpty { access.noteDemoAdded(now: Date().timeIntervalSince1970) }
+        overlay.render()
+        saveRoster()
+        rebuildMenu()
+    }
+
     // MARK: Companion
 
     private func setUpCompanion() {
@@ -348,6 +511,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return (404, "{}") }
             return self.handleControl(method: method, path: path, query: query)
         }
+        server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.start()
         control = server
         if CommandLine.arguments.contains("--focus-demo") { focus.breakMinutes = 0.25; focus.startFocus(minutes: 0.25) }
@@ -355,6 +519,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleControl(method: String, path: String, query: [String: String]) -> (Int, String) {
         let name = path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+        if name == "wallet/test-begin", method == "POST", ProcessInfo.processInfo.environment["GREMLETS_WALLET_TEST"] == "1", let w = wallet {
+            return (200, w.beginForTest())
+        }
+        if name == "wallet/status" { return (200, wallet?.statusJSON() ?? #"{"state":"idle"}"#) }
+        if name == "wallet/proof" {
+            guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
+            return wallet?.handleProof(query) ?? (404, #"{"ok":false,"error":"wallet linking isn't set up in this build"}"#)
+        }
         if name == "status" {
             let ids = world.creatures.map { "\"\($0.species.id)\"" }.joined(separator: ",")
             let f = focus.label.map { "\"\($0)\"" } ?? "null"
@@ -415,6 +587,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             lastReminder = Date()
             schedule(rate: 60)
         }
+        let out = world.creatures.map(\.species.id)
+        if access.tick(out: out, now: Date().timeIntervalSince1970) { endDemoSession() }
+        if Int(CACurrentMediaTime()) % 600 == 0 { wallet?.refresh(access.ownership) }
         let hour = Calendar.current.component(.hour, from: Date())
         world.sleepyFactor = (hour >= 23 || hour < 5) ? 3 : 1     // gentle "time to log off" hint
         if Int(CACurrentMediaTime()) % 60 == 0 {

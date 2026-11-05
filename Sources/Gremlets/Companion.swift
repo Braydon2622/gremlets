@@ -100,8 +100,14 @@ final class FocusTimer {
 /// Safety: it only listens on the loopback interface (nothing on your network can reach it), every request must
 /// carry an `X-Gremlets` header (web pages can't add custom headers to cross-site requests without a CORS
 /// preflight, which this server never approves), and the only things it can do are trigger animations and the
-/// focus timer.
+/// focus timer or open the wallet-link page. The Host header must be 127.0.0.1/localhost, so a hostile site that
+/// re-points its own domain at 127.0.0.1 (DNS rebinding) is turned away too.
+///
+/// Exception: registered `pages` (the wallet-link page) are plain GETs without the custom header, so the browser can
+/// open them. They have no side effects; anything they do goes back through header-protected POSTs.
 final class ControlServer {
+    /// Read-only HTML pages served on GET without the X-Gremlets header.
+    var pages: [String: () -> String] = [:]
     static let defaultPort: UInt16 = 47920
     private var listener: NWListener?
     private let handle: (_ method: String, _ path: String, _ query: [String: String]) -> (Int, String)
@@ -133,23 +139,36 @@ final class ControlServer {
     private func receive(_ conn: NWConnection) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, _, _ in
             guard let self, let data, let text = String(data: data, encoding: .utf8) else { conn.cancel(); return }
-            let (status, body) = self.route(text)
-            let reason = [200: "OK", 400: "Bad Request", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed"][status] ?? "OK"
-            let resp = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: application/json\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
+            let (status, body, type) = self.route(text)
+            let reason = [200: "OK", 202: "Accepted", 400: "Bad Request", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed"][status] ?? "OK"
+            var headers = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(type)\r\nContent-Length: \(body.utf8.count)\r\n"
+            headers += "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\n"
+            if type.hasPrefix("text/html") {
+                // Page may only talk back to this server; scripts must be the inline one we wrote.
+                headers += "Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'\r\n"
+            }
+            let resp = headers + "Connection: close\r\n\r\n" + body
             conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in conn.cancel() })
         }
     }
 
-    private func route(_ request: String) -> (Int, String) {
+    private static let json = "application/json"
+
+    private func route(_ request: String) -> (Int, String, String) {
         let lines = request.components(separatedBy: "\r\n")
         let parts = (lines.first ?? "").split(separator: " ")
-        guard parts.count >= 2 else { return (400, #"{"ok":false,"error":"bad request"}"#) }
+        guard parts.count >= 2 else { return (400, #"{"ok":false,"error":"bad request"}"#, Self.json) }
         let method = String(parts[0]).uppercased()
-        guard method == "GET" || method == "POST" else { return (405, #"{"ok":false,"error":"method not allowed"}"#) }
-        let hasHeader = lines.dropFirst().contains { $0.lowercased().hasPrefix("x-gremlets:") }
-        guard hasHeader else { return (403, #"{"ok":false,"error":"missing X-Gremlets header"}"#) }
+        guard method == "GET" || method == "POST" else { return (405, #"{"ok":false,"error":"method not allowed"}"#, Self.json) }
+        let headerLines = lines.dropFirst().map { $0.lowercased() }
+        let host = headerLines.first { $0.hasPrefix("host:") }.map { $0.dropFirst(5).trimmingCharacters(in: .whitespaces) } ?? ""
+        let hostName = host.split(separator: ":").first.map(String.init) ?? ""
+        guard hostName == "127.0.0.1" || hostName == "localhost" else { return (403, #"{"ok":false,"error":"bad host"}"#, Self.json) }
         let target = String(parts[1])
         let pathAndQuery = target.split(separator: "?", maxSplits: 1).map(String.init)
+        if method == "GET", let page = pages[pathAndQuery[0]] { return (200, page(), "text/html; charset=utf-8") }
+        let hasHeader = headerLines.contains { $0.hasPrefix("x-gremlets:") }
+        guard hasHeader else { return (403, #"{"ok":false,"error":"missing X-Gremlets header"}"#, Self.json) }
         var query: [String: String] = [:]
         if pathAndQuery.count > 1 {
             for pair in pathAndQuery[1].split(separator: "&") {
@@ -157,6 +176,7 @@ final class ControlServer {
                 if kv.count == 2 { query[kv[0]] = kv[1] }
             }
         }
-        return handle(method, pathAndQuery[0], query)
+        let (status, body) = handle(method, pathAndQuery[0], query)
+        return (status, body, Self.json)
     }
 }

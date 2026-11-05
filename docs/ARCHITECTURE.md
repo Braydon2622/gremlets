@@ -130,3 +130,25 @@ Hearts and Zzz particles are fire-and-forget `CAAnimationGroup`s, so the render 
 forward/reverse/pingpong). It also builds alpha masks per frame for hit testing. Built-ins come from the
 app bundle (or the repo's `Species/` in dev), and user art in `~/Library/Application Support/Gremlets/Species`
 overrides them by id.
+
+## Ownership (wallet-verified unlocks)
+
+```
+menu "Connect Wallet…" ─► browser opens http://127.0.0.1:47920/connect (nonce baked into the page)
+   page: eth_requestAccounts ─► personal_sign(message with nonce)          (free, no transaction)
+   page ─► POST /wallet/proof?address&signature&nonce   (X-Gremlets header, same origin)
+app:  eth_chainId == 84532?  ─► eth_call ecrecover precompile (0x…01) with EIP-191 hash ‖ v ‖ r ‖ s
+      signer == claimed?     ─► batched eth_call ownerOf(1…50) on the Gremlets contract
+      store {address, ownedTokenIDs, checkedAt}  ─► Access recomputes owned / demo per species
+```
+
+- **Why the precompile:** recovering a secp256k1 public key needs big-integer elliptic-curve math. The node
+  already has to be trusted for `ownerOf`, so asking it for `ecrecover` adds no new trust and keeps all
+  EC code out of the app. Hashing (Keccak-256 + EIP-191) runs locally, so the node only sees a hash and a signature.
+- **Access rules** live in `GremletsCore/Ownership.swift` as pure value types (`Access`, `DemoPolicy`) and are
+  unit tested with an injected clock. Kinds: `owned`, `custom` (species outside the collection), `demo`, and
+  `unlocked` (no deployment configured yet). The demo session starts with the first demo Gremlet, ends quietly if
+  you send them all home, and otherwise fires once so the app can play the goodbye wave and remove them.
+- **Local server hardening:** loopback only. A `Host` allow-list blocks DNS rebinding. State-changing routes need
+  a custom header, which forces a CORS preflight that is never approved. The page is served with
+  `default-src 'none'` CSP and `frame-ancestors 'none'`.

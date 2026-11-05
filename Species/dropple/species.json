@@ -1,4 +1,5 @@
 {
+  "description" : "A springy raindrop with a curling tip. Best jumper of the bunch.",
   "element" : "tide",
   "jumpPower" : 1.25,
   "name" : "Dropple",

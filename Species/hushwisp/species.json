@@ -1,0 +1,10 @@
+{
+  "description" : "A quiet lantern ghost that drifts instead of walking and carries a cool blue flame.",
+  "element" : "spirit",
+  "floats" : true,
+  "jumpPower" : 1.2,
+  "name" : "Hushwisp",
+  "scale" : 3,
+  "sleepiness" : 1.1000000000000001,
+  "walkSpeed" : 50
+}

@@ -1,0 +1,676 @@
+{
+  "frames" : [
+    {
+      "duration" : 520,
+      "filename" : "dandelet 0.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 0,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 420,
+      "filename" : "dandelet 1.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 32,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 520,
+      "filename" : "dandelet 2.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 64,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 3.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 96,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 380,
+      "filename" : "dandelet 4.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 128,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 300,
+      "filename" : "dandelet 5.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 160,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 6.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 192,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 380,
+      "filename" : "dandelet 7.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 224,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 300,
+      "filename" : "dandelet 8.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 256,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 200,
+      "filename" : "dandelet 9.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 288,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 10.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 320,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 11.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 352,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 12.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 384,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 13.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 416,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 14.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 448,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 15.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 480,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "dandelet 16.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 512,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 17.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 544,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 18.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 576,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 80,
+      "filename" : "dandelet 19.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 608,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 80,
+      "filename" : "dandelet 20.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 640,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 80,
+      "filename" : "dandelet 21.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 672,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 22.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 704,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 150,
+      "filename" : "dandelet 23.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 736,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 150,
+      "filename" : "dandelet 24.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 768,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 150,
+      "filename" : "dandelet 25.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 800,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 150,
+      "filename" : "dandelet 26.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 832,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "dandelet 27.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 864,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 180,
+      "filename" : "dandelet 28.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 896,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "dandelet 29.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 928,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 620,
+      "filename" : "dandelet 30.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 960,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 280,
+      "filename" : "dandelet 31.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 992,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 320,
+      "filename" : "dandelet 32.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1024,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 650,
+      "filename" : "dandelet 33.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1056,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 650,
+      "filename" : "dandelet 34.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1088,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 650,
+      "filename" : "dandelet 35.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1120,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 650,
+      "filename" : "dandelet 36.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1152,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 170,
+      "filename" : "dandelet 37.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1184,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 260,
+      "filename" : "dandelet 38.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1216,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 380,
+      "filename" : "dandelet 39.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1248,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 140,
+      "filename" : "dandelet 40.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1280,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 80,
+      "filename" : "dandelet 41.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1312,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 100,
+      "filename" : "dandelet 42.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1344,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 130,
+      "filename" : "dandelet 43.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1376,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 44.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1408,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 90,
+      "filename" : "dandelet 45.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1440,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 280,
+      "filename" : "dandelet 46.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1472,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "dandelet 47.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1504,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "dandelet 48.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1536,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "dandelet 49.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1568,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 220,
+      "filename" : "dandelet 50.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1600,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 51.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1632,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 52.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1664,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 53.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1696,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 110,
+      "filename" : "dandelet 54.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1728,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 150,
+      "filename" : "dandelet 55.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1760,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 260,
+      "filename" : "dandelet 56.aseprite",
+      "frame" : {
+        "h" : 32,
+        "w" : 32,
+        "x" : 1792,
+        "y" : 0
+      }
+    }
+  ],
+  "meta" : {
+    "app" : "gremlets-spritegen",
+    "format" : "RGBA8888",
+    "frameTags" : [
+      {
+        "direction" : "forward",
+        "from" : 0,
+        "name" : "idle",
+        "to" : 3
+      },
+      {
+        "direction" : "forward",
+        "from" : 4,
+        "name" : "look",
+        "to" : 9
+      },
+      {
+        "direction" : "forward",
+        "from" : 10,
+        "name" : "walk",
+        "to" : 15
+      },
+      {
+        "direction" : "forward",
+        "from" : 16,
+        "name" : "crouch",
+        "to" : 16
+      },
+      {
+        "direction" : "forward",
+        "from" : 17,
+        "name" : "jump",
+        "to" : 18
+      },
+      {
+        "direction" : "forward",
+        "from" : 19,
+        "name" : "fall",
+        "to" : 20
+      },
+      {
+        "direction" : "forward",
+        "from" : 21,
+        "name" : "land",
+        "to" : 22
+      },
+      {
+        "direction" : "forward",
+        "from" : 23,
+        "name" : "dizzy",
+        "to" : 26
+      },
+      {
+        "direction" : "forward",
+        "from" : 27,
+        "name" : "yawn",
+        "to" : 32
+      },
+      {
+        "direction" : "forward",
+        "from" : 33,
+        "name" : "sleep",
+        "to" : 36
+      },
+      {
+        "direction" : "forward",
+        "from" : 37,
+        "name" : "wake",
+        "to" : 40
+      },
+      {
+        "direction" : "forward",
+        "from" : 41,
+        "name" : "react",
+        "to" : 46
+      },
+      {
+        "direction" : "forward",
+        "from" : 47,
+        "name" : "pet",
+        "to" : 50
+      },
+      {
+        "direction" : "forward",
+        "from" : 51,
+        "name" : "drag",
+        "to" : 54
+      },
+      {
+        "direction" : "forward",
+        "from" : 55,
+        "name" : "alert",
+        "to" : 56
+      }
+    ],
+    "image" : "sheet.png",
+    "scale" : "1",
+    "size" : {
+      "h" : 32,
+      "w" : 1824
+    }
+  }
+}

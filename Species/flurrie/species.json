@@ -1,0 +1,9 @@
+{
+  "description" : "A snowball bunny with icicle ear-tips and a scarf it never takes off.",
+  "element" : "frost",
+  "jumpPower" : 1.2,
+  "name" : "Flurrie",
+  "scale" : 3,
+  "sleepiness" : 0.90000000000000002,
+  "walkSpeed" : 75
+}

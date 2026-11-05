@@ -1,0 +1,9 @@
+{
+  "description" : "A tiny lightbulb spirit. Its filament glows brighter the happier it is.",
+  "element" : "spark",
+  "jumpPower" : 1.1499999999999999,
+  "name" : "Fizzlet",
+  "scale" : 3,
+  "sleepiness" : 0.5,
+  "walkSpeed" : 80
+}

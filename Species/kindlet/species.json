@@ -1,4 +1,5 @@
 {
+  "description" : "A melting-candle sprite whose flame flares when it's happy and dims to an ember when it naps.",
   "element" : "ember",
   "jumpPower" : 1,
   "name" : "Kindlet",

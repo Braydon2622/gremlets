@@ -1,0 +1,9 @@
+{
+  "description" : "A dandelion cub with a petal mane. Its puff tail scatters seeds when it bounces.",
+  "element" : "bloom",
+  "jumpPower" : 1.05,
+  "name" : "Dandelet",
+  "scale" : 3,
+  "sleepiness" : 0.80000000000000004,
+  "walkSpeed" : 75
+}

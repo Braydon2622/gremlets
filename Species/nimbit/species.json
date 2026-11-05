@@ -1,0 +1,9 @@
+{
+  "description" : "A pocket-sized thundercloud. Its little bolt crackles when it gets excited.",
+  "element" : "storm",
+  "jumpPower" : 1.1000000000000001,
+  "name" : "Nimbit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "walkSpeed" : 60
+}

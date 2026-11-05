@@ -1,0 +1,9 @@
+{
+  "description" : "A little clay pot that came alive after a hundred years on a shelf. Hollow eyes, warm heart.",
+  "element" : "clay",
+  "jumpPower" : 0.75,
+  "name" : "Kilnby",
+  "scale" : 3,
+  "sleepiness" : 1.1000000000000001,
+  "walkSpeed" : 40
+}

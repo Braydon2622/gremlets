@@ -1,0 +1,9 @@
+{
+  "description" : "A shy mushroom with a bell-shaped cap whose spots glow in the dark.",
+  "element" : "spore",
+  "jumpPower" : 0.90000000000000002,
+  "name" : "Bellcap",
+  "scale" : 3,
+  "sleepiness" : 1.2,
+  "walkSpeed" : 40
+}

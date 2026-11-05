@@ -56,6 +56,30 @@ that wakes up) without copying any existing character. No Gremlet wears clothing
 - **Bring your own art.** The app loads Aseprite JSON exports directly (see below).
 - **Low CPU.** About 1–3% CPU with eight creatures on an Apple Silicon MacBook (see Performance).
 
+## Companion features
+
+**Focus buddy.** Menu bar → *Focus for 25/50 min*. A countdown appears next to the menu bar icon; your Gremlets
+settle down and doze while you work (no flying, no tag), then wake up and throw a dance party when your break
+starts, and one waves when the break is over. Optional *Water & Stretch Reminders* every 45 minutes. Late at night
+they get sleepy faster, a gentle hint to log off.
+
+**Coding companion.** A tiny local control channel lets scripts make your Gremlets react:
+
+```bash
+scripts/gremlet run npm test      # dance if the tests pass, fall over dizzy if they fail (exit code preserved)
+make && scripts/gremlet pass || scripts/gremlet fail
+scripts/gremlet done              # after any long job: the nearest Gremlet pops up and waves
+scripts/gremlet focus 50          # start a focus session from the terminal
+source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
+```
+
+It listens on `127.0.0.1:47920` only, every request needs an `X-Gremlets` header (so a web page can't trigger it
+cross-site without a CORS preflight, which it never approves), and it can only trigger animations and the timer.
+
+**Bond.** Each Gremlet remembers days and hours together, pets and pokes, and levels up from *New friend* to
+*Kindred spirit*. Closer friends wave at your cursor and follow it more, and from *Friend* up they show off their
+signature move when you pet them. A level-up sets off a shower of hearts. See *Your Gremlets* in the menu.
+
 ## Run it
 
 Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools).
@@ -127,6 +151,7 @@ Sources/
   GremletsCore/     platform-agnostic engine (no AppKit), unit tested
     World.swift       simulation: physics, grounding, window riding, flight, bumps, stacking, input
     Social.swift      greet, follow, nap together, tag, stack, dance parties, signature moves, peeking
+    Companion.swift   focus mode, signals (pass/fail/done...), bond levels
     Brain.swift       utility AI: scores candidate actions and picks one by weighted random choice
     Surfaces.swift    turns screens + windows into one-way platforms, with occlusion
     Creature.swift    state (activity, energy, facing, social role), per-pixel hit testing
@@ -136,6 +161,7 @@ Sources/
     WindowTracker.swift  CGWindowList → window frames (y-flipped into Cocoa space)
     SpriteLibrary.swift  Aseprite JSON loader + alpha masks
     App.swift         adaptive game loop, menu bar, roster persistence, perf monitor
+    Companion.swift   focus timer, bond storage, local control channel (127.0.0.1)
   spritegen/        part-based pixel-art generator for the 50 built-in species
 web/
   js/engine.js      JavaScript port of GremletsCore (tested headlessly with JavaScriptCore)
@@ -168,6 +194,7 @@ How it stays cheap:
 - [x] Peek around screen edges
 - [x] Web habitat (phones + live NFT view)
 - [x] NFT contract: 50 one-of-a-kind ERC-721 tokens (OpenZeppelin, 18 tests, 100% coverage), creator console, metadata + portraits. Testnet only.
+- [x] Focus buddy, coding companion (`gremlet` command), bond levels
 - [ ] Wallet-verified unlocks in the desktop app (+ demo mode for visitors)
 - [ ] Host web habitat + metadata (GitHub Pages)
 - [ ] Demo GIF + signed/notarized download

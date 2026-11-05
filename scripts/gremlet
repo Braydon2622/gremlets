@@ -1,0 +1,31 @@
+#!/bin/bash
+# gremlet: make your desktop Gremlets react from the terminal, scripts, git hooks or test runners.
+#
+#   gremlet pass | fail | done | dance | wave | sleep | wake | special | water | stretch
+#   gremlet focus [minutes]      start a focus session (they doze, then dance when the break starts)
+#   gremlet unfocus              stop the focus timer
+#   gremlet status               what's out and whether a focus timer is running
+#   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
+#
+# Talks to the Gremlets app on 127.0.0.1 only. Set GREMLETS_PORT if you changed the port.
+PORT="${GREMLETS_PORT:-47920}"
+URL="http://127.0.0.1:${PORT}"
+
+call() {
+  curl -s -m 2 -X "${2:-POST}" -H 'X-Gremlets: 1' "${URL}/$1" || { echo "gremlet: the Gremlets app isn't running" >&2; return 1; }
+}
+
+case "${1:-}" in
+  pass|fail|done|dance|wave|sleep|wake|special|water|stretch) call "$1" >/dev/null ;;
+  focus)   call "focus?minutes=${2:-25}" >/dev/null ;;
+  unfocus) call unfocus >/dev/null ;;
+  status)  call status GET; echo ;;
+  run)
+    shift
+    [ $# -gt 0 ] || { echo "usage: gremlet run <command...>" >&2; exit 2; }
+    "$@"; code=$?
+    if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
+    exit $code ;;
+  ""|-h|--help|help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
+esac

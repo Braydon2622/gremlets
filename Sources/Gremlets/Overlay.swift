@@ -269,6 +269,12 @@ final class OverlayController {
 
     private func creature(_ id: Int) -> Creature? { world.creatures.first { $0.id == id } }
 
+    /// A shower of hearts when a Gremlet's bond with you grows.
+    func bondLevelUp(_ c: Creature) {
+        guard let (si, p) = localPoint(c, dy: c.size.y * 0.7) else { return }
+        burst([Effects.heart, Effects.smallHeart, Effects.sparkle], si: si, at: p, count: 9, dx: -45...45, dy: 20...60, duration: 1.6, stagger: 0.06)
+    }
+
     private func localPoint(_ c: Creature, dy: Double = 0) -> (Int, CGPoint)? {
         guard let si = layerScreen[c.id] else { return nil }
         let o = screens[si].frame.origin

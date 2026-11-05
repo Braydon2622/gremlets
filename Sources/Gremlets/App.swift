@@ -18,6 +18,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let rosterKey = "roster"
 
+    // Companion features.
+    private let bonds = BondStore()
+    private let focus = FocusTimer()
+    private var control: ControlServer?
+    private var lastHousekeeping = CACurrentMediaTime()
+    private var lastTitle: String? = ""
+    private var remindersOn: Bool {
+        get { UserDefaults.standard.bool(forKey: "reminders") }
+        set { UserDefaults.standard.set(newValue, forKey: "reminders") }
+    }
+    private var lastReminder = Date()
+    private var nextReminderIsWater = true
+
     func applicationDidFinishLaunching(_ note: Notification) {
         species = SpriteLibrary.loadAll()
         guard !species.isEmpty else {
@@ -31,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlay = OverlayController(world: world, species: species)
         refreshEnvironment()
         restoreRoster()
+        setUpCompanion()
         setUpMenuBar()
 
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
@@ -73,10 +87,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         world.cursor = Vec2(Double(NSEvent.mouseLocation.x), Double(NSEvent.mouseLocation.y))
         world.step(dt)
-        overlay.handle(world.drainEvents())
+        let events = world.drainEvents()
+        trackBond(events)
+        overlay.handle(events)
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
+        if now - lastHousekeeping >= 1 { housekeeping(elapsed: now - lastHousekeeping); lastHousekeeping = now }
 
         let wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         schedule(rate: wanted)
@@ -182,6 +199,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(remove)
         }
 
+        // Your Gremlets: bond with each one that's out.
+        if !world.creatures.isEmpty {
+            let mine = NSMenuItem(title: "Your Gremlets", action: nil, keyEquivalent: "")
+            let msub = NSMenu()
+            var seen = Set<String>()
+            for c in world.creatures where seen.insert(c.species.id).inserted {
+                let b = bonds.bond(c.species.id)
+                let hearts = String(repeating: "♥", count: b.level + 1) + String(repeating: "♡", count: 4 - b.level)
+                let item = NSMenuItem(title: "\(c.species.name)   \(hearts)  \(b.name)", action: nil, keyEquivalent: "")
+                if let img = species[c.species.id]?.frames.first { item.image = NSImage(cgImage: img, size: NSSize(width: 22, height: 22)) }
+                let detail = NSMenu()
+                let hours = b.hoursTogether < 1 ? "\(Int(b.hoursTogether * 60)) min" : String(format: "%.1f h", b.hoursTogether)
+                var lines = ["Together \(b.daysTogether) day\(b.daysTogether == 1 ? "" : "s") · \(hours)",
+                             "Petted \(b.pets)× · Poked \(b.pokes)×"]
+                if let next = b.pointsToNext { lines.append("\(Int(next.rounded(.up))) points to \(Bond.levelNames[b.level + 1])") }
+                else { lines.append("The closest bond there is") }
+                if b.level >= 2 { lines.append("Shows off its signature move when petted") }
+                for l in lines { let li = NSMenuItem(title: l, action: nil, keyEquivalent: ""); li.isEnabled = false; detail.addItem(li) }
+                item.submenu = detail
+                msub.addItem(item)
+            }
+            let tip = NSMenuItem(title: "Pet them (rub the cursor over them) to grow your bond", action: nil, keyEquivalent: "")
+            tip.isEnabled = false
+            msub.addItem(.separator()); msub.addItem(tip)
+            mine.submenu = msub
+            menu.addItem(mine)
+        }
+        menu.addItem(.separator())
+
+        // Focus buddy.
+        if let label = focus.label {
+            let state = NSMenuItem(title: focus.isFocusing ? "Focusing · \(label) left" : label + " left", action: nil, keyEquivalent: "")
+            state.isEnabled = false
+            menu.addItem(state)
+            let stop = NSMenuItem(title: "Stop Focus Timer", action: #selector(stopFocus), keyEquivalent: "")
+            stop.target = self
+            menu.addItem(stop)
+        } else {
+            for m in [25, 50] {
+                let f = NSMenuItem(title: "Focus for \(m) min", action: #selector(startFocus(_:)), keyEquivalent: "")
+                f.target = self
+                f.representedObject = m
+                menu.addItem(f)
+            }
+        }
+        let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
+        rem.target = self
+        rem.state = remindersOn ? .on : .off
+        menu.addItem(rem)
+        let cli = NSMenuItem(title: "Copy Terminal Command Setup", action: #selector(copyCLISetup), keyEquivalent: "")
+        cli.target = self
+        cli.toolTip = "Lets scripts and test runners make your Gremlets react (gremlet pass / fail / done)."
+        menu.addItem(cli)
+        menu.addItem(.separator())
+
         let pause = NSMenuItem(title: paused ? "Resume" : "Pause", action: #selector(togglePause), keyEquivalent: "p")
         pause.target = self
         menu.addItem(pause)
@@ -210,10 +282,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let vf = scr?.visibleFrame ?? .zero
         let x = min(max(Double(m.x), vf.minX + 60), vf.maxX - 60)
         world.spawn(sp.info, at: Vec2(x, Double(vf.maxY) - sp.info.pointSize.y - 4))
+        bonds.markSeenToday(id)
+        world.setBond(bonds.bond(id).strength, forSpecies: id)
         saveRoster()
         rebuildMenu()
         schedule(rate: 60)
     }
+
+    func applicationWillTerminate(_ notification: Notification) { bonds.save() }
 
     @objc private func addRandomParty() {
         let picks = species.values.shuffled().prefix(5)
@@ -222,6 +298,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for (i, sp) in picks.enumerated() {
             let x = Double(vf.minX) + Double(vf.width) * (0.2 + 0.15 * Double(i))
             world.spawn(sp.info, at: Vec2(x, Double(vf.maxY) - sp.info.pointSize.y - 4))
+            bonds.markSeenToday(sp.info.id)
+            world.setBond(bonds.bond(sp.info.id).strength, forSpecies: sp.info.id)
         }
         saveRoster()
         rebuildMenu()
@@ -253,6 +331,126 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.runModal()
         }
         rebuildMenu()
+    }
+
+    // MARK: Companion
+
+    private func setUpCompanion() {
+        for c in world.creatures {
+            bonds.markSeenToday(c.species.id)
+            world.setBond(bonds.bond(c.species.id).strength, forSpecies: c.species.id)
+        }
+        bonds.save()
+        focus.onFocusStart = { [weak self] in self?.world.focusMode = true; self?.rebuildMenu() }
+        focus.onBreakStart = { [weak self] in self?.world.receive(.pass); self?.schedule(rate: 60); self?.rebuildMenu() }
+        focus.onBreakEnd = { [weak self] in self?.world.receive(.done); self?.rebuildMenu() }
+        let server = ControlServer { [weak self] method, path, query in
+            guard let self else { return (404, "{}") }
+            return self.handleControl(method: method, path: path, query: query)
+        }
+        server.start()
+        control = server
+        if CommandLine.arguments.contains("--focus-demo") { focus.breakMinutes = 0.25; focus.startFocus(minutes: 0.25) }
+    }
+
+    private func handleControl(method: String, path: String, query: [String: String]) -> (Int, String) {
+        let name = path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+        if name == "status" {
+            let ids = world.creatures.map { "\"\($0.species.id)\"" }.joined(separator: ",")
+            let f = focus.label.map { "\"\($0)\"" } ?? "null"
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused)}"#)
+        }
+        guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
+        switch name {
+        case "focus":
+            let minutes = Double(query["minutes"] ?? "") ?? 25
+            focus.startFocus(minutes: min(max(minutes, 1), 180))
+        case "unfocus":
+            focus.stop(); world.focusMode = false; rebuildMenu()
+        default:
+            guard let signal = Signal(rawValue: name) else { return (404, #"{"ok":false,"error":"unknown action"}"#) }
+            world.receive(signal)
+        }
+        schedule(rate: 60)
+        return (200, #"{"ok":true}"#)
+    }
+
+    /// Bond bookkeeping from world events; celebrates when a bond levels up.
+    private func trackBond(_ events: [WorldEvent]) {
+        for e in events {
+            let id: Int, petted: Bool
+            switch e {
+            case .petted(let i): id = i; petted = true
+            case .poked(let i): id = i; petted = false
+            default: continue
+            }
+            guard let c = world.creatures.first(where: { $0.id == id }) else { continue }
+            let before = bonds.bond(c.species.id).level
+            if petted { bonds.addPet(c.species.id) } else { bonds.addPoke(c.species.id) }
+            let after = bonds.bond(c.species.id)
+            if after.level > before {
+                world.setBond(after.strength, forSpecies: c.species.id)
+                overlay.bondLevelUp(c)
+                rebuildMenu()
+            }
+        }
+    }
+
+    /// Once a second: menu bar timer text, focus phases, reminders, time-together and late-night sleepiness.
+    private func housekeeping(elapsed: Double) {
+        focus.update()
+        let title = focus.label
+        if title != lastTitle {
+            statusItem.button?.title = title.map { " " + $0 } ?? ""
+            statusItem.button?.imagePosition = .imageLeading
+            if (title == nil) != (lastTitle == nil) { rebuildMenu() }
+            lastTitle = title
+        }
+        if !paused {
+            for id in Set(world.creatures.map(\.species.id)) { bonds.addTime(id, seconds: elapsed) }
+        }
+        if remindersOn && !focus.isFocusing && Date().timeIntervalSince(lastReminder) > 45 * 60 {
+            world.receive(nextReminderIsWater ? .water : .stretch)
+            nextReminderIsWater.toggle()
+            lastReminder = Date()
+            schedule(rate: 60)
+        }
+        let hour = Calendar.current.component(.hour, from: Date())
+        world.sleepyFactor = (hour >= 23 || hour < 5) ? 3 : 1     // gentle "time to log off" hint
+        if Int(CACurrentMediaTime()) % 60 == 0 {
+            for id in Set(world.creatures.map(\.species.id)) { bonds.markSeenToday(id) }
+            bonds.save()
+        }
+    }
+
+    @objc private func startFocus(_ sender: NSMenuItem) {
+        focus.startFocus(minutes: Double(sender.representedObject as? Int ?? 25))
+    }
+
+    @objc private func stopFocus() {
+        focus.stop()
+        world.focusMode = false
+        world.receive(.wake)
+        rebuildMenu()
+    }
+
+    @objc private func toggleReminders() {
+        remindersOn.toggle()
+        lastReminder = Date()
+        rebuildMenu()
+    }
+
+    @objc private func copyCLISetup() {
+        let repoScript = SpriteLibrary.builtInFolder?.deletingLastPathComponent().appendingPathComponent("scripts/gremlet").path
+        let text = """
+        # Gremlets terminal command. Paste into your shell config (~/.zshrc):
+        gremlet() { curl -s -m 2 -X POST -H 'X-Gremlets: 1' "http://127.0.0.1:\(ControlServer.defaultPort)/$1" >/dev/null; }
+        # Then:  npm test && gremlet pass || gremlet fail
+        #        gremlet done  (after any long command)
+        # Full version with `gremlet run <cmd>` and auto-react to long commands: \(repoScript ?? "scripts/gremlet in the Gremlets repo")
+        """
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     @objc private func openSpritesFolder() {

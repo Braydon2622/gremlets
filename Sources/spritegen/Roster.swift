@@ -59,12 +59,12 @@ let roster: [Species] = [
         $0.top = [fruit(0xFFC531, 0x6CC24A)]
         $0.special = "steam"; $0.walkSpeed = 40; $0.sleepiness = 1.6; $0.jumpPower = 0.8
     },
-    species("seedcheek", "Seedcheek", "harvest", "animal", main: 0xF2B872, "A hamster that stuffs its cheeks with sunflower seeds and never quite finishes eating.") {
-        $0.rx = 7.5; $0.ry = 7; $0.belly = 0xFFF4E2; $0.eye = 0x2A1A10; $0.mouthDY = 4; $0.teeth = true
+    species("seedcheek", "Seedcheek", "harvest", "animal", main: 0xBDB6C8, "A dwarf hamster that stuffs its cheeks with blueberries and never quite finishes eating.") {
+        $0.rx = 7.5; $0.ry = 7; $0.belly = 0xFFF8F0; $0.eye = 0x2A1A10; $0.mouthDY = 4; $0.teeth = true
         $0.back = [roundEars(0xF7A6B4, size: 0.95)]
-        $0.surface = [cheekPouches(0xF7CB92)]
-        $0.muzzle = snout(0xFFF4E2, nose: 0xE07A8A, w: 0.25)
-        $0.front = [holds(.seed)]
+        $0.surface = [cheekPouches(0xD2CCDB)]
+        $0.muzzle = snout(0xFFF8F0, nose: 0xE07A8A, w: 0.25)
+        $0.front = [holds(.berry)]
         $0.special = "seeds"; $0.walkSpeed = 80
     },
     species("rustle", "Rustle", "autumn", "animal", main: 0xC8552B, "A red panda with a striped autumn tail. Stands up tall to look bigger when surprised.") {
@@ -91,9 +91,9 @@ let roster: [Species] = [
         $0.top = [eyeStalks(0xD3CFA6)]
         $0.feet = .slime(0xC8C49A); $0.special = "steam"; $0.walkSpeed = 22; $0.jumpPower = 0.6
     },
-    species("duskwing", "Duskwing", "night", "animal", main: 0x6B4A6E, "A fruit bat who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk.") {
-        $0.rx = 7; $0.ry = 6.8; $0.belly = 0xC9A27C; $0.eye = 0x1E1420; $0.fangs = true; $0.eyeStyle = .light
-        $0.back = [batWings(0x8A5F8E, 0x4A324D), batEars(0xF2B8C6)]
+    species("duskwing", "Duskwing", "night", "animal", main: 0xB5743A, "A golden flying fox who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk.") {
+        $0.rx = 7; $0.ry = 6.8; $0.belly = 0xF0C878; $0.eye = 0x2A140A; $0.fangs = true
+        $0.back = [batWings(0x6A4030, 0x3A2018), batEars(0xE8A890)]
         $0.front = [holds(.fig)]
         $0.flies = true; $0.special = "sparkle"; $0.sleepiness = 1.4
     },
@@ -105,14 +105,14 @@ let roster: [Species] = [
         $0.front = [holds(.pebble)]
         $0.special = "bubbles"; $0.walkSpeed = 70
     },
-    species("gumleaf", "Gumleaf", "eucalyptus", "animal", main: 0xA4A9B0, "A fluffy koala that clutches a eucalyptus sprig and naps twenty hours a day.") {
-        $0.rx = 8; $0.ry = 7.2; $0.belly = 0xF4F4F2; $0.eye = 0x1E1E24; $0.mouthDY = 5; $0.restEyes = .sleepy; $0.fluffy = true
-        $0.back = [roundEars(0xF4F4F2, size: 1.45, spread: 0.75)]
+    species("gumleaf", "Gumleaf", "eucalyptus", "animal", main: 0xB7B2AC, "A koala who wears a crown of gum blossoms and insists on being called Your Fluffiness.") {
+        $0.rx = 8; $0.ry = 7.2; $0.belly = 0xF6F2EC; $0.eye = 0x1E1E24; $0.mouthDY = 5; $0.fluffy = true
+        $0.back = [roundEars(0xF6F2EC, size: 1.45, spread: 0.75)]
         $0.muzzle = koalaNose()
-        $0.front = [holds(.sprig)]
-        $0.special = "leaves"; $0.walkSpeed = 35; $0.sleepiness = 2.2
+        $0.top = [blossomCrown(0xFF9EC4, 0xFFF4F8)]
+        $0.special = "petals"; $0.walkSpeed = 45; $0.sleepiness = 1.3
     },
-    species("dozel", "Dozel", "canopy", "animal", main: 0xB59A7A, "A sloth carrying a flower it picked last week. It's still deciding who to give it to.") {
+    species("dozel", "Dozel", "canopy", "animal", main: 0x9AA584, "A sloth carrying a flower it picked last week. It's still deciding who to give it to.") {
         $0.body = .egg; $0.rx = 7.5; $0.ry = 7.5; $0.eye = 0x2A1E14; $0.limb = 0x8A7458; $0.restEyes = .sleepy; $0.eyeStyle = .light
         $0.surface = [facePatch(0xEFE2C8, w: 0.8, h: 0.6), eyeMask(0x6A5038)]
         $0.front = [holds(.flower)]
@@ -159,12 +159,12 @@ let roster: [Species] = [
         $0.top = [antennae(.ball, 0x2A2430)]
         $0.feet = .insect; $0.flies = true; $0.special = "sparkle"
     },
-    species("orchis", "Orchis", "orchid", "insect", main: 0xF7D9EA, "An orchid mantis that looks like a flower and holds its arms like it's praying for snacks.") {
-        $0.body = .egg; $0.rx = 6.8; $0.ry = 7.4; $0.eye = 0x5A1A3A; $0.eyeStyle = .bug(0xFF7FB0); $0.noArms = true; $0.limb = 0xF7B6D2
-        $0.back = [petals(0xFFFFFF)]
-        $0.top = [antennae(.long, 0xD98FB0)]
-        $0.front = [scytheArms(0xF7B6D2)]
-        $0.feet = .insect; $0.special = "petals"; $0.walkSpeed = 50
+    species("prayla", "Prayla", "dusk", "insect", main: 0x8C9BE0, "A periwinkle mantis that folds its arms and says grace before every single snack.") {
+        $0.body = .egg; $0.rx = 6.8; $0.ry = 7.4; $0.belly = 0xD6DCF8; $0.eye = 0x3A2A10; $0.eyeStyle = .bug(0xFFC94A); $0.noArms = true; $0.limb = 0x6F7FC8
+        $0.back = [laceLobes(0xDCE2FA)]
+        $0.top = [antennae(.long, 0x4A5AA0)]
+        $0.front = [scytheArms(0x6F7FC8)]
+        $0.feet = .insect; $0.special = "sparkle"; $0.walkSpeed = 50
     },
     species("lumbug", "Lumbug", "glow", "insect", main: 0x3A3550, "A firefly whose lantern glows brighter when it's excited and dims to a nightlight when it sleeps.") {
         $0.body = .bugHead; $0.rx = 6.5; $0.ry = 6.5; $0.head = 0x1E1B2A; $0.limb = 0x1E1B2A; $0.eyeStyle = .light; $0.eye = 0x1E1B2A
@@ -196,10 +196,10 @@ let roster: [Species] = [
         $0.front = [holds(.violin)]
         $0.feet = .insect; $0.special = "notes"; $0.jumpPower = 1.5
     },
-    species("gemscarab", "Gemscarab", "sun", "insect", main: 0x2FAE7A, "A jewel scarab that rolls the morning sun up into the sky, very slowly, one push at a time.") {
-        $0.rx = 7.2; $0.ry = 6.6; $0.eye = 0x0E2A1E; $0.glossy = true; $0.armsUp = true; $0.limb = 0x1F7A55
-        $0.surface = [shellLine(), spots(0xF2C14E, [(-0.6, 0.15, 0.8), (0.6, 0.15, 0.8)])]
-        $0.top = [sunDisk()]
+    species("prismite", "Prismite", "prism", "insect", main: 0x2E9AA8, "A jewel beetle whose shell throws tiny rainbows on the wall whenever the sun hits it.") {
+        $0.rx = 7.2; $0.ry = 6.6; $0.eye = 0x0E2A2E; $0.glossy = true; $0.limb = 0x1F6A75
+        $0.surface = [shellLine(), spots(0xF2C14E, [(-0.6, 0.2, 0.8), (0.6, 0.2, 0.8), (-0.3, 0.65, 0.6), (0.3, 0.65, 0.6)])]
+        $0.top = [noseHorn(0xF2C14E)]
         $0.feet = .insect; $0.special = "sparkle"; $0.walkSpeed = 45
     },
     species("snipleaf", "Snipleaf", "colony", "insect", main: 0xA0482A, "A leafcutter ant carrying a leaf ten times its size. Uses it as a blanket at night.") {
@@ -220,16 +220,16 @@ let roster: [Species] = [
         $0.front = [cloudPuffs()]
         $0.flies = true; $0.special = "clouds"
     },
-    species("steepy", "Steepy", "tea", "dragon", main: 0x9FE0C5, "A tea dragon no bigger than a teacup, so it lives in one. Smells faintly of jasmine.") {
+    species("steepy", "Steepy", "tea", "dragon", main: 0x9FE0C5, "A mint wyrm small enough to nap in a teacup, so it does. Smells faintly of jasmine.") {
         $0.rx = 6.2; $0.ry = 6; $0.belly = 0xF2FFF6; $0.eye = 0x1A3A2A; $0.feet = .none
         $0.back = [batWings(0x7FCFB0, 0x4FA58A), curvedHorns(0xF2E2B0)]
         $0.front = [teacup()]
         $0.special = "steam"; $0.walkSpeed = 35; $0.jumpPower = 0.9
     },
-    species("gemscale", "Gemscale", "crystal", "dragon", main: 0xB9A6F0, "A lavender dragon that grows crystals instead of spikes. They chime when it runs.") {
-        $0.body = .egg; $0.rx = 7.4; $0.ry = 7.4; $0.eye = 0x2A1E4A
-        $0.back = [batWings(0x9F8AE0, 0x6F5AB8), lizardTail(0xB9A6F0, tip: .spade(0x9FF3FF)), crystals(0x9FF3FF)]
-        $0.surface = [bellyScales(0xE9E1FF)]
+    species("gemscale", "Gemscale", "crystal", "dragon", main: 0xD6E2F5, "A moonstone dragon that grows crystals instead of spikes. They chime when it runs.") {
+        $0.body = .egg; $0.rx = 7.4; $0.ry = 7.4; $0.eye = 0x1E2A4A
+        $0.back = [batWings(0xA8B8E0, 0x6A7AA8), lizardTail(0xD6E2F5, tip: .spikes(0xB49CFF)), crystals(0xB49CFF)]
+        $0.surface = [bellyScales(0xF4F8FF)]
         $0.feet = .big; $0.flies = true; $0.special = "sparkle"
     },
     species("mossmaw", "Mossmaw", "ancient", "dragon", main: 0x7E9F5A, "An old, sleepy dragon so still that moss and flowers grow on its back.") {
@@ -238,13 +238,13 @@ let roster: [Species] = [
         $0.surface = [bellyScales(0xD9E6A8), moss(0x5FAF4A, flower: 0xFF9EC4)]
         $0.feet = .big; $0.special = "petals"; $0.walkSpeed = 35; $0.sleepiness = 1.9; $0.jumpPower = 0.75
     },
-    species("pipwyrn", "Pipwyrn", "mischief", "dragon", main: 0x8C5BD6, "A pocket wyvern with a fang-y grin. Hides things, then helps you look for them.") {
-        $0.rx = 6.6; $0.ry = 6.4; $0.belly = 0xF2C9F0; $0.eye = 0x1E0E3A; $0.fangs = true
-        $0.back = [batWings(0xB07FE0, 0x5A3A9A), lizardTail(0x8C5BD6, tip: .spade(0xFF7FC0), len: 0.9)]
+    species("pipwyrn", "Pipwyrn", "mischief", "dragon", main: 0xE05FA8, "A pocket wyvern with a fang-y grin. Hides things, then helps you look for them.") {
+        $0.rx = 6.6; $0.ry = 6.4; $0.belly = 0xFFE07A; $0.eye = 0x3A0E2A; $0.fangs = true
+        $0.back = [batWings(0x7A3A8A, 0x4A1E5A), lizardTail(0xE05FA8, tip: .tuft(0xFFE07A), len: 0.9)]
         $0.top = [hornNubs(0xFFE3F2)]
         $0.flies = true; $0.special = "smoke"; $0.walkSpeed = 85
     },
-    species("smolder", "Smolder", "ember", "dragon", main: 0x3A3440, "A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs.") {
+    species("ashlet", "Ashlet", "ember", "dragon", main: 0x3A3440, "A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs.") {
         $0.body = .egg; $0.rx = 7.4; $0.ry = 7.2; $0.eye = 0x2A1A10; $0.eyeStyle = .glow(0xFF9A3D)
         $0.back = [batWings(0x4A4250, 0x2A2430), lizardTail(0x3A3440, tip: .ember), curvedHorns(0x6A6070)]
         $0.surface = [bellyScales(0x5A5260), cracks(0xFF8A3D)]
@@ -320,10 +320,10 @@ let roster: [Species] = [
         $0.surface = [facePatch(0x7F8FB8, w: 0.72, h: 0.62)]
         $0.feet = .big; $0.special = "snow"; $0.walkSpeed = 55
     },
-    species("nessle", "Nessle", "loch", "mythic", main: 0x4FB3A9, "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.") {
+    species("nessle", "Nessle", "loch", "mythic", main: 0x6E8F5A, "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.") {
         $0.body = .longneck; $0.rx = 8; $0.ry = 6.5; $0.eye = 0x0E2A26; $0.faceV = -0.05; $0.noArms = true; $0.feet = .none
         $0.back = [humps()]
-        $0.surface = [spots(0x3A8F86, [(-0.5, 0.25, 1.0), (-0.05, 0.4, 0.8)])]
+        $0.surface = [spots(0x4F6E40, [(-0.5, 0.25, 1.0), (-0.05, 0.4, 0.8)])]
         $0.front = [ripples()]
         $0.special = "bubbles"; $0.walkSpeed = 45
     },

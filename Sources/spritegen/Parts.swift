@@ -950,7 +950,7 @@ func whiskers(_ col: UInt32, long: Bool = false) -> Draw {
 
 // MARK: - Front: held items and overlays
 
-enum Item { case pebble, fig, seed, sprig, violin, bigLeaf, flower }
+enum Item { case pebble, fig, seed, sprig, violin, bigLeaf, flower, berry }
 
 func holds(_ item: Item) -> Draw {
     return { cv, c in
@@ -980,6 +980,9 @@ func holds(_ item: Item) -> Draw {
             cv.ellipse(x, ly, 6.5, 2.6, Ramp(0x6CC24A), rot: c.p.lying ? 0 : -0.15)
             cv.line(x - 5.5, ly + 0.5, x + 5.5, ly - 0.8, Ramp(0x6CC24A).shade)
             cv.line(x - 5.5, ly + 1.5, x - 7.5, ly + 2.5, 0x4A7A2A)
+        case .berry:
+            cv.ellipse(x, y, 2.2, 2.1, Ramp(0x4A5FC1), glossy: true)
+            cv.plot(x - 0.5, y - 2, 0x2A3070); cv.plot(x + 0.5, y - 2, 0x2A3070)
         case .flower:
             for (dx, dy) in [(-1.2, 0.0), (1.2, 0.0), (0.0, -1.2), (0.0, 1.2)] { cv.ellipse(x + dx, y + dy, 1.2, 1.2, Ramp(0xFF9EC4)) }
             cv.plot(x, y, 0xFFD54A)
@@ -1041,6 +1044,26 @@ func scytheArms(_ col: UInt32) -> Draw {
             let hand = (c.cx + side * c.rx * 0.05 + (raised ? side * 3 : 0), c.cy - c.ry * (raised ? 1.0 : 0.05))
             cv.blob(curve(sh, elbow, hand, r0: 1.3, r1: 1.0, steps: 5), r)
             cv.plot(hand.0 - side * 0.5, hand.1 - 1, r.outline)
+        }
+    }
+}
+
+func blossomCrown(_ c1: UInt32, _ c2: UInt32) -> Draw {
+    return { cv, c in
+        for (i, u) in [-0.6, -0.2, 0.2, 0.6].enumerated() {
+            let x = c.hx + u * c.hrx, y = c.headTop + 1.2 + abs(u) * 1.5
+            let col = Ramp(i % 2 == 0 ? c1 : c2)
+            for (dx, dy) in [(-0.9, 0.0), (0.9, 0.0), (0.0, -0.9), (0.0, 0.9)] { cv.plot(x + dx, y + dy, col.base) }
+            cv.plot(x, y, 0xFFE38A)
+        }
+    }
+}
+
+/// Lace-like side lobes (mantis).
+func laceLobes(_ col: UInt32) -> Draw {
+    return { cv, c in
+        for side in sides {
+            cv.ellipse(c.cx + side * (c.rx + 0.4), c.cy + c.ry * 0.55, 2.6, 1.5, Ramp(col), rot: side * 0.6)
         }
     }
 }

@@ -1,5 +1,5 @@
 {
-  "description" : "A fluffy koala that clutches a eucalyptus sprig and naps twenty hours a day.",
+  "description" : "A koala who wears a crown of gum blossoms and insists on being called Your Fluffiness.",
   "element" : "eucalyptus",
   "family" : "animal",
   "flies" : false,
@@ -7,7 +7,7 @@
   "jumpPower" : 1,
   "name" : "Gumleaf",
   "scale" : 3,
-  "sleepiness" : 2.2000000000000002,
-  "special" : "leaves",
-  "walkSpeed" : 35
+  "sleepiness" : 1.3,
+  "special" : "petals",
+  "walkSpeed" : 45
 }

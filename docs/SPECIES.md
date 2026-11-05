@@ -13,14 +13,14 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 3 | **Mossfawn** | grove | leaves |  | A forest fawn whose antlers sprout tiny red mushrooms after it rains. |
 | 4 | **Pomble** | trickster | leaves |  | A pot-bellied tanuki who keeps a leaf on its head for luck and drums its tummy when happy. |
 | 5 | **Yuzubara** | onsen | steam |  | A hot-spring capybara balancing a yuzu on its head. Nothing ruffles it. |
-| 6 | **Seedcheek** | harvest | seeds |  | A hamster that stuffs its cheeks with sunflower seeds and never quite finishes eating. |
+| 6 | **Seedcheek** | harvest | seeds |  | A dwarf hamster that stuffs its cheeks with blueberries and never quite finishes eating. |
 | 7 | **Rustle** | autumn | leaves |  | A red panda with a striped autumn tail. Stands up tall to look bigger when surprised. |
 | 8 | **Nimbuss** | sky | rain | ✓ | A kitten made of cloud fluff. It drizzles a little when it's sad and floats when it's happy. |
 | 9 | **Crownip** | pond | bubbles |  | A pond frog who found a tiny crown and has been royalty ever since. |
 | 10 | **Kettlesnail** | tea | steam |  | A snail living in an old copper kettle. It puffs steam when it's thinking. |
-| 11 | **Duskwing** | night | sparkle | ✓ | A fruit bat who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk. |
+| 11 | **Duskwing** | night | sparkle | ✓ | A golden flying fox who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk. |
 | 12 | **Tidepaw** | river | bubbles |  | A river otter that carries its favourite pebble and shows it to everyone it meets. |
-| 13 | **Gumleaf** | eucalyptus | leaves |  | A fluffy koala that clutches a eucalyptus sprig and naps twenty hours a day. |
+| 13 | **Gumleaf** | eucalyptus | petals |  | A koala who wears a crown of gum blossoms and insists on being called Your Fluffiness. |
 | 14 | **Dozel** | canopy | petals |  | A sloth carrying a flower it picked last week. It's still deciding who to give it to. |
 | 15 | **Puffling** | sea | bubbles | ✓ | A puffin chick with a beak too big for its face and a lot of confidence. |
 | 16 | **Alpocco** | highland | notes |  | A fluffy alpaca with woven pom-pom tassels. Hums when it's content. |
@@ -33,13 +33,13 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 18 | **Zipwing** | breeze | sparkle | ✓ | A dragonfly with huge shiny eyes. Zips everywhere, stops for nothing. |
 | 19 | **Bumbuzz** | pollen | pollen | ✓ | A round, fuzzy bumblebee whose wings are far too small. It flies anyway. |
 | 20 | **Spotsy** | luck | sparkle | ✓ | A shiny ladybug. Counting its spots is said to bring good luck. |
-| 21 | **Orchis** | orchid | petals |  | An orchid mantis that looks like a flower and holds its arms like it's praying for snacks. |
+| 21 | **Prayla** | dusk | sparkle |  | A periwinkle mantis that folds its arms and says grace before every single snack. |
 | 22 | **Lumbug** | glow | glow | ✓ | A firefly whose lantern glows brighter when it's excited and dims to a nightlight when it sleeps. |
 | 23 | **Lunette** | moon | glow | ✓ | A pale luna moth with long ribbon tails. Only comes out to dance under the moon. |
 | 24 | **Woolybit** | weather | sparkle |  | A woolly bear caterpillar. The width of its orange band predicts the winter, supposedly. |
 | 25 | **Peacockle** | display | notes |  | A peacock spider. It unfurls a rainbow fan and dances for anyone who'll watch. |
 | 26 | **Fiddlet** | song | notes |  | A cricket that plays a tiny fiddle. Its favourite song has three notes. |
-| 27 | **Gemscarab** | sun | sparkle |  | A jewel scarab that rolls the morning sun up into the sky, very slowly, one push at a time. |
+| 27 | **Prismite** | prism | sparkle |  | A jewel beetle whose shell throws tiny rainbows on the wall whenever the sun hits it. |
 | 28 | **Snipleaf** | colony | leaves |  | A leafcutter ant carrying a leaf ten times its size. Uses it as a blanket at night. |
 
 ## Dragons (6)
@@ -47,11 +47,11 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
 | 29 | **Kumoryu** | cloud | clouds | ✓ | A coral sky-dragon who rides its own little cloud and never touches the ground. |
-| 30 | **Steepy** | tea | steam |  | A tea dragon no bigger than a teacup, so it lives in one. Smells faintly of jasmine. |
-| 31 | **Gemscale** | crystal | sparkle | ✓ | A lavender dragon that grows crystals instead of spikes. They chime when it runs. |
+| 30 | **Steepy** | tea | steam |  | A mint wyrm small enough to nap in a teacup, so it does. Smells faintly of jasmine. |
+| 31 | **Gemscale** | crystal | sparkle | ✓ | A moonstone dragon that grows crystals instead of spikes. They chime when it runs. |
 | 32 | **Mossmaw** | ancient | petals |  | An old, sleepy dragon so still that moss and flowers grow on its back. |
 | 33 | **Pipwyrn** | mischief | smoke | ✓ | A pocket wyvern with a fang-y grin. Hides things, then helps you look for them. |
-| 34 | **Smolder** | ember | fire | ✓ | A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs. |
+| 34 | **Ashlet** | ember | fire | ✓ | A charcoal dragonling with glowing cracks. Hiccups little sparks when it laughs. |
 
 ## Dinosaurs (7)
 

@@ -2,7 +2,7 @@
   "frames" : [
     {
       "duration" : 520,
-      "filename" : "gemscarab 0.aseprite",
+      "filename" : "prismite 0.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -12,7 +12,7 @@
     },
     {
       "duration" : 420,
-      "filename" : "gemscarab 1.aseprite",
+      "filename" : "prismite 1.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -22,7 +22,7 @@
     },
     {
       "duration" : 520,
-      "filename" : "gemscarab 2.aseprite",
+      "filename" : "prismite 2.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -32,7 +32,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 3.aseprite",
+      "filename" : "prismite 3.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -42,7 +42,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "gemscarab 4.aseprite",
+      "filename" : "prismite 4.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -52,7 +52,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "gemscarab 5.aseprite",
+      "filename" : "prismite 5.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -62,7 +62,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 6.aseprite",
+      "filename" : "prismite 6.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -72,7 +72,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "gemscarab 7.aseprite",
+      "filename" : "prismite 7.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -82,7 +82,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "gemscarab 8.aseprite",
+      "filename" : "prismite 8.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -92,7 +92,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "gemscarab 9.aseprite",
+      "filename" : "prismite 9.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -102,7 +102,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 10.aseprite",
+      "filename" : "prismite 10.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -112,7 +112,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 11.aseprite",
+      "filename" : "prismite 11.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -122,7 +122,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 12.aseprite",
+      "filename" : "prismite 12.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -132,7 +132,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 13.aseprite",
+      "filename" : "prismite 13.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -142,7 +142,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 14.aseprite",
+      "filename" : "prismite 14.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -152,7 +152,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 15.aseprite",
+      "filename" : "prismite 15.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -162,7 +162,7 @@
     },
     {
       "duration" : 120,
-      "filename" : "gemscarab 16.aseprite",
+      "filename" : "prismite 16.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -172,7 +172,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 17.aseprite",
+      "filename" : "prismite 17.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -182,7 +182,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 18.aseprite",
+      "filename" : "prismite 18.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -192,7 +192,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "gemscarab 19.aseprite",
+      "filename" : "prismite 19.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -202,7 +202,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "gemscarab 20.aseprite",
+      "filename" : "prismite 20.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -212,7 +212,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "gemscarab 21.aseprite",
+      "filename" : "prismite 21.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -222,7 +222,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 22.aseprite",
+      "filename" : "prismite 22.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -232,7 +232,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "gemscarab 23.aseprite",
+      "filename" : "prismite 23.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -242,7 +242,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "gemscarab 24.aseprite",
+      "filename" : "prismite 24.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -252,7 +252,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "gemscarab 25.aseprite",
+      "filename" : "prismite 25.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -262,7 +262,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "gemscarab 26.aseprite",
+      "filename" : "prismite 26.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -272,7 +272,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 27.aseprite",
+      "filename" : "prismite 27.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -282,7 +282,7 @@
     },
     {
       "duration" : 180,
-      "filename" : "gemscarab 28.aseprite",
+      "filename" : "prismite 28.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -292,7 +292,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 29.aseprite",
+      "filename" : "prismite 29.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -302,7 +302,7 @@
     },
     {
       "duration" : 620,
-      "filename" : "gemscarab 30.aseprite",
+      "filename" : "prismite 30.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -312,7 +312,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "gemscarab 31.aseprite",
+      "filename" : "prismite 31.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -322,7 +322,7 @@
     },
     {
       "duration" : 320,
-      "filename" : "gemscarab 32.aseprite",
+      "filename" : "prismite 32.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -332,7 +332,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "gemscarab 33.aseprite",
+      "filename" : "prismite 33.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -342,7 +342,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "gemscarab 34.aseprite",
+      "filename" : "prismite 34.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -352,7 +352,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "gemscarab 35.aseprite",
+      "filename" : "prismite 35.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -362,7 +362,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "gemscarab 36.aseprite",
+      "filename" : "prismite 36.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -372,7 +372,7 @@
     },
     {
       "duration" : 170,
-      "filename" : "gemscarab 37.aseprite",
+      "filename" : "prismite 37.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -382,7 +382,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "gemscarab 38.aseprite",
+      "filename" : "prismite 38.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -392,7 +392,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "gemscarab 39.aseprite",
+      "filename" : "prismite 39.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -402,7 +402,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 40.aseprite",
+      "filename" : "prismite 40.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -412,7 +412,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "gemscarab 41.aseprite",
+      "filename" : "prismite 41.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -422,7 +422,7 @@
     },
     {
       "duration" : 100,
-      "filename" : "gemscarab 42.aseprite",
+      "filename" : "prismite 42.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -432,7 +432,7 @@
     },
     {
       "duration" : 130,
-      "filename" : "gemscarab 43.aseprite",
+      "filename" : "prismite 43.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -442,7 +442,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 44.aseprite",
+      "filename" : "prismite 44.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -452,7 +452,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "gemscarab 45.aseprite",
+      "filename" : "prismite 45.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -462,7 +462,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "gemscarab 46.aseprite",
+      "filename" : "prismite 46.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -472,7 +472,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 47.aseprite",
+      "filename" : "prismite 47.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -482,7 +482,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 48.aseprite",
+      "filename" : "prismite 48.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -492,7 +492,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 49.aseprite",
+      "filename" : "prismite 49.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -502,7 +502,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 50.aseprite",
+      "filename" : "prismite 50.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -512,7 +512,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 51.aseprite",
+      "filename" : "prismite 51.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -522,7 +522,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 52.aseprite",
+      "filename" : "prismite 52.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -532,7 +532,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 53.aseprite",
+      "filename" : "prismite 53.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -542,7 +542,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "gemscarab 54.aseprite",
+      "filename" : "prismite 54.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -552,7 +552,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "gemscarab 55.aseprite",
+      "filename" : "prismite 55.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -562,7 +562,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "gemscarab 56.aseprite",
+      "filename" : "prismite 56.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -572,7 +572,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 57.aseprite",
+      "filename" : "prismite 57.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -582,7 +582,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 58.aseprite",
+      "filename" : "prismite 58.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -592,7 +592,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 59.aseprite",
+      "filename" : "prismite 59.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -602,7 +602,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 60.aseprite",
+      "filename" : "prismite 60.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -612,7 +612,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 61.aseprite",
+      "filename" : "prismite 61.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -622,7 +622,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 62.aseprite",
+      "filename" : "prismite 62.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -632,7 +632,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "gemscarab 63.aseprite",
+      "filename" : "prismite 63.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -642,7 +642,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "gemscarab 64.aseprite",
+      "filename" : "prismite 64.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -652,7 +652,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "gemscarab 65.aseprite",
+      "filename" : "prismite 65.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -662,7 +662,7 @@
     },
     {
       "duration" : 240,
-      "filename" : "gemscarab 66.aseprite",
+      "filename" : "prismite 66.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -672,7 +672,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 67.aseprite",
+      "filename" : "prismite 67.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -682,7 +682,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 68.aseprite",
+      "filename" : "prismite 68.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -692,7 +692,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 69.aseprite",
+      "filename" : "prismite 69.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -702,7 +702,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 70.aseprite",
+      "filename" : "prismite 70.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -712,7 +712,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 71.aseprite",
+      "filename" : "prismite 71.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -722,7 +722,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "gemscarab 72.aseprite",
+      "filename" : "prismite 72.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -732,7 +732,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 73.aseprite",
+      "filename" : "prismite 73.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -742,7 +742,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 74.aseprite",
+      "filename" : "prismite 74.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -752,7 +752,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 75.aseprite",
+      "filename" : "prismite 75.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -762,7 +762,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "gemscarab 76.aseprite",
+      "filename" : "prismite 76.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -772,7 +772,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 77.aseprite",
+      "filename" : "prismite 77.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -782,7 +782,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 78.aseprite",
+      "filename" : "prismite 78.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -792,7 +792,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 79.aseprite",
+      "filename" : "prismite 79.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -802,7 +802,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 80.aseprite",
+      "filename" : "prismite 80.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -812,7 +812,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 81.aseprite",
+      "filename" : "prismite 81.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -822,7 +822,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "gemscarab 82.aseprite",
+      "filename" : "prismite 82.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,

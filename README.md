@@ -12,8 +12,8 @@ heads, throw dance parties, and show off a signature move.
 | Family | Count | Some of them |
 |---|---|---|
 | Animals | 16 | Flurrie the scarf bunny, Dandelet the dandelion lion cub, Yuzubara the hot-spring capybara, Pomble the tanuki |
-| Insects & Bugs | 12 | Spotsy the ladybug, Zipwing the dragonfly, Bumbuzz the bumblebee, Orchis the orchid mantis, Peacockle the dancing spider |
-| Dragons | 6 | Smolder the charcoal dragonling, Steepy the teacup dragon, Kumoryu the cloud dragon |
+| Insects & Bugs | 12 | Spotsy the ladybug, Zipwing the dragonfly, Bumbuzz the bumblebee, Prayla the praying mantis, Peacockle the dancing spider |
+| Dragons | 6 | Ashlet the charcoal dragonling, Steepy the teacup dragon, Kumoryu the cloud dragon |
 | Dinosaurs | 7 | Trikit, Rexlet, Brontle, Bonkle the head-bonker |
 | Mythical | 9 | Kindlet the candle spirit, Griffet the griffin chick, Tripup the three-headed puppy, Inklet the baby kraken |
 
@@ -23,7 +23,7 @@ Every creature has 20 animations (83 frames): idle, look-around, walk, run, crou
 a squash landing, dizzy, a big yawn, sleep with a snot bubble, a startled wake-up, a happy jump, petting bliss,
 dance, wave, dangling when dragged, an "!" alert, and its signature move.
 
-![Smolder's key poses](Species/smolder/preview.png)
+![Ashlet's key poses](Species/ashlet/preview.png)
 
 All creatures, names and art are original. The design approach borrows *principles* from classic
 creature-collecting games and Ghibli-style nature spirits (a readable silhouette, one strong signature
@@ -60,7 +60,7 @@ Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools).
 
 ```bash
 swift run Gremlets                                      # dev run
-swift run Gremlets --spawn flurrie,smolder,spotsy       # pick who shows up
+swift run Gremlets --spawn flurrie,ashlet,spotsy       # pick who shows up
 scripts/bundle.sh && open build/Gremlets.app            # real app bundle (needed for Launch at Login)
 swift test                                              # engine tests, including a 10-minute simulated soak test
 swift run spritegen                                     # regenerate all 50 sprite sheets

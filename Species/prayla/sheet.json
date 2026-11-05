@@ -2,7 +2,7 @@
   "frames" : [
     {
       "duration" : 520,
-      "filename" : "smolder 0.aseprite",
+      "filename" : "prayla 0.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -12,7 +12,7 @@
     },
     {
       "duration" : 420,
-      "filename" : "smolder 1.aseprite",
+      "filename" : "prayla 1.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -22,7 +22,7 @@
     },
     {
       "duration" : 520,
-      "filename" : "smolder 2.aseprite",
+      "filename" : "prayla 2.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -32,7 +32,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 3.aseprite",
+      "filename" : "prayla 3.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -42,7 +42,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "smolder 4.aseprite",
+      "filename" : "prayla 4.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -52,7 +52,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "smolder 5.aseprite",
+      "filename" : "prayla 5.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -62,7 +62,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 6.aseprite",
+      "filename" : "prayla 6.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -72,7 +72,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "smolder 7.aseprite",
+      "filename" : "prayla 7.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -82,7 +82,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "smolder 8.aseprite",
+      "filename" : "prayla 8.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -92,7 +92,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "smolder 9.aseprite",
+      "filename" : "prayla 9.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -102,7 +102,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 10.aseprite",
+      "filename" : "prayla 10.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -112,7 +112,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 11.aseprite",
+      "filename" : "prayla 11.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -122,7 +122,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 12.aseprite",
+      "filename" : "prayla 12.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -132,7 +132,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 13.aseprite",
+      "filename" : "prayla 13.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -142,7 +142,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 14.aseprite",
+      "filename" : "prayla 14.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -152,7 +152,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 15.aseprite",
+      "filename" : "prayla 15.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -162,7 +162,7 @@
     },
     {
       "duration" : 120,
-      "filename" : "smolder 16.aseprite",
+      "filename" : "prayla 16.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -172,7 +172,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 17.aseprite",
+      "filename" : "prayla 17.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -182,7 +182,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 18.aseprite",
+      "filename" : "prayla 18.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -192,7 +192,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "smolder 19.aseprite",
+      "filename" : "prayla 19.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -202,7 +202,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "smolder 20.aseprite",
+      "filename" : "prayla 20.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -212,7 +212,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "smolder 21.aseprite",
+      "filename" : "prayla 21.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -222,7 +222,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 22.aseprite",
+      "filename" : "prayla 22.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -232,7 +232,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "smolder 23.aseprite",
+      "filename" : "prayla 23.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -242,7 +242,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "smolder 24.aseprite",
+      "filename" : "prayla 24.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -252,7 +252,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "smolder 25.aseprite",
+      "filename" : "prayla 25.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -262,7 +262,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "smolder 26.aseprite",
+      "filename" : "prayla 26.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -272,7 +272,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 27.aseprite",
+      "filename" : "prayla 27.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -282,7 +282,7 @@
     },
     {
       "duration" : 180,
-      "filename" : "smolder 28.aseprite",
+      "filename" : "prayla 28.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -292,7 +292,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 29.aseprite",
+      "filename" : "prayla 29.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -302,7 +302,7 @@
     },
     {
       "duration" : 620,
-      "filename" : "smolder 30.aseprite",
+      "filename" : "prayla 30.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -312,7 +312,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "smolder 31.aseprite",
+      "filename" : "prayla 31.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -322,7 +322,7 @@
     },
     {
       "duration" : 320,
-      "filename" : "smolder 32.aseprite",
+      "filename" : "prayla 32.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -332,7 +332,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "smolder 33.aseprite",
+      "filename" : "prayla 33.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -342,7 +342,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "smolder 34.aseprite",
+      "filename" : "prayla 34.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -352,7 +352,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "smolder 35.aseprite",
+      "filename" : "prayla 35.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -362,7 +362,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "smolder 36.aseprite",
+      "filename" : "prayla 36.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -372,7 +372,7 @@
     },
     {
       "duration" : 170,
-      "filename" : "smolder 37.aseprite",
+      "filename" : "prayla 37.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -382,7 +382,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "smolder 38.aseprite",
+      "filename" : "prayla 38.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -392,7 +392,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "smolder 39.aseprite",
+      "filename" : "prayla 39.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -402,7 +402,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 40.aseprite",
+      "filename" : "prayla 40.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -412,7 +412,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "smolder 41.aseprite",
+      "filename" : "prayla 41.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -422,7 +422,7 @@
     },
     {
       "duration" : 100,
-      "filename" : "smolder 42.aseprite",
+      "filename" : "prayla 42.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -432,7 +432,7 @@
     },
     {
       "duration" : 130,
-      "filename" : "smolder 43.aseprite",
+      "filename" : "prayla 43.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -442,7 +442,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 44.aseprite",
+      "filename" : "prayla 44.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -452,7 +452,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "smolder 45.aseprite",
+      "filename" : "prayla 45.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -462,7 +462,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "smolder 46.aseprite",
+      "filename" : "prayla 46.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -472,7 +472,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 47.aseprite",
+      "filename" : "prayla 47.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -482,7 +482,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 48.aseprite",
+      "filename" : "prayla 48.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -492,7 +492,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 49.aseprite",
+      "filename" : "prayla 49.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -502,7 +502,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 50.aseprite",
+      "filename" : "prayla 50.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -512,7 +512,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 51.aseprite",
+      "filename" : "prayla 51.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -522,7 +522,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 52.aseprite",
+      "filename" : "prayla 52.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -532,7 +532,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 53.aseprite",
+      "filename" : "prayla 53.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -542,7 +542,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "smolder 54.aseprite",
+      "filename" : "prayla 54.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -552,7 +552,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "smolder 55.aseprite",
+      "filename" : "prayla 55.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -562,7 +562,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "smolder 56.aseprite",
+      "filename" : "prayla 56.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -572,7 +572,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 57.aseprite",
+      "filename" : "prayla 57.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -582,7 +582,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 58.aseprite",
+      "filename" : "prayla 58.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -592,7 +592,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 59.aseprite",
+      "filename" : "prayla 59.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -602,7 +602,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 60.aseprite",
+      "filename" : "prayla 60.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -612,7 +612,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 61.aseprite",
+      "filename" : "prayla 61.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -622,7 +622,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 62.aseprite",
+      "filename" : "prayla 62.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -632,7 +632,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "smolder 63.aseprite",
+      "filename" : "prayla 63.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -642,7 +642,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "smolder 64.aseprite",
+      "filename" : "prayla 64.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -652,7 +652,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "smolder 65.aseprite",
+      "filename" : "prayla 65.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -662,7 +662,7 @@
     },
     {
       "duration" : 240,
-      "filename" : "smolder 66.aseprite",
+      "filename" : "prayla 66.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -672,7 +672,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 67.aseprite",
+      "filename" : "prayla 67.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -682,7 +682,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 68.aseprite",
+      "filename" : "prayla 68.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -692,7 +692,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 69.aseprite",
+      "filename" : "prayla 69.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -702,7 +702,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 70.aseprite",
+      "filename" : "prayla 70.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -712,7 +712,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 71.aseprite",
+      "filename" : "prayla 71.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -722,7 +722,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "smolder 72.aseprite",
+      "filename" : "prayla 72.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -732,7 +732,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 73.aseprite",
+      "filename" : "prayla 73.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -742,7 +742,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 74.aseprite",
+      "filename" : "prayla 74.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -752,7 +752,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 75.aseprite",
+      "filename" : "prayla 75.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -762,7 +762,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "smolder 76.aseprite",
+      "filename" : "prayla 76.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -772,7 +772,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 77.aseprite",
+      "filename" : "prayla 77.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -782,7 +782,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 78.aseprite",
+      "filename" : "prayla 78.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -792,7 +792,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 79.aseprite",
+      "filename" : "prayla 79.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -802,7 +802,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 80.aseprite",
+      "filename" : "prayla 80.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -812,7 +812,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 81.aseprite",
+      "filename" : "prayla 81.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -822,7 +822,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "smolder 82.aseprite",
+      "filename" : "prayla 82.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,

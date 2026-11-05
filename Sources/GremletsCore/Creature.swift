@@ -64,6 +64,8 @@ public final class Creature {
     var tagImmunity = 0.0
     var beatTimer = 0.0
     var animSpeed = 1.0
+    /// 0...1: how close this Gremlet is to you (see `Bond`).
+    public internal(set) var bond = 0.0
 
     /// Surface owner id used when another creature stands on this one's head.
     var carrierOwnerID: Int { World.creatureOwner(id) }

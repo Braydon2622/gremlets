@@ -14,6 +14,15 @@ struct Brain {
         let e = c.energy
         func add(_ name: String, _ w: Double, _ f: @escaping () -> Void) { if w > 0 { choices.append(Choice(name: name, weight: w, start: f)) } }
 
+        // Focus mode: only quiet things. Mostly dozing, the odd stretch or slow amble.
+        if world.calm {
+            add("doze", 3.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) }
+            add("idle", 1.0) { c.idleVariant = "idle"; c.set(.idle, duration: world.rng.range(3, 6)) }
+            add("amble", 0.3) { c.facing = world.rng.chance(0.5) ? 1 : -1; c.set(.walk, duration: world.rng.range(1, 2)) }
+            pickAndStart(choices, world)
+            return
+        }
+
         // --- Solo
         add("idle", 1.0) {
             c.idleVariant = world.rng.chance(0.35) ? "look" : "idle"
@@ -48,7 +57,7 @@ struct Brain {
         if let cur = world.cursor, abs(cur.y - c.pos.y) < 220 {
             let dx = abs(cur.x - c.pos.x)
             if dx > 40 && dx < 700 {
-                add("chase", 0.4 * e) {
+                add("chase", (0.4 + c.bond * 0.4) * e) {
                     c.targetX = cur.x
                     c.facing = cur.x > c.pos.x ? 1 : -1
                     c.set(.alert, duration: max(0.3, c.animationLength(for: .alert)))
@@ -56,7 +65,7 @@ struct Brain {
                 }
             }
             if dx < 240 {
-                add("waveAtCursor", 0.5) {
+                add("waveAtCursor", 0.5 + c.bond * 1.2) {
                     c.facing = cur.x > c.pos.x ? 1 : -1
                     c.set(.wave, duration: 1.3)
                 }
@@ -101,6 +110,10 @@ struct Brain {
             _ = pick
         }
 
+        pickAndStart(choices, world)
+    }
+
+    static func pickAndStart(_ choices: [Choice], _ world: World) {
         let total = choices.reduce(0) { $0 + $1.weight }
         var roll = world.rng.range(0, total)
         for choice in choices {

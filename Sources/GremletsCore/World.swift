@@ -33,6 +33,10 @@ public final class World {
     public var flySpeed: Double = 210
     /// Chance that two creatures walking into each other bonk and bounce (otherwise they squeeze past).
     public var bumpChance: Double = 0.35
+    /// Extra sleepiness (e.g. late at night). Multiplies energy drain.
+    public var sleepyFactor: Double = 1
+    /// Focus mode (see Companion.swift): calm, dozing Gremlets.
+    public internal(set) var calm = false
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
@@ -130,6 +134,10 @@ public final class World {
 
     public func poke(_ c: Creature) {
         guard c.isGrounded else { return }
+        if c.isAsleep && calm {
+            emit(.poked(c.id))   // focus mode: a sleepy acknowledgement, no wake-up
+            return
+        }
         if c.isAsleep {
             // Startled awake: jolt, then rub eyes. A bit grumpy, so no energy bonus.
             c.set(.wake, duration: c.animationLength(for: .wake))
@@ -151,8 +159,13 @@ public final class World {
             if c.activity == .sleep { return } // let sleeping gremlets lie, petting doesn't wake them
             c.energy = min(1, c.energy + 0.05)
             endSocial(c)
-            c.set(.pet, duration: 1.4)
-            emit(.petted(c.id))
+            if c.bond >= 0.5 && !calm && rng.chance(0.5) {
+                startSpecial(c)        // close friends show off for you
+                emit(.petted(c.id))
+            } else {
+                c.set(.pet, duration: 1.4)
+                emit(.petted(c.id))
+            }
         }
     }
 
@@ -213,7 +226,7 @@ public final class World {
             c.energy = min(1, c.energy + dt * 0.06)
         } else if c.activity != .dragged {
             let busy = [.walk, .chase, .run, .fly, .dance].contains(c.activity)
-            c.energy = max(0, c.energy - dt * energyDrainPerSecond * (busy ? 1.6 : 1))
+            c.energy = max(0, c.energy - dt * energyDrainPerSecond * sleepyFactor * (busy ? 1.6 : 1))
         }
 
         switch c.activity {
@@ -279,6 +292,7 @@ public final class World {
             }
             return
         case .sleep:
+            if calm { return }  // focus mode: keep dozing until the break
             if c.timer <= 0 || c.energy >= 1 {
                 c.set(.wake, duration: c.animationLength(for: .wake))
                 emit(.wokeUp(c.id))

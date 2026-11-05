@@ -1,8 +1,8 @@
 # Gremlets
 
 Fifty one-of-a-kind pixel creatures that live on your Mac desktop: gentle animals, a few bugs, a tiny
-dragon, some friendly mythical beasts, and little spirits of objects, plants and weather that came alive (an umbrella that woke up one rainy night, a
-paper crane, a runaway rice ball, a puff of summer wind). They walk along the Dock line, hop and fly up onto
+dragon, a couple of friendly mythical beasts, and gentle nature spirits and elementals (a stream that went for a
+walk, a stack of river stones, a scrap of night sky, a moss-covered boulder that wakes up once a century). They walk along the Dock line, hop and fly up onto
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
 
@@ -12,10 +12,10 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 
 | Family | Count | Some of them |
 |---|---|---|
+| Spirits | 28 | Brooklet the walking stream, Pebblin the stone stack, Weepling the willow spirit, Auralis the aurora, Puffcloud, Sakurin the cherry blossom |
 | Animals | 15 | Flurrie the frost bunny, Dandelet the dandelion lion cub, Capyzen the hot-spring capybara, Calicat the calico kitten |
-| Spirits | 27 | Kasakko the umbrella spirit, Foldwing the paper crane, Riceling the rice ball, Windwhisk the summer wind, Bubbit the soap bubble |
-| Mythical | 3 | Kindlet the candle spirit, Inklet the baby kraken, Nessle the lake monster |
 | Insects & Bugs | 4 | Silkwing the butterfly, Zipwing the dragonfly, Prismite the jewel beetle, Snipleaf the leafcutter ant |
+| Mythical | 2 | Kindlet the candle spirit, Inklet the baby kraken |
 | Dragons | 1 | Mintwyrm the jasmine dragon |
 
 Full catalog with personalities and signature moves: [docs/SPECIES.md](docs/SPECIES.md).
@@ -24,12 +24,12 @@ Every creature has 20 animations (83 frames): idle, look-around, walk, run, crou
 a squash landing, dizzy, a big yawn, sleep with a snot bubble, a startled wake-up, a happy jump, petting bliss,
 dance, wave, dangling when dragged, an "!" alert, and its signature move.
 
-![Kasakko's key poses](Species/kasakko/preview.png)
+![Brooklet's key poses](Species/brooklet/preview.png)
 
 All creatures, names and art are original. The design approach borrows *principles* from classic
 creature-collecting games and gentle folk-tale nature spirits (a readable silhouette, one strong
-signature feature, 2–3 soft colours, and a touch of everyday magic: frost ears, a petal mane, an old umbrella
-that woke up) without copying any existing character. No Gremlet wears clothing or carries props.
+signature feature, 2–3 soft colours, and a touch of nature magic: frost ears, a petal mane, a boulder
+that wakes up) without copying any existing character. No Gremlet wears clothing or carries props.
 
 ## Features
 
@@ -61,7 +61,7 @@ Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools).
 
 ```bash
 swift run Gremlets                                      # dev run
-swift run Gremlets --spawn flurrie,kindlet,kasakko       # pick who shows up
+swift run Gremlets --spawn flurrie,kindlet,brooklet       # pick who shows up
 scripts/bundle.sh && open build/Gremlets.app            # real app bundle (needed for Launch at Login)
 swift test                                              # engine tests, including a 10-minute simulated soak test
 swift run spritegen                                     # regenerate all 50 sprite sheets

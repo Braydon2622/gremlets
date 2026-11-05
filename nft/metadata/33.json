@@ -1,9 +1,9 @@
 {
-  "name": "Puffcap · Gremlet #33",
-  "description": "A mushroom spirit that puffs out a little cloud of golden spores when it laughs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Puffcap in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Bubbit · Gremlet #33",
+  "description": "A soap bubble that refused to pop. It's very careful around anything pointy.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bubbit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/33.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffcap",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffcap",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bubbit",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bubbit",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Forest Floor"
+      "value": "Soap"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Pollen"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Puffcap"
+      "value": "Bubbit"
     }
   ]
 }

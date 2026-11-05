@@ -1,9 +1,9 @@
 {
-  "name": "Windwhisk · Gremlet #45",
-  "description": "A puff of summer wind with somewhere to be. It tugs at papers and ruffles everyone's hair.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Windwhisk in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Auralis · Gremlet #45",
+  "description": "A ribbon of northern lights that drifted south. It ripples when it's thinking.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Auralis in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/45.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=windwhisk",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=windwhisk",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=auralis",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=auralis",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Wind"
+      "value": "Aurora"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Windwhisk"
+      "value": "Auralis"
     }
   ]
 }

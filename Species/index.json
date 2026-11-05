@@ -133,60 +133,6 @@
       "name" : "Inklet"
     },
     {
-      "element" : "rain",
-      "family" : "spirit",
-      "id" : "kasakko",
-      "name" : "Kasakko"
-    },
-    {
-      "element" : "wind",
-      "family" : "spirit",
-      "id" : "kitekin",
-      "name" : "Kitekin"
-    },
-    {
-      "element" : "paper",
-      "family" : "spirit",
-      "id" : "foldwing",
-      "name" : "Foldwing"
-    },
-    {
-      "element" : "puddle",
-      "family" : "spirit",
-      "id" : "boatlet",
-      "name" : "Boatlet"
-    },
-    {
-      "element" : "picnic",
-      "family" : "spirit",
-      "id" : "riceling",
-      "name" : "Riceling"
-    },
-    {
-      "element" : "steam",
-      "family" : "spirit",
-      "id" : "baobun",
-      "name" : "Baobun"
-    },
-    {
-      "element" : "festival",
-      "family" : "spirit",
-      "id" : "toplet",
-      "name" : "Toplet"
-    },
-    {
-      "element" : "hearth",
-      "family" : "spirit",
-      "id" : "yarnbit",
-      "name" : "Yarnbit"
-    },
-    {
-      "element" : "clay",
-      "family" : "spirit",
-      "id" : "kilnby",
-      "name" : "Kilnby"
-    },
-    {
       "element" : "spring",
       "family" : "spirit",
       "id" : "leaflet",
@@ -211,22 +157,10 @@
       "name" : "Loglet"
     },
     {
-      "element" : "garden",
-      "family" : "spirit",
-      "id" : "bloomlet",
-      "name" : "Bloomlet"
-    },
-    {
       "element" : "field",
       "family" : "spirit",
       "id" : "turnipkin",
       "name" : "Turnipkin"
-    },
-    {
-      "element" : "orchard",
-      "family" : "spirit",
-      "id" : "peachlet",
-      "name" : "Peachlet"
     },
     {
       "element" : "luck",
@@ -241,18 +175,6 @@
       "name" : "Whirlseed"
     },
     {
-      "element" : "hillside",
-      "family" : "spirit",
-      "id" : "teabud",
-      "name" : "Teabud"
-    },
-    {
-      "element" : "meadow",
-      "family" : "spirit",
-      "id" : "combbit",
-      "name" : "Combbit"
-    },
-    {
       "element" : "spring breeze",
       "family" : "spirit",
       "id" : "sakurin",
@@ -265,28 +187,10 @@
       "name" : "Puffcloud"
     },
     {
-      "element" : "wind",
-      "family" : "spirit",
-      "id" : "windwhisk",
-      "name" : "Windwhisk"
-    },
-    {
       "element" : "rain",
       "family" : "spirit",
       "id" : "rainlet",
       "name" : "Rainlet"
-    },
-    {
-      "element" : "frost",
-      "family" : "spirit",
-      "id" : "rimelet",
-      "name" : "Rimelet"
-    },
-    {
-      "element" : "sea",
-      "family" : "spirit",
-      "id" : "drifty",
-      "name" : "Drifty"
     },
     {
       "element" : "soap",
@@ -295,10 +199,106 @@
       "name" : "Bubbit"
     },
     {
-      "element" : "loch",
-      "family" : "mythic",
-      "id" : "nessle",
-      "name" : "Nessle"
+      "element" : "water",
+      "family" : "spirit",
+      "id" : "brooklet",
+      "name" : "Brooklet"
+    },
+    {
+      "element" : "earth",
+      "family" : "spirit",
+      "id" : "pebblin",
+      "name" : "Pebblin"
+    },
+    {
+      "element" : "lightning",
+      "family" : "spirit",
+      "id" : "sparkit",
+      "name" : "Sparkit"
+    },
+    {
+      "element" : "light",
+      "family" : "spirit",
+      "id" : "glowmote",
+      "name" : "Glowmote"
+    },
+    {
+      "element" : "night",
+      "family" : "spirit",
+      "id" : "dusklet",
+      "name" : "Dusklet"
+    },
+    {
+      "element" : "stone",
+      "family" : "spirit",
+      "id" : "bouldren",
+      "name" : "Bouldren"
+    },
+    {
+      "element" : "soil",
+      "family" : "spirit",
+      "id" : "rootling",
+      "name" : "Rootling"
+    },
+    {
+      "element" : "forest",
+      "family" : "spirit",
+      "id" : "fernwhisp",
+      "name" : "Fernwhisp"
+    },
+    {
+      "element" : "willow",
+      "family" : "spirit",
+      "id" : "weepling",
+      "name" : "Weepling"
+    },
+    {
+      "element" : "crystal",
+      "family" : "spirit",
+      "id" : "geodle",
+      "name" : "Geodle"
+    },
+    {
+      "element" : "sand",
+      "family" : "spirit",
+      "id" : "dunelet",
+      "name" : "Dunelet"
+    },
+    {
+      "element" : "aurora",
+      "family" : "spirit",
+      "id" : "auralis",
+      "name" : "Auralis"
+    },
+    {
+      "element" : "wind",
+      "family" : "spirit",
+      "id" : "gustling",
+      "name" : "Gustling"
+    },
+    {
+      "element" : "prairie",
+      "family" : "spirit",
+      "id" : "tumblet",
+      "name" : "Tumblet"
+    },
+    {
+      "element" : "seed",
+      "family" : "spirit",
+      "id" : "sproutle",
+      "name" : "Sproutle"
+    },
+    {
+      "element" : "hearth",
+      "family" : "spirit",
+      "id" : "warmstone",
+      "name" : "Warmstone"
+    },
+    {
+      "element" : "field",
+      "family" : "spirit",
+      "id" : "mumbletuft",
+      "name" : "Mumbletuft"
     }
   ]
 }

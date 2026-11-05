@@ -1,9 +1,9 @@
 {
-  "name": "Marimoss · Gremlet #34",
-  "description": "A moss ball from the bottom of a quiet lake. Floats up whenever it's happy, which is always.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Marimoss in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Brooklet · Gremlet #34",
+  "description": "A little stream that got up and went for a walk. Its crest curls over when it laughs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Brooklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/34.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brooklet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=brooklet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,7 +11,7 @@
     },
     {
       "trait_type": "Element",
-      "value": "Lake"
+      "value": "Water"
     },
     {
       "trait_type": "Signature Move",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Marimoss"
+      "value": "Brooklet"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "description" : "A little whirlwind that carries its favourite leaves everywhere it goes.",
+  "element" : "wind",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Gustling",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 85
+}

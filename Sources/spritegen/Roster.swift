@@ -151,53 +151,6 @@ let roster: [Species] = [
         $0.front = [tentacles()]
         $0.special = "ink"; $0.walkSpeed = 50
     },
-
-    // ---------------------------------------------------------------- Spirits: objects, plants and weather that came alive
-    species("kasakko", "Kasakko", "rain", "spirit", main: 0x5A6FC0, "An old paper umbrella that woke up one rainy night. Hops around on its one leg looking for puddles.") {
-        $0.rx = 8; $0.ry = 6; $0.eye = 0x1A1A30; $0.eyeStyle = .cyclops; $0.faceV = -0.75; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = umbrellaBody(0x5A6FC0, 0xF2E6C8, 0x8A6A4A)
-        $0.special = "rain"; $0.jumpPower = 1.4; $0.walkSpeed = 60
-    },
-    species("kitekin", "Kitekin", "wind", "spirit", main: 0xF2C14E, "A kite that snapped its string and decided it liked being free.") {
-        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x3A2A10; $0.eyeStyle = .dot; $0.faceV = -0.2; $0.feet = .none; $0.noArms = true; $0.floats = true
-        $0.bodyDraw = kiteBody(0xF2C14E, 0xE0604E, 0xE0604E)
-        $0.flies = true; $0.special = "leaves"
-    },
-    species("foldwing", "Foldwing", "paper", "spirit", main: 0xF6F8FF, "A paper crane folded with a wish inside. It flaps a little stiffly.") {
-        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x2A2430; $0.eyeStyle = .dot; $0.faceV = 0.25; $0.eyeGap = 0.3; $0.feet = .none; $0.noArms = true; $0.restMouth = Mouth.none; $0.cheeks = false
-        $0.bodyDraw = craneBody(0xF6F8FF, 0xB8C8EC)
-        $0.flies = true; $0.special = "sparkle"
-    },
-    species("boatlet", "Boatlet", "puddle", "spirit", main: 0xE8D8B4, "A folded paper boat that sails across the desktop as if it were a pond.") {
-        $0.rx = 7.5; $0.ry = 5.5; $0.eye = 0x2A2010; $0.eyeStyle = .dot; $0.faceV = 0.45; $0.feet = .none; $0.noArms = true; $0.floats = true
-        $0.bodyDraw = boatBody(0xE8D8B4, 0xFAF6EE)
-        $0.special = "bubbles"; $0.walkSpeed = 50
-    },
-    species("riceling", "Riceling", "picnic", "spirit", main: 0xFBFBF6, "A rice ball from a picnic basket who wandered off to see the world.") {
-        $0.rx = 7.5; $0.ry = 7; $0.eye = 0x1E1E1A; $0.eyeStyle = .dot; $0.faceV = 0.0; $0.limb = 0xEDEDE4; $0.restMouth = .cat
-        $0.bodyDraw = riceBody(0xFBFBF6, 0x2E4A3A)
-        $0.special = "seeds"; $0.walkSpeed = 60
-    },
-    species("baobun", "Baobun", "steam", "spirit", main: 0xFFF4E2, "A steamed bun spirit that's always a little bit warm and smells like a bakery.") {
-        $0.rx = 8; $0.ry = 6.5; $0.eye = 0x2A1E14; $0.eyeStyle = .dot; $0.faceV = 0.3; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = baoBody(0xFFF4E2)
-        $0.special = "steam"; $0.walkSpeed = 45; $0.jumpPower = 1.1
-    },
-    species("toplet", "Toplet", "festival", "spirit", main: 0xE0604E, "A wooden spinning top from a summer festival. It never gets dizzy, mostly.") {
-        $0.rx = 7; $0.ry = 6.5; $0.eye = 0x2A1410; $0.eyeStyle = .dot; $0.faceV = -0.35; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = topBody(0xE0604E, 0xF2C14E)
-        $0.special = "sparkle"; $0.walkSpeed = 85
-    },
-    species("yarnbit", "Yarnbit", "hearth", "spirit", main: 0xE89AB8, "A ball of yarn that rolled under the sofa and came back alive. Trails a loose thread everywhere.") {
-        $0.rx = 7; $0.ry = 7; $0.eye = 0x3A1A2A; $0.eyeStyle = .dot; $0.limb = 0xD07A9C
-        $0.bodyDraw = yarnBody(0xE89AB8)
-        $0.special = "sparkle"; $0.walkSpeed = 65
-    },
-    species("kilnby", "Kilnby", "clay", "spirit", main: 0xD07A4E, "A little clay pot that came alive after a hundred years on a shelf. Hollow eyes, warm heart.") {
-        $0.rx = 8; $0.ry = 8; $0.eye = 0x3A1A0E; $0.eyeStyle = .hollow; $0.faceV = -0.05; $0.limb = 0xB25E37
-        $0.bodyDraw = potBody(0xD07A4E)
-        $0.special = "steam"; $0.walkSpeed = 40; $0.jumpPower = 0.75
-    },
     species("leaflet", "Leaflet", "spring", "spirit", main: 0x8FCB6A, "The first leaf of spring, which hopped off its branch to have a look around.") {
         $0.rx = 6.5; $0.ry = 8; $0.eye = 0x1E2A12; $0.eyeStyle = .dot; $0.faceV = -0.15; $0.limb = 0x6FAF4A
         $0.bodyDraw = leafBody(0x8FCB6A)
@@ -217,20 +170,10 @@ let roster: [Species] = [
         $0.bodyDraw = logBody(0x7A5A3A, 0xE8C894, 0x8FCB6A)
         $0.special = "leaves"; $0.walkSpeed = 45
     },
-    species("bloomlet", "Bloomlet", "garden", "spirit", main: 0xF7A8C4, "A tulip bud that hasn't opened yet. It's waiting for exactly the right sunny day.") {
-        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x3A1A28; $0.eyeStyle = .dot; $0.faceV = 0.15; $0.limb = 0x6FAF4A
-        $0.bodyDraw = budBody(0xF7A8C4)
-        $0.special = "petals"; $0.walkSpeed = 60
-    },
     species("turnipkin", "Turnipkin", "field", "spirit", main: 0xFAF6F0, "A turnip that pulled itself up out of the field one morning and never went back.") {
         $0.rx = 7; $0.ry = 7; $0.eye = 0x2A2030; $0.eyeStyle = .dot; $0.faceV = 0.2; $0.limb = 0xEAE2D8
         $0.bodyDraw = turnipBody(0xFAF6F0, 0xB07AC8, 0x6FAF4A)
         $0.special = "leaves"; $0.walkSpeed = 55
-    },
-    species("peachlet", "Peachlet", "orchard", "spirit", main: 0xFFD2A8, "A peach that floated down the river and kept going. Smells like summer.") {
-        $0.rx = 7.5; $0.ry = 7; $0.eye = 0x3A2010; $0.eyeStyle = .dot; $0.limb = 0xF2B890
-        $0.bodyDraw = peachBody(0xFFD2A8, 0xFF9E9E, 0x6FAF4A)
-        $0.special = "petals"; $0.walkSpeed = 55
     },
     species("clovette", "Clovette", "luck", "spirit", main: 0x7CC46A, "A four-leaf clover spirit. Finding it is lucky; being found is its favourite game.") {
         $0.rx = 8; $0.ry = 8; $0.eye = 0x14280F; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
@@ -242,16 +185,6 @@ let roster: [Species] = [
         $0.bodyDraw = samaraBody(0xC89A6A, 0xE8C894)
         $0.flies = true; $0.special = "leaves"; $0.walkSpeed = 60
     },
-    species("teabud", "Teabud", "hillside", "spirit", main: 0x9BD07A, "A tea-leaf bud from a misty hillside garden. Quiet, calm, and slightly fragrant.") {
-        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x1E2A12; $0.eyeStyle = .dot; $0.faceV = -0.1; $0.limb = 0x6FAF4A
-        $0.bodyDraw = teabudBody(0x9BD07A, 0x6FAF4A)
-        $0.special = "steam"; $0.walkSpeed = 50
-    },
-    species("combbit", "Combbit", "meadow", "spirit", main: 0xF2B843, "One cell of honeycomb that escaped the hive. Always a little sticky, always very sweet.") {
-        $0.rx = 7.5; $0.ry = 7; $0.eye = 0x3A2408; $0.eyeStyle = .dot; $0.limb = 0xC8902A
-        $0.bodyDraw = hexBody(0xF2B843, 0xF2A63A)
-        $0.special = "pollen"; $0.walkSpeed = 55
-    },
     species("sakurin", "Sakurin", "spring breeze", "spirit", main: 0xFFC2D6, "A cherry blossom that drifted off its tree and decided not to land just yet.") {
         $0.rx = 8; $0.ry = 8; $0.eye = 0x3A1A28; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
         $0.bodyDraw = blossomBody(0xFFC2D6, 0xFFE38A)
@@ -261,36 +194,101 @@ let roster: [Species] = [
         $0.body = .cloud; $0.rx = 9; $0.ry = 6.5; $0.eye = 0x2B3157; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xB9C8FF
         $0.flies = true; $0.special = "rain"; $0.walkSpeed = 45
     },
-    species("windwhisk", "Windwhisk", "wind", "spirit", main: 0xC8F0E0, "A puff of summer wind with somewhere to be. It tugs at papers and ruffles everyone's hair.") {
-        $0.rx = 7; $0.ry = 6.5; $0.eye = 0x14302A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.limb = 0xA8E0CC
-        $0.bodyDraw = wispBody(0xC8F0E0)
-        $0.flies = true; $0.special = "leaves"; $0.walkSpeed = 80
-    },
     species("rainlet", "Rainlet", "rain", "spirit", main: 0x7EC4F0, "The first raindrop of a storm, very proud of having arrived first.") {
         $0.rx = 6.5; $0.ry = 7; $0.eye = 0x14283A; $0.eyeStyle = .dot; $0.glossy = true; $0.limb = 0x5AA8E0
         $0.bodyDraw = dropBody(0x7EC4F0)
         $0.special = "rain"; $0.walkSpeed = 65; $0.jumpPower = 1.25
-    },
-    species("rimelet", "Rimelet", "frost", "spirit", main: 0xBFE8FA, "An icicle that slid off the roof on the first warm day of spring and kept on going.") {
-        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x1A2A40; $0.eyeStyle = .dot; $0.limb = 0x9AD4F0
-        $0.bodyDraw = crystalBody(0xBFE8FA)
-        $0.special = "snow"; $0.walkSpeed = 60
-    },
-    species("drifty", "Drifty", "sea", "spirit", main: 0xFFC8B0, "A little jellyfish spirit that drifts through the air as if it were still in the sea.") {
-        $0.rx = 7.5; $0.ry = 6.5; $0.eye = 0x3A1A1A; $0.eyeStyle = .dot; $0.faceV = -0.05; $0.floats = true; $0.feet = .none; $0.noArms = true
-        $0.bodyDraw = jellyBody(0xFFC8B0, 0xFFB0C8)
-        $0.flies = true; $0.special = "bubbles"; $0.walkSpeed = 40
     },
     species("bubbit", "Bubbit", "soap", "spirit", main: 0xF2F8FF, "A soap bubble that refused to pop. It's very careful around anything pointy.") {
         $0.rx = 7; $0.ry = 7; $0.eye = 0x2A3050; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
         $0.bodyDraw = bubbleBody()
         $0.flies = true; $0.special = "bubbles"; $0.walkSpeed = 40
     },
-    species("nessle", "Nessle", "loch", "mythic", main: 0x6FB59A, "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.") {
-        $0.body = .longneck; $0.rx = 8.4; $0.ry = 6.8; $0.eye = 0x12302A; $0.eyeStyle = .dot; $0.faceV = -0.1; $0.noArms = true; $0.cheeks = false
-        $0.limb = 0x5A9E84
-        $0.back = [lizardTail(0x6FB59A, len: 0.9)]
-        $0.surface = [bellyScales(0xE8F4D8), spots(0x5A9E84, [(-0.55, 0.25, 0.9), (-0.85, 0.5, 0.7)])]
-        $0.special = "bubbles"; $0.walkSpeed = 45
+
+    // ---------------------------------------------------------------- Elementals, nature spirits and gentle monsters
+    species("brooklet", "Brooklet", "water", "spirit", main: 0x7CC8F0, "A little stream that got up and went for a walk. Its crest curls over when it laughs.") {
+        $0.rx = 7.5; $0.ry = 6.5; $0.eye = 0x14304A; $0.eyeStyle = .dot; $0.faceV = 0.15; $0.feet = .none; $0.limb = 0x5AB0E0
+        $0.bodyDraw = waveBody(0x7CC8F0, 0xFFFFFF)
+        $0.special = "bubbles"; $0.walkSpeed = 75
+    },
+    species("pebblin", "Pebblin", "earth", "spirit", main: 0xB8B4AC, "A stack of river stones that balanced itself one day and has been very careful ever since.") {
+        $0.rx = 8; $0.ry = 8; $0.eye = 0x2A2620; $0.eyeStyle = .dot; $0.faceV = -0.62; $0.eyeGap = 0.3; $0.feet = .none; $0.noArms = true; $0.cheeks = false
+        $0.bodyDraw = cairnBody(0xB8B4AC, 0xA4AEB4, 0x7CC46A)
+        $0.special = "sparkle"; $0.walkSpeed = 35; $0.jumpPower = 0.8
+    },
+    species("sparkit", "Sparkit", "lightning", "spirit", main: 0xDCEEFF, "A ball of static from a summer thunderstorm. Your hair stands up when it's near.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x1A2A4A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xB8A8FF
+        $0.bodyDraw = staticBody(0xDCEEFF, 0x8A7AFF)
+        $0.flies = true; $0.special = "sparkle"; $0.walkSpeed = 90
+    },
+    species("glowmote", "Glowmote", "light", "spirit", main: 0xFFF6DC, "A mote of evening light that forgot to go home with the sunset.") {
+        $0.rx = 5.6; $0.ry = 5.6; $0.eye = 0x5A4A20; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0xFFC8A0
+        $0.bodyDraw = lightBody(0xFFF6DC, 0xFFE08A)
+        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 55
+    },
+    species("dusklet", "Dusklet", "night", "spirit", main: 0x4A4A8C, "A scrap of night sky with a few stars still in it. Gets braver after sunset.") {
+        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x14142A; $0.eyeStyle = .light; $0.floats = true; $0.feet = .none; $0.noArms = true; $0.cheek = 0x8A7AD0
+        $0.bodyDraw = nightBody(0x4A4A8C)
+        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 50; $0.sleepiness = 0.6
+    },
+    species("bouldren", "Bouldren", "stone", "spirit", main: 0xA8AEA8, "A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years.") {
+        $0.rx = 9.5; $0.ry = 7.2; $0.eye = 0x2A3A20; $0.eyeStyle = .glow(0xB8F07A); $0.limb = 0x8A928A; $0.feet = .big; $0.cheeks = false
+        $0.bodyDraw = boulderBody(0xA8AEA8, 0x7CC46A)
+        $0.special = "stomp"; $0.walkSpeed = 30; $0.jumpPower = 0.7; $0.sleepiness = 1.6
+    },
+    species("rootling", "Rootling", "soil", "spirit", main: 0xD8B48A, "A root that wriggled up out of the garden to see the sun. Walks on its tendrils.") {
+        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x2A1A0A; $0.eyeStyle = .dot; $0.feet = .none; $0.limb = 0xC09A70
+        $0.bodyDraw = rootBody(0xD8B48A, 0x7CC46A)
+        $0.special = "leaves"; $0.walkSpeed = 50
+    },
+    species("fernwhisp", "Fernwhisp", "forest", "spirit", main: 0x7CC46A, "A curled-up fern frond that unrolls a little more every morning.") {
+        $0.rx = 6.5; $0.ry = 7; $0.eye = 0x14280F; $0.eyeStyle = .dot; $0.faceV = -0.25; $0.eyeGap = 0.3; $0.feet = .none; $0.noArms = true; $0.cheeks = false
+        $0.bodyDraw = fernBody(0x7CC46A)
+        $0.special = "leaves"; $0.walkSpeed = 45
+    },
+    species("weepling", "Weepling", "willow", "spirit", main: 0x7AA860, "A shy willow spirit that peeks out from behind its long green fronds.") {
+        $0.rx = 8; $0.ry = 6.5; $0.eye = 0x14200F; $0.eyeStyle = .dot; $0.faceV = -0.1; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = willowBody(0x5E8A4C, 0x8CC46E)
+        $0.special = "leaves"; $0.walkSpeed = 35; $0.sleepiness = 1.4
+    },
+    species("geodle", "Geodle", "crystal", "spirit", main: 0x9A8A7A, "A plain-looking stone that's full of amethyst inside. Opens up only for friends.") {
+        $0.rx = 8; $0.ry = 7.5; $0.eye = 0x2A1A40; $0.eyeStyle = .dot; $0.limb = 0x7A6A5A; $0.cheek = 0xF2A8E0
+        $0.bodyDraw = geodeBody(0x9A8A7A, 0xC8A8F0)
+        $0.special = "sparkle"; $0.walkSpeed = 40
+    },
+    species("dunelet", "Dunelet", "sand", "spirit", main: 0xEACB8E, "A small sand dune that wanders a few inches every night. Nobody ever sees it move.") {
+        $0.rx = 10; $0.ry = 5.5; $0.eye = 0x3A2A10; $0.eyeStyle = .dot; $0.faceV = 0.3; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = duneBody(0xEACB8E)
+        $0.special = "pollen"; $0.walkSpeed = 25; $0.jumpPower = 0.6
+    },
+    species("auralis", "Auralis", "aurora", "spirit", main: 0x8CEAB8, "A ribbon of northern lights that drifted south. It ripples when it's thinking.") {
+        $0.rx = 8.5; $0.ry = 5.5; $0.eye = 0x14303A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = auroraBody(0x8CEAB8, 0x7CD8E8, 0xC8A8F0)
+        $0.flies = true; $0.special = "glow"; $0.walkSpeed = 50
+    },
+    species("gustling", "Gustling", "wind", "spirit", main: 0xE6F6EE, "A little whirlwind that carries its favourite leaves everywhere it goes.") {
+        $0.rx = 5.2; $0.ry = 5.2; $0.eye = 0x14302A; $0.eyeStyle = .dot; $0.floats = true; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = leafSwirlBody(0xE6F6EE, 0x8FCB6A, 0xF2A65A)
+        $0.flies = true; $0.special = "leaves"; $0.walkSpeed = 85
+    },
+    species("tumblet", "Tumblet", "prairie", "spirit", main: 0xE8D6A8, "A tumbleweed that rolled in from somewhere far away. It's not in a hurry anymore.") {
+        $0.rx = 7; $0.ry = 7; $0.eye = 0x3A2A10; $0.eyeStyle = .dot; $0.feet = .none; $0.noArms = true; $0.cheeks = false
+        $0.bodyDraw = tumbleBody(0xE8D6A8, 0xA8865A)
+        $0.special = "seeds"; $0.walkSpeed = 70
+    },
+    species("sproutle", "Sproutle", "seed", "spirit", main: 0xD8C48A, "A bean seed that just split open. It's very proud of its first two leaves.") {
+        $0.rx = 6.5; $0.ry = 6.5; $0.eye = 0x2A2010; $0.eyeStyle = .dot; $0.limb = 0xB8A46A
+        $0.bodyDraw = sproutBody(0xD8C48A, 0x8FCB6A)
+        $0.special = "leaves"; $0.walkSpeed = 55
+    },
+    species("warmstone", "Warmstone", "hearth", "spirit", main: 0xB8A898, "A river stone that sat in the sun so long it started glowing from the inside.") {
+        $0.rx = 7.5; $0.ry = 6; $0.eye = 0x3A2010; $0.eyeStyle = .dot; $0.faceV = 0.05; $0.feet = .none; $0.noArms = true
+        $0.bodyDraw = warmStoneBody(0xB8A898, 0xFFB46A)
+        $0.special = "steam"; $0.walkSpeed = 30; $0.sleepiness = 1.5
+    },
+    species("mumbletuft", "Mumbletuft", "field", "spirit", main: 0xE8C878, "A haystack that grumbles to itself in the field. It's actually very friendly.") {
+        $0.rx = 8.5; $0.ry = 7; $0.eye = 0x2A1A0A; $0.eyeStyle = .dot; $0.faceV = -0.35; $0.feet = .none; $0.noArms = true; $0.cheeks = false
+        $0.bodyDraw = haystackBody(0xE8C878)
+        $0.special = "seeds"; $0.walkSpeed = 40
     },
 ]

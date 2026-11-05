@@ -1,0 +1,13 @@
+{
+  "description" : "A ribbon of northern lights that drifted south. It ripples when it's thinking.",
+  "element" : "aurora",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Auralis",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 50
+}

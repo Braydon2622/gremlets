@@ -1,9 +1,9 @@
 {
-  "name": "Kasakko · Gremlet #23",
-  "description": "An old paper umbrella that woke up one rainy night. Hops around on its one leg looking for puddles.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kasakko in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Leaflet · Gremlet #23",
+  "description": "The first leaf of spring, which hopped off its branch to have a look around.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Leaflet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/23.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kasakko",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kasakko",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=leaflet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=leaflet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Rain"
+      "value": "Spring"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Rain"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Kasakko"
+      "value": "Leaflet"
     }
   ]
 }

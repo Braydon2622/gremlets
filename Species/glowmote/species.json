@@ -1,0 +1,13 @@
+{
+  "description" : "A mote of evening light that forgot to go home with the sunset.",
+  "element" : "light",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Glowmote",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 55
+}

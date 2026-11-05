@@ -1,0 +1,13 @@
+{
+  "description" : "A haystack that grumbles to itself in the field. It's actually very friendly.",
+  "element" : "field",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Mumbletuft",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "seeds",
+  "walkSpeed" : 40
+}

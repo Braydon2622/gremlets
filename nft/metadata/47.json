@@ -1,9 +1,9 @@
 {
-  "name": "Rimelet · Gremlet #47",
-  "description": "An icicle that slid off the roof on the first warm day of spring and kept on going.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rimelet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Tumblet · Gremlet #47",
+  "description": "A tumbleweed that rolled in from somewhere far away. It's not in a hurry anymore.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Tumblet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/47.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rimelet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rimelet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tumblet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tumblet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Frost"
+      "value": "Prairie"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Snow"
+      "value": "Seeds"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Rimelet"
+      "value": "Tumblet"
     }
   ]
 }

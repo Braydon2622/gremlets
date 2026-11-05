@@ -1,0 +1,13 @@
+{
+  "description" : "A stack of river stones that balanced itself one day and has been very careful ever since.",
+  "element" : "earth",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.80000000000000004,
+  "name" : "Pebblin",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 35
+}

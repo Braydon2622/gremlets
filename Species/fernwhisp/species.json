@@ -1,0 +1,13 @@
+{
+  "description" : "A curled-up fern frond that unrolls a little more every morning.",
+  "element" : "forest",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Fernwhisp",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 45
+}

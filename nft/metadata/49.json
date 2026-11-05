@@ -1,9 +1,9 @@
 {
-  "name": "Bubbit · Gremlet #49",
-  "description": "A soap bubble that refused to pop. It's very careful around anything pointy.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bubbit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Warmstone · Gremlet #49",
+  "description": "A river stone that sat in the sun so long it started glowing from the inside.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Warmstone in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/49.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bubbit",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bubbit",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=warmstone",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=warmstone",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Soap"
+      "value": "Hearth"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Steam"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Bubbit"
+      "value": "Warmstone"
     }
   ]
 }

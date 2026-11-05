@@ -366,3 +366,268 @@ func bubbleBody() -> Draw {
         cv.ellipse(c.cx - r * 0.45, c.cy - r * 0.45, 1.4, 1.0, Ramp(0xFFFFFF), outline: false, flat: true, rot: -0.6)
     }
 }
+
+// MARK: - Round 4: elementals, nature spirits and gentle monsters
+
+/// Stream spirit: a rounded body with a curling wave crest and foam.
+func waveBody(_ col: UInt32, _ crest: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        cv.blob([Ell(cx: c.cx, cy: c.cy + c.ry * 0.15, rx: c.rx, ry: c.ry * 0.85)]
+                + curve((c.cx - c.rx * 0.55, c.cy - c.ry * 0.3), (c.cx - c.rx * 0.1, c.cy - c.ry * 1.45), (c.cx + c.rx * 0.75 + c.p.tilt, c.cy - c.ry * 0.95), r0: 3.0, r1: 1.4, steps: 10), R, glossy: true)
+        let es = curve((c.cx - c.rx * 0.5, c.cy - c.ry * 0.75), (c.cx - c.rx * 0.1, c.cy - c.ry * 1.7), (c.cx + c.rx * 0.8 + c.p.tilt, c.cy - c.ry * 1.1), r0: 0.5, r1: 0.5, steps: 12)
+        for (i, e) in es.enumerated() where i % 2 == 0 { cv.plot(e.cx, e.cy, Ramp(crest).base) }
+        cv.plot(c.cx + c.rx * 0.95 + c.p.tilt, c.cy - c.ry * 0.85, 0xFFFFFF)
+    }
+}
+
+/// Stacked river stones; the face lives on the top stone.
+func cairnBody(_ a: UInt32, _ b: UInt32, _ moss: UInt32) -> Draw {
+    return { cv, c in
+        let sway = c.p.tilt * 0.5
+        cv.blob([Ell(cx: c.cx, cy: c.cy + c.ry * 0.55, rx: c.rx, ry: c.ry * 0.45)], Ramp(a))
+        cv.blob([Ell(cx: c.cx - 0.6 + sway * 0.5, cy: c.cy - c.ry * 0.05, rx: c.rx * 0.76, ry: c.ry * 0.38)], Ramp(b))
+        cv.ellipse(c.cx - c.rx * 0.45, c.cy - c.ry * 0.2, 1.4, 0.8, Ramp(moss), outline: false, flat: true)
+        cv.blob([Ell(cx: c.cx + sway, cy: c.cy - c.ry * 0.62, rx: c.rx * 0.58, ry: c.ry * 0.38)], Ramp(a))
+    }
+}
+
+/// Crackling ball of static with little lightning spikes.
+func staticBody(_ col: UInt32, _ spark: UInt32) -> Draw {
+    return { cv, c in
+        let S = Ramp(spark)
+        for i in 0..<7 {
+            let a = Double(i) / 7 * 2 * Double.pi + (c.p.acc == 2 ? 0.25 : 0) + c.p.tail * 0.1
+            let r0 = c.rx + 0.3, r1 = c.rx + 3.4
+            let mid = (c.cx + cos(a + 0.25) * (r0 + r1) / 2, c.cy + sin(a + 0.25) * (r0 + r1) / 2)
+            cv.line(c.cx + cos(a) * r0, c.cy + sin(a) * r0, mid.0, mid.1, S.base)
+            cv.line(mid.0, mid.1, c.cx + cos(a) * r1, c.cy + sin(a) * r1, S.light)
+        }
+        cv.ellipse(c.cx, c.cy, c.rx, c.ry, Ramp(col), glossy: true)
+    }
+}
+
+/// Soft orb of light with a faint halo.
+func lightBody(_ col: UInt32, _ halo: UInt32) -> Draw {
+    return { cv, c in
+        let r = c.rx + 2.6 + (c.p.acc == 2 ? 0.8 : 0)
+        var a = 0.0
+        while a < 2 * Double.pi {
+            if Int(a * 10) % 3 != 0 { cv.plot(c.cx + cos(a) * r, c.cy + sin(a) * r * (c.ry / c.rx), Ramp(halo).base) }
+            a += 0.09
+        }
+        cv.ellipse(c.cx, c.cy, c.rx, c.ry, Ramp(col), glossy: true)
+    }
+}
+
+/// A scrap of night sky: a teardrop with stars in it.
+func nightBody(_ col: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        cv.blob([Ell(cx: c.cx, cy: c.cy - c.ry * 0.15, rx: c.rx, ry: c.ry * 0.85)]
+                + curve((c.cx, c.cy + c.ry * 0.3), (c.cx - 1 + c.p.tail, c.cy + c.ry * 0.9), (c.cx - 2.5 + c.p.tail * 2, c.cy + c.ry * 1.3), r0: c.rx * 0.6, r1: 0.6, steps: 8), R)
+        for (u, v) in [(-0.55, -0.55), (0.6, -0.35), (-0.25, 0.45), (0.45, 0.4), (0.05, -0.85)] {
+            cv.plot(c.cx + u * c.rx, c.cy + v * c.ry, 0xFFF3B0)
+        }
+    }
+}
+
+/// Moss-covered boulder golem.
+func boulderBody(_ stone: UInt32, _ moss: UInt32) -> Draw {
+    return { cv, c in
+        let body = [Ell(cx: c.cx, cy: c.cy + c.ry * 0.12, rx: c.rx, ry: c.ry * 0.88), Ell(cx: c.cx - c.rx * 0.25, cy: c.cy - c.ry * 0.3, rx: c.rx * 0.7, ry: c.ry * 0.7),
+                    Ell(cx: c.cx + c.rx * 0.3, cy: c.cy - c.ry * 0.15, rx: c.rx * 0.7, ry: c.ry * 0.75)]
+        cv.blob(body, Ramp(stone))
+        cv.blob(body, Ramp(moss), outline: false, clipMaxY: c.cy - c.ry * 0.45)
+        for (u, len) in [(-0.6, 2), (-0.1, 1), (0.35, 2), (0.75, 1)] {
+            let x = Int(c.cx + u * c.rx), y = Int(c.cy - c.ry * 0.45)
+            for d in 0...len { cv.plot(x, y + d, d == len ? Ramp(moss).shade : Ramp(moss).base) }
+        }
+        cv.plot(c.cx - c.rx * 0.5, c.cy + c.ry * 0.4, Ramp(stone).shade); cv.plot(c.cx + c.rx * 0.55, c.cy + c.ry * 0.2, Ramp(stone).shade)
+    }
+}
+
+/// Root spirit: a little root body with a leafy sprout and tendril legs.
+func rootBody(_ col: UInt32, _ leaf: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        for (dx, rot) in [(-1.8, -0.5), (0.0, 0.0), (1.8, 0.5)] { cv.ellipse(c.cx + dx + c.p.tilt * 0.5, c.cy - c.ry - 2.0, 1.4, 2.8, Ramp(leaf), rot: rot) }
+        for (i, dx) in [-0.5, 0.0, 0.5].enumerated() {
+            let x = c.cx + dx * c.rx, step = (i % 2 == 0 ? 1.0 : -1.0) * c.p.tail
+            for e in curve((x, c.cy + c.ry * 0.7), (x + dx * 3 + step, c.bottom), (x + dx * 5 + step * 1.5, c.bottom + 2.4), r0: 0.5, r1: 0.5, steps: 6) {
+                cv.plot(e.cx, e.cy, R.shade)
+            }
+        }
+        cv.blob([Ell(cx: c.cx, cy: c.cy + c.ry * 0.1, rx: c.rx, ry: c.ry * 0.9), Ell(cx: c.cx, cy: c.cy - c.ry * 0.5, rx: c.rx * 0.6, ry: c.ry * 0.5)], R)
+    }
+}
+
+/// Fiddlehead fern: a curled frond on a stem.
+func fernBody(_ col: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        cv.blob(curve((c.cx - 0.5, c.bottom + 1), (c.cx - 1.5 + c.p.tail, c.cy + c.ry * 0.7), (c.cx, c.cy + c.ry * 0.3), r0: 1.2, r1: 1.4, steps: 6), R)
+        for k in [0.85, 0.6] { for side in sides { cv.ellipse(c.cx + side * 2.2, c.cy + c.ry * k + 1, 1.8, 0.8, R, rot: side * -0.5) } }
+        var es: [Ell] = []
+        var a = 0.0
+        while a < 2.6 * Double.pi {
+            let r = c.rx * (1.0 - a / (3.4 * Double.pi))
+            es.append(Ell(cx: c.cx + cos(a + Double.pi / 2) * r * 0.9, cy: c.cy - c.ry * 0.25 + sin(a + Double.pi / 2) * r * 0.9, rx: 1.9, ry: 1.9))
+            a += 0.3
+        }
+        cv.blob(es + [Ell(cx: c.cx, cy: c.cy - c.ry * 0.25, rx: c.rx * 0.6, ry: c.ry * 0.6)], R)
+        var b = 0.6
+        while b < 2.5 * Double.pi {
+            let r = c.rx * (1.0 - b / (3.4 * Double.pi)) * 0.9 - 1.6
+            if r > 2.2 { cv.plot(c.cx + cos(b + Double.pi / 2) * r, c.cy - c.ry * 0.25 + sin(b + Double.pi / 2) * r, R.shade) }
+            b += 0.12
+        }
+    }
+}
+
+/// Willow spirit: a dome hidden under drooping green fronds.
+func willowBody(_ col: UInt32, _ frond: UInt32) -> Draw {
+    return { cv, c in
+        let F = Ramp(frond)
+        cv.blob([Ell(cx: c.cx, cy: c.cy, rx: c.rx, ry: c.ry)], Ramp(col))
+        var x = c.cx - c.rx - 1
+        var i = 0
+        while x <= c.cx + c.rx + 1 {
+            let d = (x - c.cx) / (c.rx + 1)
+            let topY = c.cy - c.ry * (1 - d * d * 0.8) + 0.5
+            let len = c.bottom - topY + (i % 3 == 0 ? 0 : -1.5)
+            let sway = c.p.tail * 0.6 * (i % 2 == 0 ? 1 : -1)
+            if abs(x - (Double(c.lx) + 0.5)) > 1.6 && abs(x - (Double(c.rxp) + 0.5)) > 1.6 {
+                cv.line(x, topY, x + sway, topY + len, i % 2 == 0 ? F.base : F.shade)
+            }
+            x += 1; i += 1
+        }
+        cv.blob([Ell(cx: c.cx, cy: c.cy - c.ry * 0.75, rx: c.rx * 0.8, ry: c.ry * 0.35)], F, clipMaxY: c.cy - c.ry * 0.55)
+    }
+}
+
+/// Geode: a rough stone shell split open to show crystals inside.
+func geodeBody(_ shell: UInt32, _ crystal: UInt32) -> Draw {
+    return { cv, c in
+        let S = Ramp(shell), K = Ramp(crystal)
+        cv.blob([Ell(cx: c.cx, cy: c.cy, rx: c.rx, ry: c.ry)], S)
+        cv.blob([Ell(cx: c.cx + 0.5, cy: c.cy + 0.3, rx: c.rx * 0.72, ry: c.ry * 0.74)], K, outline: false, flat: true)
+        for (u, v) in [(-0.45, -0.35), (0.4, -0.5), (0.55, 0.2), (-0.5, 0.35), (0.0, 0.55)] {
+            let x = c.cx + u * c.rx * 0.7, y = c.cy + v * c.ry * 0.7
+            cv.poly([(x - 1.2, y + 1.2), (x, y - 1.6), (x + 1.2, y + 1.2)], K, outline: false)
+            cv.plot(x, y - 0.6, K.spec)
+        }
+    }
+}
+
+/// Sand dune spirit with wind ripples.
+func duneBody(_ col: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        cv.blob([Ell(cx: c.cx, cy: c.cy + c.ry * 0.35, rx: c.rx, ry: c.ry)], R, clipMaxY: c.cy + c.ry * 0.95)
+        for k in 0..<3 {
+            let y = c.cy + c.ry * (0.45 + Double(k) * 0.18)
+            lineInside(&cv, c.cx - c.rx * 0.8, y, c.cx + c.rx * 0.8, y - 1, R.shade, onto: tones(R))
+        }
+        var a = 0.0
+        while a < 1.7 * Double.pi { cv.plot(c.cx + 1 + cos(a) * (0.5 + a * 0.5), c.cy - c.ry * 0.6 - 1.5 + sin(a) * (0.5 + a * 0.4), R.light); a += 0.3 }
+    }
+}
+
+/// Aurora: a floating curtain of light in three soft bands.
+func auroraBody(_ a: UInt32, _ b: UInt32, _ cc: UInt32) -> Draw {
+    return { cv, c in
+        var es: [Ell] = []
+        for i in 0...10 {
+            let t = Double(i) / 10
+            let x = c.cx - c.rx + t * 2 * c.rx
+            es.append(Ell(cx: x, cy: c.cy + sin(t * Double.pi * 2 + c.p.tail * 1.5) * 1.6, rx: 2.4, ry: c.ry))
+        }
+        cv.blob(es, Ramp(a))
+        cv.blob(es, Ramp(b), outline: false, clipMinY: c.cy - c.ry * 0.2)
+        cv.blob(es, Ramp(cc), outline: false, clipMinY: c.cy + c.ry * 0.45)
+    }
+}
+
+/// Wind spirit: a little core with leaves orbiting it.
+func leafSwirlBody(_ core: UInt32, _ leafA: UInt32, _ leafB: UInt32) -> Draw {
+    return { cv, c in
+        let spin = c.p.tail * 0.6 + c.p.tilt * 0.3 + c.p.wing * 0.4
+        for i in 0..<4 where i % 2 == 1 {
+            let a = Double(i) * Double.pi / 2 + spin
+            cv.ellipse(c.cx + cos(a) * (c.rx + 2), c.cy + sin(a) * (c.ry + 1.5) * 0.7, 2.6, 1.2, Ramp(i == 1 ? leafA : leafB), rot: a + 1.2)
+        }
+        cv.ellipse(c.cx, c.cy, c.rx, c.ry, Ramp(core), glossy: true)
+        for i in 0..<4 where i % 2 == 0 {
+            let a = Double(i) * Double.pi / 2 + spin
+            cv.ellipse(c.cx + cos(a) * (c.rx + 2), c.cy + sin(a) * (c.ry + 1.5) * 0.7, 2.6, 1.2, Ramp(i == 0 ? leafA : leafB), rot: a + 1.2)
+        }
+    }
+}
+
+/// Tumbleweed: a loose ball of dry twigs around a straw core.
+func tumbleBody(_ core: UInt32, _ twig: UInt32) -> Draw {
+    return { cv, c in
+        let T = Ramp(twig)
+        cv.ellipse(c.cx, c.cy, c.rx * 0.8, c.ry * 0.8, Ramp(core), outline: false)
+        let rot = c.p.tail * 0.4
+        for i in 0..<5 {
+            let a = Double(i) / 5 * Double.pi + rot + 0.3
+            let r = c.rx + 0.8
+            cv.line(c.cx + cos(a) * r, c.cy + sin(a) * r * (c.ry / c.rx), c.cx - cos(a) * r, c.cy - sin(a) * r * (c.ry / c.rx), i % 2 == 0 ? T.base : T.shade)
+        }
+        var a = 0.0
+        while a < 2 * Double.pi { cv.plot(c.cx + cos(a) * (c.rx + 0.6), c.cy + sin(a) * (c.ry + 0.6), T.shade); a += 0.15 }
+        cv.ellipse(c.cx + 0.4, c.cy - c.ry * 0.05, c.rx * 0.68, c.ry * 0.6, Ramp(core), outline: false)
+    }
+}
+
+/// Bean seed splitting open with a two-leaf sprout.
+func sproutBody(_ seed: UInt32, _ leaf: UInt32) -> Draw {
+    return { cv, c in
+        let L = Ramp(leaf)
+        let sway = c.p.tilt * 0.6 + (c.p.acc == 2 ? 0.8 : 0)
+        cv.line(c.cx + 0.5, c.cy - c.ry * 0.7, c.cx + 0.5 + sway * 0.5, c.cy - c.ry - 2.5, L.shade)
+        cv.ellipse(c.cx - 1.8 + sway, c.cy - c.ry - 3, 2.6, 1.4, L, rot: -0.4)
+        cv.ellipse(c.cx + 2.8 + sway, c.cy - c.ry - 3.2, 2.6, 1.4, L, rot: 0.4)
+        cv.blob([Ell(cx: c.cx - c.rx * 0.2, cy: c.cy, rx: c.rx * 0.85, ry: c.ry), Ell(cx: c.cx + c.rx * 0.35, cy: c.cy + c.ry * 0.15, rx: c.rx * 0.7, ry: c.ry * 0.85)], Ramp(seed))
+        lineInside(&cv, c.cx + 0.5, c.cy - c.ry * 0.95, c.cx + 0.8, c.cy - c.ry * 0.45, Ramp(seed).shade, onto: tones(Ramp(seed)))
+    }
+}
+
+/// A smooth river stone glowing warm from inside, with curls of steam.
+func warmStoneBody(_ stone: UInt32, _ glow: UInt32) -> Draw {
+    return { cv, c in
+        for (dx, ph) in [(-2.0, 0.0), (2.5, 1.5)] {
+            var t = 0.0
+            while t < 4 { cv.plot(c.cx + dx + sin(t * 1.6 + ph + c.p.tail) * 0.9, c.cy - c.ry - 1 - t, 0xEEF2F6); t += 0.7 }
+        }
+        cv.ellipse(c.cx, c.cy + c.ry * 0.1, c.rx, c.ry * 0.9, Ramp(stone), glossy: true)
+        let G = Ramp(glow)
+        let (set, _) = blobPixels([Ell(cx: c.cx, cy: c.cy + c.ry * 0.25, rx: c.rx * 0.6, ry: c.ry * 0.5)])
+        let S = Ramp(stone)
+        for q in set { if cv.px[q] == S.base || cv.px[q] == S.shade { cv.px[q] = c.p.acc == 3 ? G.shade : G.base } else if cv.px[q] == S.light { cv.px[q] = G.light } }
+    }
+}
+
+/// A shaggy little haystack monster.
+func haystackBody(_ col: UInt32) -> Draw {
+    return { cv, c in
+        let R = Ramp(col)
+        var pts: [(Double, Double)] = []
+        for i in 0...16 {
+            let a = Double.pi * Double(i) / 16
+            pts.append((c.cx - cos(a) * c.rx, c.bottom - sin(a) * (c.bottom - (c.cy - c.ry * 1.1)) + (i % 2 == 0 ? 0 : 0.8)))
+        }
+        cv.poly(pts, R)
+        var x = c.cx - c.rx + 1
+        var i = 0
+        while x < c.cx + c.rx - 1 {
+            let d = (x - c.cx) / c.rx
+            let top = c.bottom - (1 - d * d) * (c.bottom - (c.cy - c.ry * 1.1)) + 2
+            if i % 2 == 0 { lineInside(&cv, x, top, x + c.p.tail * 0.5, c.bottom - 0.5, R.shade, onto: tones(R)) }
+            x += 1.5; i += 1
+        }
+        cv.line(c.cx - 1, c.cy - c.ry * 1.1 - 1, c.cx + 0.5, c.cy - c.ry * 1.1 - 3, R.base)
+    }
+}

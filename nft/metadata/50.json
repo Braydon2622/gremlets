@@ -1,21 +1,21 @@
 {
-  "name": "Nessle · Gremlet #50",
-  "description": "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Nessle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Mumbletuft · Gremlet #50",
+  "description": "A haystack that grumbles to itself in the field. It's actually very friendly.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mumbletuft in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/50.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mumbletuft",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mumbletuft",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Loch"
+      "value": "Field"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Seeds"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Nessle"
+      "value": "Mumbletuft"
     }
   ]
 }

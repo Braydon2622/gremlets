@@ -1,9 +1,9 @@
 {
-  "name": "Peachlet · Gremlet #38",
-  "description": "A peach that floated down the river and kept going. Smells like summer.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Peachlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Dusklet · Gremlet #38",
+  "description": "A scrap of night sky with a few stars still in it. Gets braver after sunset.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dusklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/38.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peachlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peachlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dusklet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dusklet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Orchard"
+      "value": "Night"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Petals"
+      "value": "Glow"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Peachlet"
+      "value": "Dusklet"
     }
   ]
 }

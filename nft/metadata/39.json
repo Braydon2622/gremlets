@@ -1,9 +1,9 @@
 {
-  "name": "Clovette · Gremlet #39",
-  "description": "A four-leaf clover spirit. Finding it is lucky; being found is its favourite game.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Clovette in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Bouldren · Gremlet #39",
+  "description": "A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bouldren in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/39.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=clovette",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=clovette",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bouldren",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bouldren",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Luck"
+      "value": "Stone"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Stomp"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Clovette"
+      "value": "Bouldren"
     }
   ]
 }

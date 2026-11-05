@@ -1,9 +1,9 @@
 {
-  "name": "Sakurin · Gremlet #43",
-  "description": "A cherry blossom that drifted off its tree and decided not to land just yet.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sakurin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Geodle · Gremlet #43",
+  "description": "A plain-looking stone that's full of amethyst inside. Opens up only for friends.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Geodle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/43.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sakurin",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sakurin",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=geodle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=geodle",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Spring Breeze"
+      "value": "Crystal"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Petals"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Sakurin"
+      "value": "Geodle"
     }
   ]
 }

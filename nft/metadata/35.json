@@ -1,9 +1,9 @@
 {
-  "name": "Loglet · Gremlet #35",
-  "description": "A log from the woodpile that would rather be a friend than firewood. Still sprouting.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Loglet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Pebblin · Gremlet #35",
+  "description": "A stack of river stones that balanced itself one day and has been very careful ever since.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Pebblin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/35.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pebblin",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=pebblin",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Woodpile"
+      "value": "Earth"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Loglet"
+      "value": "Pebblin"
     }
   ]
 }

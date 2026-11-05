@@ -1,9 +1,9 @@
 {
-  "name": "Drifty · Gremlet #48",
-  "description": "A little jellyfish spirit that drifts through the air as if it were still in the sea.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Drifty in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Sproutle · Gremlet #48",
+  "description": "A bean seed that just split open. It's very proud of its first two leaves.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sproutle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drifty",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drifty",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sproutle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sproutle",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Sea"
+      "value": "Seed"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Drifty"
+      "value": "Sproutle"
     }
   ]
 }

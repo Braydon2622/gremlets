@@ -1,9 +1,9 @@
 {
-  "name": "Bloomlet · Gremlet #36",
-  "description": "A tulip bud that hasn't opened yet. It's waiting for exactly the right sunny day.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bloomlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Sparkit · Gremlet #36",
+  "description": "A ball of static from a summer thunderstorm. Your hair stands up when it's near.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sparkit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/36.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bloomlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bloomlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sparkit",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sparkit",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Garden"
+      "value": "Lightning"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Petals"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Bloomlet"
+      "value": "Sparkit"
     }
   ]
 }

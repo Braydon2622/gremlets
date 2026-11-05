@@ -1,0 +1,13 @@
+{
+  "description" : "A shy willow spirit that peeks out from behind its long green fronds.",
+  "element" : "willow",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Weepling",
+  "scale" : 3,
+  "sleepiness" : 1.3999999999999999,
+  "special" : "leaves",
+  "walkSpeed" : 35
+}

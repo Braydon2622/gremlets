@@ -1,9 +1,9 @@
 {
-  "name": "Leaflet · Gremlet #32",
-  "description": "The first leaf of spring, which hopped off its branch to have a look around.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Leaflet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Rainlet · Gremlet #32",
+  "description": "The first raindrop of a storm, very proud of having arrived first.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rainlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/32.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=leaflet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=leaflet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Spring"
+      "value": "Rain"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Rain"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Leaflet"
+      "value": "Rainlet"
     }
   ]
 }

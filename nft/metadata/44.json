@@ -1,9 +1,9 @@
 {
-  "name": "Puffcloud · Gremlet #44",
-  "description": "A little cloud that came down to see what everyone was doing. Drizzles when it's moved.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Puffcloud in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Dunelet · Gremlet #44",
+  "description": "A small sand dune that wanders a few inches every night. Nobody ever sees it move.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Dunelet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/44.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffcloud",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=puffcloud",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dunelet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=dunelet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Sky"
+      "value": "Sand"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Rain"
+      "value": "Pollen"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Puffcloud"
+      "value": "Dunelet"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
-  "name": "Combbit · Gremlet #42",
-  "description": "One cell of honeycomb that escaped the hive. Always a little sticky, always very sweet.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Combbit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Weepling · Gremlet #42",
+  "description": "A shy willow spirit that peeks out from behind its long green fronds.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Weepling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/42.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=combbit",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=combbit",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=weepling",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=weepling",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Meadow"
+      "value": "Willow"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Pollen"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Combbit"
+      "value": "Weepling"
     }
   ]
 }

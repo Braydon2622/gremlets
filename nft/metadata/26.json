@@ -1,9 +1,9 @@
 {
-  "name": "Boatlet · Gremlet #26",
-  "description": "A folded paper boat that sails across the desktop as if it were a pond.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Boatlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Loglet · Gremlet #26",
+  "description": "A log from the woodpile that would rather be a friend than firewood. Still sprouting.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Loglet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/26.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=boatlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=boatlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Puddle"
+      "value": "Woodpile"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Boatlet"
+      "value": "Loglet"
     }
   ]
 }

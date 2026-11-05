@@ -1,0 +1,13 @@
+{
+  "description" : "A moss-covered boulder that wakes up every hundred years to stretch. This is one of those years.",
+  "element" : "stone",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.69999999999999996,
+  "name" : "Bouldren",
+  "scale" : 3,
+  "sleepiness" : 1.6000000000000001,
+  "special" : "stomp",
+  "walkSpeed" : 30
+}

@@ -1,9 +1,9 @@
 {
-  "name": "Rainlet · Gremlet #46",
-  "description": "The first raindrop of a storm, very proud of having arrived first.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rainlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Gustling · Gremlet #46",
+  "description": "A little whirlwind that carries its favourite leaves everywhere it goes.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gustling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/46.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gustling",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gustling",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,19 +11,19 @@
     },
     {
       "trait_type": "Element",
-      "value": "Rain"
+      "value": "Wind"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Rain"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Rainlet"
+      "value": "Gustling"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
-  "name": "Whirlseed · Gremlet #40",
-  "description": "A maple seed that spins like a helicopter. Loves high places and dramatic exits.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Whirlseed in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Rootling · Gremlet #40",
+  "description": "A root that wriggled up out of the garden to see the sun. Walks on its tendrils.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rootling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/40.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=whirlseed",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=whirlseed",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rootling",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rootling",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,7 +11,7 @@
     },
     {
       "trait_type": "Element",
-      "value": "Autumn"
+      "value": "Soil"
     },
     {
       "trait_type": "Signature Move",
@@ -19,11 +19,11 @@
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Whirlseed"
+      "value": "Rootling"
     }
   ]
 }

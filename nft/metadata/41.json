@@ -1,9 +1,9 @@
 {
-  "name": "Teabud · Gremlet #41",
-  "description": "A tea-leaf bud from a misty hillside garden. Quiet, calm, and slightly fragrant.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Teabud in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Fernwhisp · Gremlet #41",
+  "description": "A curled-up fern frond that unrolls a little more every morning.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Fernwhisp in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/41.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=teabud",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=teabud",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=fernwhisp",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=fernwhisp",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Hillside"
+      "value": "Forest"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Steam"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Teabud"
+      "value": "Fernwhisp"
     }
   ]
 }

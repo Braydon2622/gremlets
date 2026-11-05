@@ -1,0 +1,304 @@
+{
+  "species" : [
+    {
+      "element" : "frost",
+      "family" : "animal",
+      "id" : "flurrie",
+      "name" : "Flurrie"
+    },
+    {
+      "element" : "ember",
+      "family" : "mythic",
+      "id" : "kindlet",
+      "name" : "Kindlet"
+    },
+    {
+      "element" : "bloom",
+      "family" : "animal",
+      "id" : "dandelet",
+      "name" : "Dandelet"
+    },
+    {
+      "element" : "grove",
+      "family" : "animal",
+      "id" : "mossfawn",
+      "name" : "Mossfawn"
+    },
+    {
+      "element" : "trickster",
+      "family" : "animal",
+      "id" : "pomble",
+      "name" : "Pomble"
+    },
+    {
+      "element" : "onsen",
+      "family" : "animal",
+      "id" : "yuzubara",
+      "name" : "Yuzubara"
+    },
+    {
+      "element" : "harvest",
+      "family" : "animal",
+      "id" : "seedcheek",
+      "name" : "Seedcheek"
+    },
+    {
+      "element" : "autumn",
+      "family" : "animal",
+      "id" : "rustle",
+      "name" : "Rustle"
+    },
+    {
+      "element" : "sky",
+      "family" : "animal",
+      "id" : "nimbuss",
+      "name" : "Nimbuss"
+    },
+    {
+      "element" : "pond",
+      "family" : "animal",
+      "id" : "crownip",
+      "name" : "Crownip"
+    },
+    {
+      "element" : "tea",
+      "family" : "animal",
+      "id" : "kettlesnail",
+      "name" : "Kettlesnail"
+    },
+    {
+      "element" : "night",
+      "family" : "animal",
+      "id" : "duskwing",
+      "name" : "Duskwing"
+    },
+    {
+      "element" : "river",
+      "family" : "animal",
+      "id" : "tidepaw",
+      "name" : "Tidepaw"
+    },
+    {
+      "element" : "eucalyptus",
+      "family" : "animal",
+      "id" : "gumleaf",
+      "name" : "Gumleaf"
+    },
+    {
+      "element" : "canopy",
+      "family" : "animal",
+      "id" : "dozel",
+      "name" : "Dozel"
+    },
+    {
+      "element" : "sea",
+      "family" : "animal",
+      "id" : "puffling",
+      "name" : "Puffling"
+    },
+    {
+      "element" : "highland",
+      "family" : "animal",
+      "id" : "alpocco",
+      "name" : "Alpocco"
+    },
+    {
+      "element" : "silk",
+      "family" : "insect",
+      "id" : "silkwing",
+      "name" : "Silkwing"
+    },
+    {
+      "element" : "breeze",
+      "family" : "insect",
+      "id" : "zipwing",
+      "name" : "Zipwing"
+    },
+    {
+      "element" : "pollen",
+      "family" : "insect",
+      "id" : "bumbuzz",
+      "name" : "Bumbuzz"
+    },
+    {
+      "element" : "luck",
+      "family" : "insect",
+      "id" : "spotsy",
+      "name" : "Spotsy"
+    },
+    {
+      "element" : "dusk",
+      "family" : "insect",
+      "id" : "prayla",
+      "name" : "Prayla"
+    },
+    {
+      "element" : "glow",
+      "family" : "insect",
+      "id" : "lumbug",
+      "name" : "Lumbug"
+    },
+    {
+      "element" : "moon",
+      "family" : "insect",
+      "id" : "lunette",
+      "name" : "Lunette"
+    },
+    {
+      "element" : "weather",
+      "family" : "insect",
+      "id" : "woolybit",
+      "name" : "Woolybit"
+    },
+    {
+      "element" : "display",
+      "family" : "insect",
+      "id" : "peacockle",
+      "name" : "Peacockle"
+    },
+    {
+      "element" : "song",
+      "family" : "insect",
+      "id" : "fiddlet",
+      "name" : "Fiddlet"
+    },
+    {
+      "element" : "prism",
+      "family" : "insect",
+      "id" : "prismite",
+      "name" : "Prismite"
+    },
+    {
+      "element" : "colony",
+      "family" : "insect",
+      "id" : "snipleaf",
+      "name" : "Snipleaf"
+    },
+    {
+      "element" : "cloud",
+      "family" : "dragon",
+      "id" : "kumoryu",
+      "name" : "Kumoryu"
+    },
+    {
+      "element" : "tea",
+      "family" : "dragon",
+      "id" : "steepy",
+      "name" : "Steepy"
+    },
+    {
+      "element" : "crystal",
+      "family" : "dragon",
+      "id" : "gemscale",
+      "name" : "Gemscale"
+    },
+    {
+      "element" : "ancient",
+      "family" : "dragon",
+      "id" : "mossmaw",
+      "name" : "Mossmaw"
+    },
+    {
+      "element" : "mischief",
+      "family" : "dragon",
+      "id" : "pipwyrn",
+      "name" : "Pipwyrn"
+    },
+    {
+      "element" : "ember",
+      "family" : "dragon",
+      "id" : "ashlet",
+      "name" : "Ashlet"
+    },
+    {
+      "element" : "stone",
+      "family" : "dino",
+      "id" : "trikit",
+      "name" : "Trikit"
+    },
+    {
+      "element" : "fern",
+      "family" : "dino",
+      "id" : "stegglet",
+      "name" : "Stegglet"
+    },
+    {
+      "element" : "thunder",
+      "family" : "dino",
+      "id" : "rexlet",
+      "name" : "Rexlet"
+    },
+    {
+      "element" : "meadow",
+      "family" : "dino",
+      "id" : "brontle",
+      "name" : "Brontle"
+    },
+    {
+      "element" : "updraft",
+      "family" : "dino",
+      "id" : "pteribit",
+      "name" : "Pteribit"
+    },
+    {
+      "element" : "pinecone",
+      "family" : "dino",
+      "id" : "ankylet",
+      "name" : "Ankylet"
+    },
+    {
+      "element" : "boulder",
+      "family" : "dino",
+      "id" : "bonkle",
+      "name" : "Bonkle"
+    },
+    {
+      "element" : "gale",
+      "family" : "mythic",
+      "id" : "griffet",
+      "name" : "Griffet"
+    },
+    {
+      "element" : "folklore",
+      "family" : "mythic",
+      "id" : "wolpy",
+      "name" : "Wolpy"
+    },
+    {
+      "element" : "blizzard",
+      "family" : "mythic",
+      "id" : "yetini",
+      "name" : "Yetini"
+    },
+    {
+      "element" : "loch",
+      "family" : "mythic",
+      "id" : "nessle",
+      "name" : "Nessle"
+    },
+    {
+      "element" : "deep",
+      "family" : "mythic",
+      "id" : "inklet",
+      "name" : "Inklet"
+    },
+    {
+      "element" : "underworld",
+      "family" : "mythic",
+      "id" : "tripup",
+      "name" : "Tripup"
+    },
+    {
+      "element" : "riddle",
+      "family" : "mythic",
+      "id" : "sphinxie",
+      "name" : "Sphinxie"
+    },
+    {
+      "element" : "basilisk",
+      "family" : "mythic",
+      "id" : "cockatrix",
+      "name" : "Cockatrix"
+    }
+  ]
+}

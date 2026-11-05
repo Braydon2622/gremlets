@@ -110,4 +110,7 @@ for sp in roster {
     lineup.append(frames[0])
 }
 try writePNG(lineup, to: outDir.appendingPathComponent("lineup.png"), scale: 5, background: 0xF3EFE6, pad: 8, perRow: 10)
+// Roster index for the web habitat (and anything else that needs the list without scanning folders).
+try writeJSON(["species": roster.map { ["id": $0.id, "name": $0.name, "family": $0.family, "element": $0.element] }],
+              to: outDir.appendingPathComponent("index.json"))
 print("Generated \(roster.count) species × \(flatPoses.count) frames")

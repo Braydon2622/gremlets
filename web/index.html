@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Gremlets Habitat</title>
+  <meta name="description" content="Fifty original pixel creatures that walk, fly, nap, play tag and stack on each other's heads.">
+  <meta name="theme-color" content="#bfe0f2">
+  <link rel="stylesheet" href="css/habitat.css">
+</head>
+<body>
+  <canvas id="world" aria-label="Gremlets habitat"></canvas>
+
+  <header id="bar">
+    <span class="logo">Gremlets</span>
+    <span id="count" class="count"></span>
+    <span class="spacer"></span>
+    <button id="party" class="btn ghost" title="Swap in a random group">Shuffle</button>
+    <button id="add" class="btn">+ Add</button>
+  </header>
+
+  <div id="picker" hidden>
+    <div class="sheet" role="dialog" aria-label="Choose a Gremlet">
+      <div class="sheet-head">
+        <h2>Choose a Gremlet</h2>
+        <button id="close" class="btn ghost" aria-label="Close">✕</button>
+      </div>
+      <div id="picker-grid"></div>
+    </div>
+  </div>
+
+  <div id="hint">Tap to poke · Hold to pet · Drag to throw</div>
+  <div id="plate" hidden></div>
+
+  <script type="module" src="js/habitat.js"></script>
+</body>
+</html>

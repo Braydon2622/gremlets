@@ -69,6 +69,24 @@ swift run spritegen                                     # regenerate all 50 spri
 No permissions are required: window *positions* are readable without Screen Recording access (only window
 titles need it, and Gremlets never reads them).
 
+## Web habitat (phones, tablets, any browser)
+
+`web/` is the same world in a browser tab: a JavaScript port of the engine (`web/js/engine.js`, same rules
+and tuning as the Swift core) plus a canvas renderer that uses the exact same sprite sheets. Since a browser
+has no app windows, Gremlets climb floating shelves, mossy ledges and clouds instead. The sky follows your
+local time (day, dusk, night with stars).
+
+- **Touch & mouse:** tap to poke, hold to pet, drag to throw, and they chase your finger.
+- **Picker:** add any of the 50 (grouped by family), or Shuffle for a random group. Up to 12 at once.
+- **Showcase mode:** `index.html?showcase=kindlet` shows one Gremlet with its nameplate, sized for an NFT's live preview.
+- **No build step:** plain ES modules, so it can be hosted anywhere static.
+
+```bash
+python3 -m http.server 8765        # from the repo root, then open http://localhost:8765/web/
+open http://localhost:8765/web/dev-preview.html   # phone-size + NFT-preview frames side by side
+scripts/test-web.sh                # engine tests (incl. soak test) in macOS's built-in JavaScriptCore, no Node needed
+```
+
 ## Drawing your own Gremlets
 
 1. In Aseprite, draw your frames (any size; 32×32 matches the built-ins) and add **tags** named
@@ -108,6 +126,10 @@ Sources/
     SpriteLibrary.swift  Aseprite JSON loader + alpha masks
     App.swift         adaptive game loop, menu bar, roster persistence, perf monitor
   spritegen/        part-based pixel-art generator for the 50 built-in species
+web/
+  js/engine.js      JavaScript port of GremletsCore (tested headlessly with JavaScriptCore)
+  js/habitat.js     canvas renderer, scenery, touch/mouse input, picker, showcase mode
+  js/sprites.js     Aseprite sheet loader + alpha masks;  js/effects.js  pixel particles
 ```
 
 Details and design decisions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -133,7 +155,7 @@ How it stays cheap:
 
 - [x] Creatures notice each other (greet, tag, follow, nap, stack, bump, dance)
 - [x] Peek around screen edges
-- [ ] Web habitat (phones + live NFT view)
+- [x] Web habitat (phones + live NFT view)
 - [ ] NFT ownership: 50 one-of-a-kind tokens, wallet-verified unlocks in the app
 - [ ] Demo GIF + signed/notarized download
 - [ ] Windows port of the platform layer (the engine is already platform-independent)

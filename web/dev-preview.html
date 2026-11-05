@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Gremlets device preview</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #2b2433; color: #fff; font: 600 13px system-ui, sans-serif; display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+    figure { margin: 0; }
+    figcaption { margin-bottom: 8px; opacity: 0.8; }
+    iframe { border: 0; border-radius: 22px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+    .square { border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <!-- Dev tool: shows the habitat at phone size and as an NFT live preview (OpenSea-style square). -->
+  <figure><figcaption>Phone · 390 × 700</figcaption><iframe src="index.html?g=flurrie,kindlet,dandelet,spotsy" width="390" height="700"></iframe></figure>
+  <figure><figcaption>NFT live preview · 400 × 400</figcaption><iframe class="square" src="index.html?showcase=kindlet" width="400" height="400"></iframe></figure>
+</body>
+</html>

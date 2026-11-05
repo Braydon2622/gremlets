@@ -107,7 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ids = UserDefaults.standard.stringArray(forKey: rosterKey) ?? []
         }
         ids = ids.filter { species[$0] != nil }
-        if ids.isEmpty { ids = [species["kindlet"] != nil ? "kindlet" : species.keys.sorted()[0]] }
+        if ids.isEmpty { ids = ["kindlet", "flurrie", "dandelet"].filter { species[$0] != nil } }
+        if ids.isEmpty, let first = species.keys.sorted().first { ids = [first] }
         for id in ids { world.spawn(species[id]!.info) }
         saveRoster()
     }
@@ -139,14 +140,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let add = NSMenuItem(title: "Add Gremlet", action: nil, keyEquivalent: "")
         let sub = NSMenu()
-        for sp in species.values.sorted(by: { $0.info.name < $1.info.name }) {
-            let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)", action: #selector(addCreature(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = sp.info.id
-            item.image = NSImage(cgImage: sp.frames[0], size: NSSize(width: 20, height: 20))
-            item.toolTip = sp.info.blurb
-            sub.addItem(item)
+        // Group the 50 species by family so the menu stays browsable.
+        let families: [(String, String)] = [("animal", "Animals"), ("insect", "Insects & Bugs"), ("dragon", "Dragons"),
+                                            ("dino", "Dinosaurs"), ("mythic", "Mythical Beasts")]
+        let known = Set(families.map(\.0))
+        for (key, title) in families + [("", "Custom")] {
+            let members = species.values
+                .filter { key.isEmpty ? !known.contains($0.info.family) : $0.info.family == key }
+                .sorted { $0.info.name < $1.info.name }
+            guard !members.isEmpty else { continue }
+            let famItem = NSMenuItem(title: "\(title) (\(members.count))", action: nil, keyEquivalent: "")
+            let famMenu = NSMenu()
+            for sp in members {
+                let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)", action: #selector(addCreature(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = sp.info.id
+                item.image = NSImage(cgImage: sp.frames[0], size: NSSize(width: 22, height: 22))
+                item.toolTip = sp.info.blurb
+                famMenu.addItem(item)
+            }
+            famItem.submenu = famMenu
+            sub.addItem(famItem)
         }
+        sub.addItem(.separator())
+        let party = NSMenuItem(title: "Surprise Party (5 random)", action: #selector(addRandomParty), keyEquivalent: "")
+        party.target = self
+        sub.addItem(party)
         add.submenu = sub
         menu.addItem(add)
 
@@ -191,6 +210,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let vf = scr?.visibleFrame ?? .zero
         let x = min(max(Double(m.x), vf.minX + 60), vf.maxX - 60)
         world.spawn(sp.info, at: Vec2(x, Double(vf.maxY) - sp.info.pointSize.y - 4))
+        saveRoster()
+        rebuildMenu()
+        schedule(rate: 60)
+    }
+
+    @objc private func addRandomParty() {
+        let picks = species.values.shuffled().prefix(5)
+        let m = NSEvent.mouseLocation
+        let vf = (NSScreen.screens.first { $0.frame.contains(m) } ?? NSScreen.main)?.visibleFrame ?? .zero
+        for (i, sp) in picks.enumerated() {
+            let x = Double(vf.minX) + Double(vf.width) * (0.2 + 0.15 * Double(i))
+            world.spawn(sp.info, at: Vec2(x, Double(vf.maxY) - sp.info.pointSize.y - 4))
+        }
         saveRoster()
         rebuildMenu()
         schedule(rate: 60)

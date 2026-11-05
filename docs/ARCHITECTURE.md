@@ -94,6 +94,29 @@ tune it through `walkSpeed`, `jumpPower` and `sleepiness` (Mossling naps a lot, 
 
 At ledges, a walker turns back 65% of the time and otherwise walks off and tumbles down.
 
+## Social behavior
+
+Social behaviors live in `Social.swift` and plug into the same utility brain. When friends are nearby
+(same level, within ~360 pt), new choices appear: **greet** (walk over, both wave, heart; 90 s cooldown per pair),
+**tag** (chaser/runner roles that swap on contact, with a short immunity so they don't tag straight back),
+**follow**, **nap together** (when tired and a friend is asleep), **stack** (hop onto a friend's head) and
+**join a dance** (a dancer invites idle neighbours, so dance parties spread).
+
+**Stacking** reuses the platform system: every standing creature contributes a narrow one-way surface at the
+top of its head (`headTop` is measured from the idle frame's alpha mask). Riders reference the carrier with a
+reserved owner id range, and each step updates lower creatures first, then moves riders by their carrier's
+delta, so a stacked friend rides along when the carrier walks, jumps or rides a moving window.
+
+**Bumps:** two walkers meeting head-on bonk and bounce apart 35% of the time (otherwise they squeeze past).
+**Startle:** a cursor swipe faster than 2,800 pt/s within 90 pt makes a creature hop away, or take off if it can fly.
+
+**Flight** is a separate steering mode (no gravity): fly toward a point 34 pt above a chosen surface with
+eased velocity and a sinusoidal flutter, then drop the last bit and land through the normal one-way platform
+check.
+
+A **soak test** runs 8 creatures for 10 simulated minutes with sliding and closing windows and a wandering
+cursor. It asserts no creature leaves the screen or produces NaNs, and that every behavior actually occurs.
+
 ## Rendering
 
 One `CALayer` per creature with `magnificationFilter = .nearest` (crisp pixels at 3×), anchored at the

@@ -169,8 +169,101 @@ final class OverlayController {
                 if let c = creature(id) { spawnStars(around: c) }
             case .landed(let id, let impact):
                 if impact > 650, let c = creature(id) { spawnDust(at: c, strength: min(1, impact / 2000)) }
+            case .special(let id, let effect):
+                if let c = creature(id) { spawnSpecial(effect, c) }
+            case .greet(let a, let b):
+                if let ca = creature(a), let cb = creature(b), let (si, pa) = localPoint(ca, dy: ca.size.y * 0.8), let (_, pb) = localPoint(cb) {
+                    burst([Effects.heart], si: si, at: CGPoint(x: (pa.x + pb.x) / 2, y: pa.y), count: 1, dx: 0...0, dy: 30...40, duration: 1.3)
+                }
+            case .tagged(let id), .startled(let id):
+                if let c = creature(id) { spawnPop(Effects.bang, above: c) }
+            case .bump(let a, let b):
+                if let ca = creature(a), let cb = creature(b), let (si, pa) = localPoint(ca, dy: ca.size.y * 0.5), let (_, pb) = localPoint(cb) {
+                    burst([Effects.smallStar, Effects.star], si: si, at: CGPoint(x: (pa.x + pb.x) / 2, y: pa.y), count: 4, dx: -26...26, dy: 4...26, duration: 0.6)
+                }
+            case .stacked(let rider, _):
+                if let c = creature(rider) { spawnEffect(Effects.smallHeart, above: c, drift: 10) }
+            case .danceBeat(let id):
+                if let c = creature(id), let (si, p) = localPoint(c, dy: c.size.y * 0.75) {
+                    burst([Effects.note, Effects.note2], si: si, at: p, count: 1, dx: -26...26, dy: 26...42, duration: 1.1)
+                }
+            case .tookOff(let id):
+                if let c = creature(id) { spawnDust(at: c, strength: 0.3) }
             default: break
             }
+        }
+    }
+
+    /// Signature-move particles, timed to the "action" frames of the special animation (after the wind-up).
+    private func spawnSpecial(_ effect: String, _ c: Creature) {
+        guard let (si, feet) = localPoint(c) else { return }
+        let f = c.facing
+        let mouth = CGPoint(x: feet.x + f * c.size.x * 0.22, y: feet.y + c.size.y * 0.42)
+        let head = CGPoint(x: feet.x, y: feet.y + c.size.y * 0.75)
+        let mid = CGPoint(x: feet.x, y: feet.y + c.size.y * 0.45)
+        let d = 0.3
+        switch effect {
+        case "fire":
+            burst([Effects.flame, Effects.flame2], si: si, at: mouth, count: 7, dx: f < 0 ? -90 ... -45 : 45...90, dy: -4...18, duration: 0.55, delay: d, stagger: 0.05)
+        case "smoke":
+            burst([Effects.smoke], si: si, at: mouth, count: 5, dx: f < 0 ? -50 ... -20 : 20...50, dy: 10...30, duration: 0.9, delay: d, stagger: 0.06)
+        case "snow":
+            burst([Effects.snow], si: si, at: CGPoint(x: head.x, y: head.y + 30), count: 7, dx: -45...45, dy: -60 ... -30, duration: 1.4, delay: d, stagger: 0.07)
+        case "rain":
+            burst([Effects.rain], si: si, at: CGPoint(x: head.x, y: head.y + 24), count: 8, dx: -22...22, dy: -70 ... -50, duration: 0.7, delay: d, stagger: 0.06)
+        case "petals", "leaves", "seeds", "pollen":
+            let img: [CGImage] = effect == "petals" ? [Effects.petal] : effect == "leaves" ? [Effects.leaf, Effects.leaf2] : effect == "seeds" ? [Effects.seed] : [Effects.pollen]
+            burst(img, si: si, at: head, count: 7, dx: -40...40, dy: 20...50, duration: 1.2, delay: d, stagger: 0.04)
+        case "steam", "clouds":
+            burst([effect == "steam" ? Effects.steam : Effects.cloud], si: si, at: head, count: 4, dx: -18...18, dy: 30...55, duration: 1.4, delay: d, stagger: 0.18)
+        case "bubbles":
+            burst([Effects.bubble], si: si, at: mouth, count: 6, dx: -20...30, dy: 30...60, duration: 1.3, delay: d, stagger: 0.1)
+        case "notes":
+            burst([Effects.note, Effects.note2], si: si, at: head, count: 5, dx: -30...30, dy: 25...50, duration: 1.3, delay: d, stagger: 0.15)
+        case "ink":
+            burst([Effects.ink], si: si, at: mid, count: 6, dx: f < 0 ? 20...50 : -50 ... -20, dy: -6...12, duration: 0.9, delay: d, stagger: 0.03)
+        case "stomp", "bonk", "roar":
+            DispatchQueue.main.asyncAfter(deadline: .now() + d) { [weak self] in
+                self?.spawnDust(at: c, strength: 0.9)
+                if effect != "stomp" { self?.spawnPop(Effects.bang, above: c) }
+            }
+        case "bark":
+            for i in 0..<3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + d + Double(i) * 0.18) { [weak self] in
+                    guard let self, let (si2, _) = self.localPoint(c) else { return }
+                    let off = CGFloat(i - 1) * 22
+                    self.burst([Effects.smallBang], si: si2, at: CGPoint(x: head.x + off, y: head.y + 8), count: 1, dx: -4...4, dy: 14...22, duration: 0.6)
+                }
+            }
+        default: // sparkle, glow
+            burst([Effects.sparkle, Effects.smallStar], si: si, at: mid, count: 6, dx: -40...40, dy: -10...40, duration: 0.9, delay: d, stagger: 0.06)
+        }
+    }
+
+    /// Fire-and-forget particles: each flies from `at` by a random offset in (dx, dy), fading out. Pure Core Animation.
+    func burst(_ images: [CGImage], si: Int, at p: CGPoint, count: Int, dx: ClosedRange<Double>, dy: ClosedRange<Double>,
+               duration: Double, delay: Double = 0, stagger: Double = 0) {
+        guard si < screens.count, !images.isEmpty else { return }
+        for i in 0..<count {
+            let l = particle(images[i % images.count], si)
+            l.position = p
+            l.opacity = 0
+            let end = CGPoint(x: p.x + Double.random(in: dx), y: p.y + Double.random(in: dy))
+            let move = CABasicAnimation(keyPath: "position")
+            move.fromValue = NSValue(point: p)
+            move.toValue = NSValue(point: end)
+            move.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 1, 1, 0]
+            fade.keyTimes = [0, 0.1, 0.6, 1]
+            let spin = CABasicAnimation(keyPath: "transform.rotation")
+            spin.toValue = Double.random(in: -1.2...1.2)
+            let g = CAAnimationGroup()
+            g.animations = [move, fade, spin]
+            g.duration = duration * Double.random(in: 0.85...1.15)
+            g.beginTime = CACurrentMediaTime() + delay + Double(i) * stagger
+            g.fillMode = .both
+            run(l, g)
         }
     }
 
@@ -410,6 +503,111 @@ enum Effects {
         "wWWw",
         ".ww.",
     ], ["w": 0xD9D2C5, "W": 0xF4F0E8])
+
+    static let note = pixels([
+        "..nn",
+        "..nN",
+        "..n.",
+        "..n.",
+        "nnn.",
+        "nnn.",
+    ], ["n": 0x3A3A6A, "N": 0x6F6FB0])
+    static let note2 = pixels([
+        ".nnnn",
+        ".n..n",
+        ".n..n",
+        "nn.nn",
+        "nn.nn",
+    ], ["n": 0x5A2A6A])
+    static let flame = pixels([
+        "..A.",
+        ".AaA",
+        "AaYa",
+        ".aa.",
+    ], ["A": 0xFF6A2B, "a": 0xFFC23D, "Y": 0xFFF6A8])
+    static let flame2 = pixels([
+        ".A.",
+        "AYA",
+        ".A.",
+    ], ["A": 0xFF8A3D, "Y": 0xFFF6A8])
+    static let smoke = pixels([
+        ".ss.",
+        "sSSs",
+        "sSSs",
+        ".ss.",
+    ], ["s": 0x8A8494, "S": 0xBDB8C6])
+    static let snow = pixels([
+        "w.w",
+        ".W.",
+        "w.w",
+    ], ["w": 0xCFE8FF, "W": 0xFFFFFF])
+    static let rain = pixels([
+        ".b",
+        "bB",
+        "bb",
+    ], ["b": 0x6FB8F0, "B": 0xD8F0FF])
+    static let petal = pixels([
+        ".pp",
+        "pPp",
+        "pp.",
+    ], ["p": 0xFF9EC4, "P": 0xFFE0EE])
+    static let leaf = pixels([
+        "..gg",
+        ".gGg",
+        "gGg.",
+        "g...",
+    ], ["g": 0x5FAF4A, "G": 0xA8E08A])
+    static let leaf2 = pixels([
+        "..oo",
+        ".oOo",
+        "oOo.",
+        "o...",
+    ], ["o": 0xE8784A, "O": 0xFFC08A])
+    static let seed = pixels([
+        ".k.",
+        "kKk",
+        ".k.",
+    ], ["k": 0x3A3A40, "K": 0xE8E2D0])
+    static let pollen = pixels([
+        ".y.",
+        "yYy",
+        ".y.",
+    ], ["y": 0xFFC93C, "Y": 0xFFF29A])
+    static let steam = pixels([
+        ".ww.",
+        "wWWw",
+        ".ww.",
+    ], ["w": 0xE8EEF4, "W": 0xFFFFFF])
+    static let cloud = pixels([
+        ".ww..",
+        "wWWww",
+        "wwwww",
+    ], ["w": 0xE8EEF8, "W": 0xFFFFFF])
+    static let bubble = pixels([
+        ".bb.",
+        "bW.b",
+        "b..b",
+        ".bb.",
+    ], ["b": 0x8FD3F0, "W": 0xFFFFFF])
+    static let ink = pixels([
+        ".kk.",
+        "kKkk",
+        "kkkk",
+        ".kk.",
+    ], ["k": 0x2A1E3A, "K": 0x5A4A7A])
+    static let sparkle = pixels([
+        "..y..",
+        "..y..",
+        "yyWyy",
+        "..y..",
+        "..y..",
+    ], ["y": 0xFFE98A, "W": 0xFFFFFF])
+    static let smallBang = pixels([
+        "oYo",
+        "oYo",
+        "...",
+        "oYo",
+    ], ["o": 0x5A2A10, "Y": 0xFFD23D])
 
     static let zzz = pixels([
         "zzzz",

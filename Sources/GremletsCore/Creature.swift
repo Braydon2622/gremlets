@@ -15,7 +15,16 @@ public enum Activity: Equatable, Sendable {
     case dizzy        // seeing stars after a hard landing
     case alert        // "!" before chasing the cursor
     case dragged
+    case fly          // winged flight to another surface
+    case special      // the species' signature move
+    case dance
+    case wave         // greeting a friend or the cursor
+    case run          // playing tag (chasing or fleeing)
+    case follow       // walking to / after a friend (greet, follow, nap together)
+    case peek         // sneaking to a screen edge to peek around it
 }
+
+enum SocialMode { case none, greet, follow, nap, chaser, runner }
 
 public final class Creature {
     public let id: Int
@@ -44,13 +53,28 @@ public final class Creature {
     var grabOffset: Vec2 = .zero
     /// Idle has variants ("idle", "look") so standing around doesn't look looped.
     var idleVariant = "idle"
+    var prevPos: Vec2 = .zero
+    var friendID: Int?
+    var social: SocialMode = .none
+    var flyTarget: Vec2?
+    var peekX: Double?
+    var lastGreet: [Int: Double] = [:]
+    var bumpCooldown = 0.0
+    var startleCooldown = 0.0
+    var tagImmunity = 0.0
+    var beatTimer = 0.0
+    var animSpeed = 1.0
+
+    /// Surface owner id used when another creature stands on this one's head.
+    var carrierOwnerID: Int { World.creatureOwner(id) }
 
     init(id: Int, species: SpeciesInfo, pos: Vec2) {
         self.id = id; self.species = species; self.pos = pos
     }
 
     public var size: Vec2 { species.pointSize }
-    public var isGrounded: Bool { groundOwner != nil && activity != .airborne && activity != .dragged }
+    public var isGrounded: Bool { groundOwner != nil && activity != .airborne && activity != .dragged && activity != .fly }
+    public var isAsleep: Bool { activity == .sleep || activity == .yawn }
 
     /// Name of the animation that matches the current activity.
     public var animationName: String {
@@ -68,11 +92,18 @@ public final class Creature {
         case .dizzy: return "dizzy"
         case .alert: return "alert"
         case .dragged: return "drag"
+        case .fly: return "fly"
+        case .special: return "special"
+        case .dance: return "dance"
+        case .wave: return "wave"
+        case .run: return "run"
+        case .follow: return "walk"
+        case .peek: return "walk"
         }
     }
 
     /// One-shot animations play once and hold their last frame; everything else loops.
-    var animationLoops: Bool { ![.yawn, .wake, .react, .land, .alert, .crouch].contains(activity) }
+    var animationLoops: Bool { ![.yawn, .wake, .react, .land, .alert, .crouch, .special].contains(activity) }
 
     public var currentFrame: Int { species.frame(animationName, at: animTime, loop: animationLoops) }
 

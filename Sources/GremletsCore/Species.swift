@@ -22,14 +22,33 @@ public struct SpeciesInfo: Sendable {
     public var jumpPower: Double
     public var sleepiness: Double
     public var blurb: String
+    public var family: String
+    /// Winged species can take off and fly between surfaces.
+    public var flies: Bool
+    /// Signature move effect name ("fire", "notes", "steam", ...), shown by the renderer.
+    public var special: String
+    /// Height of the solid top of the head above the feet, in points (where a friend can stand).
+    public let headTop: Double
 
     public init(id: String, name: String, element: String, frameWidth: Int, frameHeight: Int, scale: Double,
                 animations: [String: Animation], masks: [[Bool]],
-                walkSpeed: Double = 70, jumpPower: Double = 1, sleepiness: Double = 1, blurb: String = "") {
+                walkSpeed: Double = 70, jumpPower: Double = 1, sleepiness: Double = 1, blurb: String = "",
+                family: String = "", flies: Bool = false, special: String = "sparkle") {
         self.id = id; self.name = name; self.element = element; self.blurb = blurb
         self.frameWidth = frameWidth; self.frameHeight = frameHeight; self.scale = scale
         self.animations = animations; self.masks = masks
         self.walkSpeed = walkSpeed; self.jumpPower = jumpPower; self.sleepiness = sleepiness
+        self.family = family; self.flies = flies; self.special = special
+        // First row (from the top) of the idle frame that is solidly filled across a quarter of its width.
+        var top = Double(frameHeight) * 0.6
+        if let idle = animations["idle"]?.frames.first, idle < masks.count {
+            let m = masks[idle]
+            for row in 0..<frameHeight {
+                let filled = (0..<frameWidth).filter { m[row * frameWidth + $0] }.count
+                if filled >= frameWidth / 4 { top = Double(frameHeight - row); break }
+            }
+        }
+        headTop = top * scale
     }
 
     public var pointSize: Vec2 { Vec2(Double(frameWidth) * scale, Double(frameHeight) * scale) }
@@ -40,6 +59,8 @@ public struct SpeciesInfo: Sendable {
         "fall": ["jump", "idle"], "jump": ["fall", "idle"], "sleep": ["idle"], "walk": ["idle"],
         "look": ["idle"], "crouch": ["land", "idle"], "pet": ["react", "idle"], "yawn": ["sleep", "idle"],
         "wake": ["react", "idle"], "dizzy": ["land", "idle"], "alert": ["react", "idle"],
+        "fly": ["jump", "idle"], "special": ["react", "idle"], "dance": ["react", "idle"], "wave": ["react", "idle"],
+        "run": ["walk", "idle"],
     ]
 
     public func animation(_ name: String) -> Animation {

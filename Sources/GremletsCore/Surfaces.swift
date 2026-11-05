@@ -1,6 +1,6 @@
 /// A one-way horizontal platform creatures can stand on: a screen floor or the visible part of a window's top edge.
 public struct Surface: Equatable, Sendable {
-    public enum Kind: Sendable { case floor, windowTop }
+    public enum Kind: Sendable { case floor, windowTop, creature }
     /// Window number for window tops; negative ids for screen floors.
     public var ownerID: Int
     public var kind: Kind

@@ -1,0 +1,214 @@
+{
+  "frames" : [
+    {
+      "duration" : 420,
+      "filename" : "kindlet 0.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 0,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 420,
+      "filename" : "kindlet 1.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 24,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "kindlet 2.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 48,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "kindlet 3.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 72,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "kindlet 4.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 96,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "kindlet 5.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 120,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 100,
+      "filename" : "kindlet 6.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 144,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 100,
+      "filename" : "kindlet 7.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 168,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 120,
+      "filename" : "kindlet 8.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 192,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 800,
+      "filename" : "kindlet 9.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 216,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 800,
+      "filename" : "kindlet 10.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 240,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "kindlet 11.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 264,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 160,
+      "filename" : "kindlet 12.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 288,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 200,
+      "filename" : "kindlet 13.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 312,
+        "y" : 0
+      }
+    },
+    {
+      "duration" : 200,
+      "filename" : "kindlet 14.aseprite",
+      "frame" : {
+        "h" : 24,
+        "w" : 24,
+        "x" : 336,
+        "y" : 0
+      }
+    }
+  ],
+  "meta" : {
+    "app" : "gremlets-spritegen",
+    "format" : "RGBA8888",
+    "frameTags" : [
+      {
+        "direction" : "forward",
+        "from" : 0,
+        "name" : "idle",
+        "to" : 1
+      },
+      {
+        "direction" : "forward",
+        "from" : 2,
+        "name" : "walk",
+        "to" : 5
+      },
+      {
+        "direction" : "forward",
+        "from" : 6,
+        "name" : "jump",
+        "to" : 6
+      },
+      {
+        "direction" : "forward",
+        "from" : 7,
+        "name" : "fall",
+        "to" : 7
+      },
+      {
+        "direction" : "forward",
+        "from" : 8,
+        "name" : "land",
+        "to" : 8
+      },
+      {
+        "direction" : "forward",
+        "from" : 9,
+        "name" : "sleep",
+        "to" : 10
+      },
+      {
+        "direction" : "forward",
+        "from" : 11,
+        "name" : "react",
+        "to" : 12
+      },
+      {
+        "direction" : "forward",
+        "from" : 13,
+        "name" : "drag",
+        "to" : 14
+      }
+    ],
+    "image" : "sheet.png",
+    "scale" : "1",
+    "size" : {
+      "h" : 24,
+      "w" : 360
+    }
+  }
+}

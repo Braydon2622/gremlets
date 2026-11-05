@@ -1,0 +1,8 @@
+{
+  "element" : "tide",
+  "jumpPower" : 1.25,
+  "name" : "Dropple",
+  "scale" : 3,
+  "sleepiness" : 0.59999999999999998,
+  "walkSpeed" : 85
+}

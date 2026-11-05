@@ -1,0 +1,8 @@
+{
+  "element" : "ember",
+  "jumpPower" : 1,
+  "name" : "Kindlet",
+  "scale" : 3,
+  "sleepiness" : 0.80000000000000004,
+  "walkSpeed" : 70
+}

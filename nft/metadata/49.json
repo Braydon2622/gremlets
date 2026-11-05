@@ -1,0 +1,29 @@
+{
+  "name": "Sphinxie · Gremlet #49",
+  "description": "A sphinx kitten in a royal headdress. Asks riddles, forgets the answers.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sphinxie in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/49.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sphinxie",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sphinxie",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Mythical Beast"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Riddle"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Sphinxie"
+    }
+  ]
+}

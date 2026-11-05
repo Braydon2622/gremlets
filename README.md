@@ -87,6 +87,15 @@ open http://localhost:8765/web/dev-preview.html   # phone-size + NFT-preview fra
 scripts/test-web.sh                # engine tests (incl. soak test) in macOS's built-in JavaScriptCore, no Node needed
 ```
 
+## NFTs (testnet)
+
+Each of the 50 Gremlets is a one-of-a-kind collectible; owning Gremlet #N unlocks it in the desktop app.
+- `contracts/`: minimal ERC-721 on OpenZeppelin 5.1.0, Foundry tests (incl. fuzz), 100% coverage. No payment
+  logic, no upgrades, max supply fixed at 50, optional permanent metadata freeze. See [contracts/README.md](contracts/README.md).
+- `nft/console.html`: dependency-free creator console that deploys and mints from your own browser wallet
+  (keys never leave the wallet; Base Sepolia testnet only). Verified end-to-end against a local `anvil` chain.
+- `nft/metadata`, `nft/images`: ERC-721 metadata with portraits, traits and a live `animation_url` into the web habitat.
+
 ## Drawing your own Gremlets
 
 1. In Aseprite, draw your frames (any size; 32×32 matches the built-ins) and add **tags** named
@@ -156,6 +165,8 @@ How it stays cheap:
 - [x] Creatures notice each other (greet, tag, follow, nap, stack, bump, dance)
 - [x] Peek around screen edges
 - [x] Web habitat (phones + live NFT view)
-- [ ] NFT ownership: 50 one-of-a-kind tokens, wallet-verified unlocks in the app
+- [x] NFT contract: 50 one-of-a-kind ERC-721 tokens (OpenZeppelin, 18 tests, 100% coverage), creator console, metadata + portraits. Testnet only.
+- [ ] Wallet-verified unlocks in the desktop app (+ demo mode for visitors)
+- [ ] Host web habitat + metadata (GitHub Pages)
 - [ ] Demo GIF + signed/notarized download
 - [ ] Windows port of the platform layer (the engine is already platform-independent)

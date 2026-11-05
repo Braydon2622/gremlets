@@ -1,0 +1,29 @@
+{
+  "name": "Prayla · Gremlet #22",
+  "description": "A periwinkle mantis that folds its arms and says grace before every single snack.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Prayla in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/22.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prayla",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=prayla",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Insect & Bug"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Dusk"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Prayla"
+    }
+  ]
+}

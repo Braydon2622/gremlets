@@ -1,0 +1,29 @@
+{
+  "name": "Rexlet · Gremlet #38",
+  "description": "A tiny tyrannosaur with a huge roar and arms too short to hug. It tries anyway.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rexlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/38.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rexlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rexlet",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Dinosaur"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Thunder"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Roar"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Rexlet"
+    }
+  ]
+}

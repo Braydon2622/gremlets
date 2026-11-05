@@ -1,0 +1,29 @@
+{
+  "name": "Crownip · Gremlet #10",
+  "description": "A pond frog who found a tiny crown and has been royalty ever since.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Crownip in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/10.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=crownip",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=crownip",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Animal"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Pond"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Bubbles"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Crownip"
+    }
+  ]
+}

@@ -43,6 +43,36 @@ func writePNG(_ frames: [Canvas], to url: URL, scale k: Int = 1, background: UIn
     guard CGImageDestinationFinalize(dest) else { throw NSError(domain: "spritegen", code: 1) }
 }
 
+/// 512×512 portrait: the frame at 13× (416 px), centred with breathing room and a soft ground shadow.
+func writePortrait(_ f: Canvas, to url: URL, background: UInt32) throws {
+    let size = 512, k = 13, ox = (512 - W * 13) / 2, oy = 34
+    var buf = [UInt8](repeating: 0, count: size * size * 4)
+    let bgc = [UInt8(background >> 16 & 0xFF), UInt8(background >> 8 & 0xFF), UInt8(background & 0xFF), 255]
+    for i in stride(from: 0, to: buf.count, by: 4) { buf.replaceSubrange(i..<(i + 4), with: bgc) }
+    // shadow ellipse under the feet
+    let sh = Ramp(background).shade
+    for y in 0..<size { for x in 0..<size {
+        let dx = Double(x - 256) / 150, dy = Double(y - (oy + H * k - 4)) / 16
+        if dx * dx + dy * dy <= 1 {
+            let i = (y * size + x) * 4
+            buf[i] = UInt8(sh >> 16 & 0xFF); buf[i + 1] = UInt8(sh >> 8 & 0xFF); buf[i + 2] = UInt8(sh & 0xFF)
+        }
+    }}
+    for y in 0..<(H * k) { for x in 0..<(W * k) {
+        guard let c = f.px[(y / k) * W + x / k] else { continue }
+        let i = ((oy + y) * size + ox + x) * 4
+        buf[i] = UInt8(c >> 16 & 0xFF); buf[i + 1] = UInt8(c >> 8 & 0xFF); buf[i + 2] = UInt8(c & 0xFF); buf[i + 3] = 255
+    }}
+    let provider = CGDataProvider(data: Data(buf) as CFData)!
+    let img = CGImage(width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: size * 4,
+                      space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                      bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                      provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!
+    let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
+    CGImageDestinationAddImage(dest, img, nil)
+    guard CGImageDestinationFinalize(dest) else { throw NSError(domain: "spritegen", code: 2) }
+}
+
 func writeJSON(_ obj: Any, to url: URL) throws {
     try JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]).write(to: url)
 }
@@ -108,6 +138,9 @@ for sp in roster {
                at("dance", 1), at("yawn", 3), at("sleep", 2), at("react", 2), at("drag", 0)]
     try writePNG(key, to: dir.appendingPathComponent("preview.png"), scale: 5, background: 0xF3EFE6, pad: 6)
     lineup.append(frames[0])
+    // 512×512 portrait for NFT metadata / marketplaces: idle frame at 16× on a soft family-coloured background.
+    let bg: [String: UInt32] = ["animal": 0xF4E9D8, "insect": 0xE3F1E0, "dragon": 0xEDE3F6, "dino": 0xE0EEF4, "mythic": 0xF6E3E8]
+    try writePortrait(frames[0], to: dir.appendingPathComponent("portrait.png"), background: bg[sp.family] ?? 0xF3EFE6)
 }
 try writePNG(lineup, to: outDir.appendingPathComponent("lineup.png"), scale: 5, background: 0xF3EFE6, pad: 8, perRow: 10)
 // Roster index for the web habitat (and anything else that needs the list without scanning folders).

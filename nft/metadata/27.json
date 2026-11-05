@@ -1,0 +1,29 @@
+{
+  "name": "Fiddlet · Gremlet #27",
+  "description": "A cricket that plays a tiny fiddle. Its favourite song has three notes.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Fiddlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/27.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=fiddlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=fiddlet",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Insect & Bug"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Song"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Notes"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Fiddlet"
+    }
+  ]
+}

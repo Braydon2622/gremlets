@@ -1,0 +1,29 @@
+{
+  "name": "Gemscale · Gremlet #32",
+  "description": "A moonstone dragon that grows crystals instead of spikes. They chime when it runs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gemscale in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/32.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gemscale",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gemscale",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Dragon"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Crystal"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Gemscale"
+    }
+  ]
+}

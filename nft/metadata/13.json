@@ -1,0 +1,29 @@
+{
+  "name": "Tidepaw · Gremlet #13",
+  "description": "A river otter that carries its favourite pebble and shows it to everyone it meets.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Tidepaw in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/13.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tidepaw",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tidepaw",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Animal"
+    },
+    {
+      "trait_type": "Element",
+      "value": "River"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Bubbles"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Tidepaw"
+    }
+  ]
+}

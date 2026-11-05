@@ -1,0 +1,29 @@
+{
+  "name": "Lunette · Gremlet #24",
+  "description": "A pale luna moth with long ribbon tails. Only comes out to dance under the moon.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Lunette in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/24.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lunette",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lunette",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Insect & Bug"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Moon"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Glow"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Lunette"
+    }
+  ]
+}

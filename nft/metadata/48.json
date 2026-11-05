@@ -1,0 +1,29 @@
+{
+  "name": "Tripup · Gremlet #48",
+  "description": "A three-headed puppy that guards nothing in particular. All three heads want belly rubs.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Tripup in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tripup",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=tripup",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Mythical Beast"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Underworld"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Bark"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Tripup"
+    }
+  ]
+}

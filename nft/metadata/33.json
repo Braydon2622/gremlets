@@ -1,0 +1,29 @@
+{
+  "name": "Mossmaw · Gremlet #33",
+  "description": "An old, sleepy dragon so still that moss and flowers grow on its back.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mossmaw in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/33.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mossmaw",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mossmaw",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Dragon"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Ancient"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Petals"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Mossmaw"
+    }
+  ]
+}

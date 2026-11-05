@@ -1,0 +1,29 @@
+{
+  "name": "Spotsy · Gremlet #21",
+  "description": "A shiny ladybug. Counting its spots is said to bring good luck.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Spotsy in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/21.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=spotsy",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=spotsy",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Insect & Bug"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Luck"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Spotsy"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Trikit · Gremlet #36",
+  "description": "A baby triceratops whose frill blushes orange when it gets excited.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Trikit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/36.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=trikit",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=trikit",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Dinosaur"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Stone"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Stomp"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Trikit"
+    }
+  ]
+}

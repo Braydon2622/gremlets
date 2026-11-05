@@ -1,0 +1,29 @@
+{
+  "name": "Zipwing · Gremlet #19",
+  "description": "A dragonfly with huge shiny eyes. Zips everywhere, stops for nothing.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Zipwing in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/19.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=zipwing",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=zipwing",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Insect & Bug"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Breeze"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Zipwing"
+    }
+  ]
+}

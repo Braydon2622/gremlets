@@ -1,0 +1,29 @@
+{
+  "name": "Griffet · Gremlet #43",
+  "description": "A griffin chick: eagle up front, lion in the back, all fluff in the middle.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Griffet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/43.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=griffet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=griffet",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Mythical Beast"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Gale"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Sparkle"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Griffet"
+    }
+  ]
+}

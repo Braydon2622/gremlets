@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gremlets Creator Console</title>
+  <style>
+    :root { --ink: #2b2433; --paper: #fffaf1; --accent: #ff7a4d; --line: rgba(43,36,51,.14); --ok: #2f8f46; --warn: #a3282c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f3efe6; color: var(--ink); font: 500 15px/1.45 ui-rounded, system-ui, -apple-system, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+    h1 { font-size: 24px; margin: 0 0 4px; }
+    .sub { margin: 0 0 18px; color: rgba(43,36,51,.65); }
+    .banner { background: #e3f1e0; border: 1px solid #b8dbb0; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+    section { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 4px; }
+    input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit; background: #fff; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+    .row > div { flex: 1; min-width: 120px; }
+    button { appearance: none; border: 0; border-radius: 10px; padding: 9px 14px; font: 700 14px/1 inherit; font-family: inherit; background: var(--accent); color: #fff; cursor: pointer; min-height: 38px; }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button.danger { background: var(--warn); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+    .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+    .kv dt { color: rgba(43,36,51,.6); }
+    .kv dd { margin: 0; }
+    #log { white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: #2b2433; color: #e8e2f0; border-radius: 12px; padding: 12px; min-height: 80px; max-height: 260px; overflow: auto; }
+    .muted { color: rgba(43,36,51,.6); font-size: 13px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Gremlets Creator Console</h1>
+  <p class="sub">Deploy the Gremlets contract and mint Gremlets from your own browser wallet.</p>
+  <div class="banner"><b>Testnet only.</b> This console only works on <b>Base Sepolia</b> (free test network, no real money).
+    Every action is signed in your wallet; this page never sees your keys or seed phrase.</div>
+
+  <section>
+    <h2>1. Wallet</h2>
+    <div class="row">
+      <button id="connect">Connect wallet</button>
+      <button id="switch" class="ghost" hidden>Switch to Base Sepolia</button>
+    </div>
+    <dl class="kv" style="margin-top:12px">
+      <dt>Account</dt><dd id="account" class="mono">not connected</dd>
+      <dt>Network</dt><dd id="network">–</dd>
+    </dl>
+    <p class="muted">Need test ETH? Use a Base Sepolia faucet (for example the one in Coinbase Wallet or on the Base docs site).</p>
+  </section>
+
+  <section>
+    <h2>2. Deploy the contract</h2>
+    <label for="deployBase">Metadata base URL (can be changed later until frozen)</label>
+    <input id="deployBase" placeholder="https://your-host/nft/metadata/">
+    <div class="row" style="margin-top:10px"><button id="deploy" disabled>Deploy Gremlets</button></div>
+  </section>
+
+  <section>
+    <h2>3. Manage</h2>
+    <label for="addr">Contract address</label>
+    <div class="row"><div><input id="addr" class="mono" placeholder="0x…"></div><button id="load" class="ghost">Load</button></div>
+    <dl class="kv" style="margin-top:12px">
+      <dt>Owner</dt><dd id="cOwner" class="mono">–</dd>
+      <dt>Minted</dt><dd id="cMinted">–</dd>
+      <dt>Metadata URL</dt><dd id="cBase" class="mono">–</dd>
+      <dt>Metadata frozen</dt><dd id="cFrozen">–</dd>
+    </dl>
+
+    <label>Mint a range of Gremlets (token ids 1–50)</label>
+    <div class="row">
+      <div><input id="from" type="number" min="1" max="50" value="1" aria-label="First id"></div>
+      <div><input id="to" type="number" min="1" max="50" value="50" aria-label="Last id"></div>
+      <div style="flex:3"><input id="recipient" class="mono" placeholder="Recipient (defaults to you)"></div>
+      <button id="mint" disabled>Mint</button>
+    </div>
+
+    <label for="newBase">Change metadata base URL</label>
+    <div class="row"><div><input id="newBase" class="mono" placeholder="https://…/nft/metadata/"></div><button id="setBase" class="ghost" disabled>Update</button></div>
+
+    <label for="freezeWord">Freeze metadata forever. This cannot be undone. Type FREEZE to enable.</label>
+    <div class="row"><div><input id="freezeWord" placeholder="FREEZE"></div><button id="freeze" class="danger" disabled>Freeze</button></div>
+  </section>
+
+  <section>
+    <h2>Activity</h2>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script type="module">
+// No libraries: minimal ABI encoding for the few calls this contract needs.
+const BASE_SEPOLIA = {
+  chainId: '0x14a34', chainName: 'Base Sepolia', nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: ['https://sepolia.base.org'], blockExplorerUrls: ['https://sepolia.basescan.org'],
+};
+// Mainnet is deliberately not supported here. Adding it requires Braydon's explicit approval.
+const ALLOWED_CHAINS = new Set([BASE_SEPOLIA.chainId]);
+const SEL = {
+  mintRange: '0xea8876fa', setBaseURI: '0x55f804b3', freezeMetadata: '0xd111515d',
+  owner: '0x8da5cb5b', totalMinted: '0xa2309ff8', baseURI: '0x6c0360eb', metadataFrozen: '0xfb3cc6c2',
+};
+
+const $ = (id) => document.getElementById(id);
+const wallet = () => window.ethereum; // looked up lazily so a wallet injected after load is found
+let account = null, chainId = null, artifact = null;
+
+const log = (msg) => { $('log').textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`; $('log').scrollTop = 1e9; };
+const pad = (hex) => hex.replace(/^0x/, '').padStart(64, '0');
+const encAddr = (a) => { if (!/^0x[0-9a-fA-F]{40}$/.test(a)) throw new Error('Invalid address: ' + a); return pad(a.toLowerCase()); };
+const encUint = (n) => pad(BigInt(n).toString(16));
+function encStringTail(s) {
+  const bytes = new TextEncoder().encode(s);
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return encUint(bytes.length) + hex.padEnd(Math.ceil(hex.length / 64) * 64, '0');
+}
+function decString(hex) {
+  const h = hex.replace(/^0x/, '');
+  const off = parseInt(h.slice(0, 64), 16) * 2, len = parseInt(h.slice(off, off + 64), 16);
+  const data = h.slice(off + 64, off + 64 + len * 2);
+  return new TextDecoder().decode(new Uint8Array(data.match(/../g)?.map((b) => parseInt(b, 16)) ?? []));
+}
+
+async function call(to, data) { return wallet().request({ method: 'eth_call', params: [{ to, data }, 'latest'] }); }
+async function send(tx) {
+  requireTestnet();
+  const hash = await wallet().request({ method: 'eth_sendTransaction', params: [{ from: account, ...tx }] });
+  log(`sent ${hash}. Waiting for confirmation…`);
+  for (let i = 0; i < 120; i++) {
+    const r = await wallet().request({ method: 'eth_getTransactionReceipt', params: [hash] });
+    if (r) { if (r.status !== '0x1') throw new Error('transaction reverted'); log(`confirmed in block ${parseInt(r.blockNumber, 16)}`); return r; }
+    await new Promise((res) => setTimeout(res, 2000));
+  }
+  throw new Error('timed out waiting for confirmation');
+}
+function requireTestnet() { if (!ALLOWED_CHAINS.has(chainId)) throw new Error('Switch your wallet to Base Sepolia first (testnet only).'); }
+
+function refreshUi() {
+  $('account').textContent = account ?? 'not connected';
+  const ok = ALLOWED_CHAINS.has(chainId);
+  $('network').innerHTML = chainId ? (ok ? '<b style="color:var(--ok)">Base Sepolia ✓</b>' : `<b style="color:var(--warn)">Unsupported (${parseInt(chainId, 16)}). Switch to Base Sepolia.</b>`) : '–';
+  $('switch').hidden = !account || ok;
+  for (const id of ['deploy', 'mint', 'setBase']) $(id).disabled = !(account && ok);
+  $('freeze').disabled = !(account && ok && $('freezeWord').value === 'FREEZE');
+}
+
+async function connect() {
+  if (!wallet()) { log('No browser wallet found. Install Coinbase Wallet or MetaMask in this browser.'); return; }
+  [account] = await wallet().request({ method: 'eth_requestAccounts' });
+  chainId = await wallet().request({ method: 'eth_chainId' });
+  log(`connected ${account}`);
+  refreshUi();
+}
+
+async function switchNetwork() {
+  try { await wallet().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA.chainId }] }); }
+  catch (e) {
+    if (e.code === 4902) await wallet().request({ method: 'wallet_addEthereumChain', params: [BASE_SEPOLIA] });
+    else throw e;
+  }
+  chainId = await wallet().request({ method: 'eth_chainId' });
+  refreshUi();
+}
+
+async function deploy() {
+  const base = $('deployBase').value.trim();
+  if (!base) throw new Error('Enter a metadata base URL (it can be changed later).');
+  artifact ??= await (await fetch('contract/Gremlets.json')).json();
+  // constructor(string baseURI_, address initialOwner): head = [offset to string, owner], tail = string
+  const args = encUint(64) + encAddr(account) + encStringTail(base);
+  log('deploying Gremlets… confirm in your wallet');
+  const r = await send({ data: artifact.bytecode + args });
+  $('addr').value = r.contractAddress;
+  try { localStorage.setItem('gremlets.contract', r.contractAddress); } catch {}
+  log(`deployed at ${r.contractAddress}\n  ${BASE_SEPOLIA.blockExplorerUrls[0]}/address/${r.contractAddress}`);
+  await load();
+}
+
+async function load() {
+  const to = $('addr').value.trim();
+  encAddr(to);
+  const [owner, minted, base, frozen] = await Promise.all([
+    call(to, SEL.owner), call(to, SEL.totalMinted), call(to, SEL.baseURI), call(to, SEL.metadataFrozen)]);
+  $('cOwner').textContent = '0x' + owner.slice(-40);
+  $('cMinted').textContent = `${parseInt(minted, 16)} / 50`;
+  $('cBase').textContent = decString(base);
+  $('cFrozen').textContent = parseInt(frozen, 16) ? 'Yes (permanent)' : 'No';
+  try { localStorage.setItem('gremlets.contract', to); } catch {}
+}
+
+async function mint() {
+  const to = $('addr').value.trim(), from = +$('from').value, last = +$('to').value;
+  const recipient = $('recipient').value.trim() || account;
+  if (!(from >= 1 && last <= 50 && from <= last)) throw new Error('Ids must be within 1–50, first ≤ last.');
+  log(`minting Gremlets #${from}–#${last} to ${recipient}… confirm in your wallet`);
+  await send({ to, data: SEL.mintRange + encAddr(recipient) + encUint(from) + encUint(last) });
+  await load();
+}
+
+async function setBase() {
+  const to = $('addr').value.trim(), base = $('newBase').value.trim();
+  if (!base) throw new Error('Enter the new base URL.');
+  await send({ to, data: SEL.setBaseURI + encUint(32) + encStringTail(base) });
+  await load();
+}
+
+async function freeze() {
+  const to = $('addr').value.trim();
+  log('freezing metadata permanently… confirm in your wallet');
+  await send({ to, data: SEL.freezeMetadata });
+  $('freezeWord').value = '';
+  await load();
+}
+
+const guard = (fn) => async () => { try { await fn(); } catch (e) { log('⚠️ ' + (e.message || e)); } finally { refreshUi(); } };
+$('connect').onclick = guard(connect);
+$('switch').onclick = guard(switchNetwork);
+$('deploy').onclick = guard(deploy);
+$('load').onclick = guard(load);
+$('mint').onclick = guard(mint);
+$('setBase').onclick = guard(setBase);
+$('freeze').onclick = guard(freeze);
+$('freezeWord').oninput = refreshUi;
+try { $('addr').value = localStorage.getItem('gremlets.contract') || ''; } catch {}
+wallet()?.on?.('chainChanged', (id) => { chainId = id; refreshUi(); });
+wallet()?.on?.('accountsChanged', (a) => { account = a[0] ?? null; refreshUi(); });
+refreshUi();
+</script>
+</body>
+</html>

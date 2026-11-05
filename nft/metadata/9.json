@@ -1,0 +1,29 @@
+{
+  "name": "Nimbuss · Gremlet #9",
+  "description": "A kitten made of cloud fluff. It drizzles a little when it's sad and floats when it's happy.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Nimbuss in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/9.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nimbuss",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nimbuss",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Animal"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Sky"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Rain"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Nimbuss"
+    }
+  ]
+}

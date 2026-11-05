@@ -1,0 +1,29 @@
+{
+  "name": "Gumleaf · Gremlet #14",
+  "description": "A koala who wears a crown of gum blossoms and insists on being called Your Fluffiness.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Gumleaf in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/14.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gumleaf",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=gumleaf",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Animal"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Eucalyptus"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Petals"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Gumleaf"
+    }
+  ]
+}

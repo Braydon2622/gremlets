@@ -1,0 +1,29 @@
+{
+  "name": "Bonkle · Gremlet #42",
+  "description": "A dome-headed dinosaur that greets friends with a gentle bonk.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bonkle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/42.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bonkle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bonkle",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Dinosaur"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Boulder"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Bonk"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Bonkle"
+    }
+  ]
+}

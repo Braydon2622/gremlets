@@ -1,0 +1,29 @@
+{
+  "name": "Nessle · Gremlet #46",
+  "description": "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Nessle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/46.png",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "Mythical Beast"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Loch"
+    },
+    {
+      "trait_type": "Signature Move",
+      "value": "Bubbles"
+    },
+    {
+      "trait_type": "Can Fly",
+      "value": "No"
+    },
+    {
+      "trait_type": "Species",
+      "value": "Nessle"
+    }
+  ]
+}

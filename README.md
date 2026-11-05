@@ -6,17 +6,34 @@ show a heart when you pet them.
 
 > 🎥 _Demo GIF coming soon (recorded on a real desktop)._
 
-![Kindlet](Species/kindlet/preview.png)
-![Mossling](Species/mossling/preview.png)
-![Dropple](Species/dropple/preview.png)
+![The Gremlets lineup](Species/lineup.png)
 
 | Species | Element | Personality |
 |---|---|---|
-| **Kindlet** | ember | Curious and bouncy, with a little flame that flickers when it's happy |
-| **Mossling** | moss | Slow, sleepy pebble with a sprout on its head |
-| **Dropple** | tide | Quick, springy water drop and the best jumper of the three |
+| **Kindlet** | ember | A melting-candle sprite whose flame flares when it's happy and dims to an ember when it naps |
+| **Mossling** | moss | A sleepy river pebble that grew a moss blanket and one stubborn sprout |
+| **Dropple** | tide | A springy raindrop with a curling tip and the best jumper of the bunch |
+| **Nimbit** | storm | A pocket-sized thundercloud whose little bolt crackles when it gets excited |
+| **Glimmoth** | glow | A chubby night moth with a fluffy collar and lantern-tipped feelers |
+| **Acornet** | grove | An acorn that refused to stay a seed and wears its cap like a beloved hat |
+| **Flurrie** | frost | A snowball bunny with icicle ear-tips and a scarf it never takes off |
+| **Fizzlet** | spark | A tiny lightbulb spirit whose filament glows brighter the happier it is |
+| **Hushwisp** | spirit | A quiet lantern ghost that drifts instead of walking and carries a cool blue flame |
+| **Bellcap** | spore | A shy mushroom with a bell-shaped cap whose spots glow in the dark |
+| **Kilnby** | clay | A little clay pot that came alive after a hundred years on a shelf. Hollow eyes, warm heart |
+| **Dandelet** | bloom | A dandelion cub with a petal mane and a seed-puff tail |
+| **Snoozle** | dusk | A velvet mole in a nightcap with a moon on its tummy, who naps whenever it can |
 
-All creatures, names and art are original.
+Every creature has 15 animations (57 frames): idle, look-around, walk, crouch, jump, a panicked fall,
+a squash landing, dizzy, a big yawn, sleep with a snot bubble, a startled wake-up, a happy jump, petting bliss,
+dangling when dragged, and an "!" alert.
+
+![Kindlet's key poses](Species/kindlet/preview.png)
+
+All creatures, names and art are original. The design approach borrows *principles* from classic
+creature-collecting games and Ghibli-style nature spirits (a readable silhouette, one strong signature feature,
+2–3 main colours plus an accent, and everyday objects or bits of nature that come alive) without copying
+any existing character.
 
 ## Features
 
@@ -25,8 +42,10 @@ All creatures, names and art are original.
 - **Window surfaces.** Creatures stand and walk on the top edges of real app windows, ride along when a
   window moves, and fall when it closes, minimizes or gets covered.
 - **Physics.** Gravity, one-way platforms, wall bounces, and drag-and-throw using the cursor's release velocity.
-- **Behavior AI.** A utility-scored brain picks between idle, walk, hop, jump-to-window, chase-the-cursor and
-  sleep, based on energy and surroundings.
+- **Behavior AI.** A utility-scored brain picks between idle, look-around, walk, hop, jump-to-window,
+  chase-the-cursor (with an "!" first) and sleep (with a yawn first), based on energy and surroundings.
+- **Drama.** Hard landings kick up dust, and really hard ones leave a creature dizzy with stars circling its head.
+  Poking a sleeper startles it awake, and rubbing the cursor over one makes it melt into a happy wiggle.
 - **Multi-monitor and Spaces.** One overlay per screen, creatures can walk across touching monitors, and the
   overlay follows you onto every Space and over full-screen apps.
 - **Menu bar app.** Add or send home gremlets, pause, launch at login, and open the custom sprites folder.
@@ -49,9 +68,9 @@ titles need it, and Gremlets never reads them).
 
 ## Drawing your own Gremlets
 
-1. In Aseprite, draw your frames (any size; 24×24 matches the built-ins) and add **tags** named
-   `idle`, `walk`, `jump`, `fall`, `land`, `sleep`, `react`, `drag`. Only `idle` is required; missing ones
-   fall back sensibly. Draw the creature **facing right** with its feet on the bottom row.
+1. In Aseprite, draw your frames (any size; 32×32 matches the built-ins) and add **tags** named
+   `idle`, `walk`, `jump`, `fall`, `land`, `sleep`, `react`, `drag`, and optionally `look`, `crouch`, `dizzy`,
+   `yawn`, `wake`, `pet`, `alert`. Only `idle` is required; missing ones fall back sensibly. Draw the creature **facing right** with its feet on the bottom row.
 2. **File → Export Sprite Sheet**: Layout *Horizontal Strip*, Output ✔ JSON Data (Array or Hash), ✔ Tags.
    Name them `sheet.png` and `sheet.json`.
 3. Put both in `~/Library/Application Support/Gremlets/Species/<your-id>/` (menu bar → *Open Custom Sprites Folder…*).
@@ -61,8 +80,11 @@ titles need it, and Gremlets never reads them).
    ```
 5. Restart Gremlets. A folder with the same id as a built-in species replaces it.
 
-The built-in placeholders are generated by `swift run spritegen` (procedural pixel art in
-`Sources/spritegen/main.swift`), which writes this same format.
+The built-in species are generated by `swift run spritegen` (`Sources/spritegen/main.swift`), which writes
+this same format. It's a small part-based pixel-art renderer: each species is a data description (body
+shape, ears, tail, accessories, palette), and shared poses drive squash/stretch, arms, legs and facial
+expressions. Rounded parts get spherical shading from a top-left light, with hue-shifted colour ramps and a
+selective outline, so the bodies read as volumes even at 32 px.
 
 ## Architecture
 
@@ -79,7 +101,7 @@ Sources/
     WindowTracker.swift  CGWindowList → window frames (y-flipped into Cocoa space)
     SpriteLibrary.swift  Aseprite JSON loader + alpha masks
     App.swift         adaptive game loop, menu bar, roster persistence, perf monitor
-  spritegen/        procedural generator for the placeholder species
+  spritegen/        part-based pixel-art generator for the 13 built-in species
 ```
 
 Details and design decisions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

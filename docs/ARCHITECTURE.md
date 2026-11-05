@@ -73,7 +73,10 @@ Polling is adaptive: about 10 Hz normally, 4 Hz when the world is idle, and 60 H
 
 ## Behavior (utility AI)
 
-`Activity` is a small state machine (idle, walk, chase, crouch, airborne, land, sleep, react, dragged).
+`Activity` is a small state machine (idle, walk, chase, alert, crouch, airborne, land, dizzy, yawn, sleep,
+wake, react, pet, dragged). One-shot activities (yawn, wake, react, alert, land) last exactly one play-through
+of their animation, so art and behavior can't drift apart. Chains add drama: tired → yawn → sleep → startled
+wake; spotting the cursor → alert "!" → chase; landing faster than 1700 pt/s → dizzy with orbiting stars.
 Physical states (airborne, land, crouch) are driven by the world. When a *voluntary* activity times out,
 `Brain.decide` scores every candidate:
 

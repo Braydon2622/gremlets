@@ -1,0 +1,13 @@
+{
+  "description" : "A four-leaf clover spirit. Finding it is lucky; being found is its favourite game.",
+  "element" : "luck",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Clovette",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 55
+}

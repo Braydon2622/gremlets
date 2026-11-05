@@ -1,0 +1,13 @@
+{
+  "description" : "A moss ball from the bottom of a quiet lake. Floats up whenever it's happy, which is always.",
+  "element" : "lake",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Marimoss",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 40
+}

@@ -1,21 +1,21 @@
 {
-  "name": "Drizzlefox · Gremlet #29",
-  "description": "A blue-grey fox kit that only comes out when it rains. Its freckles look like raindrops.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Drizzlefox in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Toplet · Gremlet #29",
+  "description": "A wooden spinning top from a summer festival. It never gets dizzy, mostly.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Toplet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/29.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drizzlefox",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drizzlefox",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=toplet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=toplet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Rain"
+      "value": "Festival"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Rain"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Drizzlefox"
+      "value": "Toplet"
     }
   ]
 }

@@ -1,21 +1,21 @@
 {
-  "name": "Nessle · Gremlet #20",
-  "description": "A shy lake monster that pops up wherever there's a puddle. Blurry in every photo.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Nessle in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Calicat · Gremlet #20",
+  "description": "A calico kitten that naps in every sunbeam and chases every dust mote.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Calicat in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/20.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=nessle",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Animal"
     },
     {
       "trait_type": "Element",
-      "value": "Loch"
+      "value": "Hearth"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Nessle"
+      "value": "Calicat"
     }
   ]
 }

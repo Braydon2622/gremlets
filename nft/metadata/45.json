@@ -1,29 +1,29 @@
 {
-  "name": "Quokkly · Gremlet #45",
-  "description": "A quokka with the happiest face on the island. Nobody knows what it's smiling about.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Quokkly in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Windwhisk · Gremlet #45",
+  "description": "A puff of summer wind with somewhere to be. It tugs at papers and ruffles everyone's hair.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Windwhisk in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/45.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=quokkly",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=quokkly",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=windwhisk",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=windwhisk",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Island"
+      "value": "Wind"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Quokkly"
+      "value": "Windwhisk"
     }
   ]
 }

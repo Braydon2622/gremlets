@@ -17,7 +17,7 @@ base = args.base.rstrip("/")
 
 index = json.load(open(os.path.join(root, "Species/index.json")))["species"]
 assert len(index) == 50, f"expected 50 species, found {len(index)}"
-families = {"animal": "Animal", "insect": "Insect & Bug", "dragon": "Dragon", "dino": "Dinosaur", "mythic": "Mythical Beast"}
+families = {"animal": "Animal", "insect": "Insect & Bug", "dragon": "Dragon", "dino": "Dinosaur", "mythic": "Mythical Beast", "spirit": "Spirit"}
 
 os.makedirs(os.path.join(root, "nft/metadata"), exist_ok=True)
 os.makedirs(os.path.join(root, "nft/images"), exist_ok=True)

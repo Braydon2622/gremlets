@@ -1,21 +1,21 @@
 {
-  "name": "Bramblet · Gremlet #36",
-  "description": "A badger cub that digs tunnels under the hedgerow and invites everyone over.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bramblet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Bloomlet · Gremlet #36",
+  "description": "A tulip bud that hasn't opened yet. It's waiting for exactly the right sunny day.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Bloomlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/36.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bramblet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bramblet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bloomlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=bloomlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Hedgerow"
+      "value": "Garden"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Leaves"
+      "value": "Petals"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Bramblet"
+      "value": "Bloomlet"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
-  "name": "Yetini · Gremlet #22",
-  "description": "A yeti cub with big soft feet. Leaves tiny footprints nobody can explain.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Yetini in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Inklet · Gremlet #22",
+  "description": "A baby kraken that squirts a little ink when it gets startled.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Inklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/22.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yetini",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yetini",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,11 +11,11 @@
     },
     {
       "trait_type": "Element",
-      "value": "Blizzard"
+      "value": "Deep"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Snow"
+      "value": "Ink"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Yetini"
+      "value": "Inklet"
     }
   ]
 }

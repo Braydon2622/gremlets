@@ -1,21 +1,21 @@
 {
-  "name": "Calicat · Gremlet #31",
-  "description": "A calico kitten that naps in every sunbeam and chases every dust mote.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Calicat in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Kilnby · Gremlet #31",
+  "description": "A little clay pot that came alive after a hundred years on a shelf. Hollow eyes, warm heart.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kilnby in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/31.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=calicat",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kilnby",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kilnby",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Hearth"
+      "value": "Clay"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Steam"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Calicat"
+      "value": "Kilnby"
     }
   ]
 }

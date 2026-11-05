@@ -1,0 +1,13 @@
+{
+  "description" : "A soap bubble that refused to pop. It's very careful around anything pointy.",
+  "element" : "soap",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Bubbit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 40
+}

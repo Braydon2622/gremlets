@@ -1,21 +1,21 @@
 {
-  "name": "Lynxie · Gremlet #41",
-  "description": "A lynx kit with fancy ear tufts and enormous paws it hasn't grown into yet.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Lynxie in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Teabud · Gremlet #41",
+  "description": "A tea-leaf bud from a misty hillside garden. Quiet, calm, and slightly fragrant.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Teabud in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/41.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lynxie",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=lynxie",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=teabud",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=teabud",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Pinewood"
+      "value": "Hillside"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Steam"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Lynxie"
+      "value": "Teabud"
     }
   ]
 }

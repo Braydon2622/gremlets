@@ -1,21 +1,21 @@
 {
-  "name": "Honklet · Gremlet #35",
-  "description": "A fluffy gosling that follows whoever it saw first. Today that's you.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Honklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Loglet · Gremlet #35",
+  "description": "A log from the woodpile that would rather be a friend than firewood. Still sprouting.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Loglet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/35.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=honklet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=honklet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=loglet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Millpond"
+      "value": "Woodpile"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Notes"
+      "value": "Leaves"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Honklet"
+      "value": "Loglet"
     }
   ]
 }

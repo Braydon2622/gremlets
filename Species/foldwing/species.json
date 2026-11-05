@@ -1,0 +1,13 @@
+{
+  "description" : "A paper crane folded with a wish inside. It flaps a little stiffly.",
+  "element" : "paper",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Foldwing",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 65
+}

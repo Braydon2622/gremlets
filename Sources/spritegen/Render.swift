@@ -6,7 +6,7 @@ import Foundation
 typealias Draw = (inout Canvas, Ctx) -> Void
 
 enum BodyKind { case round, egg, pear, pebble, cloud, coil, longneck, bugHead }
-enum EyeStyle { case normal, light, bug(UInt32), spider, hollow, glow(UInt32) }
+enum EyeStyle { case normal, light, bug(UInt32), spider, hollow, glow(UInt32), dot, cyclops }
 enum Feet { case nubs, big, hooves(UInt32), talons(UInt32), insect, webbed(UInt32), slime(UInt32), none }
 
 struct Species {
@@ -38,6 +38,11 @@ struct Species {
     var mouthDY = 2
     var armsUp = false
     var noArms = false
+    var cheeks = true
+    /// Replaces the standard ellipse body with a custom silhouette (spirits: umbrellas, leaves, kites...).
+    var bodyDraw: Draw? = nil
+    /// Mouth used whenever a pose asks for the default smile (many spirits have no mouth).
+    var restMouth: Mouth? = nil
     var back: [Draw] = []
     var surface: [Draw] = []
     var muzzle: Draw? = nil
@@ -75,6 +80,7 @@ struct Ctx {
 func render(_ sp: Species, _ pose: Pose) -> Canvas {
     var p = pose
     if case .open = p.eyes, let r = sp.restEyes { p.eyes = r }
+    if p.mouth == .smile, let m = sp.restMouth { p.mouth = m }
     if sp.armsUp && !p.lying {
         func lift(_ a: Arm) -> Arm {
             switch a { case .down, .swing, .tucked: return .up; default: return a }
@@ -140,9 +146,13 @@ func render(_ sp: Species, _ pose: Pose) -> Canvas {
     drawFeet(&cv, ctx)
 
     // 3. Body (+ fur) and separate head.
-    cv.blob(bodyEll, ctx.R, glossy: sp.glossy)
-    if sp.fluffy { fluff(&cv, bodyEll, ctx.R, cx: cx, cy: cy) }
-    if let b = sp.belly {
+    if let custom = sp.bodyDraw {
+        custom(&cv, ctx)
+    } else {
+        cv.blob(bodyEll, ctx.R, glossy: sp.glossy)
+        if sp.fluffy { fluff(&cv, bodyEll, ctx.R, cx: cx, cy: cy) }
+    }
+    if let b = sp.belly, sp.bodyDraw == nil {
         let by = head != nil ? cy + ry * 0.38 : cy + ry * 0.3
         let bx = sp.body == .longneck ? cx - rx * 0.1 : cx + p.look * 0.3
         let bry = sp.body == .longneck ? ry * 0.32 : ry * 0.52
@@ -278,6 +288,28 @@ func drawFace(_ cv: inout Canvas, _ c: Ctx) {
             default: break
             }
         }
+    case .dot:
+        if !common() {
+            switch p.eyes {
+            case .open: eyes(["D", "D"])
+            case .sleepy: eyes(["D"], dy: 1)
+            case .wide: eyes(["DD", "DD"])
+            default: break
+            }
+        }
+    case .cyclops:
+        let x0 = c.mx - 2, y0 = eyeY - 2
+        let rows: [String]
+        switch p.eyes {
+        case .open: rows = [".DD.", "DWDD", "DDID", ".DD."]
+        case .wide: rows = [".DD.", "DWWD", "DWWD", ".DD."]
+        case .blink, .squint: rows = ["....", "....", "DDDD"]
+        case .sleepy: rows = ["....", "DDDD", "DDID"]
+        case .happy: rows = ["....", ".DD.", "D..D"]
+        case .sleep: rows = ["....", "D..D", ".DD."]
+        case .dizzy: rows = ["D..D", ".DD.", ".DD.", "D..D"]
+        }
+        cv.stamp(rows, x0, y0, pal)
     case .glow(let g):
         let gr = Ramp(g)
         pal["W"] = gr.spec; pal["I"] = gr.light
@@ -301,7 +333,8 @@ func drawFace(_ cv: inout Canvas, _ c: Ctx) {
     case .none: break
     }
     // Cheeks.
-    if p.blush > 0, case .hollow = c.sp.eyeStyle {} else if p.blush > 0 {
+    let noCheeks: Bool = !c.sp.cheeks || { switch c.sp.eyeStyle { case .hollow, .cyclops: return true; default: return false } }()
+    if p.blush > 0 && !noCheeks {
         let ch = c.sp.cheek
         cv.plot(lx - 2, eyeY + 2, ch); cv.plot(rxp + 2, eyeY + 2, ch)
         if p.blush > 1 { cv.plot(lx - 1, eyeY + 2, ch); cv.plot(rxp + 1, eyeY + 2, ch) }

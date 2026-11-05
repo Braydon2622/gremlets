@@ -1,0 +1,13 @@
+{
+  "description" : "The first raindrop of a storm, very proud of having arrived first.",
+  "element" : "rain",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.25,
+  "name" : "Rainlet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "rain",
+  "walkSpeed" : 65
+}

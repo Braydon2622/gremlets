@@ -1,21 +1,21 @@
 {
-  "name": "Inklet · Gremlet #23",
-  "description": "A baby kraken that squirts a little ink when it gets startled.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Inklet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Kasakko · Gremlet #23",
+  "description": "An old paper umbrella that woke up one rainy night. Hops around on its one leg looking for puddles.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kasakko in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/23.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=inklet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kasakko",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kasakko",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Deep"
+      "value": "Rain"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Ink"
+      "value": "Rain"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Inklet"
+      "value": "Kasakko"
     }
   ]
 }

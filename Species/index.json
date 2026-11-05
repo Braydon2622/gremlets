@@ -115,72 +115,6 @@
       "name" : "Mintwyrm"
     },
     {
-      "element" : "loch",
-      "family" : "mythic",
-      "id" : "nessle",
-      "name" : "Nessle"
-    },
-    {
-      "element" : "gale",
-      "family" : "mythic",
-      "id" : "griffet",
-      "name" : "Griffet"
-    },
-    {
-      "element" : "blizzard",
-      "family" : "mythic",
-      "id" : "yetini",
-      "name" : "Yetini"
-    },
-    {
-      "element" : "deep",
-      "family" : "mythic",
-      "id" : "inklet",
-      "name" : "Inklet"
-    },
-    {
-      "element" : "auspice",
-      "family" : "mythic",
-      "id" : "qiru",
-      "name" : "Qiru"
-    },
-    {
-      "element" : "tide",
-      "family" : "mythic",
-      "id" : "selkip",
-      "name" : "Selkip"
-    },
-    {
-      "element" : "breeze",
-      "family" : "mythic",
-      "id" : "skyfoal",
-      "name" : "Skyfoal"
-    },
-    {
-      "element" : "prairie",
-      "family" : "mythic",
-      "id" : "hopalope",
-      "name" : "Hopalope"
-    },
-    {
-      "element" : "hedgerow",
-      "family" : "animal",
-      "id" : "dormie",
-      "name" : "Dormie"
-    },
-    {
-      "element" : "rain",
-      "family" : "animal",
-      "id" : "drizzlefox",
-      "name" : "Drizzlefox"
-    },
-    {
-      "element" : "meadow",
-      "family" : "animal",
-      "id" : "wombloom",
-      "name" : "Wombloom"
-    },
-    {
       "element" : "hearth",
       "family" : "animal",
       "id" : "calicat",
@@ -193,112 +127,178 @@
       "name" : "Shibun"
     },
     {
-      "element" : "woodland",
-      "family" : "animal",
-      "id" : "truffet",
-      "name" : "Truffet"
+      "element" : "deep",
+      "family" : "mythic",
+      "id" : "inklet",
+      "name" : "Inklet"
     },
     {
-      "element" : "hillside",
-      "family" : "animal",
-      "id" : "billet",
-      "name" : "Billet"
+      "element" : "rain",
+      "family" : "spirit",
+      "id" : "kasakko",
+      "name" : "Kasakko"
     },
     {
-      "element" : "millpond",
-      "family" : "animal",
-      "id" : "honklet",
-      "name" : "Honklet"
+      "element" : "wind",
+      "family" : "spirit",
+      "id" : "kitekin",
+      "name" : "Kitekin"
     },
     {
-      "element" : "hedgerow",
-      "family" : "animal",
-      "id" : "bramblet",
-      "name" : "Bramblet"
+      "element" : "paper",
+      "family" : "spirit",
+      "id" : "foldwing",
+      "name" : "Foldwing"
     },
     {
-      "element" : "sky",
-      "family" : "animal",
-      "id" : "skyfin",
-      "name" : "Skyfin"
+      "element" : "puddle",
+      "family" : "spirit",
+      "id" : "boatlet",
+      "name" : "Boatlet"
     },
     {
-      "element" : "winter",
-      "family" : "animal",
-      "id" : "ermelin",
-      "name" : "Ermelin"
+      "element" : "picnic",
+      "family" : "spirit",
+      "id" : "riceling",
+      "name" : "Riceling"
     },
     {
-      "element" : "thicket",
-      "family" : "animal",
-      "id" : "wrenlet",
-      "name" : "Wrenlet"
+      "element" : "steam",
+      "family" : "spirit",
+      "id" : "baobun",
+      "name" : "Baobun"
     },
     {
-      "element" : "summit",
-      "family" : "animal",
-      "id" : "snowpaw",
-      "name" : "Snowpaw"
+      "element" : "festival",
+      "family" : "spirit",
+      "id" : "toplet",
+      "name" : "Toplet"
     },
     {
-      "element" : "pinewood",
-      "family" : "animal",
-      "id" : "lynxie",
-      "name" : "Lynxie"
+      "element" : "hearth",
+      "family" : "spirit",
+      "id" : "yarnbit",
+      "name" : "Yarnbit"
     },
     {
-      "element" : "fen",
-      "family" : "animal",
-      "id" : "moosling",
-      "name" : "Moosling"
+      "element" : "clay",
+      "family" : "spirit",
+      "id" : "kilnby",
+      "name" : "Kilnby"
     },
     {
-      "element" : "creek",
-      "family" : "animal",
-      "id" : "paddlebill",
-      "name" : "Paddlebill"
+      "element" : "spring",
+      "family" : "spirit",
+      "id" : "leaflet",
+      "name" : "Leaflet"
     },
     {
-      "element" : "savanna",
-      "family" : "animal",
-      "id" : "pangle",
-      "name" : "Pangle"
+      "element" : "forest floor",
+      "family" : "spirit",
+      "id" : "puffcap",
+      "name" : "Puffcap"
     },
     {
-      "element" : "island",
-      "family" : "animal",
-      "id" : "quokkly",
-      "name" : "Quokkly"
+      "element" : "lake",
+      "family" : "spirit",
+      "id" : "marimoss",
+      "name" : "Marimoss"
+    },
+    {
+      "element" : "woodpile",
+      "family" : "spirit",
+      "id" : "loglet",
+      "name" : "Loglet"
     },
     {
       "element" : "garden",
-      "family" : "animal",
-      "id" : "thrumlet",
-      "name" : "Thrumlet"
+      "family" : "spirit",
+      "id" : "bloomlet",
+      "name" : "Bloomlet"
     },
     {
-      "element" : "lagoon",
-      "family" : "animal",
-      "id" : "mellow",
-      "name" : "Mellow"
-    },
-    {
-      "element" : "bush",
-      "family" : "animal",
-      "id" : "kiwibit",
-      "name" : "Kiwibit"
+      "element" : "field",
+      "family" : "spirit",
+      "id" : "turnipkin",
+      "name" : "Turnipkin"
     },
     {
       "element" : "orchard",
-      "family" : "animal",
-      "id" : "possumkin",
-      "name" : "Possumkin"
+      "family" : "spirit",
+      "id" : "peachlet",
+      "name" : "Peachlet"
     },
     {
-      "element" : "alpine",
-      "family" : "animal",
-      "id" : "whistlet",
-      "name" : "Whistlet"
+      "element" : "luck",
+      "family" : "spirit",
+      "id" : "clovette",
+      "name" : "Clovette"
+    },
+    {
+      "element" : "autumn",
+      "family" : "spirit",
+      "id" : "whirlseed",
+      "name" : "Whirlseed"
+    },
+    {
+      "element" : "hillside",
+      "family" : "spirit",
+      "id" : "teabud",
+      "name" : "Teabud"
+    },
+    {
+      "element" : "meadow",
+      "family" : "spirit",
+      "id" : "combbit",
+      "name" : "Combbit"
+    },
+    {
+      "element" : "spring breeze",
+      "family" : "spirit",
+      "id" : "sakurin",
+      "name" : "Sakurin"
+    },
+    {
+      "element" : "sky",
+      "family" : "spirit",
+      "id" : "puffcloud",
+      "name" : "Puffcloud"
+    },
+    {
+      "element" : "wind",
+      "family" : "spirit",
+      "id" : "windwhisk",
+      "name" : "Windwhisk"
+    },
+    {
+      "element" : "rain",
+      "family" : "spirit",
+      "id" : "rainlet",
+      "name" : "Rainlet"
+    },
+    {
+      "element" : "frost",
+      "family" : "spirit",
+      "id" : "rimelet",
+      "name" : "Rimelet"
+    },
+    {
+      "element" : "sea",
+      "family" : "spirit",
+      "id" : "drifty",
+      "name" : "Drifty"
+    },
+    {
+      "element" : "soap",
+      "family" : "spirit",
+      "id" : "bubbit",
+      "name" : "Bubbit"
+    },
+    {
+      "element" : "loch",
+      "family" : "mythic",
+      "id" : "nessle",
+      "name" : "Nessle"
     }
   ]
 }

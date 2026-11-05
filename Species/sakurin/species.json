@@ -1,0 +1,13 @@
+{
+  "description" : "A cherry blossom that drifted off its tree and decided not to land just yet.",
+  "element" : "spring breeze",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Sakurin",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "petals",
+  "walkSpeed" : 50
+}

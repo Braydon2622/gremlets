@@ -1,21 +1,21 @@
 {
-  "name": "Hopalope · Gremlet #27",
-  "description": "A jackalope: a rabbit with tiny antlers. Shy, fast, and absolutely real.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Hopalope in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Riceling · Gremlet #27",
+  "description": "A rice ball from a picnic basket who wandered off to see the world.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Riceling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/27.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=hopalope",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=hopalope",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=riceling",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=riceling",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Mythical Beast"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Prairie"
+      "value": "Picnic"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Seeds"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Hopalope"
+      "value": "Riceling"
     }
   ]
 }

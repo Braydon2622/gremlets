@@ -1,0 +1,13 @@
+{
+  "description" : "A turnip that pulled itself up out of the field one morning and never went back.",
+  "element" : "field",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Turnipkin",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 55
+}

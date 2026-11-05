@@ -1,21 +1,21 @@
 {
-  "name": "Mellow · Gremlet #47",
-  "description": "A manatee calf that drifts wherever the current goes and greets everyone with a gentle bump.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mellow in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Rimelet · Gremlet #47",
+  "description": "An icicle that slid off the roof on the first warm day of spring and kept on going.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rimelet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/47.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mellow",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mellow",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rimelet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rimelet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Lagoon"
+      "value": "Frost"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Snow"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Mellow"
+      "value": "Rimelet"
     }
   ]
 }

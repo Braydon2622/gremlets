@@ -1,0 +1,13 @@
+{
+  "description" : "A log from the woodpile that would rather be a friend than firewood. Still sprouting.",
+  "element" : "woodpile",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Loglet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 45
+}

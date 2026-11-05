@@ -1,0 +1,13 @@
+{
+  "description" : "An icicle that slid off the roof on the first warm day of spring and kept on going.",
+  "element" : "frost",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Rimelet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "snow",
+  "walkSpeed" : 60
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "One cell of honeycomb that escaped the hive. Always a little sticky, always very sweet.",
+  "element" : "meadow",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Combbit",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "pollen",
+  "walkSpeed" : 55
+}

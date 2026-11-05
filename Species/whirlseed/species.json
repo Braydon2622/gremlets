@@ -1,0 +1,13 @@
+{
+  "description" : "A maple seed that spins like a helicopter. Loves high places and dramatic exits.",
+  "element" : "autumn",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Whirlseed",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 60
+}

@@ -1,21 +1,21 @@
 {
-  "name": "Billet · Gremlet #34",
-  "description": "A goat kid that climbs everything, especially the things it shouldn't.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Billet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Marimoss · Gremlet #34",
+  "description": "A moss ball from the bottom of a quiet lake. Floats up whenever it's happy, which is always.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Marimoss in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/34.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=billet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=billet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Hillside"
+      "value": "Lake"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Billet"
+      "value": "Marimoss"
     }
   ]
 }

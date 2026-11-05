@@ -1,29 +1,29 @@
 {
-  "name": "Thrumlet · Gremlet #46",
-  "description": "A hummingbird that hovers in place to say hello, then zips off mid-sentence.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Thrumlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Rainlet · Gremlet #46",
+  "description": "The first raindrop of a storm, very proud of having arrived first.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rainlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/46.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=thrumlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=thrumlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Garden"
+      "value": "Rain"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Sparkle"
+      "value": "Rain"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Thrumlet"
+      "value": "Rainlet"
     }
   ]
 }

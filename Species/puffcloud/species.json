@@ -1,0 +1,13 @@
+{
+  "description" : "A little cloud that came down to see what everyone was doing. Drizzles when it's moved.",
+  "element" : "sky",
+  "family" : "spirit",
+  "flies" : true,
+  "floats" : true,
+  "jumpPower" : 1,
+  "name" : "Puffcloud",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "rain",
+  "walkSpeed" : 45
+}

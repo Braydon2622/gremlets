@@ -1,21 +1,21 @@
 {
-  "name": "Ermelin · Gremlet #38",
-  "description": "A stoat in its white winter coat. Only the tip of its tail stays black.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Ermelin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Peachlet · Gremlet #38",
+  "description": "A peach that floated down the river and kept going. Smells like summer.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Peachlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/38.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ermelin",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=ermelin",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peachlet",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=peachlet",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Winter"
+      "value": "Orchard"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Snow"
+      "value": "Petals"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Ermelin"
+      "value": "Peachlet"
     }
   ]
 }

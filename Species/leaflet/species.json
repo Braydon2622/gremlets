@@ -1,0 +1,13 @@
+{
+  "description" : "The first leaf of spring, which hopped off its branch to have a look around.",
+  "element" : "spring",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Leaflet",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 70
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A steamed bun spirit that's always a little bit warm and smells like a bakery.",
+  "element" : "steam",
+  "family" : "spirit",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.1000000000000001,
+  "name" : "Baobun",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "steam",
+  "walkSpeed" : 45
+}

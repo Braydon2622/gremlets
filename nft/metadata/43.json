@@ -1,21 +1,21 @@
 {
-  "name": "Paddlebill · Gremlet #43",
-  "description": "A platypus that can't decide if it's a duck, a beaver or an otter, and is happy being all three.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Paddlebill in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Sakurin · Gremlet #43",
+  "description": "A cherry blossom that drifted off its tree and decided not to land just yet.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Sakurin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/43.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=paddlebill",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=paddlebill",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sakurin",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=sakurin",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Creek"
+      "value": "Spring Breeze"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Bubbles"
+      "value": "Petals"
     },
     {
       "trait_type": "Can Fly",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Paddlebill"
+      "value": "Sakurin"
     }
   ]
 }

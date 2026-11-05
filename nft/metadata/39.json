@@ -1,29 +1,29 @@
 {
-  "name": "Wrenlet · Gremlet #39",
-  "description": "A round little wren with its tail cocked high. Sings far too loudly for its size.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wrenlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Clovette · Gremlet #39",
+  "description": "A four-leaf clover spirit. Finding it is lucky; being found is its favourite game.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Clovette in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/39.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wrenlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wrenlet",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=clovette",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=clovette",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Thicket"
+      "value": "Luck"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Notes"
+      "value": "Sparkle"
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",
-      "value": "Wrenlet"
+      "value": "Clovette"
     }
   ]
 }

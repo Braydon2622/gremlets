@@ -1,29 +1,29 @@
 {
-  "name": "Kiwibit · Gremlet #48",
-  "description": "A round kiwi chick with no wings to speak of and a very long nose for finding worms.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Kiwibit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Drifty · Gremlet #48",
+  "description": "A little jellyfish spirit that drifts through the air as if it were still in the sea.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Drifty in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kiwibit",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=kiwibit",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drifty",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=drifty",
   "attributes": [
     {
       "trait_type": "Family",
-      "value": "Animal"
+      "value": "Spirit"
     },
     {
       "trait_type": "Element",
-      "value": "Bush"
+      "value": "Sea"
     },
     {
       "trait_type": "Signature Move",
-      "value": "Seeds"
+      "value": "Bubbles"
     },
     {
       "trait_type": "Can Fly",
-      "value": "No"
+      "value": "Yes"
     },
     {
       "trait_type": "Species",
-      "value": "Kiwibit"
+      "value": "Drifty"
     }
   ]
 }

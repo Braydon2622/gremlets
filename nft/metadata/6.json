@@ -1,9 +1,9 @@
 {
-  "name": "Yuzubara · Gremlet #6",
-  "description": "A hot-spring capybara balancing a yuzu on its head. Nothing ruffles it.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Yuzubara in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Capyzen · Gremlet #6",
+  "description": "A hot-spring capybara so calm that birds land on it. Nothing ruffles it.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Capyzen in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/6.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yuzubara",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=yuzubara",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=capyzen",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=capyzen",
   "attributes": [
     {
       "trait_type": "Family",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Yuzubara"
+      "value": "Capyzen"
     }
   ]
 }

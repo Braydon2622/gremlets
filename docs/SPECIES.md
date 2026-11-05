@@ -8,22 +8,22 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
-| 1 | **Flurrie** | frost | snow |  | A snowball bunny with icicle ear-tips and a scarf it never takes off. |
+| 1 | **Flurrie** | frost | snow |  | A snowball bunny with icicle ear-tips. Leaves a little frost wherever it hops. |
 | 2 | **Dandelet** | bloom | petals |  | A dandelion lion cub with a petal mane. Its puff tail scatters seeds when it bounces. |
 | 3 | **Mossfawn** | grove | leaves |  | A forest fawn whose antlers sprout tiny red mushrooms after it rains. |
 | 4 | **Pomble** | trickster | leaves |  | A pot-bellied tanuki who keeps a leaf on its head for luck and drums its tummy when happy. |
-| 5 | **Yuzubara** | onsen | steam |  | A hot-spring capybara balancing a yuzu on its head. Nothing ruffles it. |
-| 6 | **Seedcheek** | harvest | seeds |  | A dwarf hamster that stuffs its cheeks with blueberries and never quite finishes eating. |
+| 5 | **Capyzen** | onsen | steam |  | A hot-spring capybara so calm that birds land on it. Nothing ruffles it. |
+| 6 | **Seedcheek** | harvest | seeds |  | A dwarf hamster whose cheeks are always stuffed with snacks it's saving for later. |
 | 7 | **Rustle** | autumn | leaves |  | A red panda with a striped autumn tail. Stands up tall to look bigger when surprised. |
 | 8 | **Nimbuss** | sky | rain | ✓ | A kitten made of cloud fluff. It drizzles a little when it's sad and floats when it's happy. |
-| 9 | **Crownip** | pond | bubbles |  | A pond frog who found a tiny crown and has been royalty ever since. |
-| 10 | **Kettlesnail** | tea | steam |  | A snail living in an old copper kettle. It puffs steam when it's thinking. |
-| 11 | **Duskwing** | night | sparkle | ✓ | A golden flying fox who hugs a fig everywhere it goes. Sleeps all day, flutters at dusk. |
-| 12 | **Tidepaw** | river | bubbles |  | A river otter that carries its favourite pebble and shows it to everyone it meets. |
-| 13 | **Gumleaf** | eucalyptus | petals |  | A koala who wears a crown of gum blossoms and insists on being called Your Fluffiness. |
-| 14 | **Dozel** | canopy | petals |  | A sloth carrying a flower it picked last week. It's still deciding who to give it to. |
+| 9 | **Lilypip** | pond | bubbles |  | A round pond frog that hops much higher than anyone expects. |
+| 10 | **Swirlby** | dew | bubbles |  | A snail with a perfectly round swirl shell. It's never late, just taking the scenic route. |
+| 11 | **Duskwing** | night | sparkle | ✓ | A golden flying fox that sleeps all day and flutters out at dusk. |
+| 12 | **Tidepaw** | river | bubbles |  | A river otter that floats on its back and holds paws with friends so nobody drifts away. |
+| 13 | **Gumleaf** | eucalyptus | petals |  | A very fluffy koala who insists on being called Your Fluffiness. |
+| 14 | **Dozel** | canopy | petals |  | A mossy sloth so slow that tiny plants grow in its fur. |
 | 15 | **Puffling** | sea | bubbles | ✓ | A puffin chick with a beak too big for its face and a lot of confidence. |
-| 16 | **Alpocco** | highland | notes |  | A fluffy alpaca with woven pom-pom tassels. Hums when it's content. |
+| 16 | **Alpocco** | highland | notes |  | A fluffy alpaca with a cloud of a hairdo. Hums when it's content. |
 
 ## Insects & Bugs (12)
 
@@ -38,16 +38,16 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 | 23 | **Lunette** | moon | glow | ✓ | A pale luna moth with long ribbon tails. Only comes out to dance under the moon. |
 | 24 | **Woolybit** | weather | sparkle |  | A woolly bear caterpillar. The width of its orange band predicts the winter, supposedly. |
 | 25 | **Peacockle** | display | notes |  | A peacock spider. It unfurls a rainbow fan and dances for anyone who'll watch. |
-| 26 | **Fiddlet** | song | notes |  | A cricket that plays a tiny fiddle. Its favourite song has three notes. |
+| 26 | **Fiddlet** | song | notes |  | A cricket that chirps the same three-note song every evening, and is very proud of it. |
 | 27 | **Prismite** | prism | sparkle |  | A jewel beetle whose shell throws tiny rainbows on the wall whenever the sun hits it. |
-| 28 | **Snipleaf** | colony | leaves |  | A leafcutter ant carrying a leaf ten times its size. Uses it as a blanket at night. |
+| 28 | **Snipleaf** | colony | leaves |  | A leafcutter ant that can lift ten times its weight and loves to show off. |
 
 ## Dragons (6)
 
 | # | Gremlet | Element | Signature move | Flies | |
 |---|---|---|---|---|---|
-| 29 | **Kumoryu** | cloud | clouds | ✓ | A coral sky-dragon who rides its own little cloud and never touches the ground. |
-| 30 | **Steepy** | tea | steam |  | A mint wyrm small enough to nap in a teacup, so it does. Smells faintly of jasmine. |
+| 29 | **Kumoryu** | cloud | clouds | ✓ | A coral sky-dragon that coils up like a cinnamon roll to nap. |
+| 30 | **Mintwyrm** | jasmine | steam |  | A tiny mint-green wyrm that smells faintly of jasmine tea. |
 | 31 | **Gemscale** | crystal | sparkle | ✓ | A moonstone dragon that grows crystals instead of spikes. They chime when it runs. |
 | 32 | **Mossmaw** | ancient | petals |  | An old, sleepy dragon so still that moss and flowers grow on its back. |
 | 33 | **Pipwyrn** | mischief | smoke | ✓ | A pocket wyvern with a fang-y grin. Hides things, then helps you look for them. |
@@ -71,10 +71,10 @@ Each Gremlet is a one-of-a-kind original design. This file is generated from `Sp
 |---|---|---|---|---|---|
 | 42 | **Kindlet** | ember | fire |  | A melting-candle sprite whose flame flares when it's happy and dims to an ember when it naps. |
 | 43 | **Griffet** | gale | sparkle | ✓ | A griffin chick: eagle up front, lion in the back, all fluff in the middle. |
-| 44 | **Wolpy** | folklore | sparkle | ✓ | A wolpertinger: a squirrel with tiny antlers and duck wings. Nobody believes it exists. |
+| 44 | **Wolpy** | folklore | sparkle |  | A squirrel that grew tiny antlers. Nobody believes it exists. |
 | 45 | **Yetini** | blizzard | snow |  | A yeti cub with big feet and a soft, shy face. Leaves tiny footprints nobody can explain. |
 | 46 | **Nessle** | loch | bubbles |  | A shy lake monster that pops up wherever there's a puddle. Blurry in every photo. |
-| 47 | **Inklet** | deep | ink |  | A baby kraken in a sailor hat. Squirts a little ink when it gets startled. |
+| 47 | **Inklet** | deep | ink |  | A baby kraken that squirts a little ink when it gets startled. |
 | 48 | **Tripup** | underworld | bark |  | A three-headed puppy that guards nothing in particular. All three heads want belly rubs. |
-| 49 | **Sphinxie** | riddle | sparkle |  | A sphinx kitten in a royal headdress. Asks riddles, forgets the answers. |
+| 49 | **Sphinxie** | riddle | sparkle | ✓ | A winged sand-kitten that asks riddles and forgets the answers. |
 | 50 | **Cockatrix** | basilisk | sparkle |  | A cockatrice chick: half chick, half lizard, all attitude. Its glare is mostly bluff. |

@@ -1,9 +1,9 @@
 {
-  "name": "Steepy · Gremlet #31",
-  "description": "A mint wyrm small enough to nap in a teacup, so it does. Smells faintly of jasmine.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Steepy in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "name": "Mintwyrm · Gremlet #31",
+  "description": "A tiny mint-green wyrm that smells faintly of jasmine tea.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mintwyrm in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/31.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=steepy",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=steepy",
+  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
+  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
   "attributes": [
     {
       "trait_type": "Family",
@@ -11,7 +11,7 @@
     },
     {
       "trait_type": "Element",
-      "value": "Tea"
+      "value": "Jasmine"
     },
     {
       "trait_type": "Signature Move",
@@ -23,7 +23,7 @@
     },
     {
       "trait_type": "Species",
-      "value": "Steepy"
+      "value": "Mintwyrm"
     }
   ]
 }

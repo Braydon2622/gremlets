@@ -1,11 +1,11 @@
 {
-  "description" : "A hot-spring capybara balancing a yuzu on its head. Nothing ruffles it.",
+  "description" : "A hot-spring capybara so calm that birds land on it. Nothing ruffles it.",
   "element" : "onsen",
   "family" : "animal",
   "flies" : false,
   "floats" : false,
   "jumpPower" : 0.80000000000000004,
-  "name" : "Yuzubara",
+  "name" : "Capyzen",
   "scale" : 3,
   "sleepiness" : 1.6000000000000001,
   "special" : "steam",

@@ -1,5 +1,5 @@
 {
-  "description" : "A cricket that plays a tiny fiddle. Its favourite song has three notes.",
+  "description" : "A cricket that chirps the same three-note song every evening, and is very proud of it.",
   "element" : "song",
   "family" : "insect",
   "flies" : false,

@@ -1,8 +1,8 @@
 {
-  "description" : "A sphinx kitten in a royal headdress. Asks riddles, forgets the answers.",
+  "description" : "A winged sand-kitten that asks riddles and forgets the answers.",
   "element" : "riddle",
   "family" : "mythic",
-  "flies" : false,
+  "flies" : true,
   "floats" : false,
   "jumpPower" : 1,
   "name" : "Sphinxie",

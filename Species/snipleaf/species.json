@@ -1,5 +1,5 @@
 {
-  "description" : "A leafcutter ant carrying a leaf ten times its size. Uses it as a blanket at night.",
+  "description" : "A leafcutter ant that can lift ten times its weight and loves to show off.",
   "element" : "colony",
   "family" : "insect",
   "flies" : false,

@@ -2,7 +2,7 @@
   "frames" : [
     {
       "duration" : 520,
-      "filename" : "kettlesnail 0.aseprite",
+      "filename" : "capyzen 0.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -12,7 +12,7 @@
     },
     {
       "duration" : 420,
-      "filename" : "kettlesnail 1.aseprite",
+      "filename" : "capyzen 1.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -22,7 +22,7 @@
     },
     {
       "duration" : 520,
-      "filename" : "kettlesnail 2.aseprite",
+      "filename" : "capyzen 2.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -32,7 +32,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 3.aseprite",
+      "filename" : "capyzen 3.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -42,7 +42,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "kettlesnail 4.aseprite",
+      "filename" : "capyzen 4.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -52,7 +52,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "kettlesnail 5.aseprite",
+      "filename" : "capyzen 5.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -62,7 +62,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 6.aseprite",
+      "filename" : "capyzen 6.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -72,7 +72,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "kettlesnail 7.aseprite",
+      "filename" : "capyzen 7.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -82,7 +82,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "kettlesnail 8.aseprite",
+      "filename" : "capyzen 8.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -92,7 +92,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "kettlesnail 9.aseprite",
+      "filename" : "capyzen 9.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -102,7 +102,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 10.aseprite",
+      "filename" : "capyzen 10.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -112,7 +112,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 11.aseprite",
+      "filename" : "capyzen 11.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -122,7 +122,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 12.aseprite",
+      "filename" : "capyzen 12.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -132,7 +132,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 13.aseprite",
+      "filename" : "capyzen 13.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -142,7 +142,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 14.aseprite",
+      "filename" : "capyzen 14.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -152,7 +152,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 15.aseprite",
+      "filename" : "capyzen 15.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -162,7 +162,7 @@
     },
     {
       "duration" : 120,
-      "filename" : "kettlesnail 16.aseprite",
+      "filename" : "capyzen 16.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -172,7 +172,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 17.aseprite",
+      "filename" : "capyzen 17.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -182,7 +182,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 18.aseprite",
+      "filename" : "capyzen 18.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -192,7 +192,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "kettlesnail 19.aseprite",
+      "filename" : "capyzen 19.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -202,7 +202,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "kettlesnail 20.aseprite",
+      "filename" : "capyzen 20.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -212,7 +212,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "kettlesnail 21.aseprite",
+      "filename" : "capyzen 21.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -222,7 +222,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 22.aseprite",
+      "filename" : "capyzen 22.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -232,7 +232,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "kettlesnail 23.aseprite",
+      "filename" : "capyzen 23.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -242,7 +242,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "kettlesnail 24.aseprite",
+      "filename" : "capyzen 24.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -252,7 +252,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "kettlesnail 25.aseprite",
+      "filename" : "capyzen 25.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -262,7 +262,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "kettlesnail 26.aseprite",
+      "filename" : "capyzen 26.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -272,7 +272,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 27.aseprite",
+      "filename" : "capyzen 27.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -282,7 +282,7 @@
     },
     {
       "duration" : 180,
-      "filename" : "kettlesnail 28.aseprite",
+      "filename" : "capyzen 28.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -292,7 +292,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 29.aseprite",
+      "filename" : "capyzen 29.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -302,7 +302,7 @@
     },
     {
       "duration" : 620,
-      "filename" : "kettlesnail 30.aseprite",
+      "filename" : "capyzen 30.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -312,7 +312,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "kettlesnail 31.aseprite",
+      "filename" : "capyzen 31.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -322,7 +322,7 @@
     },
     {
       "duration" : 320,
-      "filename" : "kettlesnail 32.aseprite",
+      "filename" : "capyzen 32.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -332,7 +332,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "kettlesnail 33.aseprite",
+      "filename" : "capyzen 33.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -342,7 +342,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "kettlesnail 34.aseprite",
+      "filename" : "capyzen 34.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -352,7 +352,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "kettlesnail 35.aseprite",
+      "filename" : "capyzen 35.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -362,7 +362,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "kettlesnail 36.aseprite",
+      "filename" : "capyzen 36.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -372,7 +372,7 @@
     },
     {
       "duration" : 170,
-      "filename" : "kettlesnail 37.aseprite",
+      "filename" : "capyzen 37.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -382,7 +382,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "kettlesnail 38.aseprite",
+      "filename" : "capyzen 38.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -392,7 +392,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "kettlesnail 39.aseprite",
+      "filename" : "capyzen 39.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -402,7 +402,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 40.aseprite",
+      "filename" : "capyzen 40.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -412,7 +412,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "kettlesnail 41.aseprite",
+      "filename" : "capyzen 41.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -422,7 +422,7 @@
     },
     {
       "duration" : 100,
-      "filename" : "kettlesnail 42.aseprite",
+      "filename" : "capyzen 42.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -432,7 +432,7 @@
     },
     {
       "duration" : 130,
-      "filename" : "kettlesnail 43.aseprite",
+      "filename" : "capyzen 43.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -442,7 +442,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 44.aseprite",
+      "filename" : "capyzen 44.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -452,7 +452,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "kettlesnail 45.aseprite",
+      "filename" : "capyzen 45.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -462,7 +462,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "kettlesnail 46.aseprite",
+      "filename" : "capyzen 46.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -472,7 +472,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 47.aseprite",
+      "filename" : "capyzen 47.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -482,7 +482,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 48.aseprite",
+      "filename" : "capyzen 48.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -492,7 +492,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 49.aseprite",
+      "filename" : "capyzen 49.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -502,7 +502,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 50.aseprite",
+      "filename" : "capyzen 50.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -512,7 +512,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 51.aseprite",
+      "filename" : "capyzen 51.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -522,7 +522,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 52.aseprite",
+      "filename" : "capyzen 52.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -532,7 +532,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 53.aseprite",
+      "filename" : "capyzen 53.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -542,7 +542,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "kettlesnail 54.aseprite",
+      "filename" : "capyzen 54.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -552,7 +552,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "kettlesnail 55.aseprite",
+      "filename" : "capyzen 55.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -562,7 +562,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "kettlesnail 56.aseprite",
+      "filename" : "capyzen 56.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -572,7 +572,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 57.aseprite",
+      "filename" : "capyzen 57.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -582,7 +582,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 58.aseprite",
+      "filename" : "capyzen 58.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -592,7 +592,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 59.aseprite",
+      "filename" : "capyzen 59.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -602,7 +602,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 60.aseprite",
+      "filename" : "capyzen 60.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -612,7 +612,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 61.aseprite",
+      "filename" : "capyzen 61.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -622,7 +622,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 62.aseprite",
+      "filename" : "capyzen 62.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -632,7 +632,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "kettlesnail 63.aseprite",
+      "filename" : "capyzen 63.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -642,7 +642,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "kettlesnail 64.aseprite",
+      "filename" : "capyzen 64.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -652,7 +652,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "kettlesnail 65.aseprite",
+      "filename" : "capyzen 65.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -662,7 +662,7 @@
     },
     {
       "duration" : 240,
-      "filename" : "kettlesnail 66.aseprite",
+      "filename" : "capyzen 66.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -672,7 +672,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 67.aseprite",
+      "filename" : "capyzen 67.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -682,7 +682,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 68.aseprite",
+      "filename" : "capyzen 68.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -692,7 +692,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 69.aseprite",
+      "filename" : "capyzen 69.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -702,7 +702,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 70.aseprite",
+      "filename" : "capyzen 70.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -712,7 +712,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 71.aseprite",
+      "filename" : "capyzen 71.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -722,7 +722,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "kettlesnail 72.aseprite",
+      "filename" : "capyzen 72.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -732,7 +732,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 73.aseprite",
+      "filename" : "capyzen 73.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -742,7 +742,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 74.aseprite",
+      "filename" : "capyzen 74.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -752,7 +752,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 75.aseprite",
+      "filename" : "capyzen 75.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -762,7 +762,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "kettlesnail 76.aseprite",
+      "filename" : "capyzen 76.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -772,7 +772,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 77.aseprite",
+      "filename" : "capyzen 77.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -782,7 +782,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 78.aseprite",
+      "filename" : "capyzen 78.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -792,7 +792,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 79.aseprite",
+      "filename" : "capyzen 79.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -802,7 +802,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 80.aseprite",
+      "filename" : "capyzen 80.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -812,7 +812,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 81.aseprite",
+      "filename" : "capyzen 81.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -822,7 +822,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "kettlesnail 82.aseprite",
+      "filename" : "capyzen 82.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,

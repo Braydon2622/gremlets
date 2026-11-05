@@ -1,6 +1,6 @@
 {
   "name": "Wolpy · Gremlet #44",
-  "description": "A wolpertinger: a squirrel with tiny antlers and duck wings. Nobody believes it exists.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wolpy in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
+  "description": "A squirrel that grew tiny antlers. Nobody believes it exists.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Wolpy in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
   "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/44.png",
   "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wolpy",
   "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=wolpy",
@@ -19,7 +19,7 @@
     },
     {
       "trait_type": "Can Fly",
-      "value": "Yes"
+      "value": "No"
     },
     {
       "trait_type": "Species",

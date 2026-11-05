@@ -1067,3 +1067,18 @@ func laceLobes(_ col: UInt32) -> Draw {
         }
     }
 }
+
+/// Plain spiral snail shell behind the body.
+func swirlShell(_ col: UInt32, _ line: UInt32) -> Draw {
+    return { cv, c in
+        let r = 7.6, sx = c.cx - c.rx * 0.95, sy = c.cy - c.ry * 0.55 - 1.5
+        cv.ellipse(sx, sy, r, r, Ramp(col), glossy: true)
+        let l = Ramp(line).base
+        var a = 0.0
+        while a < 4.2 * Double.pi {
+            let rr = 0.6 + a / (4.2 * Double.pi) * (r - 1.6)
+            cv.plot(sx + cos(a) * rr, sy + sin(a) * rr, l)
+            a += 0.18
+        }
+    }
+}

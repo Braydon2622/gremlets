@@ -33,8 +33,8 @@
     {
       "element" : "onsen",
       "family" : "animal",
-      "id" : "yuzubara",
-      "name" : "Yuzubara"
+      "id" : "capyzen",
+      "name" : "Capyzen"
     },
     {
       "element" : "harvest",
@@ -57,14 +57,14 @@
     {
       "element" : "pond",
       "family" : "animal",
-      "id" : "crownip",
-      "name" : "Crownip"
+      "id" : "lilypip",
+      "name" : "Lilypip"
     },
     {
-      "element" : "tea",
+      "element" : "dew",
       "family" : "animal",
-      "id" : "kettlesnail",
-      "name" : "Kettlesnail"
+      "id" : "swirlby",
+      "name" : "Swirlby"
     },
     {
       "element" : "night",
@@ -181,10 +181,10 @@
       "name" : "Kumoryu"
     },
     {
-      "element" : "tea",
+      "element" : "jasmine",
       "family" : "dragon",
-      "id" : "steepy",
-      "name" : "Steepy"
+      "id" : "mintwyrm",
+      "name" : "Mintwyrm"
     },
     {
       "element" : "crystal",

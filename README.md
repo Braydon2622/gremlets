@@ -11,9 +11,9 @@ heads, throw dance parties, and show off a signature move.
 
 | Family | Count | Some of them |
 |---|---|---|
-| Animals | 16 | Flurrie the scarf bunny, Dandelet the dandelion lion cub, Yuzubara the hot-spring capybara, Pomble the tanuki |
+| Animals | 16 | Flurrie the scarf bunny, Dandelet the dandelion lion cub, Capyzen the hot-spring capybara, Pomble the tanuki |
 | Insects & Bugs | 12 | Spotsy the ladybug, Zipwing the dragonfly, Bumbuzz the bumblebee, Prayla the praying mantis, Peacockle the dancing spider |
-| Dragons | 6 | Ashlet the charcoal dragonling, Steepy the teacup dragon, Kumoryu the cloud dragon |
+| Dragons | 6 | Ashlet the charcoal dragonling, Mintwyrm the jasmine dragon, Kumoryu the cloud dragon |
 | Dinosaurs | 7 | Trikit, Rexlet, Brontle, Bonkle the head-bonker |
 | Mythical | 9 | Kindlet the candle spirit, Griffet the griffin chick, Tripup the three-headed puppy, Inklet the baby kraken |
 

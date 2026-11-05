@@ -1,9 +1,9 @@
 {
-  "description" : "A coral sky-dragon who rides its own little cloud and never touches the ground.",
+  "description" : "A coral sky-dragon that coils up like a cinnamon roll to nap.",
   "element" : "cloud",
   "family" : "dragon",
   "flies" : true,
-  "floats" : true,
+  "floats" : false,
   "jumpPower" : 1,
   "name" : "Kumoryu",
   "scale" : 3,

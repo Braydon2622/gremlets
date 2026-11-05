@@ -1,0 +1,13 @@
+{
+  "description" : "A snail with a perfectly round swirl shell. It's never late, just taking the scenic route.",
+  "element" : "dew",
+  "family" : "animal",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.59999999999999998,
+  "name" : "Swirlby",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "bubbles",
+  "walkSpeed" : 22
+}

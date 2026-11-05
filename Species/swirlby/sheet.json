@@ -2,7 +2,7 @@
   "frames" : [
     {
       "duration" : 520,
-      "filename" : "steepy 0.aseprite",
+      "filename" : "swirlby 0.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -12,7 +12,7 @@
     },
     {
       "duration" : 420,
-      "filename" : "steepy 1.aseprite",
+      "filename" : "swirlby 1.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -22,7 +22,7 @@
     },
     {
       "duration" : 520,
-      "filename" : "steepy 2.aseprite",
+      "filename" : "swirlby 2.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -32,7 +32,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 3.aseprite",
+      "filename" : "swirlby 3.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -42,7 +42,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "steepy 4.aseprite",
+      "filename" : "swirlby 4.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -52,7 +52,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "steepy 5.aseprite",
+      "filename" : "swirlby 5.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -62,7 +62,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 6.aseprite",
+      "filename" : "swirlby 6.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -72,7 +72,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "steepy 7.aseprite",
+      "filename" : "swirlby 7.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -82,7 +82,7 @@
     },
     {
       "duration" : 300,
-      "filename" : "steepy 8.aseprite",
+      "filename" : "swirlby 8.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -92,7 +92,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "steepy 9.aseprite",
+      "filename" : "swirlby 9.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -102,7 +102,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 10.aseprite",
+      "filename" : "swirlby 10.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -112,7 +112,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 11.aseprite",
+      "filename" : "swirlby 11.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -122,7 +122,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 12.aseprite",
+      "filename" : "swirlby 12.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -132,7 +132,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 13.aseprite",
+      "filename" : "swirlby 13.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -142,7 +142,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 14.aseprite",
+      "filename" : "swirlby 14.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -152,7 +152,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 15.aseprite",
+      "filename" : "swirlby 15.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -162,7 +162,7 @@
     },
     {
       "duration" : 120,
-      "filename" : "steepy 16.aseprite",
+      "filename" : "swirlby 16.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -172,7 +172,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 17.aseprite",
+      "filename" : "swirlby 17.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -182,7 +182,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 18.aseprite",
+      "filename" : "swirlby 18.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -192,7 +192,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "steepy 19.aseprite",
+      "filename" : "swirlby 19.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -202,7 +202,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "steepy 20.aseprite",
+      "filename" : "swirlby 20.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -212,7 +212,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "steepy 21.aseprite",
+      "filename" : "swirlby 21.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -222,7 +222,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 22.aseprite",
+      "filename" : "swirlby 22.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -232,7 +232,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "steepy 23.aseprite",
+      "filename" : "swirlby 23.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -242,7 +242,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "steepy 24.aseprite",
+      "filename" : "swirlby 24.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -252,7 +252,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "steepy 25.aseprite",
+      "filename" : "swirlby 25.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -262,7 +262,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "steepy 26.aseprite",
+      "filename" : "swirlby 26.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -272,7 +272,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 27.aseprite",
+      "filename" : "swirlby 27.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -282,7 +282,7 @@
     },
     {
       "duration" : 180,
-      "filename" : "steepy 28.aseprite",
+      "filename" : "swirlby 28.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -292,7 +292,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 29.aseprite",
+      "filename" : "swirlby 29.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -302,7 +302,7 @@
     },
     {
       "duration" : 620,
-      "filename" : "steepy 30.aseprite",
+      "filename" : "swirlby 30.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -312,7 +312,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "steepy 31.aseprite",
+      "filename" : "swirlby 31.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -322,7 +322,7 @@
     },
     {
       "duration" : 320,
-      "filename" : "steepy 32.aseprite",
+      "filename" : "swirlby 32.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -332,7 +332,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "steepy 33.aseprite",
+      "filename" : "swirlby 33.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -342,7 +342,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "steepy 34.aseprite",
+      "filename" : "swirlby 34.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -352,7 +352,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "steepy 35.aseprite",
+      "filename" : "swirlby 35.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -362,7 +362,7 @@
     },
     {
       "duration" : 650,
-      "filename" : "steepy 36.aseprite",
+      "filename" : "swirlby 36.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -372,7 +372,7 @@
     },
     {
       "duration" : 170,
-      "filename" : "steepy 37.aseprite",
+      "filename" : "swirlby 37.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -382,7 +382,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "steepy 38.aseprite",
+      "filename" : "swirlby 38.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -392,7 +392,7 @@
     },
     {
       "duration" : 380,
-      "filename" : "steepy 39.aseprite",
+      "filename" : "swirlby 39.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -402,7 +402,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 40.aseprite",
+      "filename" : "swirlby 40.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -412,7 +412,7 @@
     },
     {
       "duration" : 80,
-      "filename" : "steepy 41.aseprite",
+      "filename" : "swirlby 41.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -422,7 +422,7 @@
     },
     {
       "duration" : 100,
-      "filename" : "steepy 42.aseprite",
+      "filename" : "swirlby 42.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -432,7 +432,7 @@
     },
     {
       "duration" : 130,
-      "filename" : "steepy 43.aseprite",
+      "filename" : "swirlby 43.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -442,7 +442,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 44.aseprite",
+      "filename" : "swirlby 44.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -452,7 +452,7 @@
     },
     {
       "duration" : 90,
-      "filename" : "steepy 45.aseprite",
+      "filename" : "swirlby 45.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -462,7 +462,7 @@
     },
     {
       "duration" : 280,
-      "filename" : "steepy 46.aseprite",
+      "filename" : "swirlby 46.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -472,7 +472,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 47.aseprite",
+      "filename" : "swirlby 47.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -482,7 +482,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 48.aseprite",
+      "filename" : "swirlby 48.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -492,7 +492,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 49.aseprite",
+      "filename" : "swirlby 49.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -502,7 +502,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 50.aseprite",
+      "filename" : "swirlby 50.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -512,7 +512,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 51.aseprite",
+      "filename" : "swirlby 51.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -522,7 +522,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 52.aseprite",
+      "filename" : "swirlby 52.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -532,7 +532,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 53.aseprite",
+      "filename" : "swirlby 53.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -542,7 +542,7 @@
     },
     {
       "duration" : 110,
-      "filename" : "steepy 54.aseprite",
+      "filename" : "swirlby 54.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -552,7 +552,7 @@
     },
     {
       "duration" : 150,
-      "filename" : "steepy 55.aseprite",
+      "filename" : "swirlby 55.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -562,7 +562,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "steepy 56.aseprite",
+      "filename" : "swirlby 56.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -572,7 +572,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 57.aseprite",
+      "filename" : "swirlby 57.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -582,7 +582,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 58.aseprite",
+      "filename" : "swirlby 58.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -592,7 +592,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 59.aseprite",
+      "filename" : "swirlby 59.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -602,7 +602,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 60.aseprite",
+      "filename" : "swirlby 60.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -612,7 +612,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 61.aseprite",
+      "filename" : "swirlby 61.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -622,7 +622,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 62.aseprite",
+      "filename" : "swirlby 62.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -632,7 +632,7 @@
     },
     {
       "duration" : 200,
-      "filename" : "steepy 63.aseprite",
+      "filename" : "swirlby 63.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -642,7 +642,7 @@
     },
     {
       "duration" : 260,
-      "filename" : "steepy 64.aseprite",
+      "filename" : "swirlby 64.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -652,7 +652,7 @@
     },
     {
       "duration" : 220,
-      "filename" : "steepy 65.aseprite",
+      "filename" : "swirlby 65.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -662,7 +662,7 @@
     },
     {
       "duration" : 240,
-      "filename" : "steepy 66.aseprite",
+      "filename" : "swirlby 66.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -672,7 +672,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 67.aseprite",
+      "filename" : "swirlby 67.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -682,7 +682,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 68.aseprite",
+      "filename" : "swirlby 68.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -692,7 +692,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 69.aseprite",
+      "filename" : "swirlby 69.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -702,7 +702,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 70.aseprite",
+      "filename" : "swirlby 70.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -712,7 +712,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 71.aseprite",
+      "filename" : "swirlby 71.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -722,7 +722,7 @@
     },
     {
       "duration" : 140,
-      "filename" : "steepy 72.aseprite",
+      "filename" : "swirlby 72.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -732,7 +732,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 73.aseprite",
+      "filename" : "swirlby 73.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -742,7 +742,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 74.aseprite",
+      "filename" : "swirlby 74.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -752,7 +752,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 75.aseprite",
+      "filename" : "swirlby 75.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -762,7 +762,7 @@
     },
     {
       "duration" : 160,
-      "filename" : "steepy 76.aseprite",
+      "filename" : "swirlby 76.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -772,7 +772,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 77.aseprite",
+      "filename" : "swirlby 77.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -782,7 +782,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 78.aseprite",
+      "filename" : "swirlby 78.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -792,7 +792,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 79.aseprite",
+      "filename" : "swirlby 79.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -802,7 +802,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 80.aseprite",
+      "filename" : "swirlby 80.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -812,7 +812,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 81.aseprite",
+      "filename" : "swirlby 81.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,
@@ -822,7 +822,7 @@
     },
     {
       "duration" : 70,
-      "filename" : "steepy 82.aseprite",
+      "filename" : "swirlby 82.aseprite",
       "frame" : {
         "h" : 32,
         "w" : 32,

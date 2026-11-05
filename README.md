@@ -1,7 +1,7 @@
 # Gremlets
 
 Fifty one-of-a-kind pixel creatures that live on your Mac desktop: gentle animals, a few bugs, a tiny
-dragon, some friendly mythical beasts, and Ghibli-style spirits (an umbrella that woke up one rainy night, a
+dragon, some friendly mythical beasts, and little spirits of objects, plants and weather that came alive (an umbrella that woke up one rainy night, a
 paper crane, a runaway rice ball, a puff of summer wind). They walk along the Dock line, hop and fly up onto
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
@@ -27,7 +27,7 @@ dance, wave, dangling when dragged, an "!" alert, and its signature move.
 ![Kasakko's key poses](Species/kasakko/preview.png)
 
 All creatures, names and art are original. The design approach borrows *principles* from classic
-creature-collecting games and Studio Ghibli's gentle nature spirits (a readable silhouette, one strong
+creature-collecting games and gentle folk-tale nature spirits (a readable silhouette, one strong
 signature feature, 2–3 soft colours, and a touch of everyday magic: frost ears, a petal mane, an old umbrella
 that woke up) without copying any existing character. No Gremlet wears clothing or carries props.
 

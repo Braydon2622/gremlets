@@ -152,7 +152,7 @@ let roster: [Species] = [
         $0.special = "ink"; $0.walkSpeed = 50
     },
 
-    // ---------------------------------------------------------------- Spirits (Ghibli-inspired: things that came alive)
+    // ---------------------------------------------------------------- Spirits: objects, plants and weather that came alive
     species("kasakko", "Kasakko", "rain", "spirit", main: 0x5A6FC0, "An old paper umbrella that woke up one rainy night. Hops around on its one leg looking for puddles.") {
         $0.rx = 8; $0.ry = 6; $0.eye = 0x1A1A30; $0.eyeStyle = .cyclops; $0.faceV = -0.75; $0.feet = .none; $0.noArms = true
         $0.bodyDraw = umbrellaBody(0x5A6FC0, 0xF2E6C8, 0x8A6A4A)

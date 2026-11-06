@@ -61,6 +61,25 @@ final class OverlayController {
 
     var paused = false { didSet { if paused { setClickThrough(nil) } } }
 
+    /// Hidden (boss key / on a call): panels leave the screen entirely, so nothing can show up in a screen share.
+    var hidden = false {
+        didSet {
+            guard hidden != oldValue else { return }
+            for s in screens {
+                if hidden {
+                    s.panel.orderOut(nil)
+                } else {
+                    s.panel.orderFrontRegardless()
+                }
+            }
+            if hidden {
+                // Let go of anything mid-drag so it drops normally when they come back.
+                if dragging, let c = pressed { world.endDrag(c, time: CACurrentMediaTime()); NSCursor.pop() }
+                pressed = nil; dragging = false; setClickThrough(nil)
+            }
+        }
+    }
+
     init(world: World, species: [String: LoadedSpecies]) {
         self.world = world
         self.species = species
@@ -81,7 +100,7 @@ final class OverlayController {
             view.layer = root
             view.wantsLayer = true
             panel.contentView = view
-            panel.orderFrontRegardless()
+            if !hidden { panel.orderFrontRegardless() }
             return Screen(frame: ns.frame, panel: panel, root: root)
         }
         layerScreen.removeAll()

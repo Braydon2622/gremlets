@@ -58,9 +58,22 @@ that wakes up) without copying any existing character. No Gremlet wears clothing
 
 ## Companion features
 
+**Safe to keep running at work.** Gremlets slip off screen whenever any app is using your camera or microphone
+(Zoom, Meet, FaceTime...), so they never show up in a screen share, and come back a few seconds after the call
+ends. *Hide During Calls* turns this off. **⌃⌥G** hides or shows them from anywhere (or `gremlet hide` / `gremlet show`
+in a presentation script). Hidden panels are removed from the screen entirely, not just made transparent, and the
+app drops to about 0% CPU. No permissions are needed: macOS reports whether a camera or mic is in use without
+giving out any audio or video.
+
+**They notice when you're away.** After 5 minutes without keyboard or mouse input they settle down for a nap (and
+the loop slows down). When you come back they wake up and one waves hello. On Low Power Mode the animation loop is capped
+at 30 Hz.
+
 **Focus buddy.** Menu bar → *Focus for 25/50 min*. A countdown appears next to the menu bar icon; your Gremlets
 settle down and doze while you work (no flying, no tag), then wake up and throw a dance party when your break
-starts, and one waves when the break is over. Optional *Water & Stretch Reminders* every 45 minutes. Late at night
+starts, and one waves when the break is over. The menu shows today's focused minutes and your
+day streak, and every Gremlet that keeps you company through a session grows closer to you. Optional
+*Water & Stretch Reminders* every 45 minutes. Late at night
 they get sleepy faster, a gentle hint to log off.
 
 **Coding companion.** A tiny local control channel lets scripts make your Gremlets react:
@@ -70,13 +83,14 @@ scripts/gremlet run npm test      # dance if the tests pass, fall over dizzy if 
 make && scripts/gremlet pass || scripts/gremlet fail
 scripts/gremlet done              # after any long job: the nearest Gremlet pops up and waves
 scripts/gremlet focus 50          # start a focus session from the terminal
+scripts/gremlet hide              # before presenting; `gremlet show` brings them back
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
 
 It listens on `127.0.0.1:47920` only, every request needs an `X-Gremlets` header (so a web page can't trigger it
 cross-site without a CORS preflight, which it never approves), and it can only trigger animations and the timer.
 
-**Bond.** Each Gremlet remembers days and hours together, pets and pokes, and levels up from *New friend* to
+**Bond.** Each Gremlet remembers days and hours together, pets, pokes and focus sessions, and levels up from *New friend* to
 *Kindred spirit*. Closer friends wave at your cursor and follow it more, and from *Friend* up they show off their
 signature move when you pet them. A level-up sets off a shower of hearts. See *Your Gremlets* in the menu.
 
@@ -176,6 +190,7 @@ Sources/
     World.swift       simulation: physics, grounding, window riding, flight, bumps, stacking, input
     Social.swift      greet, follow, nap together, tag, stack, dance parties, signature moves, peeking
     Companion.swift   focus mode, signals (pass/fail/done...), bond levels
+    Presence.swift    hide on calls / boss key, away + welcome back, Low Power cap, focus log + streaks
     Ownership.swift   owned / custom / demo rules, demo session clock, Ethereum encoding (EIP-191, ABI, EIP-55)
     Keccak.swift      dependency-free Keccak-256
     Brain.swift       utility AI: scores candidate actions and picks one by weighted random choice
@@ -188,6 +203,7 @@ Sources/
     SpriteLibrary.swift  Aseprite JSON loader + alpha masks
     App.swift         adaptive game loop, menu bar, roster persistence, perf monitor
     Companion.swift   focus timer, bond storage, local control channel (127.0.0.1)
+    SystemSignals.swift  camera/mic-in-use (CoreMediaIO/CoreAudio), idle time, Low Power, Carbon global hotkey
     Wallet.swift      wallet-link page + signature check, read-only JSON-RPC ownership reads (Base Sepolia)
   spritegen/        part-based pixel-art generator for the 50 built-in species
 web/
@@ -208,6 +224,8 @@ MacBook (Apple Silicon), macOS 15:
 | 3 creatures walking/jumping (30 Hz loop, 10 Hz window polling) | 1.6–2.0% |
 | 6 creatures (15 animations each, particles) | 2.0–2.4% |
 | 8 creatures (v3: flight, tag, dance parties, mostly at 60 Hz) | 1.0–3.2% |
+| 3 creatures with call/idle detection running once a second | 1.0–2.1% |
+| Hidden (on a call or ⌃⌥G) | ~0% (2 Hz housekeeping only) |
 
 How it stays cheap:
 - The loop rate adapts: 60 Hz only while something is flying, running, airborne or being dragged, 30 Hz while walking, 12 Hz when everyone is idle or asleep.

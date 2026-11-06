@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import ServiceManagement
 import GremletsCore
 
@@ -35,6 +36,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var access = Access(tokens: [:], gatingEnabled: false)
     private var wallet: WalletLink?
     private var demoNotice: String?
+
+    // Presence: hide on calls / boss key, nap while you're away, calmer on Low Power Mode.
+    private var presence = PresenceTracker()
+    private var manuallyHidden = false
+    private var hideHotKey: HotKey?
+    private let focusLog = FocusLogStore()
+    private var hideDuringCalls: Bool {
+        get { UserDefaults.standard.object(forKey: "hideDuringCalls") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "hideDuringCalls") }
+    }
 
     func applicationDidFinishLaunching(_ note: Notification) {
         species = SpriteLibrary.loadAll()
@@ -80,7 +91,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let now = CACurrentMediaTime()
         let dt = now - lastTick
         lastTick = now
-        guard !paused else { return }
+        if now - lastHousekeeping >= 1 { housekeeping(elapsed: now - lastHousekeeping); lastHousekeeping = now }
+        guard !paused, !presence.isHidden else {
+            if presence.isHidden { schedule(rate: 2) }   // nothing on screen: just keep an ear out for "show"
+            return
+        }
 
         // Window polling is the most expensive thing we do, so its rate adapts: fast while a window that a
         // creature stands on is moving (so riding a dragged window is smooth), slow otherwise.
@@ -99,9 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
-        if now - lastHousekeeping >= 1 { housekeeping(elapsed: now - lastHousekeeping); lastHousekeeping = now }
 
-        let wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
+        var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
+        if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
     }
 
@@ -170,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func rebuildMenu() {
+        guard statusItem != nil else { return }      // callbacks can fire during launch, before the menu bar item exists
         let menu = NSMenu()
         menu.delegate = self
         for item in buildMenuItems() { menu.addItem(item) }
@@ -178,7 +194,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func buildMenuItems() -> [NSMenuItem] {
         let menu = NSMenu()
-        let header = NSMenuItem(title: "Gremlets: \(world.creatures.count) out", action: nil, keyEquivalent: "")
+        var headerText = "Gremlets: \(world.creatures.count) out"
+        switch presence.hidden {
+        case .call?: headerText = "Gremlets: hiding while you're on a call"
+        case .manual?: headerText = "Gremlets: hidden (⌃⌥G to bring them back)"
+        case nil: if presence.isAway { headerText += " · napping until you're back" }
+        }
+        let header = NSMenuItem(title: headerText, action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         menu.addItem(.separator())
@@ -276,6 +298,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 menu.addItem(f)
             }
         }
+        let mins = Int(focusLog.todayMinutes.rounded()), streak = focusLog.streak
+        if mins > 0 || streak > 0 {
+            let line = "Today: \(mins) min focused" + (streak > 0 ? " · \(streak)-day streak" : "")
+            let st = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+            st.isEnabled = false
+            st.toolTip = "Gremlets that keep you company through a focus session grow closer to you."
+            menu.addItem(st)
+        }
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
         rem.state = remindersOn ? .on : .off
@@ -289,6 +319,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let pause = NSMenuItem(title: paused ? "Resume" : "Pause", action: #selector(togglePause), keyEquivalent: "p")
         pause.target = self
         menu.addItem(pause)
+        let hide = NSMenuItem(title: manuallyHidden ? "Show Gremlets" : "Hide Gremlets", action: #selector(toggleHidden), keyEquivalent: "g")
+        hide.keyEquivalentModifierMask = [.control, .option]
+        hide.target = self
+        hide.toolTip = "Works anywhere with ⌃⌥G"
+        menu.addItem(hide)
+        let calls = NSMenuItem(title: "Hide During Calls", action: #selector(toggleHideDuringCalls), keyEquivalent: "")
+        calls.target = self
+        calls.state = hideDuringCalls ? .on : .off
+        calls.toolTip = "Slip away whenever an app uses your camera or microphone (Zoom, Meet, FaceTime…), so they never end up in a screen share."
+        menu.addItem(calls)
         menu.addItem(.separator())
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
@@ -505,7 +545,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         bonds.save()
         focus.onFocusStart = { [weak self] in self?.world.focusMode = true; self?.rebuildMenu() }
-        focus.onBreakStart = { [weak self] in self?.world.receive(.pass); self?.schedule(rate: 60); self?.rebuildMenu() }
+        focus.onBreakStart = { [weak self] in
+            guard let self else { return }
+            // A finished session: log it, and every Gremlet that kept you company grows a little closer.
+            self.focusLog.record(minutes: self.focus.focusMinutes)
+            for id in Set(self.world.creatures.map(\.species.id)) {
+                let before = self.bonds.bond(id).level
+                self.bonds.addFocusSession(id)
+                let after = self.bonds.bond(id)
+                if after.level > before, let c = self.world.creatures.first(where: { $0.species.id == id }) {
+                    self.world.setBond(after.strength, forSpecies: id); self.overlay.bondLevelUp(c)
+                }
+            }
+            self.bonds.save()
+            self.world.receive(.pass); self.schedule(rate: 60); self.rebuildMenu()
+        }
         focus.onBreakEnd = { [weak self] in self?.world.receive(.done); self?.rebuildMenu() }
         let server = ControlServer { [weak self] method, path, query in
             guard let self else { return (404, "{}") }
@@ -514,6 +568,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.start()
         control = server
+        // Boss key: ⌃⌥G hides/shows every Gremlet instantly.
+        hideHotKey = HotKey(keyCode: kVK_ANSI_G, modifiers: controlKey | optionKey, id: 1) { [weak self] in self?.toggleHidden() }
         if CommandLine.arguments.contains("--focus-demo") { focus.breakMinutes = 0.25; focus.startFocus(minutes: 0.25) }
     }
 
@@ -530,13 +586,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if name == "status" {
             let ids = world.creatures.map { "\"\($0.species.id)\"" }.joined(separator: ",")
             let f = focus.label.map { "\"\($0)\"" } ?? "null"
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused)}"#)
+            let h = presence.hidden.map { "\"\($0.rawValue)\"" } ?? "null"
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak)}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {
         case "focus":
             let minutes = Double(query["minutes"] ?? "") ?? 25
             focus.startFocus(minutes: min(max(minutes, 1), 180))
+        case "hide", "show":
+            manuallyHidden = name == "hide"
+            updatePresence()
+            return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
         default:
@@ -569,7 +630,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Once a second: menu bar timer text, focus phases, reminders, time-together and late-night sleepiness.
+    private func presenceInput() -> PresenceInput {
+        PresenceInput(now: CACurrentMediaTime(), manuallyHidden: manuallyHidden, inCall: inCall,
+                      hideDuringCalls: hideDuringCalls, idleSeconds: idleSeconds, lowPower: lowPower)
+    }
+    private var inCall = false, idleSeconds = 0.0, lowPower = false
+
+    /// Reads camera/mic/idle/power once a second and applies hide / show / away / welcome-back.
+    private func updatePresence() {
+        inCall = hideDuringCalls && (SystemSignals.cameraInUse() || SystemSignals.microphoneInUse())
+        idleSeconds = SystemSignals.idleSeconds()
+        lowPower = SystemSignals.lowPowerMode
+        for e in presence.update(presenceInput()) {
+            switch e {
+            case .hide:
+                overlay.hidden = true
+            case .show:
+                overlay.hidden = false
+                lastTick = CACurrentMediaTime()       // don't simulate the time they were away in one giant step
+                refreshEnvironment()
+                schedule(rate: 30)
+            case .away:
+                world.receive(.sleep)
+            case .welcomeBack:
+                world.receive(.wake)
+                schedule(rate: 60)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in self?.world.receive(.wave) }
+            }
+            rebuildMenu()
+        }
+    }
+
+    @objc private func toggleHidden() {
+        manuallyHidden.toggle()
+        updatePresence()
+    }
+
+    @objc private func toggleHideDuringCalls() {
+        hideDuringCalls.toggle()
+        updatePresence()
+        rebuildMenu()
+    }
+
     private func housekeeping(elapsed: Double) {
+        updatePresence()
         focus.update()
         let title = focus.label
         if title != lastTitle {
@@ -578,7 +682,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if (title == nil) != (lastTitle == nil) { rebuildMenu() }
             lastTitle = title
         }
-        if !paused {
+        if !paused && !presence.isHidden && !presence.isAway {
             for id in Set(world.creatures.map(\.species.id)) { bonds.addTime(id, seconds: elapsed) }
         }
         if remindersOn && !focus.isFocusing && Date().timeIntervalSince(lastReminder) > 45 * 60 {

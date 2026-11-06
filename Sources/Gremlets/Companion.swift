@@ -7,9 +7,21 @@ import GremletsCore
 /// Saves how long you've had each Gremlet and how often you've petted and poked it (UserDefaults, per species).
 final class BondStore {
     private struct Record: Codable {
-        var days = 0, pets = 0, pokes = 0
+        var days = 0, pets = 0, pokes = 0, focus = 0
         var hours = 0.0
         var lastDay = ""
+
+        init() {}
+        // Tolerant decoding: records saved by older versions lack newer fields, and must still load.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            days = try c.decodeIfPresent(Int.self, forKey: .days) ?? 0
+            pets = try c.decodeIfPresent(Int.self, forKey: .pets) ?? 0
+            pokes = try c.decodeIfPresent(Int.self, forKey: .pokes) ?? 0
+            focus = try c.decodeIfPresent(Int.self, forKey: .focus) ?? 0
+            hours = try c.decodeIfPresent(Double.self, forKey: .hours) ?? 0
+            lastDay = try c.decodeIfPresent(String.self, forKey: .lastDay) ?? ""
+        }
     }
     private var records: [String: Record] = [:]
     private let key = "bonds.v1"
@@ -21,12 +33,13 @@ final class BondStore {
 
     func bond(_ id: String) -> Bond {
         let r = records[id] ?? Record()
-        return Bond(daysTogether: r.days, pets: r.pets, pokes: r.pokes, hoursTogether: r.hours)
+        return Bond(daysTogether: r.days, pets: r.pets, pokes: r.pokes, hoursTogether: r.hours, focusSessions: r.focus)
     }
 
-    private static var today: String {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date())
+    static func dayKey(_ d: Date = Date()) -> String {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX"); return f.string(from: d)
     }
+    private static var today: String { dayKey() }
 
     /// Counts today as a day together (once per calendar day).
     func markSeenToday(_ id: String) {
@@ -38,10 +51,38 @@ final class BondStore {
 
     func addPet(_ id: String) { records[id, default: Record()].pets += 1 }
     func addPoke(_ id: String) { records[id, default: Record()].pokes += 1 }
+    func addFocusSession(_ id: String) { records[id, default: Record()].focus += 1 }
     func addTime(_ id: String, seconds: Double) { records[id, default: Record()].hours += seconds / 3600 }
 
     func save() {
         if let data = try? JSONEncoder().encode(records) { UserDefaults.standard.set(data, forKey: key) }
+    }
+}
+
+// MARK: - Focus log
+
+/// Minutes focused per day and the streak (UserDefaults).
+final class FocusLogStore {
+    private let key = "focusLog.v1"
+    private(set) var log = FocusLog()
+
+    init() {
+        if let d = UserDefaults.standard.data(forKey: key), let l = try? JSONDecoder().decode(FocusLog.self, from: d) { log = l }
+    }
+
+    func record(minutes: Double) {
+        log.record(minutes: minutes, day: BondStore.dayKey())
+        if let d = try? JSONEncoder().encode(log) { UserDefaults.standard.set(d, forKey: key) }
+    }
+
+    var todayMinutes: Double { log.minutes(on: BondStore.dayKey()) }
+
+    var streak: Int {
+        log.streak(today: BondStore.dayKey()) { day in
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+            guard let d = f.date(from: day), let prev = Calendar.current.date(byAdding: .day, value: -1, to: d) else { return "" }
+            return BondStore.dayKey(prev)
+        }
     }
 }
 
@@ -52,12 +93,15 @@ final class FocusTimer {
     enum Phase: Equatable { case idle, focus(end: Date), rest(end: Date) }
     private(set) var phase: Phase = .idle
     var breakMinutes = 5.0
+    /// Length of the current/last focus session.
+    private(set) var focusMinutes = 0.0
 
     var onFocusStart: () -> Void = {}
     var onBreakStart: () -> Void = {}
     var onBreakEnd: () -> Void = {}
 
     func startFocus(minutes: Double) {
+        focusMinutes = minutes
         phase = .focus(end: Date().addingTimeInterval(minutes * 60))
         onFocusStart()
     }

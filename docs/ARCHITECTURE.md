@@ -152,3 +152,21 @@ app:  eth_chainId == 84532?  ─► eth_call ecrecover precompile (0x…01) with
 - **Local server hardening:** loopback only. A `Host` allow-list blocks DNS rebinding. State-changing routes need
   a custom header, which forces a CORS preflight that is never approved. The page is served with
   `default-src 'none'` CSP and `frame-ancestors 'none'`.
+
+## Presence (calls, away, power)
+
+Once a second the app samples four cheap facts and hands them to `PresenceTracker` (pure, unit tested):
+
+| Fact | Source | Permission |
+|---|---|---|
+| Camera in use by any app | CoreMediaIO `kCMIODevicePropertyDeviceIsRunningSomewhere` on every video device | none |
+| Microphone in use by another app | CoreAudio process objects `kAudioProcessPropertyIsRunningInput` (macOS 14.2+); older systems fall back to the default input device, only when it's input-only | none |
+| Seconds since last input | `CGEventSource.secondsSinceLastEventType(.combinedSessionState, kCGAnyInputEventType)` | none |
+| Low Power Mode | `ProcessInfo.isLowPowerModeEnabled` | none |
+
+The tracker turns those into edge-triggered events: `hide(.manual | .call)`, `show`, `away`, `welcomeBack`, plus a
+tick-rate cap (2 Hz hidden, 12 Hz away, 30 Hz on Low Power). Calls get an 8-second grace period because meeting apps
+blip the mic on and off when you mute. Using the per-process input flag matters: a headset's device-level
+"running" flag is also true whenever music plays. Hiding calls `orderOut` on the overlay panels (rather than
+alpha 0), so screen-capture APIs have nothing to pick up, and the simulation stops so no time "piles up".
+The boss key uses Carbon `RegisterEventHotKey`, which unlike global key monitors needs no Accessibility permission.

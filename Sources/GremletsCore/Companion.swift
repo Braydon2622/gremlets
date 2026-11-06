@@ -21,17 +21,19 @@ public struct Bond: Equatable, Sendable {
     public var pets: Int
     public var pokes: Int
     public var hoursTogether: Double
+    public var focusSessions: Int      // focus sessions it kept you company through
 
-    public init(daysTogether: Int = 0, pets: Int = 0, pokes: Int = 0, hoursTogether: Double = 0) {
+    public init(daysTogether: Int = 0, pets: Int = 0, pokes: Int = 0, hoursTogether: Double = 0, focusSessions: Int = 0) {
         self.daysTogether = daysTogether; self.pets = pets; self.pokes = pokes; self.hoursTogether = hoursTogether
+        self.focusSessions = focusSessions
     }
 
     public static let levelNames = ["New friend", "Pal", "Friend", "Best friend", "Kindred spirit"]
     static let thresholds: [Double] = [0, 4, 15, 40, 90]
 
-    /// Points from everything you've done together. Petting counts most; just being around counts too.
+    /// Points from everything you've done together. Petting and focusing together count most; being around counts too.
     public var score: Double {
-        Double(daysTogether) * 1.5 + Double(pets) * 0.4 + Double(pokes) * 0.1 + hoursTogether * 0.5
+        Double(daysTogether) * 1.5 + Double(pets) * 0.4 + Double(pokes) * 0.1 + hoursTogether * 0.5 + Double(focusSessions) * 1.0
     }
 
     /// 0...4

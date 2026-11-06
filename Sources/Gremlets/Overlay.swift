@@ -75,6 +75,10 @@ final class OverlayController {
         var shelf: CALayer?
         var shelfPx = 0
         var lantern: CALayer?
+        /// The tree a branch grows on, or the balloons a swing hangs from.
+        var extra: CALayer?
+        var extraKey = ""
+        var lastBounce: Double?
         var wasOnShelf = false
         var key = ""
         var beat = 0
@@ -538,6 +542,10 @@ final class OverlayController {
             let g = CAAnimationGroup(); g.animations = [move, fade]; g.duration = 2.6
             run(l, g)
             burst([Effects.smallHeart], si: si, at: CGPoint(x: p.x + 4, y: p.top), count: 1, dx: -4...4, dy: 14...22, duration: 0.8, delay: 1.2)
+        case .snap(let f, let b):
+            let pf = slotPoint(st, f, j), pb = slotPoint(st, b, j)
+            burst([PropArt.aphid], si: si, at: CGPoint(x: pb.x + 6, y: pb.top - 10), count: 1, dx: (pf.x - pb.x - 6)...(pf.x - pb.x - 6), dy: (pf.top - pb.top)...(pf.top - pb.top), duration: 0.35)
+            burst([Effects.smallBang], si: si, at: CGPoint(x: pf.x, y: pf.top), count: 1, dx: -2...2, dy: 10...16, duration: 0.6, delay: 0.35)
         case .mystery(let i):
             let p = slotPoint(st, i, j)
             burst([Effects.sparkle, Effects.smallStar], si: si, at: CGPoint(x: p.x, y: p.soil + 10), count: 10, dx: -30...30, dy: 0...40, duration: 1.1, stagger: 0.03)
@@ -545,6 +553,68 @@ final class OverlayController {
             let f = st.item.frame
             burst([Effects.sparkle, Effects.heart, Effects.smallStar, Effects.petal], si: si, at: CGPoint(x: f.midX, y: f.maxY), count: 12, dx: -60...60, dy: 10...60, duration: 1.4, stagger: 0.05)
         }
+    }
+
+    /// Shelf extras: a whole tree for a branch shelf (trunk from the floor up, canopy around the branch), balloons
+    /// and ropes holding up a swing.
+    private func updateShelfExtra(_ st: inout PropState, _ j: Job, _ s: Surface, _ si: Int, _ o: CGPoint, _ flip: CGFloat) {
+        let side = j.shelfSide ?? 1
+        let outer = side > 0 ? s.maxX : s.minX
+        switch j.shelfStyle {
+        case .branch:
+            guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: outer - side * 30) }).min(by: { $0.y < $1.y }) else { return }
+            let hpx = max(20, Int(((s.y - floor.y) / 3).rounded()) + 16)
+            let key = "tree\(hpx)"
+            if st.extraKey != key || st.extra == nil {
+                st.extra?.removeFromSuperlayer()
+                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                setImage(l, PropArt.tree(heightPx: hpx))
+                screens[si].root.insertSublayer(l, at: 0)
+                if st.extra == nil { popIn(l) }
+                st.extra = l; st.extraKey = key
+            }
+            st.extra?.position = CGPoint(x: (outer - side * 30 - o.x).rounded(), y: (floor.y - o.y).rounded())
+        case .swing:
+            if st.extra == nil {
+                let c = CALayer()
+                c.anchorPoint = CGPoint(x: 0.5, y: 0)
+                c.bounds = CGRect(x: 0, y: 0, width: s.width, height: 130)
+                for rx in [CGFloat(10), s.width - 10] {
+                    let rope = CALayer()
+                    rope.backgroundColor = NSColor(red: 0.55, green: 0.4, blue: 0.25, alpha: 1).cgColor
+                    rope.frame = CGRect(x: rx, y: 0, width: 2, height: 96)
+                    c.addSublayer(rope)
+                }
+                let b = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                setImage(b, PropArt.swingBalloons())
+                b.position = CGPoint(x: s.width / 2, y: 90)
+                c.addSublayer(b)
+                screens[si].root.insertSublayer(c, at: 0)
+                popIn(c)
+                st.extra = c
+            }
+            // Rock gently.
+            let t = CACurrentMediaTime()
+            st.extra?.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(t * 1.2) * 0.02)))
+            st.extra?.position = CGPoint(x: (s.minX + s.width / 2 - o.x).rounded(), y: (s.y - o.y).rounded())
+        default:
+            if let l = st.extra { l.removeFromSuperlayer(); st.extra = nil }
+        }
+    }
+
+    /// A mushroom pops out of the ground, squashes, and springs a Gremlet up.
+    private func springMushroom(at p: CGPoint, _ si: Int) {
+        let l = particle(PropArt.springMushroom, si, scale: 3)
+        l.anchorPoint = CGPoint(x: 0.5, y: 0)
+        l.position = p
+        let sy = CAKeyframeAnimation(keyPath: "transform.scale.y")
+        sy.values = [0.1, 1.15, 0.55, 1.2, 1.0, 1.0, 0.1]
+        sy.keyTimes = [0, 0.12, 0.2, 0.3, 0.4, 0.85, 1]
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [1, 1, 0]; fade.keyTimes = [0, 0.8, 1]
+        let g = CAAnimationGroup(); g.animations = [sy, fade]; g.duration = 1.6
+        run(l, g)
+        burst([Effects.dust], si: si, at: p, count: 3, dx: -26...26, dy: 0...8, duration: 0.45)
     }
 
     /// A little rain cloud drifts over the box, rains for a few seconds, and leaves a rainbow behind.
@@ -673,7 +743,7 @@ final class OverlayController {
                 if st.shelf == nil || st.shelfPx != px || st.screen != si {
                     st.shelf?.removeFromSuperlayer()
                     let l = pixelLayer(si, anchor: CGPoint(x: 0, y: 1))
-                    setImage(l, PropArt.shelf(widthPx: px))
+                    setImage(l, PropArt.shelf(j.shelfStyle, widthPx: px))
                     screens[si].root.insertSublayer(l, at: 0)
                     if st.shelf == nil { popIn(l); burst([Effects.dust], si: si, at: CGPoint(x: s.minX - o.x + s.width / 2, y: s.y - o.y), count: 3, dx: -40...40, dy: -6...6, duration: 0.5) }
                     st.shelf = l; st.shelfPx = px
@@ -683,6 +753,7 @@ final class OverlayController {
                 let p = CGPoint(x: (s.minX - o.x).rounded() + (flip < 0 ? s.width : 0), y: (s.y - o.y).rounded())
                 st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
                 if st.shelf?.position != p { st.shelf?.position = p }
+                updateShelfExtra(&st, j, s, si, o, flip)
                 // A little lantern at the outer end in the evening.
                 if PropArt.isEvening {
                     if st.lantern == nil {
@@ -698,7 +769,13 @@ final class OverlayController {
                     let lx = side > 0 ? s.maxX - 12 : s.minX + 12
                     st.lantern?.position = CGPoint(x: (lx - o.x).rounded(), y: (s.y - o.y - 9).rounded())
                 } else if let l = st.lantern { l.removeFromSuperlayer(); st.lantern = nil }
-            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil }
+            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil; st.extra?.removeFromSuperlayer(); st.extra = nil }
+
+            // The bouncy mushroom that launches a Gremlet up to its shelf.
+            if let b = j.bounceAt, b != st.lastBounce, let spot = j.bounceSpot {
+                st.lastBounce = b
+                springMushroom(at: CGPoint(x: spot.x - o.x, y: spot.y - o.y), si)
+            }
 
             // The creation.
             if let a = anchor {
@@ -741,7 +818,7 @@ final class OverlayController {
                 st.contentRows = j.garden.plants.compactMap { $0.map { PropArt.plantRows($0).count } }.max() ?? 1
                 // Special blooms glow; golden ones sparkle now and then.
                 let glow = st.harvest.contains { $0.kind == .moonflower } ? "moon" : st.harvest.contains { $0.golden } ? "gold"
-                    : st.harvest.contains { $0.kind == .crystalRose } ? "crystal" : st.harvest.contains { $0.kind == .wishingTree } ? "gold" : ""
+                    : st.harvest.contains { $0.kind == .crystalRose || $0.kind == .starLily } ? "crystal" : st.harvest.contains { $0.kind == .wishingTree } ? "gold" : ""
                 if glow != st.glow {
                     st.glow = glow
                     let color: NSColor? = glow == "moon" ? NSColor(red: 0.85, green: 0.8, blue: 1, alpha: 1)
@@ -752,7 +829,7 @@ final class OverlayController {
                     st.item.shadowRadius = 8
                     st.item.shadowOffset = .zero
                 }
-                if st.harvest.contains(where: { $0.golden }) && now >= st.nextSparkle {
+                if st.harvest.contains(where: { $0.golden || $0.kind == .starLily }) && now >= st.nextSparkle {
                     st.nextSparkle = now + Double.random(in: 2.5...4.5)
                     burst([Effects.sparkle, Effects.smallStar], si: si, at: top, count: 2, dx: -40...40, dy: -30...10, duration: 0.8)
                 }
@@ -785,6 +862,7 @@ final class OverlayController {
         for (id, var st) in props where !busy.contains(id) {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
+            if let l = st.extra { fadeOut(l, 0.5); st.extra = nil }
             if st.lingerUntil == nil { st.lingerUntil = now + (st.wasOnShelf ? 0 : 60) }
             if now >= st.lingerUntil! || st.item.superlayer == nil {
                 fadeOut(st.item, 0.8)
@@ -853,46 +931,88 @@ final class OverlayController {
         CATransaction.commit()
     }
 
-    /// A balloon on a string over a Gremlet's head while it floats; let go (drifting up and away) when it lands.
+    /// What a floating Gremlet rides: a balloon, soap bubble, dandelion puff, umbrella or big leaf. When it lands,
+    /// the balloon drifts away, the bubble pops, and the rest float off and fade.
     private func updateBalloon(_ c: Creature) {
         let floating = c.activity == .float
         if !floating {
             if let b = balloons.removeValue(forKey: c.id) {
                 let start = b.position
-                let drift = CABasicAnimation(keyPath: "position")
-                drift.fromValue = NSValue(point: start)
-                drift.toValue = NSValue(point: CGPoint(x: start.x + 30, y: start.y + 260))
-                let fade = CABasicAnimation(keyPath: "opacity")
-                fade.fromValue = 1; fade.toValue = 0
                 let g = CAAnimationGroup()
-                g.animations = [drift, fade]; g.duration = 2.2
-                g.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                if b.name == "bubble" {
+                    let grow = CABasicAnimation(keyPath: "transform.scale"); grow.fromValue = 1; grow.toValue = 1.4
+                    let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 1; fade.toValue = 0
+                    g.animations = [grow, fade]; g.duration = 0.25
+                    if let si = layerScreen[c.id] { burst([Effects.sparkle], si: si, at: start, count: 5, dx: -40...40, dy: -20...40, duration: 0.5) }
+                } else {
+                    let drift = CABasicAnimation(keyPath: "position")
+                    drift.fromValue = NSValue(point: start)
+                    drift.toValue = NSValue(point: CGPoint(x: start.x + 30, y: start.y + (b.name == "balloon" ? 260 : 60)))
+                    let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 1; fade.toValue = 0
+                    g.animations = [drift, fade]; g.duration = b.name == "balloon" ? 2.2 : 1.2
+                    g.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                }
                 run(b, g)
             }
             return
         }
         guard let si = layerScreen[c.id] else { return }
+        let style = c.ride == .bounce ? Ride.balloon : c.ride
+        if let existing = balloons[c.id], existing.name != style.rawValue {
+            existing.removeFromSuperlayer(); balloons[c.id] = nil
+        }
         let b: CALayer
         if let existing = balloons[c.id] { b = existing } else {
-            b = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
-            let img = PropArt.balloon(c.id)
-            b.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3 + 30)
-            let face = CALayer()
-            face.contents = img
-            face.magnificationFilter = .nearest
-            face.frame = CGRect(x: 0, y: 30, width: img.width * 3, height: img.height * 3)
-            let string = CALayer()
-            string.backgroundColor = NSColor(white: 0.25, alpha: 0.9).cgColor
-            string.frame = CGRect(x: Double(img.width) * 1.5 - 1, y: 0, width: 1.5, height: 32)
-            b.addSublayer(string); b.addSublayer(face)
+            if style == .bubble {
+                // A soap bubble around the whole Gremlet.
+                let r = c.size.x * 0.62
+                let shape = CAShapeLayer()
+                shape.bounds = CGRect(x: 0, y: 0, width: r * 2, height: r * 2)
+                shape.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+                shape.path = CGPath(ellipseIn: shape.bounds.insetBy(dx: 2, dy: 2), transform: nil)
+                shape.fillColor = NSColor(red: 0.75, green: 0.9, blue: 1, alpha: 0.18).cgColor
+                shape.strokeColor = NSColor(red: 0.7, green: 0.85, blue: 1, alpha: 0.9).cgColor
+                shape.lineWidth = 2
+                let shine = CAShapeLayer()
+                shine.path = CGPath(ellipseIn: CGRect(x: r * 0.45, y: r * 1.35, width: r * 0.35, height: r * 0.22), transform: nil)
+                shine.fillColor = NSColor(white: 1, alpha: 0.8).cgColor
+                shape.addSublayer(shine)
+                b = shape
+            } else {
+                b = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                let img = PropArt.ride(style, c.id)
+                if style == .balloon {
+                    b.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3 + 30)
+                    let face = CALayer()
+                    face.contents = img
+                    face.magnificationFilter = .nearest
+                    face.frame = CGRect(x: 0, y: 30, width: img.width * 3, height: img.height * 3)
+                    let string = CALayer()
+                    string.backgroundColor = NSColor(white: 0.25, alpha: 0.9).cgColor
+                    string.frame = CGRect(x: Double(img.width) * 1.5 - 1, y: 0, width: 1.5, height: 32)
+                    b.addSublayer(string); b.addSublayer(face)
+                } else {
+                    setImage(b, img)
+                }
+            }
+            b.name = style.rawValue
             screens[si].root.addSublayer(b)
             popIn(b)
             balloons[c.id] = b
         }
         let o = screens[si].frame.origin
-        let hand = CGPoint(x: (c.pos.x - o.x + c.facing * c.size.x * 0.06).rounded(), y: (c.pos.y - o.y + c.size.y * 0.72).rounded())
+        let p: CGPoint
+        if style == .bubble {
+            p = CGPoint(x: (c.pos.x - o.x).rounded(), y: (c.pos.y - o.y + c.size.y * 0.42).rounded())
+        } else {
+            p = CGPoint(x: (c.pos.x - o.x + c.facing * c.size.x * 0.06).rounded(), y: (c.pos.y - o.y + c.size.y * 0.72).rounded())
+            // Umbrellas and leaves sway a little on the way down.
+            if style == .umbrella || style == .leaf {
+                b.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(CACurrentMediaTime() * 2.4) * 0.12)))
+            }
+        }
         if b.superlayer !== screens[si].root { b.removeFromSuperlayer(); screens[si].root.addSublayer(b) }
-        if b.position != hand { b.position = hand }
+        if b.position != p { b.position = p }
     }
 
     // MARK: Speech bubbles

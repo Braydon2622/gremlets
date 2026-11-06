@@ -14,6 +14,7 @@ import Testing
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = grounded(w, [100])[0]
         #expect(w.startJob(windowID: 9, craft: .garden) == c.id)
+        c.job!.rideUp = .balloon
         var floated = false
         run(w, 30) { if c.activity == .float { floated = true } }
         #expect(floated)
@@ -44,6 +45,7 @@ import Testing
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = grounded(w, [100])[0]
         w.startJob(windowID: 9, craft: .garden)
+        c.job!.shelfStyle = .plank
         run(w, 30)
         let before = c.pos
         var moved = tall; moved.frame = Rect(x: 340, y: 60, w: 500, h: 550)
@@ -373,5 +375,77 @@ import Testing
         #expect(cs[0].job?.shelfSide != cs[1].job?.shelfSide)
         w.startJob(windowID: 9, craft: .garden, prefer: cs[2].id)
         #expect(cs[2].job?.shelfSide == nil)          // both sides taken: works on the floor below
+    }
+
+    @Test func mushroomBounceLaunchesItOntoItsShelf() {
+        let w = World(seed: 80)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        let c = grounded(w, [100])[0]
+        w.startJob(windowID: 9, craft: .garden)
+        c.job!.rideUp = .bounce
+        var bounced = false
+        run(w, 30) { if c.job?.bounceAt != nil { bounced = true } }
+        #expect(bounced)
+        #expect(c.groundOwner == World.shelfOwner(c.id) && c.job?.phase == .working)
+        #expect(c.activity != .dizzy)
+    }
+
+    @Test func staysOnABobbingCloudShelf() {
+        let w = World(seed: 81)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        let c = grounded(w, [100])[0]
+        w.startJob(windowID: 9, craft: .garden)
+        c.job!.shelfStyle = .cloud
+        run(w, 30)
+        var ys = Set<Int>(), fell = false
+        run(w, 60) {
+            ys.insert(Int(c.pos.y))
+            if c.groundOwner != World.shelfOwner(c.id) { fell = true }
+        }
+        #expect(!fell)
+        #expect(ys.count > 4)                 // it really bobs
+    }
+
+    @Test func flytrapSnapsUpItsNeighboursAphids() {
+        let w = World(seed: 82)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = grounded(w, [400])[0]
+        w.startHobby(c, onWindow: false)
+        run(w, 10)
+        let j = c.job!
+        var trap = Plant(kind: .flytrap); trap.growth = 0.8
+        j.garden.plants[1] = trap
+        j.garden.plants[2]?.bug = true
+        #expect(w.doGardenChore(j))
+        #expect(j.garden.lastAction == .snap(1, 2) && j.garden.plants[2]?.bug == false)
+    }
+
+    @Test func everyStyleAndRideTurnsUp() {
+        let w = World(seed: 83)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        var styles = Set<ShelfStyle>(), rides = Set<Ride>()
+        for _ in 0..<200 {
+            let c = w.spawn(testSpecies(), at: Vec2(100, 0))
+            c.set(.idle); c.groundOwner = -1
+            w.startJob(windowID: 9, craft: .garden, prefer: c.id)
+            if let j = c.job { styles.insert(j.shelfStyle); rides.insert(j.rideUp) }
+            w.remove(c.id)
+        }
+        #expect(styles.count == ShelfStyle.allCases.count)
+        #expect(rides == Set(Ride.up))
+    }
+
+    @Test func noRoomBesideAnyWindowMeansAShelfOnTheWall() {
+        let w = World(seed: 84)
+        let wide = WindowInfo(id: 9, frame: Rect(x: 0, y: 100, w: 1000, h: 600))
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [wide])
+        let c = grounded(w, [300])[0]
+        #expect(w.startHobby(c, onWindow: true))
+        #expect(c.job?.wall != nil && c.job?.shelfSide == 1)      // left wall, sticking out to the right
+        c.job!.rideUp = .balloon
+        run(w, 40)
+        #expect(c.groundOwner == World.shelfOwner(c.id) && c.job?.phase == .working)
+        let shelf = w.jobShelf(c.job!, workerID: c.id)!
+        #expect(shelf.minX == 0 && shelf.y > 200 && shelf.y < 650)
     }
 }

@@ -88,19 +88,24 @@ scripts/gremlet say "Deploy finished" 10   # a Gremlet pops up with a speech bub
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
 
-**Gardening.** While you're at your Mac, a Gremlet now and then takes up gardening. Usually it floats up on a balloon
-to a little wooden shelf it hangs on the side of a nearby window (one Gremlet per shelf; the shelf rides along when you
-move the window and doesn't care if another window covers it), sometimes it gardens right on the floor. On the shelf
+**Gardening.** While you're at your Mac, a Gremlet now and then takes up gardening. Usually it hangs a shelf on the
+side of a nearby window, or on the wall (the screen's edge) when no window has room, and gets up there on a balloon, in a
+soap bubble, holding a giant dandelion puff, or bounced up by a mushroom that pops out of the ground; it comes back down
+under an umbrella or a big leaf. Every shelf is different: a wooden plank, a mossy stone ledge, a living leaf that sways,
+a cloud that bobs, a bracket fungus, the branch of a tree that grows up beside the window, or a swing held up by
+balloons. One Gremlet per shelf; window shelves ride along when you move the window and don't care if another window
+covers it. Sometimes it gardens right on the floor instead. On the shelf
 sits a window box with three spots. The Gremlet plants a seed in each, waters whichever plant is getting dry (the soil
 darkens when it's wet), shoos off aphids and pulls weeds, and the plants grow through five stages: seed, sprout, young
 plant, bud, bloom. Eight kinds turn up, from common (tulip, daisy, carrot) to uncommon (strawberry, tomato, cactus) to
 rare (sunflower, mushroom); rare seeds show up more often during a focus session, when everything also grows faster.
 Butterflies visit while something's in bloom.
 
-There's a lot to find. Sixteen plants in five tiers: common (tulip, daisy, carrot, lavender), uncommon (strawberry,
-tomato, cactus, bluebell), rare (sunflower, mushroom, plus cherry blossom in spring and frostbell in winter), epic
-(crystal rose, and the moonflower, which is only planted after dark and glows when it opens) and legendary giants
-(a giant pumpkin, likelier in autumn, and a wishing tree with glowing fruit) that take up the whole window box.
+There's a lot to find. Nineteen plants in five tiers: common (tulip, daisy, carrot, lavender), uncommon (strawberry,
+tomato, cactus, bluebell), rare (sunflower, mushroom, a Venus flytrap that snaps up its neighbours' aphids, plus cherry
+blossom in spring and frostbell in winter), epic (crystal rose, a sparkling star lily, and the moonflower, which is only
+planted after dark and glows when it opens) and legendary giants that take up the whole window box (a giant pumpkin,
+likelier in autumn, a wishing tree with glowing fruit, and a bonsai).
 About one plant in forty comes up golden and sparkles. A rain cloud sometimes drifts over a box and waters everything,
 leaving a rainbow; a ladybug sometimes beats the gardener to an aphid; fireflies come out around the gardens at night;
 and a shooting star now and then grants a wish (the next seed will be epic or better). When a harvest has something

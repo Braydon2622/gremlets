@@ -9,17 +9,19 @@ public enum PlantKind: String, CaseIterable, Codable, Sendable {
     case tulip, daisy, carrot, lavender
     // Uncommon
     case strawberry, tomato, cactus, bluebell
-    // Rare (cherry blossom in spring, frostbell in winter)
-    case sunflower, mushroom, cherryBlossom, frostbell
+    // Rare (cherry blossom in spring, frostbell in winter; the flytrap eats its neighbours' aphids)
+    case sunflower, mushroom, cherryBlossom, frostbell, flytrap
     // Epic (moonflower only at night)
-    case moonflower, crystalRose
+    case moonflower, crystalRose, starLily
     // Legendary giants: fill the whole window box
-    case giantPumpkin, wishingTree
+    case giantPumpkin, wishingTree, bonsai
 
     public var name: String {
         switch self {
         case .cherryBlossom: return "Cherry blossom"
         case .crystalRose: return "Crystal rose"
+        case .starLily: return "Star lily"
+        case .flytrap: return "Venus flytrap"
         case .giantPumpkin: return "Giant pumpkin"
         case .wishingTree: return "Wishing tree"
         default: return rawValue.prefix(1).uppercased() + rawValue.dropFirst()
@@ -31,9 +33,9 @@ public enum PlantKind: String, CaseIterable, Codable, Sendable {
         switch self {
         case .tulip, .daisy, .carrot, .lavender: return 0
         case .strawberry, .tomato, .cactus, .bluebell: return 1
-        case .sunflower, .mushroom, .cherryBlossom, .frostbell: return 2
-        case .moonflower, .crystalRose: return 3
-        case .giantPumpkin, .wishingTree: return 4
+        case .sunflower, .mushroom, .cherryBlossom, .frostbell, .flytrap: return 2
+        case .moonflower, .crystalRose, .starLily: return 3
+        case .giantPumpkin, .wishingTree, .bonsai: return 4
         }
     }
 
@@ -96,6 +98,8 @@ public enum GardenAction: Equatable, Sendable {
     case plant(Int), water(Int), shoo(Int), weed(Int), bloom(Int), harvest
     /// A passing rain cloud watered everything.
     case rain
+    /// The flytrap (first index) snapped up the aphid on its neighbour (second).
+    case snap(Int, Int)
     /// A ladybug flew in and ate the aphid.
     case ladybug(Int)
     /// The gardener found a mystery seed and planted it.
@@ -166,7 +170,7 @@ extension World {
                 // Claude jobs bloom when Claude is done, not before.
                 p.growth = min(claude && j.phase != .finished ? 0.95 : 1, p.growth)
             }
-            if !p.bug && p.growth > 0.25 && p.growth < 1 && userActive && rng.chance(dt * 0.006) {
+            if !p.bug && p.kind != .flytrap && p.growth > 0.25 && p.growth < 1 && userActive && rng.chance(dt * 0.006) {
                 p.bug = true; p.bugSince = clock
             }
             if p.stage == 4 && before < 4 {
@@ -208,6 +212,11 @@ extension World {
                 g.plants[empty] = seed
                 g.lastAction = .plant(empty)
             }
+        } else if let f = g.plants.indices.first(where: { g.plants[$0]?.kind == .flytrap && (g.plants[$0]?.growth ?? 0) >= 0.6 }),
+                  let b = g.plants.indices.first(where: { abs($0 - f) == 1 && g.plants[$0]?.bug == true }) {
+            // Snap! The flytrap gets there first.
+            g.plants[b]?.bug = false
+            g.lastAction = .snap(f, b)
         } else if let b = g.activeSlots.first(where: { g.plants[$0]?.bug == true && clock - (g.plants[$0]?.bugSince ?? 0) > 6 }) {
             g.plants[b]?.bug = false
             g.lastAction = rng.chance(0.3) ? .ladybug(b) : .shoo(b)

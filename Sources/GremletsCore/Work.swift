@@ -13,6 +13,38 @@ public enum Craft: String, CaseIterable, Sendable {
     public var noun: String { "window box" }
 }
 
+/// What a Gremlet's shelf is made of. Some are alive or move: the leaf sways, the cloud bobs, the swing rocks.
+public enum ShelfStyle: String, CaseIterable, Sendable {
+    case plank, stone, leaf, cloud, mushroom, branch, swing
+
+    /// Relative chance of each.
+    var weight: Double {
+        switch self { case .plank: return 1.6; case .branch, .leaf: return 1.3; default: return 1.0 }
+    }
+
+    /// Up-and-down motion (points) at time t.
+    func bob(_ t: Double, _ seed: UInt64) -> Double {
+        let phase = Double(seed % 1000) / 159
+        switch self {
+        case .cloud: return sin(t * 0.9 + phase) * 6
+        case .leaf: return sin(t * 1.5 + phase) * 3
+        case .swing: return sin(t * 1.2 + phase) * 2.5
+        default: return 0
+        }
+    }
+}
+
+/// How a Gremlet gets up to (or down from) its shelf.
+public enum Ride: String, CaseIterable, Sendable {
+    /// Floating rides (the platform layer draws the prop over its head).
+    case balloon, bubble, dandelion, umbrella, leaf
+    /// A mushroom pops up from the ground and bounces it up onto the shelf.
+    case bounce
+
+    static let up: [Ride] = [.balloon, .bubble, .dandelion, .bounce]
+    static let down: [Ride] = [.balloon, .umbrella, .leaf, .dandelion]
+}
+
 public final class Job {
     public enum Phase: Equatable, Sendable { case travel, working, finished, leaving }
     public enum Kind: Equatable, Sendable {
@@ -28,6 +60,14 @@ public final class Job {
     public internal(set) var windowID: Int?
     /// Which side of the window the shelf sticks out of (+1 right, -1 left); nil = no shelf.
     public internal(set) var shelfSide: Double?
+    public internal(set) var shelfStyle: ShelfStyle = .plank
+    /// A shelf on the wall (the side edge of a screen) rather than on a window: screen index and height.
+    public internal(set) var wall: (screen: Int, y: Double)?
+    var rideUp: Ride = .balloon
+    /// The bouncy mushroom (where and when), for the platform layer to draw.
+    public internal(set) var bounceAt: Double?
+    public internal(set) var bounceSpot: Vec2?
+    var bounceTries = 0
     public internal(set) var phase: Phase = .travel
     /// Seconds of work done (drives how far along the creation is).
     public internal(set) var workSeconds: Double = 0
@@ -119,8 +159,24 @@ extension World {
                 }.min { abs(windows[$0]!.midX - c.pos.x) < abs(windows[$1]!.midX - c.pos.x) }
             }
         }
-        guard windowID != nil || support.kind == .floor else { return false }
-        assign(c, Job(craft: craft, kind: .hobby, windowID: windowID, seed: rng.next(), now: clock))
+        // No window with room for a shelf? Put one up on the wall: the side edge of the screen, at a cozy height.
+        var wall: (Int, Double, Double)?
+        if wantsShelf && windowID == nil, let si = screens.firstIndex(where: { c.pos.x >= $0.minX && c.pos.x < $0.maxX }) ?? screens.indices.first {
+            let scr = screens[si]
+            let taken = creatures.compactMap { $0.job?.wall }.filter { $0.screen == si }.map(\.y)
+            let side: Double = c.pos.x - scr.minX < scr.maxX - c.pos.x ? 1 : -1
+            for _ in 0..<6 {
+                let y = scr.minY + scr.h * rng.range(0.32, 0.72)
+                if !taken.contains(where: { abs($0 - y) < 160 }) { wall = (si, side, y); break }
+            }
+        }
+        guard windowID != nil || wall != nil || support.kind == .floor else { return false }
+        let job = Job(craft: craft, kind: .hobby, windowID: windowID, seed: rng.next(), now: clock)
+        assign(c, job)
+        if let (si, side, y) = wall {
+            job.wall = (si, y)
+            job.shelfSide = side
+        }
         c.set(.idle, duration: 0.3)
         return true
     }
@@ -140,6 +196,11 @@ extension World {
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j
         if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x, for: c.id) }
+        // Every shelf is a little different, and so is the way up.
+        let total = ShelfStyle.allCases.reduce(0) { $0 + $1.weight }
+        var roll = rng.range(0, total)
+        j.shelfStyle = ShelfStyle.allCases.first { roll -= $0.weight; return roll <= 0 } ?? .plank
+        j.rideUp = Ride.up[Int(rng.next() % UInt64(Ride.up.count))]
     }
 
     /// Finishes the creation now (Claude is done); the Gremlet shows it off.
@@ -189,7 +250,7 @@ extension World {
         if c.groundOwner == World.shelfOwner(c.id), let floor = floorBelow(c.pos.x) {
             j.phase = .leaving
             if j.finishedAt == nil { j.finishedAt = clock }
-            startFloat(c, to: Vec2(c.pos.x + (j.shelfSide ?? 1) * 40, floor.y))
+            startFloat(c, to: Vec2(c.pos.x + (j.shelfSide ?? 1) * 40, floor.y), ride: Ride.down[Int(rng.next() % UInt64(Ride.down.count))])
             return
         }
         if j.isHobby { c.hobbyRestUntil = clock + rng.range(150, 420) }
@@ -224,6 +285,15 @@ extension World {
 
     /// The shelf for this job, if any: a plank sticking out of the window's side just below its top edge.
     public func jobShelf(_ j: Job, workerID: Int) -> Surface? {
+        if let wall = j.wall, let side = j.shelfSide, wall.screen < screens.count {
+            // On the wall: the shelf sticks out from the screen's edge into the screen.
+            let scr = screens[wall.screen]
+            let edge = side > 0 ? scr.minX : scr.maxX
+            let y = wall.y + j.shelfStyle.bob(clock, j.seed)
+            let lo = side > 0 ? edge : edge - World.shelfWidth
+            let hi = side > 0 ? edge + World.shelfWidth : edge
+            return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: y, minX: lo, maxX: hi)
+        }
         guard var side = j.shelfSide, let id = j.windowID, let w = windows[id],
               let scr = screens.first(where: { w.midX >= $0.minX && w.midX < $0.maxX }) ?? screens.first
         else { return nil }
@@ -233,7 +303,7 @@ extension World {
             guard let other = shelfSideFor(window: id, near: side > 0 ? w.minX : w.maxX, for: workerID) else { j.shelfSide = nil; return nil }
             side = other; j.shelfSide = other
         }
-        let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60)
+        let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60) + j.shelfStyle.bob(clock, j.seed)
         let edge = side > 0 ? w.maxX : w.minX
         let lo = side > 0 ? edge - 6 : edge - World.shelfWidth
         let hi = side > 0 ? edge + World.shelfWidth : edge + 6
@@ -402,8 +472,9 @@ extension World {
     // MARK: Simulation
 
     /// Balloon ride: rises a little, drifts over, then settles down onto the target. Ignores platforms on the way.
-    func startFloat(_ c: Creature, to target: Vec2) {
+    func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .balloon) {
         endSocial(c)
+        c.ride = ride
         c.floatTarget = target
         c.groundOwner = nil
         c.vel = Vec2(0, 60)
@@ -524,6 +595,26 @@ extension World {
                 if c.activity != .walk { c.set(.walk, duration: 9999) }
                 return true
             }
+            if !c.species.flies && j.rideUp == .bounce && j.bounceTries < 2 && support.kind != .shelf {
+                // Bouncy mushroom: walk under the shelf, then boing.
+                let launchX = sp.x.clamped(support.minX + 30, support.maxX - 30)
+                if abs(launchX - c.pos.x) > 8 {
+                    c.facing = launchX > c.pos.x ? 1 : -1
+                    if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { j.rideUp = .balloon }
+                    else if c.activity != .walk { c.set(.walk, duration: 9999) }
+                    return true
+                }
+                j.bounceTries += 1
+                j.bounceAt = clock
+                j.bounceSpot = Vec2(c.pos.x, support.y)
+                c.groundOwner = nil
+                c.vel = ballistic(from: c.pos, toX: sp.x, y: sp.y, apexExtra: 45)
+                c.facing = sp.x >= c.pos.x ? 1 : -1
+                c.set(.airborne)
+                c.pos.y += 1
+                emit(.tookOff(c.id))
+                return true
+            }
             if c.species.flies {
                 c.flyTarget = sp
                 c.groundOwner = nil
@@ -532,7 +623,7 @@ extension World {
                 c.set(.fly, duration: 10)
                 emit(.tookOff(c.id))
             } else {
-                startFloat(c, to: sp)
+                startFloat(c, to: sp, ride: j.rideUp == .bounce ? .balloon : j.rideUp)
             }
             return true
         }

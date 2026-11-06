@@ -53,7 +53,8 @@ enum PropArt {
             case .tulip: return "r"; case .daisy: return "w"; case .sunflower: return "y"; case .strawberry: return "w"
             case .carrot: return "g"; case .tomato: return "y"; case .cactus: return "p"; case .mushroom: return "W"
             case .lavender: return "v"; case .bluebell: return "B"; case .cherryBlossom: return "p"; case .frostbell: return "i"
-            case .moonflower: return "l"; case .crystalRose: return "x"; case .giantPumpkin, .wishingTree: return "g" } }()
+            case .moonflower: return "l"; case .crystalRose: return "x"; case .starLily: return "L"; case .flytrap: return "R"
+            case .giantPumpkin, .wishingTree, .bonsai: return "g" } }()
         if k == .cactus { return [".....p......", "....ccc.....", "....cCc.....", "..c.cCc.....", "..cccCc.c...", "....cCccc...", "....cCc....."] }
         if k == .mushroom { return ["....WWW.....", "...WWWWW....", ".....W......", ".....W......", "..g..W..g..."] }
         return [".....\(c)......", "....\(c)\(c)\(c).....", ".....G......", "..gg.G.gg...", ".gggGG.Ggg..", ".....G......", "...ggG......", "..gggG......", ".....G......"]
@@ -75,7 +76,9 @@ enum PropArt {
         case .frostbell: return ["....i.i.....", "...iIiIi....", "....iii.....", "..i..G..i...", ".iIi.G.iIi..", "..i..G..i...", ".....G......", "..gg.G.gg...", "...gGGGg....", ".....G......"]
         case .moonflower: return ["....lllll...", "...lLLLLLl..", "..lLLyyLLl..", "..lLyyyyLl..", "..lLLyyLLl..", "...lLLLLl...", "....lllll...", ".....G......", "..gg.G.gg...", ".ggg.G.ggg..", ".....G......", "....gGg.....", ".....G......"]
         case .crystalRose: return [".....x......", "....xXx.....", "...xXzXx....", "..xXzzzXx...", "...xXzXx....", "....xXx.....", ".....G......", "..g..G..g...", "...gGG......", ".....G.gg...", ".....G......"]
-        case .giantPumpkin, .wishingTree: return giantRows(k)
+        case .flytrap: return ["..G......G..", ".gRg....gRg.", "gRRRg..gRRRg", "gRwRg..gRwRg", ".gRg.GG.gRg.", "...G.G.G....", "....GGG.....", ".....G......", "..gg.G.gg...", ".....G......"]
+        case .starLily: return ["....p.p.....", "...pLpLp....", ".pLLLyLLLp..", "..pLyYyLp...", ".pLLLyLLLp..", "...pLpLp....", "....p.p.....", ".....G......", "..gg.G.gg...", "...gGG......", ".....G......"]
+        case .giantPumpkin, .wishingTree, .bonsai: return giantRows(k)
         }
     }
     static func plantRows(_ p: Plant) -> [String] {
@@ -94,11 +97,27 @@ enum PropArt {
     /// The legendary giants, drawn procedurally: 36 art pixels wide (the whole box).
     static func giantRows(_ k: PlantKind, half: Bool = false) -> [String] {
         let w = half ? 20 : 36
-        let h = k == .wishingTree ? (half ? 14 : 26) : (half ? 9 : 16)
+        let h = k == .wishingTree ? (half ? 14 : 26) : k == .bonsai ? (half ? 12 : 22) : (half ? 9 : 16)
         var g = Array(repeating: Array(repeating: Character("."), count: w), count: h)
         func put(_ x: Int, _ y: Int, _ c: Character) { if x >= 0 && x < w && y >= 0 && y < h { g[y][x] = c } }
         let cx = Double(w) / 2 - 0.5
-        if k == .giantPumpkin {
+        if k == .bonsai {
+            // A twisting trunk with flat, cloud-like pads of foliage.
+            let sx = Double(w) / 36
+            let trunk: [(Double, Double)] = [(18, 21), (19, 19), (19, 17), (18, 15), (16, 13), (14, 11), (12, 10), (11, 8), (16, 12), (20, 11), (23, 10), (25, 9), (17, 9), (17, 7), (17, 5)]
+            for (tx, ty) in trunk {
+                let x = Int(tx * sx), y = Int(ty * Double(h) / 22)
+                put(x, y, "s"); put(x + 1, y, "b"); put(x, y + 1, "s")
+            }
+            let pads: [(Double, Double, Double, Double)] = [(9, 6, 6, 2.6), (26, 7, 6.5, 2.6), (17, 3, 7, 2.8), (13, 13, 4, 1.8)]
+            for (pcx, pcy, rx, ry) in pads {
+                for y in 0..<h { for x in 0..<w {
+                    let dx = (Double(x) - pcx * sx) / (rx * sx), dy = (Double(y) - pcy * Double(h) / 22) / (ry * Double(h) / 22)
+                    if dx * dx + dy * dy <= 1 { put(x, y, dy < -0.2 ? "g" : "G") }
+                }}
+            }
+            for x in (Int(cx) - 3)...(Int(cx) + 3) { put(x, h - 1, "s") }
+        } else if k == .giantPumpkin {
             let cy = Double(h) - Double(h) * 0.38, rx = Double(w) / 2 - 1.5, ry = Double(h) * 0.38
             for y in 0..<h { for x in 0..<w {
                 let dx = (Double(x) - cx) / rx, dy = (Double(y) - cy) / ry
@@ -203,6 +222,11 @@ enum PropArt {
 
     /// A planted keepsake: the bloomed plant on a little mound of soil (gold all over if it was golden).
     static func keepsake(_ k: PlantKind, golden: Bool = false) -> CGImage {
+        if k.isGiant {
+            var g = grid(giantRows(k) + [String(repeating: ".", count: 12) + "mmmmmmmmmmmm"], G)
+            if golden { g = g.map { $0.map { $0.map(goldify) } } }
+            return image(g)
+        }
         let rows = bloom(k)
         let width = rows.first?.count ?? 12
         let mound = String(repeating: ".", count: max(0, width / 2 - 4)) + "mmmmmmmm"
@@ -267,6 +291,135 @@ enum PropArt {
         for (x, y) in [(w - 3, 3), (w - 3, 4), (w - 2, 4), (w - 3, 5), (w - 4, 6), (w - 3, 7)] where x >= 0 { g[y][x] = leaf }
         return image(g)
     }
+
+    /// The shelves: each style is `widthPx` wide; its top row is the surface the Gremlet stands on. Drawn as if
+    /// sticking out to the right of the window (flipped for the left side).
+    static func shelf(_ style: ShelfStyle, widthPx: Int) -> CGImage {
+        let w = max(12, widthPx)
+        var g: Grid = []
+        func row(_ f: (Int) -> UInt32?) -> [UInt32?] { (0..<w).map(f) }
+        switch style {
+        case .plank:
+            return shelf(widthPx: w)
+        case .stone:
+            let top: UInt32 = 0x8FA88A, moss: UInt32 = 0x6CC04A, light: UInt32 = 0xB8B6AE, mid: UInt32 = 0x8E8B83, dark: UInt32 = 0x5E5B55
+            g.append(row { $0 % 5 == 1 || $0 % 7 == 3 ? moss : top })
+            for r in 0..<4 {
+                g.append(row { x in
+                    if x >= w - (r + 1) { return nil }                       // rounded outer end
+                    if (x + r * 3) % 11 == 0 { return dark }                 // cracks
+                    return r == 0 ? light : r == 3 ? dark : mid
+                })
+            }
+            g.append(row { x in x < w - 6 && x % 9 == 4 ? moss : nil })    // moss dripping off
+            g.append(row { x in x < w - 6 && x % 9 == 4 ? moss : nil })
+        case .leaf:
+            let light: UInt32 = 0x8FD67A, mid: UInt32 = 0x6CC04A, dark: UInt32 = 0x3E8E3A
+            g.append(row { x in x > w - 3 ? nil : light })
+            for r in 1...5 {
+                let inset = r * r / 2 + 1
+                g.append(row { x in
+                    guard x < w - inset else { return nil }
+                    if r == 1 { return mid }
+                    return (x + r) % 8 == 0 ? dark : mid
+                })
+            }
+            g.append(row { x in x < 3 ? dark : nil })                      // stem into the window's side
+        case .cloud:
+            let white: UInt32 = 0xFFFFFF, shade: UInt32 = 0xDCE9F5, edge: UInt32 = 0xB9CCE0
+            g.append(row { _ in white })
+            for r in 1...5 {
+                g.append(row { x in
+                    let bump = abs(sin(Double(x) / 4.5)) * 2
+                    if Double(r) > 4 - bump + 1 { return nil }
+                    return r >= 3 ? (r == 4 ? edge : shade) : white
+                })
+            }
+        case .mushroom:
+            // A bracket fungus growing out of the window's side, in layered bands.
+            let bands: [UInt32] = [0xE8B26A, 0xD9935A, 0xC27A45, 0x9E5C34, 0x7A4628]
+            g.append(row { x in x > w - 2 ? nil : 0xF2CF92 })
+            for (r, c) in bands.enumerated() {
+                let inset = (r + 1) * (r + 1) / 2 + 1
+                g.append(row { x in x < w - inset ? c : nil })
+            }
+        case .branch:
+            let bark: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22, leaf: UInt32 = 0x6CC04A
+            g.append(row { x in x % 6 == 2 ? dark : bark })
+            g.append(row { x in x % 6 == 5 ? dark : bark })
+            g.append(row { x in x < w - 2 ? dark : nil })
+            g.append(row { x in [w / 4, w / 2 + 3].contains(x) ? leaf : nil })
+            g.append(row { x in [w / 4, w / 4 + 1, w / 2 + 3].contains(x) ? leaf : nil })
+        case .swing:
+            let seat: UInt32 = 0xD9A066, mid: UInt32 = 0xB07A44, dark: UInt32 = 0x7A5230
+            g.append(row { _ in seat })
+            g.append(row { x in x % 10 == 4 ? dark : mid })
+            g.append(row { _ in dark })
+        }
+        return image(g)
+    }
+
+    /// The tree a branch shelf grows on: trunk from the floor up to the branch, with leafy canopy around it.
+    static func tree(heightPx: Int) -> CGImage {
+        let w = 26, h = max(20, heightPx)
+        var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
+        let bark: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22, leaf: UInt32 = 0x6CC04A, leafDark: UInt32 = 0x3E8E3A
+        // Canopy at the top (behind the Gremlet).
+        for y in 0..<min(h, 22) { for x in 0..<w {
+            for (cx, cy, r) in [(7.0, 10.0, 7.0), (18.0, 9.0, 7.5), (12.5, 5.0, 6.5), (12.5, 13.0, 6.0)] {
+                let dx = Double(x) - cx, dy = Double(y) - cy
+                if dx * dx + dy * dy <= r * r { g[y][x] = dx > r * 0.3 || dy > r * 0.4 ? leafDark : leaf }
+            }
+        }}
+        for y in 14..<h { for x in 10...14 { g[y][x] = (x == 10 || (x + y) % 5 == 0) ? dark : bark } }
+        for x in 6...18 { g[h - 1][x] = dark }
+        for x in 8...16 { g[h - 2][x] = bark }
+        return image(g)
+    }
+
+    /// The balloons a swing hangs from.
+    static func swingBalloons() -> CGImage {
+        var g: Grid = Array(repeating: Array(repeating: nil, count: 21), count: 12)
+        let colors: [UInt32] = [0xFF6F7E, 0xFFD84A, 0x6FB8F0]
+        for (i, cx) in [4, 10, 16].enumerated() {
+            let cy = i == 1 ? 3 : 5
+            for y in 0..<12 { for x in 0..<21 {
+                let dx = Double(x - cx), dy = Double(y - cy) * 1.2
+                if dx * dx + dy * dy <= 10 { g[y][x] = colors[i] }
+            }}
+            g[cy - 1][cx - 1] = 0xFFFFFF
+        }
+        return image(g)
+    }
+
+    /// Things to float with (held over the head) and the bouncy mushroom.
+    static func ride(_ r: Ride, _ id: Int) -> CGImage {
+        switch r {
+        case .balloon, .bounce: return balloon(id)
+        case .bubble: return image(grid([".", "."], [:]))
+        case .dandelion:
+            return image(grid([
+                "..w.w.w..", ".w.www.w.", "w.wwWww.w", ".wwWWWww.", "wwWWyWWww", ".wwWWWww.", "w.wwWww.w", ".w.www.w.", "..w.w.w..",
+                "....g....", "....g....", "....g....", "....g....",
+            ], ["w": 0xFFFFFF, "W": 0xEDEDED, "y": 0xC9B79C, "g": 0x6CC04A]))
+        case .umbrella:
+            let c: [(UInt32, UInt32)] = [(0xFF6F7E, 0xD8455A), (0x6FB8F0, 0x3F8CC9), (0xFFD84A, 0xE0A92E), (0xA98BEA, 0x7A5FC9)]
+            let (a, b) = c[id % c.count]
+            return image(grid([
+                "......a......", "...aabbbaa...", ".aabbbbbbbaa.", "abbbbbbbbbbba", "a.a.a.a.a.a.a",
+                "......k......", "......k......", "......k......", "......k......", ".....kk......",
+            ], ["a": a, "b": b, "k": 0x4A3424]))
+        case .leaf:
+            return image(grid([
+                "....gggg.....", "..gggGgggg...", ".ggGggGggggg.", "gggggGgggGggg", ".gGggggGggg..", "....GG.......",
+                ".....G.......", ".....G.......",
+            ], ["g": 0x8FD67A, "G": 0x3E8E3A]))
+        }
+    }
+
+    static let springMushroom = image(grid([
+        "...rrrrrr...", ".rrWrrrrWrr.", "rrrrrWrrrrrr", "rWrrrrrrrWrr", "wwwwwwwwwwww", "....wwww....", "....wwww....", "...wwwwww...",
+    ], ["r": 0xE8343F, "W": 0xFFFFFF, "w": 0xF4EAD8]))
 
     static let balloonColors: [UInt32] = [0xFF6F7E, 0xFFD84A, 0x6FB8F0, 0xA98BEA, 0x6CC04A, 0xFF8FBF]
     static func balloon(_ id: Int) -> CGImage {

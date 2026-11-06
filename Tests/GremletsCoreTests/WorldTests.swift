@@ -83,6 +83,7 @@ func settle(_ w: World, _ seconds: Double = 2) {
 
     @Test func throwBouncesOffWall() {
         let w = World(seed: 4)
+        w.maxHobbies = 0          // physics only: no gardening breaks
         w.setEnvironment(screens: [screen], windowsFrontToBack: [])
         let c = w.spawn(testSpecies(), at: Vec2(500, 300))
         w.beginDrag(c, at: Vec2(500, 300), time: 0)

@@ -56,6 +56,8 @@ public final class World {
     public private(set) var surfaces: [Surface] = []
     public private(set) var creatures: [Creature] = []
     public var cursor: Vec2?
+    /// Simulation time (seconds), the clock jobs and events are stamped with.
+    public var time: Double { clock }
     public var rng: SplitMix64
     public private(set) var events: [WorldEvent] = []
 

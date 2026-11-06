@@ -1,88 +1,160 @@
-import Foundation  // exp()
+import Foundation  // exp(), sin()
 
-/// Claude buddy: while Claude works on something, a Gremlet goes to that Claude window and works on a little
-/// project of its own (a plant, a painting, a block tower) that grows the longer Claude works and is finished when
-/// Claude is. The platform layer says which window and when; this file decides how the Gremlet gets there
-/// (walk, jump, fly, or climb a ladder) and what it does once it's there. The platform layer draws the props.
+/// Gremlets have hobbies. While you're at your Mac they now and then settle down to grow a flower, paint a picture,
+/// build a block tower or knit a scarf, and doze beside it when you step away. The Claude buddy uses the same
+/// machinery: while Claude Code works, a Gremlet floats up on a balloon to a little shelf it puts up on the side of
+/// that Claude window and works there until Claude is done.
+///
+/// This file decides where the work happens and how the Gremlet gets there. The platform layer draws the shelf,
+/// balloon and creation.
 public enum Craft: String, CaseIterable, Sendable {
-    case garden, paint, build
+    case garden, paint, build, knit
 
     public var noun: String {
-        switch self { case .garden: return "flower"; case .paint: return "painting"; case .build: return "tower" }
+        switch self {
+        case .garden: return "flower"
+        case .paint: return "painting"
+        case .build: return "tower"
+        case .knit: return "scarf"
+        }
     }
 }
 
 public final class Job {
-    public enum Phase: Equatable, Sendable { case travel, working, finished }
+    public enum Phase: Equatable, Sendable { case travel, working, finished, leaving }
+    public enum Kind: Equatable, Sendable {
+        /// Lasts as long as Claude works; the platform layer finishes and ends it.
+        case claude
+        /// A hobby: finishes on its own after `length` seconds of work (only counted while you're at the Mac).
+        case hobby(length: Double)
+    }
 
     public let craft: Craft
-    /// The window Claude is running in (nil = no window found; the Gremlet works where it stands).
+    public let kind: Kind
+    /// The window the shelf hangs on (nil = working on the floor).
     public internal(set) var windowID: Int?
+    /// Which side of the window the shelf sticks out of (+1 right, -1 left); nil = no shelf.
+    public internal(set) var shelfSide: Double?
     public internal(set) var phase: Phase = .travel
-    /// Seconds spent actually working (drives how far along the creation is).
+    /// Seconds of work done (drives how far along the creation is).
     public internal(set) var workSeconds: Double = 0
-    /// Set once Claude is done.
     public internal(set) var finishedAt: Double?
     /// Which side of the Gremlet the creation sits on (+1 right, -1 left).
     public internal(set) var propSide: Double = 1
-    /// Where the creation stands. Relative to the window's top-left corner when on a window, else absolute.
+    /// Floor spot (absolute) when there's no shelf.
     var spot: Vec2?
-    var spotOnWindow = false
-    /// Ladder from `ladderBaseY` (absolute) up to the window's top edge, `ladderX` relative to the window's left edge.
-    public internal(set) var ladderX: Double?
-    public internal(set) var ladderBaseY: Double?
-    /// A per-job number the platform layer can use to vary the art (which picture gets painted...).
+    /// A per-job number the platform layer uses to vary the art (which picture gets painted...).
     public let seed: UInt64
     var started: Double
     var poseTimer = 0.0
     var beats = 0
+    /// You poked it while it worked: a little burst of progress.
+    var bonus = 0.0
 
-    init(craft: Craft, windowID: Int?, seed: UInt64, now: Double) {
-        self.craft = craft; self.windowID = windowID; self.seed = seed; self.started = now
+    init(craft: Craft, kind: Kind, windowID: Int?, seed: UInt64, now: Double) {
+        self.craft = craft; self.kind = kind; self.windowID = windowID; self.seed = seed; self.started = now
     }
 
-    /// 0...1. Grows quickly at first and then more slowly; never reaches 1 until Claude is done.
+    public var isHobby: Bool { if case .hobby = kind { return true }; return false }
+
+    /// 0...1. Claude jobs grow quickly and then more slowly and never reach 1 until Claude is done; hobbies grow
+    /// steadily until they're finished.
     public var progress: Double {
-        if phase == .finished { return 1 }
-        return 0.9 * (1 - exp(-workSeconds / 75))
+        if phase == .finished || phase == .leaving { return 1 }
+        switch kind {
+        case .claude: return min(0.9, 0.9 * (1 - exp(-workSeconds / 75)) + bonus)
+        case .hobby(let length): return min(0.95, workSeconds / length + bonus)
+        }
     }
 
-    /// Counts up every time the Gremlet does a bit of work (watering, a brush stroke, a block). The platform layer
-    /// shows a little effect whenever it changes.
+    /// Counts up each time the Gremlet does a bit of work (watering, a brush stroke, a block, a row of stitches).
     public var beat: Int { beats }
 }
 
 extension World {
+    /// Surface owner ids at or below this belong to the shelves Gremlets put up.
+    static let shelfOwnerBase = -500_000
+    static func shelfOwner(_ creatureID: Int) -> Int { shelfOwnerBase - creatureID }
 
-    /// Creatures currently on a Claude job.
+    public static let shelfWidth: Double = 132
+    /// How far below the window's top edge the shelf hangs.
+    static let shelfDrop: Double = 36
+
+    /// Whether this Gremlet could take up a hobby now: you're at the Mac, it's rested, and not too many are busy.
+    func canStartHobby(_ c: Creature) -> Bool {
+        userActive && c.job == nil && c.energy > 0.3 && c.isGrounded && clock >= c.hobbyRestUntil
+            && creatures.filter({ $0.job?.isHobby == true }).count < maxHobbies
+    }
+
+    /// Creatures with a job (hobby or Claude).
     public var workers: [Creature] { creatures.filter { $0.job != nil } }
 
-    /// Gives a Gremlet a job at a window. Prefers the given creature, then one that's free and closest to the window.
-    /// Returns the worker's id, or nil if no Gremlet is out.
+    // MARK: Starting and stopping
+
+    /// Claude buddy: gives a Gremlet a job at a Claude window. Prefers the given creature, then a free one closest to
+    /// the window (one on a hobby is happy to drop it). Returns the worker's id, or nil if no Gremlet is out.
     @discardableResult
     public func startJob(windowID: Int?, craft: Craft, prefer id: Int? = nil) -> Int? {
         let target = windowID.flatMap { windows[$0] }
-        let free = creatures.filter { $0.job == nil || $0.job?.phase == .finished }
+        let free = creatures.filter { $0.job == nil || $0.job!.isHobby || $0.job!.phase == .finished }
         let pick = creature(id: id) ?? free.min { a, b in
             guard let t = target else { return a.id < b.id }
             return abs(a.pos.x - t.midX) + abs(a.pos.y - t.maxY) < abs(b.pos.x - t.midX) + abs(b.pos.y - t.maxY)
         } ?? creatures.first
         guard let c = pick else { return nil }
-        if let j = c.job, j.phase != .finished, j.windowID == windowID { return c.id }   // already on it
-        c.job = Job(craft: craft, windowID: windowID, seed: rng.next(), now: clock)
-        endSocial(c)
-        if c.isAsleep { emit(.wokeUp(c.id)) }
+        if let j = c.job, j.kind == .claude, j.phase == .travel || j.phase == .working, j.windowID == windowID { return c.id }
+        assign(c, Job(craft: craft, kind: .claude, windowID: windowID, seed: rng.next(), now: clock))
         if c.isGrounded { c.set(.react, duration: c.animationLength(for: .react)) }   // perks up, then off to work
         emit(.alert(c.id))
         return c.id
     }
 
-    /// Claude finished: the creation completes and the Gremlet shows it off.
+    /// Starts a hobby: right here on the floor, or now and then on a shelf on a nearby window.
+    @discardableResult
+    public func startHobby(_ c: Creature, craft: Craft? = nil, length: Double? = nil, onWindow: Bool? = nil) -> Bool {
+        guard c.job == nil, c.isGrounded, let support = supportingSurface(for: c) else { return false }
+        let craft = craft ?? Craft.allCases[Int(rng.next() % UInt64(Craft.allCases.count))]
+        let length = length ?? rng.range(100, 260)
+        var windowID: Int?
+        let wantsShelf = onWindow ?? (support.kind == .windowTop || rng.chance(0.35))
+        if wantsShelf {
+            if support.kind == .windowTop, shelfSideFor(window: support.ownerID, near: c.pos.x) != nil {
+                windowID = support.ownerID
+            } else {
+                windowID = windows.keys.filter { id in
+                    guard let w = windows[id], abs(w.midX - c.pos.x) < 700 else { return false }
+                    return shelfSideFor(window: id, near: c.pos.x) != nil && !workers.contains { $0.job?.windowID == id }
+                }.min { abs(windows[$0]!.midX - c.pos.x) < abs(windows[$1]!.midX - c.pos.x) }
+            }
+        }
+        guard windowID != nil || support.kind == .floor else { return false }
+        assign(c, Job(craft: craft, kind: .hobby(length: length), windowID: windowID, seed: rng.next(), now: clock))
+        c.set(.idle, duration: 0.3)
+        return true
+    }
+
+    /// The `gremlet hobby` command: the free Gremlet nearest the cursor starts a hobby now.
+    @discardableResult
+    public func startHobbyNearCursor(craft: Craft? = nil, onWindow: Bool? = nil) -> Bool {
+        let free = creatures.filter { $0.job == nil && $0.isGrounded }
+        guard let c = nearestToCursor(free) else { return false }
+        return startHobby(c, craft: craft, onWindow: onWindow) || startHobby(c, craft: craft, onWindow: !(onWindow ?? true))
+    }
+
+    private func assign(_ c: Creature, _ j: Job) {
+        endSocial(c)
+        c.visitingID = nil
+        if c.isAsleep { emit(.wokeUp(c.id)) }
+        c.job = j
+        if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x) }
+    }
+
+    /// Finishes the creation now (Claude is done); the Gremlet shows it off.
     public func finishJob(_ id: Int) {
-        guard let c = creature(id: id), let j = c.job, j.phase != .finished else { return }
-        if j.phase == .travel, c.isGrounded {
-            // Didn't make it there in time: build it right where it stands.
-            setSpotHere(c, j)
+        guard let c = creature(id: id), let j = c.job, j.phase == .travel || j.phase == .working else { return }
+        if j.phase == .travel {
+            // Didn't make it there in time: it finishes up right where it is.
+            if c.isGrounded { beginWork(c, j) }
         }
         j.phase = .finished
         j.finishedAt = clock
@@ -99,62 +171,203 @@ extension World {
         emit(.alert(c.id))
     }
 
-    /// Ends a job (session closed, or the platform's display time ran out). The Gremlet goes back to normal life.
+    /// Ends a job. A Gremlet up on its shelf floats back down on its balloon first; the shelf comes down after it.
     public func endJob(_ id: Int) {
-        guard let c = creature(id: id), c.job != nil else { return }
+        guard let c = creature(id: id), let j = c.job else { return }
+        if c.groundOwner == World.shelfOwner(c.id), let floor = floorBelow(c.pos.x) {
+            j.phase = .leaving
+            if j.finishedAt == nil { j.finishedAt = clock }
+            startFloat(c, to: Vec2(c.pos.x + (j.shelfSide ?? 1) * 40, floor.y))
+            return
+        }
+        if j.isHobby { c.hobbyRestUntil = clock + rng.range(150, 420) }
         c.job = nil
-        if c.activity == .climb { c.set(.airborne) }
+        if c.activity == .float { c.floatTarget = nil; c.set(.airborne) }
         if c.activity == .work { c.set(.idle, duration: 0.5) }
     }
 
-    /// Where the creation stands right now, in global points (feet of the prop), or nil if not placed yet.
-    public func jobAnchor(_ j: Job) -> Vec2? {
-        guard let s = j.spot else { return nil }
-        if j.spotOnWindow {
-            guard let id = j.windowID, let w = windows[id] else { return nil }
-            return Vec2(w.minX + s.x, w.maxY)
+    /// You clicked a busy Gremlet: it shows you what it's making and gets a burst of motivation.
+    func encourage(_ c: Creature) {
+        guard let j = c.job, j.phase == .working else { return }
+        j.bonus = min(0.25, j.bonus + 0.04)
+        j.beats += 1
+    }
+
+    // MARK: Geometry (public so the platform layer can draw it)
+
+    /// The shelf for this job, if any: a plank sticking out of the window's side just below its top edge.
+    public func jobShelf(_ j: Job, workerID: Int) -> Surface? {
+        guard var side = j.shelfSide, let id = j.windowID, let w = windows[id],
+              let scr = screens.first(where: { w.midX >= $0.minX && w.midX < $0.maxX }) ?? screens.first
+        else { return nil }
+        // The window moved and the shelf no longer fits on this side: move it to the other side, or take it down.
+        let fits = side > 0 ? w.maxX + World.shelfWidth <= scr.maxX : w.minX - World.shelfWidth >= scr.minX
+        if !fits {
+            guard let other = shelfSideFor(window: id, near: side > 0 ? w.minX : w.maxX) else { j.shelfSide = nil; return nil }
+            side = other; j.shelfSide = other
         }
-        return s
+        let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60)
+        let edge = side > 0 ? w.maxX : w.minX
+        let lo = side > 0 ? edge - 6 : edge - World.shelfWidth
+        let hi = side > 0 ? edge + World.shelfWidth : edge + 6
+        return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: y, minX: lo, maxX: hi)
     }
 
-    /// The ladder's foot and top, in global points, while one is up.
-    public func jobLadder(_ j: Job) -> (x: Double, bottom: Double, top: Double)? {
-        guard let lx = j.ladderX, let by = j.ladderBaseY, let id = j.windowID, let w = windows[id] else { return nil }
-        return (w.minX + lx, by, w.maxY)
+    /// Where the creation stands (feet of the prop), in global points, once the Gremlet has started.
+    public func jobAnchor(_ j: Job, workerID: Int) -> Vec2? {
+        if j.shelfSide != nil, let s = jobShelf(j, workerID: workerID), let side = j.shelfSide {
+            guard j.phase != .travel else { return nil }
+            let edge = side > 0 ? s.minX + 6 : s.maxX - 6
+            return Vec2(edge + side * 26, s.y)
+        }
+        return j.spot
     }
 
-    // MARK: Simulation (called from `update` while a creature has a job)
-
-    /// Surface the Gremlet should work on: the widest visible stretch of the window's top edge, else the floor below
-    /// the window (a maximised or covered window), else nil.
-    func workSurface(_ j: Job) -> Surface? {
-        guard let id = j.windowID, let w = windows[id] else { return nil }
-        if let top = surfaces.filter({ $0.ownerID == id && $0.width >= 90 }).max(by: { $0.width < $1.width }) { return top }
-        return surfaces.filter { $0.kind == .floor && $0.supports(x: w.midX.clamped($0.minX, $0.maxX)) && $0.y <= w.maxY }
-            .max { $0.y < $1.y }
+    /// Where the Gremlet stands while working on a shelf: out past the creation, facing the window.
+    func standPoint(_ j: Job, workerID: Int) -> Vec2? {
+        guard let side = j.shelfSide, let s = jobShelf(j, workerID: workerID) else { return nil }
+        let edge = side > 0 ? s.minX + 6 : s.maxX - 6
+        return Vec2(edge + side * 88, s.y)
     }
 
-    private func setSpotHere(_ c: Creature, _ j: Job) {
-        let propX = c.pos.x + j.propSide * c.size.x * 0.55
-        if let owner = c.groundOwner, owner >= 0, owner == j.windowID, let w = windows[owner] {
-            j.spot = Vec2(propX - w.minX, 0); j.spotOnWindow = true
-        } else {
-            j.spot = Vec2(propX, c.pos.y); j.spotOnWindow = false
+    /// Which side of a window has room for a shelf (closest to `x` first), or nil if neither does.
+    func shelfSideFor(window id: Int, near x: Double) -> Double? {
+        guard let w = windows[id], let scr = screens.first(where: { w.midX >= $0.minX && w.midX < $0.maxX }) ?? screens.first
+        else { return nil }
+        guard w.maxY - World.shelfDrop > scr.minY + 60 else { return nil }
+        let need = World.shelfWidth + 12
+        let y = w.maxY - World.shelfDrop
+        // Only on a side you can actually see: that end of the window's top edge isn't covered, and no window in
+        // front of this one sits where the shelf would go.
+        let tops = surfaces.filter { $0.ownerID == id }
+        let front = windowOrder.prefix { $0 != id }.compactMap { windows[$0] }
+        func clear(_ side: Double) -> Bool {
+            let lo = side > 0 ? w.maxX : w.minX - World.shelfWidth, hi = side > 0 ? w.maxX + World.shelfWidth : w.minX
+            let cornerShowing = tops.contains { side > 0 ? $0.maxX >= w.maxX - 1 : $0.minX <= w.minX + 1 }
+            let blocked = front.contains { $0.minX < hi && $0.maxX > lo && $0.minY < y + 110 && $0.maxY > y - 30 }
+            return cornerShowing && !blocked
+        }
+        var sides: [Double] = []
+        if scr.maxX - w.maxX >= need && clear(1) { sides.append(1) }
+        if w.minX - scr.minX >= need && clear(-1) { sides.append(-1) }
+        return sides.min { abs((($0 > 0) ? w.maxX : w.minX) - x) < abs((($1 > 0) ? w.maxX : w.minX) - x) }
+    }
+
+    /// Shelves currently up (they're surfaces anyone can stand on).
+    var shelfSurfaces: [Surface] {
+        creatures.compactMap { c in c.job.flatMap { jobShelf($0, workerID: c.id) } }
+    }
+
+    /// The window a surface owner moves with (a window's own top edge, or a shelf hanging on it).
+    func windowFor(owner: Int?) -> Int? {
+        guard let o = owner else { return nil }
+        if o >= 0 { return o }
+        if o <= World.shelfOwnerBase, let c = creature(id: World.shelfOwnerBase - o) { return c.job?.windowID }
+        return nil
+    }
+
+    func floorBelow(_ x: Double) -> Surface? {
+        surfaces.filter { $0.kind == .floor && $0.supports(x: x) }.min { $0.y < $1.y }
+            ?? surfaces.filter { $0.kind == .floor }.min { abs($0.minX + $0.width / 2 - x) < abs($1.minX + $1.width / 2 - x) }
+    }
+
+    // MARK: Friends come to watch
+
+    /// A busy friend on the same floor or window edge, within walking distance.
+    func workerToVisit(from c: Creature) -> Creature? {
+        guard c.job == nil, c.isGrounded else { return nil }
+        return creatures.first { o in
+            guard o !== c, let j = o.job, j.phase == .working, o.groundOwner == c.groundOwner,
+                  abs(o.pos.x - c.pos.x) < 600 else { return false }
+            return !creatures.contains { $0.visitingID == o.id }
         }
     }
 
-    /// Climbing a ladder: straight up, ignoring platforms until the top.
-    func updateClimb(_ c: Creature, _ dt: Double) {
-        guard let j = c.job, let lad = jobLadder(j) else { c.set(.airborne); return }
-        c.pos.x = lad.x
-        c.pos.y += 120 * dt
-        if c.pos.y >= lad.top {
-            c.pos.y = lad.top
-            // Step off the ladder onto the window's top edge.
-            if let t = workSurface(j), t.kind == .windowTop { c.pos.x = lad.x.clamped(t.minX + 14, t.maxX - 14) }
-            c.groundOwner = j.windowID
-            c.set(.land, duration: 0.14)
-            emit(.landed(c.id, impact: 200))
+    func startVisit(_ c: Creature, _ friend: Creature) {
+        endSocial(c)
+        c.visitingID = friend.id
+        c.visitUntil = clock + rng.range(14, 26)
+        c.set(.walk, duration: 9999)
+    }
+
+    /// Walks over to stand on the far side of the friend's creation, watches, and claps now and then.
+    func updateVisit(_ c: Creature, _ dt: Double, on support: Surface) -> Bool {
+        guard [.idle, .walk, .pet].contains(c.activity) else { return false }
+        guard let f = creature(id: c.visitingID), let j = f.job, j.phase == .working || j.phase == .finished,
+              f.groundOwner == c.groundOwner, clock < c.visitUntil, let a = jobAnchor(j, workerID: f.id) else {
+            c.visitingID = nil
+            c.set(.idle, duration: 0.5)
+            return true
+        }
+        let want = (a.x + j.propSide * 48).clamped(support.minX + 20, support.maxX - 20)
+        if abs(want - c.pos.x) > 8 && c.activity != .pet {
+            c.facing = want > c.pos.x ? 1 : -1
+            if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 1) { c.visitingID = nil; c.set(.idle, duration: 1) }
+            else if c.activity != .walk { c.set(.walk, duration: 9999) }
+            return true
+        }
+        c.facing = a.x > c.pos.x ? 1 : -1
+        if c.activity == .walk || c.timer <= 0 {
+            if rng.chance(0.3) {
+                c.set(.pet, duration: 1.2)        // happy wiggle: a little clap
+                emit(.greet(c.id, f.id))
+            } else {
+                c.idleVariant = rng.chance(0.5) ? "look" : "idle"
+                c.set(.idle, duration: rng.range(1.5, 3))
+            }
+        }
+        return true
+    }
+
+    // MARK: Simulation
+
+    /// Balloon ride: rises a little, drifts over, then settles down onto the target. Ignores platforms on the way.
+    func startFloat(_ c: Creature, to target: Vec2) {
+        endSocial(c)
+        c.floatTarget = target
+        c.groundOwner = nil
+        c.vel = Vec2(0, 60)
+        c.facing = target.x > c.pos.x ? 1 : -1
+        c.set(.float, duration: 30)
+        emit(.tookOff(c.id))
+    }
+
+    func updateFloat(_ c: Creature, _ dt: Double) {
+        // Follow the shelf if its window moved during the ride.
+        if let j = c.job, j.phase == .travel, let sp = standPoint(j, workerID: c.id) { c.floatTarget = sp }
+        guard var target = c.floatTarget else { c.set(.airborne); return }
+        c.timer -= dt
+        let above = target + Vec2(0, 30)
+        // Rise (or hold height) while drifting across, then settle straight down.
+        let aim = abs(c.pos.x - target.x) > 8 ? Vec2(target.x, max(c.pos.y, above.y)) : target
+        let to = aim - c.pos
+        let dist = to.length
+        let speed = (aim == target ? 55 : 120.0)
+        var v = dist > 0.5 ? to * (min(speed, dist * 3 + 10) / dist) : .zero
+        v.y += sin(clock * 3.2 + Double(c.id)) * 14 * min(1, (c.pos - target).length / 80)   // gentle bob, calm on landing
+        c.vel = c.vel + (v - c.vel) * min(1, 4 * dt)
+        c.pos = c.pos + c.vel * dt
+        let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y)
+        c.pos.x = c.pos.x.clamped(lo, hi)
+        if let scr = screen(containingX: c.pos.x, y: c.pos.y), c.pos.y + c.size.y > scr.maxY { c.pos.y = scr.maxY - c.size.y }
+        if abs(c.vel.x) > 10 { c.facing = c.vel.x > 0 ? 1 : -1 }
+        target = c.floatTarget ?? target
+        if (abs(c.pos.x - target.x) < 6 && c.pos.y <= target.y + 6) || c.timer <= 0 {
+            c.pos = target
+            c.vel = .zero
+            c.floatTarget = nil
+            let landing = allSurfaces(excluding: c).filter { abs($0.y - target.y) <= 2 && $0.supports(x: target.x) }
+            if let s = landing.first(where: { $0.ownerID == World.shelfOwner(c.id) }) ?? landing.max(by: { $0.y < $1.y }) {
+                c.groundOwner = s.ownerID
+                c.set(.land, duration: 0.14)
+                emit(.landed(c.id, impact: 120))
+            } else {
+                c.set(.airborne)
+            }
+            if let j = c.job, j.phase == .leaving {
+                if j.isHobby { c.hobbyRestUntil = clock + rng.range(150, 420) }
+                c.job = nil
+            }
         }
     }
 
@@ -162,8 +375,11 @@ extension World {
     func updateJob(_ c: Creature, _ j: Job, _ dt: Double, on support: Surface) -> Bool {
         guard [.idle, .walk, .work].contains(c.activity) else { return false }
         switch j.phase {
+        case .leaving:
+            endJob(c.id); return true
         case .finished:
-            // Hang around next to the creation, admiring it, until the platform ends the job.
+            // Admire the creation for a while. Hobbies end themselves; Claude jobs are ended by the platform.
+            if case .hobby = j.kind, let f = j.finishedAt, clock - f > 25 { endJob(c.id); return true }
             if c.activity != .idle || c.timer <= 0 {
                 c.idleVariant = rng.chance(0.4) ? "look" : "idle"
                 c.facing = rng.chance(0.7) ? j.propSide : -j.propSide
@@ -171,24 +387,28 @@ extension World {
             }
             return true
         case .working:
-            // Carried or knocked away from the creation: head back to the window.
-            if let a = jobAnchor(j) {
-                let standX = a.x - j.propSide * c.size.x * 0.55
-                if abs(standX - c.pos.x) > 40 || abs(a.y - c.pos.y) > 4 {
-                    j.phase = .travel; j.started = clock; j.spot = nil
-                    return travel(c, j, dt, on: support)
-                }
+            if strayed(c, j) {
+                j.phase = .travel; j.started = clock; j.spot = nil
+                return travel(c, j, dt, on: support)
             }
-            j.workSeconds += dt
+            let resting = j.isHobby && !userActive
+            if !resting { j.workSeconds += dt }
+            if case .hobby(let length) = j.kind, j.workSeconds >= length * (1 - j.bonus) {
+                finishJob(c.id); return true
+            }
             c.facing = j.propSide
             j.poseTimer -= dt
-            if c.activity != .work || j.poseTimer <= 0 {
-                let r = rng.next() % 10
-                c.workPose = r < 5 ? "crouch" : (r < 8 ? "idle" : "pet")
-                if c.workPose == "idle" { c.idleVariant = "look" }
-                j.poseTimer = rng.range(1.6, 3.0)
+            if c.activity != .work || j.poseTimer <= 0 || (resting != (c.workPose == "sleep")) {
+                if resting {
+                    c.workPose = "sleep"
+                    j.poseTimer = 5
+                } else {
+                    let r = rng.next() % 10
+                    c.workPose = r < 5 ? "crouch" : (r < 8 ? "look" : "pet")
+                    j.poseTimer = rng.range(1.6, 3.0)
+                    if c.workPose == "crouch" { j.beats += 1 }
+                }
                 c.set(.work, duration: 9999)
-                if c.workPose == "crouch" { j.beats += 1 }
             }
             return true
         case .travel:
@@ -196,97 +416,69 @@ extension World {
         }
     }
 
+    /// Knocked, dragged or dropped away from its spot.
+    private func strayed(_ c: Creature, _ j: Job) -> Bool {
+        if j.shelfSide != nil {
+            guard let sp = standPoint(j, workerID: c.id) else { return true }
+            return c.groundOwner != World.shelfOwner(c.id) || abs(sp.x - c.pos.x) > 30
+        }
+        guard let a = j.spot else { return true }
+        return abs(a.x - j.propSide * c.size.x * 0.55 - c.pos.x) > 40 || abs(a.y - c.pos.y) > 4
+    }
+
     private func travel(_ c: Creature, _ j: Job, _ dt: Double, on support: Surface) -> Bool {
-        // Taking too long (odd window layout): set up shop right here.
-        if clock - j.started > 45 || j.windowID.flatMap({ windows[$0] }) == nil {
-            beginWork(c, j); return true
-        }
-        guard let target = workSurface(j) else { beginWork(c, j); return true }
+        // The window went away (closed, minimised) or this is taking too long: set up shop right here.
+        if j.windowID != nil && j.windowID.flatMap({ windows[$0] }) == nil { j.windowID = nil; j.shelfSide = nil }
+        if clock - j.started > 60 { j.shelfSide = nil }
 
-        // The stretch to work in: the window's top edge, or the part of the floor right below the window.
-        var spanLo = target.minX, spanHi = target.maxX
-        if target.kind == .floor, let w = j.windowID.flatMap({ windows[$0] }) {
-            spanLo = max(spanLo, w.minX); spanHi = min(spanHi, w.maxX)
-            if spanLo >= spanHi { spanLo = target.minX; spanHi = target.maxX }
-        }
-        if support.ownerID == target.ownerID {
-            // On the right surface: walk to a spot near the right end (away from the window's buttons).
-            let want = (spanHi - 80).clamped(spanLo + 40, max(spanLo + 40, spanHi - 40))
-            if abs(want - c.pos.x) < 8 || !target.supports(x: want) { beginWork(c, j); return true }
-            c.facing = want > c.pos.x ? 1 : -1
-            if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { beginWork(c, j) }
-            else if c.activity != .walk { c.set(.walk, duration: 9999) }
-            return true
-        }
-
-        let dh = target.y - support.y
-        // Fliers just fly up.
-        if c.species.flies && abs(dh) > 20 {
-            let tx = (spanHi - 80).clamped(spanLo + 30, max(spanLo + 30, spanHi - 30))
-            c.flyTarget = Vec2(tx, target.y)
-            c.groundOwner = nil
-            c.vel = Vec2(0, 200)
-            c.facing = tx > c.pos.x ? 1 : -1
-            c.set(.fly, duration: 8)
-            emit(.tookOff(c.id))
-            return true
-        }
-        // A short hop up: jump.
-        let reachX = c.pos.x.clamped(target.minX + 30, target.maxX - 30)
-        if dh > 25, dh < maxJumpHeight * c.species.jumpPower * 0.9, abs(reachX - c.pos.x) < maxJumpDistance * 0.8 {
-            launch(c, velocity: ballistic(from: c.pos, toX: reachX, y: target.y))
-            return true
-        }
-        // Higher up: put up a ladder where this surface and the target overlap, walk to it, climb.
-        if dh > 0 {
-            let lo = max(support.minX, target.minX) + 20, hi = min(support.maxX, target.maxX) - 20
-            if let w = j.windowID.flatMap({ windows[$0] }), j.ladderX != nil && j.ladderBaseY == support.y || ladderSpot(c, w, target, support, lo, hi) != nil {
-                if j.ladderX == nil || j.ladderBaseY != support.y, let lx = ladderSpot(c, w, target, support, lo, hi) {
-                    j.ladderX = lx - w.minX; j.ladderBaseY = support.y
-                }
-                let ladderAbs = w.minX + (j.ladderX ?? 0)
-                if abs(ladderAbs - c.pos.x) < 6 {
-                    c.pos.x = ladderAbs
-                    c.groundOwner = nil
-                    c.set(.climb, duration: 9999)
-                    return true
-                }
-                c.facing = ladderAbs > c.pos.x ? 1 : -1
-                move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1)
+        if j.shelfSide != nil, let sp = standPoint(j, workerID: c.id) {
+            if support.ownerID == World.shelfOwner(c.id) {
+                if abs(sp.x - c.pos.x) < 6 { beginWork(c, j); return true }
+                c.facing = sp.x > c.pos.x ? 1 : -1
+                move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 1)
                 if c.activity != .walk { c.set(.walk, duration: 9999) }
                 return true
             }
+            if c.species.flies {
+                c.flyTarget = sp
+                c.groundOwner = nil
+                c.vel = Vec2(0, 200)
+                c.facing = sp.x > c.pos.x ? 1 : -1
+                c.set(.fly, duration: 10)
+                emit(.tookOff(c.id))
+            } else {
+                startFloat(c, to: sp)
+            }
+            return true
         }
-        // Wrong level with no overlap (or the target is below): walk off the nearer end and drop down.
-        let goal = target.minX + target.width / 2
-        let dir: Double = support.kind == .floor ? (goal > c.pos.x ? 1 : -1)
-            : (c.pos.x - support.minX < support.maxX - c.pos.x ? -1 : 1)
-        c.facing = dir
-        move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 0)
-        if c.activity != .walk { c.set(.walk, duration: 9999) }
+
+        // No shelf: work on the floor (under the Claude window if there is one).
+        if support.kind != .floor, let floor = floorBelow(c.pos.x) {
+            startFloat(c, to: Vec2(c.pos.x, floor.y))
+            return true
+        }
+        var want = c.pos.x
+        if let id = j.windowID, let w = windows[id] {
+            want = (w.maxX - 80).clamped(max(support.minX + 50, w.minX + 30), min(support.maxX - 50, max(w.minX + 31, w.maxX - 30)))
+        }
+        if abs(want - c.pos.x) < 8 { beginWork(c, j); return true }
+        c.facing = want > c.pos.x ? 1 : -1
+        if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { beginWork(c, j) }
+        else if c.activity != .walk { c.set(.walk, duration: 9999) }
         return true
     }
 
-    /// Where to stand the ladder: leaning against the window's left or right side (so it never covers what's in the
-    /// window), whichever is closer and has the top edge showing there; otherwise inside the overlap of the two surfaces.
-    private func ladderSpot(_ c: Creature, _ w: Rect, _ target: Surface, _ support: Surface, _ lo: Double, _ hi: Double) -> Double? {
-        let gap = 16.0
-        var sides: [Double] = []
-        if target.minX <= w.minX + 1 { sides.append(w.minX - gap) }
-        if target.maxX >= w.maxX - 1 { sides.append(w.maxX + gap) }
-        let (screenLo, screenHi) = horizontalLimits(for: c, atY: support.y + 1)
-        let ok = sides.filter { support.supports(x: $0) && $0 > screenLo && $0 < screenHi }
-        if let best = ok.min(by: { abs($0 - c.pos.x) < abs($1 - c.pos.x) }) { return best }
-        return lo < hi ? c.pos.x.clamped(lo, hi) : nil
-    }
-
     private func beginWork(_ c: Creature, _ j: Job) {
-        // Face whichever side has room for the creation.
-        if let s = supportingSurface(for: c) {
-            j.propSide = (s.maxX - c.pos.x) >= (c.pos.x - s.minX) ? 1 : -1
-            if min(s.maxX - c.pos.x, c.pos.x - s.minX) > 70 { j.propSide = rng.chance(0.5) ? 1 : -1 }
+        if let side = j.shelfSide, c.groundOwner == World.shelfOwner(c.id) {
+            j.propSide = -side                       // face back toward the window, creation in between
+        } else {
+            j.shelfSide = nil
+            if let s = supportingSurface(for: c) {
+                j.propSide = (s.maxX - c.pos.x) >= (c.pos.x - s.minX) ? 1 : -1
+                if min(s.maxX - c.pos.x, c.pos.x - s.minX) > 80 { j.propSide = rng.chance(0.5) ? 1 : -1 }
+            }
+            j.spot = Vec2(c.pos.x + j.propSide * c.size.x * 0.55, c.pos.y)
         }
-        setSpotHere(c, j)
         j.phase = .working
         j.poseTimer = 0
         c.set(.work, duration: 9999)

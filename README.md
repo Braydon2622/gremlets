@@ -88,18 +88,26 @@ scripts/gremlet say "Deploy finished" 10   # a Gremlet pops up with a speech bub
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
 
-**Claude buddy.** Send Claude Code a prompt and a Gremlet heads for that Claude window: it walks, hops or flies up,
-or puts up a ladder against the window's side and climbs it. While Claude works it grows a flower in a pot, paints a
-picture on an easel or builds a block tower on the window's top edge; the longer Claude works, the further along it
-gets, and it's finished the moment Claude is. Then the Gremlet shows it off and says "SalesCheatCodeLive: Claude is
-done ✓" (or "PhotoToPart: Claude needs your OK" when Claude is waiting on you). Each Claude session gets its own
-Gremlet, the menu counts what they made today, and *Claude Buddy* in the menu turns it off.
+**Hobbies.** While you're at your Mac, Gremlets now and then settle down to a hobby: they grow a flower in a pot,
+paint a picture on an easel, build a block tower or knit a scarf. Sometimes they work right on the floor; sometimes one
+floats up on a balloon to a little wooden shelf it puts up on the side of a nearby window and works up there (the shelf
+rides along when you move the window and doesn't care if another window covers it). The creation grows as they work,
+friends wander over to watch and clap, clicking a busy Gremlet cheers it on (a little burst of progress), and when you
+step away they doze off beside their work until you're back. Finished flowers get planted along the bottom of the
+screen and finished paintings lean there too, so a busy week leaves a little garden (menu → *Clear Garden*). At most two
+hobbies run at once, with a few minutes' rest in between. `gremlet hobby [garden|paint|build|knit] [shelf]` starts one now.
+
+**Claude buddy.** Send Claude Code a prompt and a Gremlet floats up to a shelf on the side of that Claude window (or
+flies, if it has wings) and works there for as long as Claude does; the creation is finished the moment Claude is. Then
+it shows it off and says "SalesCheatCodeLive: Claude is done ✓" (or "PhotoToPart: Claude needs your OK" when Claude is
+waiting on you), and floats back down a little later. Each Claude session gets its own Gremlet, the menu counts what
+they made today, and *Claude Buddy* in the menu turns it off.
 
 `scripts/gremlet-claude-hook` connects Claude Code's `UserPromptSubmit`, `Stop`, `Notification` and `SessionEnd` hooks
 (setup is in the script's header). It sends only the event, the session id, the project folder's name and a process id.
 The app finds the window by walking up from that process to the terminal or editor that owns it (process ids and
-window bounds only, never titles or contents). If the window's top edge is hidden, the Gremlet works on the floor
-below it. The engine side (`GremletsCore/Work.swift`) is pure Swift with its own tests.
+window bounds only, never titles or contents). A window with no room beside it (full width) gets a Gremlet working on
+the floor below it. The engine side (`GremletsCore/Work.swift`) is pure Swift with its own tests.
 
 It listens on `127.0.0.1:47920` only, every request needs an `X-Gremlets` header (so a web page can't trigger it
 cross-site without a CORS preflight, which it never approves), and it can only trigger animations and the timer.

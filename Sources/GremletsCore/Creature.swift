@@ -22,8 +22,8 @@ public enum Activity: Equatable, Sendable {
     case run          // playing tag (chasing or fleeing)
     case follow       // walking to / after a friend (greet, follow, nap together)
     case peek         // sneaking to a screen edge to peek around it
-    case climb        // climbing a ladder up to a Claude window (Claude buddy)
-    case work         // gardening / painting / building next to a Claude window (pose in `workPose`)
+    case float        // riding a balloon up to (or down from) a shelf on a window
+    case work         // gardening / painting / building / knitting (pose in `workPose`)
 }
 
 enum SocialMode { case none, greet, follow, nap, chaser, runner }
@@ -68,8 +68,17 @@ public final class Creature {
     var animSpeed = 1.0
     /// The Claude-buddy job this Gremlet is on, if any (see Work.swift).
     public internal(set) var job: Job?
-    /// Which animation plays while working ("crouch" = tending, "idle", "pet" = happy wiggle).
+    /// Which animation plays while working ("crouch" = tending, "look", "pet" = happy wiggle, "sleep" = dozing).
     var workPose = "crouch"
+    /// Watching a friend work (their id) and until when.
+    var visitingID: Int?
+    var visitUntil = 0.0
+    /// No new hobby before this (world clock): a breather after finishing one.
+    var hobbyRestUntil = 0.0
+    /// Where a balloon ride is headed.
+    var floatTarget: Vec2?
+    /// Dozing next to its project because you stepped away.
+    public var isDozingAtWork: Bool { activity == .work && workPose == "sleep" }
     /// 0...1: how close this Gremlet is to you (see `Bond`).
     public internal(set) var bond = 0.0
 
@@ -81,7 +90,7 @@ public final class Creature {
     }
 
     public var size: Vec2 { species.pointSize }
-    public var isGrounded: Bool { groundOwner != nil && ![.airborne, .dragged, .fly, .climb].contains(activity) }
+    public var isGrounded: Bool { groundOwner != nil && ![.airborne, .dragged, .fly, .float].contains(activity) }
     public var isAsleep: Bool { activity == .sleep || activity == .yawn }
 
     /// Name of the animation that matches the current activity.
@@ -107,7 +116,7 @@ public final class Creature {
         case .run: return "run"
         case .follow: return "walk"
         case .peek: return "walk"
-        case .climb: return "walk"
+        case .float: return "drag"       // dangling from the balloon string
         case .work: return workPose
         }
     }

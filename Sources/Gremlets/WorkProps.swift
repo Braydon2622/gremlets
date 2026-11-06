@@ -126,17 +126,115 @@ enum PropArt {
         return image(rows.reversed())
     }
 
-    // MARK: Ladder
+    // MARK: Knitting
 
-    static func ladder(heightPx: Int) -> CGImage {
-        let rail: UInt32 = 0xB07A44, rung: UInt32 = 0xD9A066
-        var g: Grid = []
-        for y in 0..<max(4, heightPx) {
-            var row: [UInt32?] = Array(repeating: nil, count: 9)
-            row[0] = rail; row[8] = rail
-            if y % 5 == 2 { for x in 1..<8 { row[x] = rung } }
-            g.append(row)
-        }
+    static let yarnPairs: [(UInt32, UInt32)] = [(0xFF8FBF, 0xFFF1F6), (0x6FB8F0, 0xFFF6D8), (0xFFB35C, 0xFFE9C9), (0x8FD6A2, 0xF7F3E8), (0xA98BEA, 0xFFE066)]
+    /// A little knitting frame: the scarf hangs from a rod and grows row by row; fringe once it's done.
+    static func knitting(rows: Int, finished: Bool, seed: UInt64) -> CGImage {
+        let (a, b) = yarnPairs[Int(seed % UInt64(yarnPairs.count))]
+        let wood: UInt32 = 0xA0703F, dark: UInt32 = 0x6E4A26
+        var g: Grid = Array(repeating: Array(repeating: nil, count: 15), count: 16)
+        for x in 0..<15 { g[0][x] = wood }
+        for y in 1..<16 { g[y][1] = dark; g[y][12] = dark }
+        let n = max(1, min(10, rows))
+        for y in 0..<n { for x in 4...9 { g[1 + y][x] = (y / 2) % 2 == 0 ? a : b } }
+        if finished { for x in stride(from: 4, through: 9, by: 2) { g[1 + n][x] = a; g[2 + n][x + 1] = a } }
+        // Yarn ball on the floor.
+        let ball: [(Int, Int)] = [(10, 13), (11, 13), (12, 13), (9, 14), (10, 14), (11, 14), (12, 14), (13, 14), (9, 15), (10, 15), (11, 15), (12, 15), (13, 15)]
+        for (x, y) in ball { g[y][x] = a }
+        g[14][11] = b; g[13][12] = b
         return image(g)
     }
+
+    // MARK: Shelf & balloon
+
+    /// A wooden shelf `widthPx` wide with two brackets underneath. The top row is the surface Gremlets stand on.
+    static func shelf(widthPx: Int) -> CGImage {
+        let light: UInt32 = 0xD9A066, mid: UInt32 = 0xB07A44, dark: UInt32 = 0x7A5230, leaf: UInt32 = 0x6CC04A
+        let w = max(8, widthPx)
+        var g: Grid = []
+        g.append((0..<w).map { _ in light })
+        g.append((0..<w).map { $0 % 9 == 4 ? dark : mid })
+        g.append((0..<w).map { _ in dark })
+        for r in 0..<5 {
+            var row: [UInt32?] = Array(repeating: nil, count: w)
+            for bx in [w / 5, w * 4 / 5] {
+                for x in max(0, bx - (4 - r))...min(w - 1, bx) { row[x] = x == bx ? dark : mid }
+            }
+            g.append(row)
+        }
+        // A sprig of ivy hanging off one end.
+        for (x, y) in [(w - 3, 3), (w - 3, 4), (w - 2, 4), (w - 3, 5), (w - 4, 6), (w - 3, 7)] where x >= 0 { g[y][x] = leaf }
+        return image(g)
+    }
+
+    static let balloonColors: [UInt32] = [0xFF6F7E, 0xFFD84A, 0x6FB8F0, 0xA98BEA, 0x6CC04A, 0xFF8FBF]
+    static func balloon(_ id: Int) -> CGImage {
+        let c = balloonColors[id % balloonColors.count]
+        let hi: UInt32 = 0xFFFFFF
+        let rows = [
+            "..xxxxx..",
+            ".xhxxxxx.",
+            "xhhxxxxxx",
+            "xhxxxxxxx",
+            "xxxxxxxxx",
+            "xxxxxxxxx",
+            ".xxxxxxx.",
+            "..xxxxx..",
+            "...xxx...",
+            "....x....",
+        ]
+        return image(grid(rows, ["x": c, "h": hi]))
+    }
+
+    // MARK: Keepsakes (the garden along the bottom of the screen)
+
+    static let flowerColors: [(UInt32, UInt32)] = [(0xFF8FBF, 0xE0588F), (0xFFD84A, 0xE0A92E), (0xA98BEA, 0x7A5FC9), (0xFF6F7E, 0xD8455A), (0x6FB8F0, 0x3F8CC9), (0xFFFFFF, 0xD8E4EC)]
+    static func groundFlower(_ variant: Int) -> CGImage {
+        let (f, F) = flowerColors[variant % flowerColors.count]
+        let rows = variant % 2 == 0
+            ? ["..f.f..", ".fFyFf.", "..fff..", "...G...", ".g.G...", "..gG.g.", "...Gg..", "...G..."]
+            : [".f...f.", "fyf.fyf", ".f.G.f.", "..gG...", "...G.g.", ".g.Gg..", "..gG...", "...G..."]
+        return image(grid(rows, ["f": f, "F": F, "y": 0xFFE066, "g": 0x6CC04A, "G": 0x3E8E3A]))
+    }
+
+    static func miniPainting(_ variant: Int) -> CGImage {
+        let pic = grid(pictures[variant % pictures.count], paintPalette)
+        let dark = paintPalette["d"]!
+        var g: Grid = [Array(repeating: dark, count: 8)]
+        for y in stride(from: 0, to: 9, by: 2) {
+            var row: [UInt32?] = [dark]
+            for x in stride(from: 0, to: 12, by: 2) { row.append(pic[y][x]) }
+            row.append(dark)
+            g.append(row)
+        }
+        g.append(Array(repeating: dark, count: 8))
+        return image(g)
+    }
+}
+
+/// Finished flowers get planted along the bottom of the main screen, and paintings lean there too. Kept between
+/// launches (UserDefaults), at most a dozen; the oldest makes room for the newest.
+final class KeepsakeStore {
+    struct Item: Codable { var kind: String; var x: Double; var variant: Int }
+    private let key = "keepsakes.v1"
+    private(set) var items: [Item] = []
+    static let limit = 12
+
+    init() {
+        if let d = UserDefaults.standard.data(forKey: key), let v = try? JSONDecoder().decode([Item].self, from: d) { items = v }
+    }
+
+    /// `x` is 0...1 across the main screen. Nudged so keepsakes don't stack on top of each other.
+    func add(kind: String, x: Double, variant: Int) {
+        var x = x.clamped(0.03, 0.97)
+        for _ in 0..<20 where items.contains(where: { abs($0.x - x) < 0.025 }) { x = (x + 0.03).truncatingRemainder(dividingBy: 0.94) + 0.03 }
+        items.append(Item(kind: kind, x: x, variant: variant))
+        if items.count > Self.limit { items.removeFirst(items.count - Self.limit) }
+        save()
+    }
+
+    func clear() { items.removeAll(); save() }
+
+    private func save() { if let d = try? JSONEncoder().encode(items) { UserDefaults.standard.set(d, forKey: key) } }
 }

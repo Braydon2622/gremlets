@@ -53,13 +53,20 @@ final class OverlayController {
     private var sleepBubbleTimer: [Int: Double] = [:]
     /// Speech bubbles: creature id → bubble layer, the screen it's on, and when it goes away.
     private var bubbles: [Int: (layer: CALayer, screen: Int, until: CFTimeInterval)] = [:]
-    /// Claude-buddy props per worker (creature id): the creation and the ladder.
+    /// Hobby / Claude-buddy props per worker (creature id): the creation and the ladder.
     private var props: [Int: PropState] = [:]
+    private var balloons: [Int: CALayer] = [:]
+    let keepsakes = KeepsakeStore()
+    private var keepsakeLayers: [CALayer] = []
     private struct PropState {
         var screen: Int
+        var craft: Craft?
+        var anchorX: Double = 0
+        var seed: UInt64 = 0
         let item = CALayer()
-        var ladder: CALayer?
-        var ladderPx = 0
+        var shelf: CALayer?
+        var shelfPx = 0
+        var wasOnShelf = false
         var key = ""
         var beat = 0
         var celebrated = false
@@ -119,7 +126,29 @@ final class OverlayController {
         }
         layerScreen.removeAll()
         for (_, l) in layers { l.removeFromSuperlayer() }
+        refreshKeepsakes()
     }
+
+    /// Draws the keepsake garden along the floor of the main screen, behind everything else.
+    func refreshKeepsakes() {
+        for l in keepsakeLayers { l.removeFromSuperlayer() }
+        keepsakeLayers.removeAll()
+        guard let main = NSScreen.screens.first, !screens.isEmpty else { return }
+        let floorY = main.visibleFrame.minY - main.frame.minY
+        for item in keepsakes.items {
+            let img = item.kind == "painting" ? PropArt.miniPainting(item.variant) : PropArt.groundFlower(item.variant)
+            let l = pixelLayer(0, anchor: CGPoint(x: 0.5, y: 0))
+            setImage(l, img)
+            l.position = CGPoint(x: (item.x * main.frame.width).rounded(), y: floorY)
+            l.opacity = item.kind == "painting" ? 0.95 : 1
+            screens[0].root.insertSublayer(l, at: 0)
+            keepsakeLayers.append(l)
+        }
+    }
+
+    var keepsakeCount: Int { keepsakes.items.count }
+
+    func clearKeepsakes() { keepsakes.clear(); refreshKeepsakes() }
 
     private func screenIndex(for p: Vec2) -> Int {
         screens.firstIndex { $0.frame.contains(CGPoint(x: p.x, y: p.y)) }
@@ -159,7 +188,7 @@ final class OverlayController {
                 layer.contents = sp.frames[f]
                 shownFrame[c.id] = f
             }
-            if c.activity == .sleep {
+            if c.activity == .sleep || c.isDozingAtWork {
                 let now = CACurrentMediaTime()
                 if now - (sleepBubbleTimer[c.id] ?? 0) > 1.6 {
                     sleepBubbleTimer[c.id] = now
@@ -431,79 +460,98 @@ final class OverlayController {
         CATransaction.commit()
     }
 
-    // MARK: Claude buddy props
+    // MARK: Hobby & Claude-buddy props
 
-    var hasProps: Bool { !props.isEmpty }
-
-    private func propLayer(_ img: CGImage, _ si: Int) -> CALayer {
-        let l = CALayer()
-        l.magnificationFilter = .nearest
-        l.anchorPoint = CGPoint(x: 0.5, y: 0)
-        l.contentsScale = screens[si].panel.backingScaleFactor
-        l.contents = img
-        l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
-        return l
-    }
+    var hasProps: Bool { !props.isEmpty || !balloons.isEmpty }
 
     private func artKey(_ j: Job) -> (String, () -> CGImage) {
-        let p = j.progress
+        let p = j.progress, done = j.phase == .finished || j.phase == .leaving
         switch j.craft {
         case .garden:
-            let stage = j.phase == .finished ? 5 : min(4, Int(p / 0.9 * 4.999))
+            let stage = done ? 5 : min(4, Int(p / 0.9 * 4.999))
             return ("g\(stage)", { PropArt.garden(stage: stage) })
         case .paint:
-            let n = j.phase == .finished ? 108 : Int((p / 0.9 * 100).rounded() / 4) * 4
+            let n = done ? 108 : Int((p / 0.9 * 100).rounded() / 4) * 4
             let pic = Int(j.seed % 4)
             return ("p\(n)", { PropArt.painting(picture: pic, revealed: n, seed: j.seed) })
         case .build:
-            let blocks = j.phase == .finished ? 8 : 1 + min(6, Int(p / 0.9 * 6.999))
-            return ("b\(blocks)\(j.phase == .finished)", { PropArt.tower(blocks: blocks, finished: j.phase == .finished, seed: j.seed) })
+            let blocks = done ? 8 : 1 + min(6, Int(p / 0.9 * 6.999))
+            return ("b\(blocks)\(done)", { PropArt.tower(blocks: blocks, finished: done, seed: j.seed) })
+        case .knit:
+            let rows = done ? 10 : 1 + min(9, Int(p / 0.9 * 9.999))
+            return ("k\(rows)\(done)", { PropArt.knitting(rows: rows, finished: done, seed: j.seed) })
         }
     }
 
-    /// Keeps each worker's creation and ladder in place (they ride along with the window), grows the creation,
-    /// shows a little effect for each bit of work, and lets finished creations linger for a minute afterwards.
+    private func pixelLayer(_ si: Int, anchor: CGPoint) -> CALayer {
+        let l = CALayer()
+        l.magnificationFilter = .nearest
+        l.anchorPoint = anchor
+        l.contentsScale = screens[si].panel.backingScaleFactor
+        return l
+    }
+
+    private func setImage(_ l: CALayer, _ img: CGImage) {
+        l.contents = img
+        l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+    }
+
+    private func popIn(_ l: CALayer) {
+        let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+        pop.values = [0.2, 1.12, 1.0]
+        pop.keyTimes = [0, 0.6, 1]
+        pop.duration = 0.35
+        l.add(pop, forKey: "pop")
+    }
+
+    /// Shelves, creations and balloons: kept in place every frame (they ride along with their window), creations grow,
+    /// a little effect plays for each bit of work, and a finished creation lingers for a minute after the job ends.
     private func updateProps() {
         let now = CACurrentMediaTime()
-        var working = Set<Int>()
+        var busy = Set<Int>()
         for c in world.creatures {
+            updateBalloon(c)
             guard let j = c.job else { continue }
-            working.insert(c.id)
-            let anchor = world.jobAnchor(j)
-            let lad = world.jobLadder(j)
-            guard anchor != nil || lad != nil else { continue }
-            let ref = anchor ?? Vec2(lad!.x, lad!.top)
+            busy.insert(c.id)
+            let shelf = world.jobShelf(j, workerID: c.id)
+            let anchor = world.jobAnchor(j, workerID: c.id)
+            guard let ref = anchor ?? shelf.map({ Vec2($0.minX + $0.width / 2, $0.y) }) else { continue }
             let si = screenIndex(for: ref + Vec2(0, 1))
-            if props[c.id] == nil { props[c.id] = PropState(screen: si) }
-            guard var st = props[c.id] else { continue }
+            var st = props[c.id] ?? PropState(screen: si)
             st.lingerUntil = nil
             let o = screens[si].frame.origin
 
-            // Ladder (stays up while the job lasts).
-            if let lad {
-                let px = max(4, Int(((lad.top - lad.bottom) / 3).rounded()))
-                if st.ladder == nil || st.ladderPx != px || st.screen != si {
-                    st.ladder?.removeFromSuperlayer()
-                    let l = propLayer(PropArt.ladder(heightPx: px), si)
+            // The shelf (pops in when it goes up).
+            if let s = shelf {
+                let px = max(8, Int((s.width / 3).rounded()))
+                if st.shelf == nil || st.shelfPx != px || st.screen != si {
+                    st.shelf?.removeFromSuperlayer()
+                    let l = pixelLayer(si, anchor: CGPoint(x: 0, y: 1))
+                    setImage(l, PropArt.shelf(widthPx: px))
                     screens[si].root.insertSublayer(l, at: 0)
-                    st.ladder = l; st.ladderPx = px
+                    if st.shelf == nil { popIn(l); burst([Effects.dust], si: si, at: CGPoint(x: s.minX - o.x + s.width / 2, y: s.y - o.y), count: 3, dx: -40...40, dy: -6...6, duration: 0.5) }
+                    st.shelf = l; st.shelfPx = px
                 }
-                st.ladder?.position = CGPoint(x: (lad.x - o.x).rounded(), y: (lad.bottom - o.y).rounded())
-            } else if let l = st.ladder { l.removeFromSuperlayer(); st.ladder = nil }
+                let flip: CGFloat = (j.shelfSide ?? 1) < 0 ? -1 : 1
+                st.shelf?.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1))
+                let p = CGPoint(x: (s.minX - o.x).rounded() + (flip < 0 ? s.width : 0), y: (s.y - o.y).rounded())
+                st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
+                if st.shelf?.position != p { st.shelf?.position = p }
+            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil }
 
             // The creation.
             if let a = anchor {
                 let (key, make) = artKey(j)
                 if st.key != key || st.item.superlayer == nil || st.screen != si {
-                    let img = make()
+                    let fresh = st.item.superlayer == nil
                     st.item.removeFromSuperlayer()
                     st.item.magnificationFilter = .nearest
                     st.item.anchorPoint = CGPoint(x: 0.5, y: 0)
                     st.item.contentsScale = screens[si].panel.backingScaleFactor
-                    st.item.contents = img
-                    st.item.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    setImage(st.item, make())
                     screens[si].root.addSublayer(st.item)
-                    if !st.key.isEmpty && st.key != key {
+                    if fresh { popIn(st.item) }
+                    else if st.key != key {
                         burst([Effects.sparkle], si: si, at: CGPoint(x: a.x - o.x, y: a.y - o.y + st.item.bounds.height), count: 2, dx: -14...14, dy: 4...16, duration: 0.6)
                     }
                     st.key = key
@@ -512,48 +560,103 @@ final class OverlayController {
                 if st.item.position != pos { st.item.position = pos }
                 let top = CGPoint(x: pos.x, y: pos.y + st.item.bounds.height)
 
-                // A bit of work: water drops, a brush dab, a block clunk.
+                // A bit of work: water drops, a brush dab, a block clunk, a puff of yarn fluff.
                 if j.beat != st.beat {
                     st.beat = j.beat
-                    if c.activity == .work {
+                    if c.activity == .work || c.activity == .react {
                         switch j.craft {
                         case .garden:
                             burst([Effects.rain], si: si, at: CGPoint(x: top.x - j.propSide * 6, y: top.y + 14), count: 4, dx: -8...8, dy: -22 ... -12, duration: 0.6, stagger: 0.08)
                         case .paint:
-                            let colors = [Effects.petal, Effects.pollen, Effects.rain]
-                            burst(colors, si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.6), count: 3, dx: -12...12, dy: -6...10, duration: 0.5, stagger: 0.07)
+                            burst([Effects.petal, Effects.pollen, Effects.rain], si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.6), count: 3, dx: -12...12, dy: -6...10, duration: 0.5, stagger: 0.07)
                         case .build:
                             burst([Effects.dust], si: si, at: top, count: 2, dx: -16...16, dy: 0...6, duration: 0.4)
+                        case .knit:
+                            burst([Effects.smallHeart, Effects.pollen], si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.5), count: 2, dx: -10...10, dy: 6...18, duration: 0.7, stagger: 0.1)
                         }
                     }
                 }
-                // Claude finished: the creation is complete. Celebrate it once.
-                if j.phase == .finished && !st.celebrated {
+                if (j.phase == .finished || j.phase == .leaving) && !st.celebrated {
                     st.celebrated = true
                     burst([Effects.sparkle, Effects.heart, Effects.smallStar], si: si, at: top, count: 10, dx: -50...50, dy: 10...60, duration: 1.4, stagger: 0.05)
                 }
             }
             st.screen = si
+            st.craft = j.craft; st.seed = j.seed
+            if let a = anchor { st.anchorX = a.x }
             props[c.id] = st
         }
-        // Job over: take the ladder down now, let the creation linger for a minute, then fade it out.
-        for (id, var st) in props where !working.contains(id) {
-            if let l = st.ladder { l.removeFromSuperlayer(); st.ladder = nil }
-            if st.lingerUntil == nil { st.lingerUntil = now + 60 }
+        // Job over: the shelf comes down now; the creation lingers a minute (on the floor, or where it was), then fades.
+        for (id, var st) in props where !busy.contains(id) {
+            if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
+            if st.lingerUntil == nil { st.lingerUntil = now + (st.wasOnShelf ? 0 : 60) }
             if now >= st.lingerUntil! || st.item.superlayer == nil {
-                let l = st.item
+                fadeOut(st.item, 0.8)
                 props[id] = nil
-                CATransaction.begin()
-                CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
-                let fade = CABasicAnimation(keyPath: "opacity")
-                fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.8
-                fade.isRemovedOnCompletion = false; fade.fillMode = .forwards
-                l.add(fade, forKey: "fade")
-                CATransaction.commit()
+                // Finished flowers get planted in the garden along the bottom of the screen; paintings lean there too.
+                if st.celebrated, let craft = st.craft, craft == .garden || craft == .paint, let main = NSScreen.screens.first {
+                    let x = (st.anchorX - main.frame.minX) / main.frame.width
+                    keepsakes.add(kind: craft == .garden ? "flower" : "painting", x: x, variant: Int(st.seed % 24))
+                    refreshKeepsakes()
+                    if let l = keepsakeLayers.last { popIn(l) }
+                }
             } else {
                 props[id] = st
             }
         }
+        for c in world.creatures where c.job?.shelfSide != nil { props[c.id]?.wasOnShelf = true }
+    }
+
+    private func fadeOut(_ l: CALayer, _ d: Double) {
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1; fade.toValue = 0; fade.duration = d
+        fade.isRemovedOnCompletion = false; fade.fillMode = .forwards
+        l.add(fade, forKey: "fade")
+        CATransaction.commit()
+    }
+
+    /// A balloon on a string over a Gremlet's head while it floats; let go (drifting up and away) when it lands.
+    private func updateBalloon(_ c: Creature) {
+        let floating = c.activity == .float
+        if !floating {
+            if let b = balloons.removeValue(forKey: c.id) {
+                let start = b.position
+                let drift = CABasicAnimation(keyPath: "position")
+                drift.fromValue = NSValue(point: start)
+                drift.toValue = NSValue(point: CGPoint(x: start.x + 30, y: start.y + 260))
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 1; fade.toValue = 0
+                let g = CAAnimationGroup()
+                g.animations = [drift, fade]; g.duration = 2.2
+                g.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                run(b, g)
+            }
+            return
+        }
+        guard let si = layerScreen[c.id] else { return }
+        let b: CALayer
+        if let existing = balloons[c.id] { b = existing } else {
+            b = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+            let img = PropArt.balloon(c.id)
+            b.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3 + 30)
+            let face = CALayer()
+            face.contents = img
+            face.magnificationFilter = .nearest
+            face.frame = CGRect(x: 0, y: 30, width: img.width * 3, height: img.height * 3)
+            let string = CALayer()
+            string.backgroundColor = NSColor(white: 0.25, alpha: 0.9).cgColor
+            string.frame = CGRect(x: Double(img.width) * 1.5 - 1, y: 0, width: 1.5, height: 32)
+            b.addSublayer(string); b.addSublayer(face)
+            screens[si].root.addSublayer(b)
+            popIn(b)
+            balloons[c.id] = b
+        }
+        let o = screens[si].frame.origin
+        let hand = CGPoint(x: (c.pos.x - o.x + c.facing * c.size.x * 0.06).rounded(), y: (c.pos.y - o.y + c.size.y * 0.72).rounded())
+        if b.superlayer !== screens[si].root { b.removeFromSuperlayer(); screens[si].root.addSublayer(b) }
+        if b.position != hand { b.position = hand }
     }
 
     // MARK: Speech bubbles

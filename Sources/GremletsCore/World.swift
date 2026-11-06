@@ -37,9 +37,15 @@ public final class World {
     public var sleepyFactor: Double = 1
     /// Focus mode (see Companion.swift): calm, dozing Gremlets.
     public internal(set) var calm = false
+    /// You're at your Mac (recent keyboard/mouse input). Hobbies only start, and only make progress, while you are.
+    public var userActive = true
+    /// At most this many Gremlets on a hobby at once.
+    public var maxHobbies = 2
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
+    /// Window ids, front-most first.
+    public private(set) var windowOrder: [Int] = []
     /// Screen floors and window tops (creature heads are added on the fly, see `allSurfaces`).
     public private(set) var surfaces: [Surface] = []
     public private(set) var creatures: [Creature] = []
@@ -61,7 +67,7 @@ public final class World {
     static let creatureOwnerBase = -1000
     static func creatureOwner(_ id: Int) -> Int { creatureOwnerBase - id }
     static func carrierID(_ owner: Int?) -> Int? {
-        guard let o = owner, o <= creatureOwnerBase else { return nil }
+        guard let o = owner, o <= creatureOwnerBase, o > shelfOwnerBase else { return nil }
         return creatureOwnerBase - o
     }
 
@@ -73,7 +79,7 @@ public final class World {
         var newWindows: [Int: Rect] = [:]
         for w in windowsFrontToBack { newWindows[w.id] = w.frame }
         for c in creatures where c.isGrounded {
-            guard let owner = c.groundOwner, owner >= 0, let old = windows[owner], let new = newWindows[owner] else { continue }
+            guard let owner = windowFor(owner: c.groundOwner), let old = windows[owner], let new = newWindows[owner] else { continue }
             let d = Vec2(new.minX - old.minX, new.maxY - old.maxY)
             c.pos += d
             // Anyone standing on this creature's head comes along for the ride.
@@ -81,6 +87,7 @@ public final class World {
         }
         self.screens = screens
         self.windows = newWindows
+        self.windowOrder = windowsFrontToBack.map(\.id)
         surfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
     }
 
@@ -146,6 +153,7 @@ public final class World {
         }
         c.energy = min(1, c.energy + 0.1)
         endSocial(c)
+        encourage(c)
         c.set(.react, duration: c.animationLength(for: .react) + 0.15)
         emit(.poked(c.id))
     }
@@ -239,8 +247,8 @@ public final class World {
             c.timer -= dt
             updateFlight(c, dt)
             return
-        case .climb:
-            updateClimb(c, dt)
+        case .float:
+            updateFloat(c, dt)
             return
         default:
             break
@@ -266,6 +274,7 @@ public final class World {
 
         c.timer -= dt
         if let job = c.job, updateJob(c, job, dt, on: support) { return }
+        if c.visitingID != nil, updateVisit(c, dt, on: support) { return }
         switch c.activity {
         case .idle:
             faceCursorIfNear(c)
@@ -511,7 +520,7 @@ public final class World {
 
     /// Static surfaces plus the tops of other creatures' heads (so friends can stand on each other).
     func allSurfaces(excluding c: Creature) -> [Surface] {
-        var out = surfaces
+        var out = surfaces + shelfSurfaces
         for o in creatures where o !== c && o.groundOwner != c.carrierOwnerID
             && World.carrierID(o.groundOwner) == nil && ![.airborne, .fly, .dragged].contains(o.activity) {
             let half = o.size.x * 0.17

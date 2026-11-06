@@ -19,6 +19,9 @@ struct Brain {
             add("doze", 3.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) }
             add("idle", 1.0) { c.idleVariant = "idle"; c.set(.idle, duration: world.rng.range(3, 6)) }
             add("amble", 0.3) { c.facing = world.rng.chance(0.5) ? 1 : -1; c.set(.walk, duration: world.rng.range(1, 2)) }
+            if world.canStartHobby(c) {
+                add("hobby", 1.5) { if !world.startHobby(c, onWindow: false) { c.set(.idle, duration: 1) } }  // quiet work while you focus
+            }
             pickAndStart(choices, world)
             return
         }
@@ -44,6 +47,12 @@ struct Brain {
             add("fly", 0.8 * (0.3 + e)) { world.startFlight(c) }
         }
         add("special", 0.3 * (0.3 + e)) { world.startSpecial(c) }
+        if let busy = world.workerToVisit(from: c) {
+            add("visit", 0.7) { world.startVisit(c, busy) }
+        }
+        if world.canStartHobby(c) {
+            add("hobby", 0.5) { if !world.startHobby(c) { c.set(.idle, duration: 1) } }
+        }
         add("dance", 0.1 * e) { world.startDance(c) }
         if c.energy < 0.55 {
             add("sleep", (0.55 - e) * 6 * c.species.sleepiness) { c.set(.yawn, duration: c.animationLength(for: .yawn)) }

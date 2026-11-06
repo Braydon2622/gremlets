@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let movingRecently = now - lastWindowChange < 0.6
         // Window frames matter most for creatures standing on a window (they ride it); otherwise they only
         // affect jump targets and landings, which tolerate a few hundred ms of staleness.
-        let anyoneOnWindow = world.creatures.contains { ($0.groundOwner ?? -1) >= 0 || $0.activity == .airborne }
+        let anyoneOnWindow = world.creatures.contains { ($0.groundOwner ?? -1) >= 0 || $0.activity == .airborne || $0.job?.windowID != nil }
         let pollInterval = movingRecently ? 1.0 / 60 : (anyoneOnWindow ? 0.1 : 0.35)
         if now - lastWindowPoll >= pollInterval { refreshEnvironment() }
 
@@ -322,6 +322,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let m = NSMenuItem(title: "Made with Claude today: \(made)", action: nil, keyEquivalent: "")
             m.isEnabled = false
             menu.addItem(m)
+        }
+        if overlay.keepsakeCount > 0 {
+            let g = NSMenuItem(title: "Clear Garden (\(overlay.keepsakeCount))", action: #selector(clearGarden), keyEquivalent: "")
+            g.target = self
+            g.toolTip = "Flowers and paintings your Gremlets finished, along the bottom of the screen."
+            menu.addItem(g)
         }
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
@@ -602,9 +608,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if name == "status" {
             let ids = world.creatures.map { "\"\($0.species.id)\"" }.joined(separator: ",")
+            let primaryTop = Double(NSScreen.screens.first?.frame.maxY ?? 0)
+            let busy = world.creatures.compactMap { c -> String? in
+                guard let j = c.job else { return nil }
+                // Top-left based screen coordinates, the same as `screencapture -R`.
+                return #"{"gremlet":"\#(c.species.id)","craft":"\#(j.craft.rawValue)","shelf":\#(j.shelfSide != nil),"x":\#(Int(c.pos.x)),"y":\#(Int(primaryTop - c.pos.y))}"#
+            }.joined(separator: ",")
             let f = focus.label.map { "\"\($0)\"" } ?? "null"
             let h = presence.hidden.map { "\"\($0.rawValue)\"" } ?? "null"
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak)}"#)
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)]}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {
@@ -617,6 +629,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "hobby":
+            let craft = query["craft"].flatMap { Craft(rawValue: $0) }
+            let shelf: Bool? = query["shelf"].map { $0 == "1" }
+            guard world.startHobbyNearCursor(craft: craft, onWindow: shelf) else {
+                return (409, #"{"ok":false,"error":"no free Gremlet on the floor or a window"}"#)
+            }
         case "claude":
             let r = buddy.handle(query)
             schedule(rate: 60)
@@ -668,6 +686,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func updatePresence() {
         inCall = hideDuringCalls && (SystemSignals.cameraInUse() || SystemSignals.microphoneInUse())
         idleSeconds = SystemSignals.idleSeconds()
+        world.userActive = idleSeconds < 90 && !presence.isHidden
         lowPower = SystemSignals.lowPowerMode
         for e in presence.update(presenceInput()) {
             switch e {
@@ -739,6 +758,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         focus.stop()
         world.focusMode = false
         world.receive(.wake)
+        rebuildMenu()
+    }
+
+    @objc private func clearGarden() {
+        overlay.clearKeepsakes()
         rebuildMenu()
     }
 

@@ -57,6 +57,13 @@ final class OverlayController {
     private var props: [Int: PropState] = [:]
     private var balloons: [Int: CALayer] = [:]
     let keepsakes = KeepsakeStore()
+    /// Desktop icon play (set by the app; nil or disabled = off).
+    var icons: DesktopIcons?
+    /// Icons currently "picked up" (their platform is gone until they're put back).
+    private(set) var liftedIcons = Set<Int>()
+    private var carries: [Int: (icon: DesktopIcons.Icon, copy: CALayer, patch: CALayer, until: Double)] = [:]
+    private var onIconSince: [Int: (icon: Int, since: Double)] = [:]
+    private var nextPickup = CACurrentMediaTime() + 40
     let seedBook = SeedBook()
     /// Called when the seed book or today's harvest changes (the menu shows them).
     var onGardenChange: () -> Void = {}
@@ -78,6 +85,14 @@ final class OverlayController {
         /// The tree a branch grows on, or the balloons a swing hangs from.
         var extra: CALayer?
         var extraKey = ""
+        /// A second extra: the treehouse cabin, the balloon's envelope.
+        var extra2: CALayer?
+        var nextBird = 0.0
+        var lastShelfX: CGFloat = 0
+        var snailFacing: CGFloat = 1
+        var snailTuckedUntil = 0.0
+        var swingBoostUntil = 0.0
+        var carpetPhase = -1
         var lastBounce: Double?
         var wasOnShelf = false
         var key = ""
@@ -90,6 +105,7 @@ final class OverlayController {
     private var pressed: Creature?
     /// A creation you pressed on (worker id).
     private var pressedProp: Int?
+    private var pressedPlatform: Int?
     private var hoverID: Int?
     private var hoverSince = 0.0
     private var hoverShown: [Int: Double] = [:]
@@ -217,6 +233,7 @@ final class OverlayController {
         updateBubbles(alive: alive)
         updateProps()
         updateHover()
+        updateIconPlay()
         for id in layers.keys where !alive.contains(id) {
             layers[id]?.removeFromSuperlayer()
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
@@ -250,6 +267,8 @@ final class OverlayController {
                 if let c = creature(id), c.activity == .wake { spawnPop(Effects.bang, above: c) }
             case .dizzy(let id):
                 if let c = creature(id) { spawnStars(around: c) }
+            case .landed(let id, _) where creature(id).flatMap({ world.iconUnder($0) }) != nil:
+                if let c = creature(id), let iconID = world.iconUnder(c), let icon = icons?.visible.first(where: { $0.id == iconID }) { iconBoing(icon) }
             case .landed(let id, let impact):
                 if impact > 650, let c = creature(id) { spawnDust(at: c, strength: min(1, impact / 2000)) }
             case .special(let id, let effect):
@@ -597,9 +616,244 @@ final class OverlayController {
             let t = CACurrentMediaTime()
             st.extra?.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(t * 1.2) * 0.02)))
             st.extra?.position = CGPoint(x: (s.minX + s.width / 2 - o.x).rounded(), y: (s.y - o.y).rounded())
+        case .treehouse:
+            guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: outer - side * 30) }).min(by: { $0.y < $1.y }) else { return }
+            let hpx = max(20, Int(((s.y - floor.y) / 3).rounded()) + 4)
+            if st.extraKey != "th\(hpx)" || st.extra == nil {
+                st.extra?.removeFromSuperlayer()
+                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                setImage(l, PropArt.tree(heightPx: hpx))
+                screens[si].root.insertSublayer(l, at: 0)
+                if st.extra == nil { popIn(l) }
+                st.extra = l; st.extraKey = "th\(hpx)"
+            }
+            st.extra?.position = CGPoint(x: (outer - side * 30 - o.x).rounded(), y: (floor.y - o.y).rounded())
+            if st.extra2 == nil {
+                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                setImage(l, PropArt.cabin)
+                screens[si].root.insertSublayer(l, above: st.extra)
+                popIn(l)
+                st.extra2 = l
+            }
+            st.extra2?.position = CGPoint(x: (outer - side * 26 - o.x).rounded(), y: (s.y - o.y).rounded())
+        case .basket:
+            // The envelope floats above the basket; the burner flickers now and then.
+            let t = CACurrentMediaTime()
+            let burning = (Int(t * 5) % 23) < 3 || t < st.swingBoostUntil
+            let flame = burning ? 1 + Int(t * 8) % 2 : 0
+            let key = "env\(flame)"
+            if st.extraKey != key || st.extra == nil {
+                let fresh = st.extra == nil
+                if st.extra == nil {
+                    let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                    screens[si].root.insertSublayer(l, at: 0)
+                    st.extra = l
+                }
+                setImage(st.extra!, PropArt.balloonEnvelope(seed: j.seed, flame: flame, ropeLength: 34))
+                if fresh { popIn(st.extra!) }
+                st.extraKey = key
+            }
+            st.extra?.position = CGPoint(x: (s.minX + s.width / 2 - o.x).rounded(), y: (s.y - o.y).rounded())
+        case .snail:
+            // The snail's body and shell under the platform; it faces the way it's crawling and wiggles its eyestalks.
+            let t = CACurrentMediaTime()
+            let x = s.minX + s.width / 2 - o.x
+            if abs(x - st.lastShelfX) > 0.05 { st.snailFacing = x > st.lastShelfX ? 1 : -1 }
+            st.lastShelfX = x
+            let look = t < st.snailTuckedUntil ? 2 : Int(t / 1.7) % 2
+            if st.extraKey != "snail\(look)" || st.extra == nil {
+                if st.extra == nil {
+                    let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                    screens[si].root.insertSublayer(l, at: 0)
+                    popIn(l)
+                    st.extra = l
+                }
+                setImage(st.extra!, PropArt.snailBody(look: look))
+                st.extraKey = "snail\(look)"
+            }
+            st.extra?.setAffineTransform(CGAffineTransform(scaleX: st.snailFacing, y: 1))
+            st.extra?.position = CGPoint(x: (x + st.snailFacing * 21).rounded(), y: (s.y - 66 - o.y).rounded())
         default:
             if let l = st.extra { l.removeFromSuperlayer(); st.extra = nil }
         }
+        if j.shelfStyle != .treehouse && j.shelfStyle != .basket, let l = st.extra2 { l.removeFromSuperlayer(); st.extra2 = nil }
+    }
+
+    /// The platform under the cursor (worker id), for clicking it.
+    private func platformOwner(at p: Vec2) -> Int? {
+        for (id, st) in props where st.lingerUntil == nil && st.screen < screens.count {
+            let o = screens[st.screen].frame.origin
+            for l in [st.shelf, st.extra2, st.extra].compactMap({ $0 }) where l.superlayer != nil {
+                if l.frame.insetBy(dx: -2, dy: -2).offsetBy(dx: o.x, dy: o.y).contains(CGPoint(x: p.x, y: p.y)) { return id }
+            }
+        }
+        return nil
+    }
+
+    /// You clicked a platform: each kind reacts its own way.
+    private func pokePlatform(_ id: Int) {
+        guard var st = props[id], let c = world.creatures.first(where: { $0.id == id }), let j = c.job, let shelf = st.shelf else { return }
+        world.pokePlatform(workerID: id)
+        let si = st.screen, f = shelf.frame
+        let mid = CGPoint(x: f.midX, y: f.maxY)
+        func wobble(_ l: CALayer, _ amount: Double) {
+            let w = CAKeyframeAnimation(keyPath: "transform.rotation")
+            w.values = [0, amount, -amount * 0.7, amount * 0.4, 0]
+            w.duration = 0.6
+            w.isAdditive = true
+            l.add(w, forKey: "wobble")
+        }
+        switch j.shelfStyle {
+        case .plank, .stone, .branch, .treehouse:
+            wobble(shelf, 0.04)
+            burst([j.shelfStyle == .stone ? Effects.dust : Effects.leaf, Effects.dust], si: si, at: CGPoint(x: f.midX, y: f.minY), count: 3, dx: -30...30, dy: -40 ... -15, duration: 0.8)
+            if j.shelfStyle == .treehouse, let cabin = st.extra2 {
+                burst([Effects.smoke], si: si, at: CGPoint(x: cabin.frame.midX + 10, y: cabin.frame.maxY), count: 3, dx: -6...6, dy: 20...45, duration: 1.4, stagger: 0.2)
+            }
+        case .leaf:
+            wobble(shelf, 0.08)
+            burst([Effects.leaf, Effects.leaf2], si: si, at: CGPoint(x: f.midX, y: f.minY), count: 4, dx: -40...40, dy: -70 ... -30, duration: 1.4, stagger: 0.08)
+        case .cloud:
+            burst([Effects.cloud], si: si, at: mid, count: 2, dx: -20...20, dy: 4...10, duration: 0.8)
+        case .mushroom:
+            burst([Effects.pollen, Effects.sparkle], si: si, at: mid, count: 8, dx: -40...40, dy: 10...50, duration: 1.2, stagger: 0.04)
+        case .swing:
+            st.swingBoostUntil = CACurrentMediaTime() + 2.5
+        case .basket:
+            st.swingBoostUntil = CACurrentMediaTime() + 1.4
+            if let env = st.extra { burst([Effects.flame, Effects.flame2], si: si, at: CGPoint(x: env.frame.midX, y: env.frame.minY + 100), count: 5, dx: -6...6, dy: 10...24, duration: 0.5, stagger: 0.04) }
+        case .carpet:
+            wobble(shelf, 0.06)
+            burst([Effects.sparkle, Effects.smallStar], si: si, at: mid, count: 6, dx: -60...60, dy: -10...20, duration: 0.8, stagger: 0.03)
+        case .snail:
+            st.snailTuckedUntil = CACurrentMediaTime() + 3
+            if let body = st.extra { burst([Effects.smallHeart], si: si, at: CGPoint(x: body.frame.midX + st.snailFacing * 100, y: body.frame.maxY), count: 2, dx: -10...10, dy: 14...26, duration: 1.0) }
+        }
+        props[id] = st
+    }
+
+    /// A little bird lands on the end of a platform, looks around, and flies off.
+    private func spawnBird(_ st: PropState, side: Double) {
+        guard let shelf = st.shelf else { return }
+        let si = st.screen, f = shelf.frame
+        let perch = CGPoint(x: side > 0 ? f.maxX - 8 : f.minX + 8, y: f.maxY + 6)
+        let l = particle(PropArt.bird[0], si, scale: 3)
+        let from = CGPoint(x: perch.x + CGFloat(side) * 260, y: perch.y + 180)
+        let to = CGPoint(x: perch.x + CGFloat(side) * 300, y: perch.y + 240)
+        let path = CGMutablePath()
+        path.move(to: from)
+        path.addQuadCurve(to: perch, control: CGPoint(x: perch.x + CGFloat(side) * 60, y: perch.y + 120))
+        path.addLine(to: CGPoint(x: perch.x + 0.1, y: perch.y))
+        path.addQuadCurve(to: to, control: CGPoint(x: perch.x - CGFloat(side) * 20, y: perch.y + 90))
+        let move = CAKeyframeAnimation(keyPath: "position")
+        move.path = path
+        move.keyTimes = [0, 0.25, 0.75, 1]
+        move.calculationMode = .linear
+        let hop = CAKeyframeAnimation(keyPath: "transform.scale.y")
+        hop.values = [1, 0.7, 1, 1, 0.8, 1]; hop.keyTimes = [0, 0.05, 0.1, 0.5, 0.55, 1]
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.08, 0.92, 1]
+        let g = CAAnimationGroup(); g.animations = [move, hop, fade]; g.duration = 7
+        l.setAffineTransform(CGAffineTransform(scaleX: side > 0 ? -1 : 1, y: 1))
+        run(l, g)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [weak self] in
+            self?.burst([Effects.note], si: si, at: CGPoint(x: perch.x, y: perch.y + 14), count: 1, dx: -4...4, dy: 16...24, duration: 0.9)
+        }
+    }
+
+    // MARK: Desktop icons
+
+    private func layerRect(_ r: CGRect) -> (Int, CGRect)? {
+        guard !screens.isEmpty else { return nil }
+        let si = screenIndex(for: Vec2(r.midX, r.midY))
+        let o = screens[si].frame.origin
+        return (si, r.offsetBy(dx: -o.x, dy: -o.y))
+    }
+
+    /// A Gremlet landed on an icon: it squashes and springs back (a copy over the real one, wallpaper behind it).
+    private func iconBoing(_ icon: DesktopIcons.Icon) {
+        guard let img = icons?.image(icon), let (si, r) = layerRect(icon.rect) else { return }
+        if let patchImg = icons?.wallpaperPatch(for: icon.rect) {
+            let patch = CALayer(); patch.contents = patchImg; patch.frame = r
+            screens[si].root.insertSublayer(patch, at: 0)
+            let keep = CABasicAnimation(keyPath: "opacity"); keep.fromValue = 1; keep.toValue = 1; keep.duration = 0.55
+            run(patch, keep)
+        }
+        let copy = CALayer(); copy.contents = img
+        copy.anchorPoint = CGPoint(x: 0.5, y: 0); copy.bounds = CGRect(origin: .zero, size: r.size)
+        copy.position = CGPoint(x: r.midX, y: r.minY)
+        screens[si].root.insertSublayer(copy, at: 1)
+        let sq = CAKeyframeAnimation(keyPath: "transform")
+        sq.values = [CATransform3DIdentity, CATransform3DMakeScale(1.12, 0.78, 1), CATransform3DMakeScale(0.94, 1.1, 1), CATransform3DIdentity].map { NSValue(caTransform3D: $0) }
+        sq.duration = 0.55
+        run(copy, sq)
+    }
+
+    /// Pick-ups: now and then a Gremlet that's been sitting on an icon picks up a copy and carries it around over its
+    /// head for a few seconds, then tosses it back into place.
+    private func updateIconPlay() {
+        let now = CACurrentMediaTime()
+        guard let icons, icons.enabled else {
+            for id in Array(carries.keys) { endCarry(id, animated: false) }
+            return
+        }
+        for c in world.creatures {
+            if let iconID = world.iconUnder(c) {
+                if onIconSince[c.id]?.icon != iconID { onIconSince[c.id] = (iconID, now) }
+            } else { onIconSince[c.id] = nil }
+        }
+        if carries.isEmpty, now >= nextPickup,
+           let (cid, info) = onIconSince.first(where: { entry in
+               now - entry.value.since > 3 && world.creatures.first(where: { $0.id == entry.key })?.job == nil
+           }),
+           let icon = icons.visible.first(where: { $0.id == info.icon }),
+           let img = icons.image(icon), let patchImg = icons.wallpaperPatch(for: icon.rect), let (si, r) = layerRect(icon.rect) {
+            nextPickup = now + Double.random(in: 70...150)
+            let patch = CALayer(); patch.contents = patchImg; patch.frame = r
+            screens[si].root.insertSublayer(patch, at: 0)
+            let copy = CALayer(); copy.contents = img
+            copy.anchorPoint = CGPoint(x: 0.5, y: 0); copy.bounds = CGRect(origin: .zero, size: CGSize(width: r.width * 0.7, height: r.height * 0.7))
+            copy.position = CGPoint(x: r.midX, y: r.minY)
+            screens[si].root.addSublayer(copy)
+            carries[cid] = (icon, copy, patch, now + Double.random(in: 8...12))
+            liftedIcons.insert(icon.id)
+            showBubble(["Ooh, what's this?", "Borrowing this!", "Wheee!"].randomElement()!, on: cid, seconds: 2.5)
+        }
+        for (cid, carry) in carries {
+            guard let c = world.creatures.first(where: { $0.id == cid }), let csi = layerScreen[cid] else { endCarry(cid, animated: false); continue }
+            if now >= carry.until { endCarry(cid, animated: true); continue }
+            let o = screens[csi].frame.origin
+            if carry.copy.superlayer !== screens[csi].root { carry.copy.removeFromSuperlayer(); screens[csi].root.addSublayer(carry.copy) }
+            carry.copy.position = CGPoint(x: (c.pos.x - o.x).rounded(), y: (c.pos.y - o.y + c.size.y * 0.82 + sin(now * 6) * 2).rounded())
+        }
+    }
+
+    /// Back it goes: the copy arcs home onto its spot and the wallpaper patch comes away.
+    private func endCarry(_ cid: Int, animated: Bool) {
+        guard let carry = carries.removeValue(forKey: cid) else { return }
+        liftedIcons.remove(carry.icon.id)
+        guard animated, let (si, r) = layerRect(carry.icon.rect), carry.copy.superlayer != nil else {
+            carry.copy.removeFromSuperlayer(); carry.patch.removeFromSuperlayer(); return
+        }
+        if world.creatures.contains(where: { $0.id == cid }) { showBubble("Putting it back!", on: cid, seconds: 1.8) }
+        let from = carry.copy.position
+        let to = CGPoint(x: r.midX, y: r.minY)
+        if carry.copy.superlayer !== screens[si].root { carry.copy.removeFromSuperlayer(); screens[si].root.addSublayer(carry.copy) }
+        let path = CGMutablePath()
+        path.move(to: from)
+        path.addQuadCurve(to: to, control: CGPoint(x: (from.x + to.x) / 2, y: max(from.y, to.y) + 160))
+        let fly = CAKeyframeAnimation(keyPath: "position"); fly.path = path
+        let grow = CABasicAnimation(keyPath: "bounds.size"); grow.toValue = NSValue(size: r.size)
+        let g = CAAnimationGroup(); g.animations = [fly, grow]; g.duration = 0.9
+        g.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        let patch = carry.patch
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            patch.removeFromSuperlayer()
+            self?.burst([Effects.dust, Effects.sparkle], si: si, at: CGPoint(x: r.midX, y: r.minY), count: 4, dx: -30...30, dy: 0...20, duration: 0.5)
+        }
+        run(carry.copy, g)
+        CATransaction.commit()
     }
 
     /// A swirling portal (to and from the phone).
@@ -794,6 +1048,18 @@ final class OverlayController {
                 st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
                 if st.shelf?.position != p { st.shelf?.position = p }
                 updateShelfExtra(&st, j, s, si, o, flip)
+                if j.shelfStyle == .carpet {
+                    let phase = Int(CACurrentMediaTime() * 7) % 8
+                    if phase != st.carpetPhase { st.carpetPhase = phase; st.shelf?.contents = PropArt.carpet(widthPx: px, phase: phase) }
+                    st.shelf?.position.y += 6
+                }
+                if j.shelfStyle == .swing, let ex = st.extra, CACurrentMediaTime() < st.swingBoostUntil {
+                    ex.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(CACurrentMediaTime() * 4) * 0.08)))
+                }
+                if j.phase == .working, now >= st.nextBird {
+                    if st.nextBird > 0 && j.shelfStyle != .snail { spawnBird(st, side: j.shelfSide ?? 1) }
+                    st.nextBird = now + Double.random(in: 45...110)
+                }
                 // A little lantern at the outer end in the evening.
                 if PropArt.isEvening {
                     if st.lantern == nil {
@@ -903,6 +1169,7 @@ final class OverlayController {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
             if let l = st.extra { fadeOut(l, 0.5); st.extra = nil }
+            if let l = st.extra2 { fadeOut(l, 0.5); st.extra2 = nil }
             if st.lingerUntil == nil { st.lingerUntil = now + (st.wasOnShelf ? 0 : 60) }
             if now >= st.lingerUntil! || st.item.superlayer == nil {
                 fadeOut(st.item, 0.8)
@@ -1145,7 +1412,7 @@ final class OverlayController {
         if paused { return }
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
-        setClickThrough(world.creature(at: p) != nil || propOwner(at: p) != nil ? screenIndex(for: p) : nil)
+        setClickThrough(world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil ? screenIndex(for: p) : nil)
     }
 
     private func setClickThrough(_ activeScreen: Int?) {
@@ -1167,6 +1434,7 @@ final class OverlayController {
     func mouseDown(at p: CGPoint, time: Double) {
         guard !paused else { return }
         if world.creature(at: vec(p)) == nil, let owner = propOwner(at: vec(p)) { pressedProp = owner; return }
+        if world.creature(at: vec(p)) == nil, let owner = platformOwner(at: vec(p)) { pressedPlatform = owner; return }
         guard let c = world.creature(at: vec(p)) else { return }
         pressed = c
         pressStart = vec(p)
@@ -1185,6 +1453,12 @@ final class OverlayController {
     }
 
     func mouseUp(at p: CGPoint, time: Double) {
+        if let owner = pressedPlatform {
+            pressedPlatform = nil
+            if platformOwner(at: vec(p)) == owner { pokePlatform(owner) }
+            updateClickThrough()
+            return
+        }
         if let owner = pressedProp {
             pressedProp = nil
             if propOwner(at: vec(p)) == owner { tend(owner) }

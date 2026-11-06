@@ -277,8 +277,10 @@ enum PropArt {
         let light: UInt32 = 0xD9A066, mid: UInt32 = 0xB07A44, dark: UInt32 = 0x7A5230, leaf: UInt32 = 0x6CC04A
         let w = max(8, widthPx)
         var g: Grid = []
+        let grain: UInt32 = 0x9A6A3C, nail: UInt32 = 0x4A4A4A
         g.append((0..<w).map { _ in light })
-        g.append((0..<w).map { $0 % 9 == 4 ? dark : mid })
+        g.append((0..<w).map { x in x == 2 || x == w - 3 ? nail : x % 9 == 4 ? dark : (x % 13 == 7 ? grain : mid) })
+        g.append((0..<w).map { x in x % 11 == 5 || x % 11 == 6 ? grain : mid })
         g.append((0..<w).map { _ in dark })
         for r in 0..<5 {
             var row: [UInt32?] = Array(repeating: nil, count: w)
@@ -301,6 +303,28 @@ enum PropArt {
         switch style {
         case .plank:
             return shelf(widthPx: w)
+        case .basket:
+            // Woven wicker: a rim, a diagonal weave, a darker base, rounded bottom corners.
+            let rim: UInt32 = 0xC98B4A, a: UInt32 = 0xD9A066, b: UInt32 = 0xB07A44, base: UInt32 = 0x7A5230
+            g.append(row { _ in rim })
+            g.append(row { x in x % 4 == 0 ? base : rim })
+            for r in 0..<6 { g.append(row { x in (x + r) % 4 < 2 ? a : b }) }
+            g.append(row { x in x == 0 || x == w - 1 ? nil : base })
+            g.append(row { x in x < 2 || x > w - 3 ? nil : base })
+        case .carpet:
+            return carpet(widthPx: w, phase: 0)
+        case .treehouse:
+            // Porch boards with a little lip, and a ladder rung or two hanging below.
+            let board: UInt32 = 0xC98B4A, gap: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22
+            g.append(row { x in x % 7 == 6 ? gap : board })
+            g.append(row { x in x % 7 == 6 ? gap : 0xB07A44 })
+            g.append(row { _ in dark })
+            for r in 0..<6 { g.append(row { x in (x == w - 8 || x == w - 3) ? dark : (r % 3 == 1 && x > w - 8 && x < w - 3 ? 0xB07A44 : nil) }) }
+        case .snail:
+            // The flat top of the snail's mossy shell.
+            let moss: UInt32 = 0x7DC45E, mossDark: UInt32 = 0x4F9A44, shell: UInt32 = 0xC98B4A
+            g.append(row { x in x % 6 == 2 ? mossDark : moss })
+            g.append(row { x in x % 5 == 1 ? moss : shell })
         case .stone:
             let top: UInt32 = 0x8FA88A, moss: UInt32 = 0x6CC04A, light: UInt32 = 0xB8B6AE, mid: UInt32 = 0x8E8B83, dark: UInt32 = 0x5E5B55
             g.append(row { $0 % 5 == 1 || $0 % 7 == 3 ? moss : top })
@@ -321,7 +345,8 @@ enum PropArt {
                 g.append(row { x in
                     guard x < w - inset else { return nil }
                     if r == 1 { return mid }
-                    return (x + r) % 8 == 0 ? dark : mid
+                    if r == 3 { return dark }                                 // the midrib
+                    return (x + r) % 8 == 0 || (x - r) % 8 == 0 ? dark : (x % 5 == 0 ? light : mid)   // veins
                 })
             }
             g.append(row { x in x < 3 ? dark : nil })                      // stem into the window's side
@@ -420,6 +445,114 @@ enum PropArt {
     static let springMushroom = image(grid([
         "...rrrrrr...", ".rrWrrrrWrr.", "rrrrrWrrrrrr", "rWrrrrrrrWrr", "wwwwwwwwwwww", "....wwww....", "....wwww....", "...wwwwww...",
     ], ["r": 0xE8343F, "W": 0xFFFFFF, "w": 0xF4EAD8]))
+
+    // MARK: Platform extras (drawn behind the platform's Gremlet)
+
+    /// A flying carpet: patterned, with tassels; rippling (`phase` 0..<8).
+    static var carpetCache: [String: CGImage] = [:]
+    static func carpet(widthPx: Int, phase: Int) -> CGImage {
+        let key = "\(widthPx)-\(phase)"
+        if let c = carpetCache[key] { return c }
+        let w = widthPx, h = 9
+        var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
+        let red: UInt32 = 0xC0393B, deep: UInt32 = 0x8A2430, gold: UInt32 = 0xF2C14E, teal: UInt32 = 0x3FA7A0
+        for x in 0..<w {
+            let off = Int((sin(Double(x) / 6 + Double(phase) / 8 * 2 * .pi) * 1.5).rounded()) + 2
+            let rows: [UInt32] = [gold, x % 6 < 3 ? red : deep, (x % 8 == 3 || x % 8 == 4) ? teal : red, gold]
+            for (i, c) in rows.enumerated() where off + i < h { g[off + i][x] = c }
+            if x == 0 || x == w - 1 { for t in 0..<2 where off + 4 + t < h { g[off + 4 + t][x] = gold } }
+        }
+        let img = image(g)
+        carpetCache[key] = img
+        return img
+    }
+
+    /// A hot-air balloon envelope with stripes, its ropes, and the burner flame (`flame` 0 = off, 1-2 flickers).
+    static func balloonEnvelope(seed: UInt64, flame: Int, ropeLength: Int) -> CGImage {
+        let w = 44, bodyH = 40, h = bodyH + ropeLength
+        var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
+        let palettes: [[UInt32]] = [[0xFF6F7E, 0xFFE066], [0x6FB8F0, 0xFFFFFF], [0xA98BEA, 0xFFB35C], [0x8FD6A2, 0xFF8FBF]]
+        let pal = palettes[Int(seed % UInt64(palettes.count))]
+        let cx = Double(w) / 2 - 0.5
+        for y in 0..<bodyH {
+            // Teardrop: round on top, narrowing to the mouth.
+            let t = Double(y) / Double(bodyH)
+            let r = t < 0.62 ? max(0, 1 - pow((t - 0.42) / 0.42, 2)).squareRoot() * 21 : (1 - (t - 0.62) / 0.38) * 14 + 4
+            for x in 0..<w {
+                let dx = Double(x) - cx
+                guard abs(dx) <= max(1, r) else { continue }
+                let stripe = Int(((dx / max(1, r)) + 1) * 3) % 2
+                var c = pal[stripe]
+                if dx < -r * 0.45 && t < 0.5 { c = 0xFFFFFF }          // highlight
+                if dx > r * 0.6 { c = stripe == 0 ? 0xD8455A : 0xD0D0D0 } // shade
+                g[y][x] = t > 0.9 ? 0x7A5230 : c
+            }
+        }
+        if flame > 0 {
+            let fy = bodyH - 3
+            for (dx, dy) in [(0, 0), (-1, 1), (1, 1), (0, 1), (0, 2)] + (flame == 2 ? [(-1, 2), (1, 2), (0, 3)] : []) {
+                g[min(h - 1, fy + dy)][Int(cx) + dx] = dy < 2 ? 0xFFE066 : 0xFF9A3C
+            }
+        }
+        for y in bodyH..<h {   // ropes down to the basket corners
+            let k = Double(y - bodyH) / Double(max(1, ropeLength))
+            g[y][min(w - 1, max(0, Int(cx - 9 - k * 9)))] = 0x5E3B22
+            g[y][min(w - 1, max(0, Int(cx + 9 + k * 9)))] = 0x5E3B22
+        }
+        return image(g)
+    }
+
+    /// The treehouse: a little cabin with a pointed roof, round window and door.
+    static let cabin: CGImage = image(grid([
+        ".......rr.......",
+        "......rRRr......",
+        ".....rRRRRr.....",
+        "....rRRRRRRr....",
+        "...rRRRRRRRRr...",
+        "..rRRRRRRRRRRr..",
+        ".rrrrrrrrrrrrrr.",
+        "..wwwwwwwwwwww..",
+        "..wwbbwwwwkkww..",
+        "..wwbbwwwwkkww..",
+        "..wwwwwwwwkkww..",
+        "..wwwwwwwwkkww..",
+        "..dddddddddddd..",
+    ], ["r": 0xB8463E, "R": 0xD8645A, "w": 0xD9A066, "b": 0xFFE9A8, "k": 0x6E4A26, "d": 0x7A5230]))
+
+    /// The garden snail: body along the floor, a spiral shell rising to the platform, eyestalks (`look` 0-2).
+    static var snailCache: [Int: CGImage] = [:]
+    static func snailBody(look: Int) -> CGImage {
+        if let c = snailCache[look] { return c }
+        let w = 82, h = 24
+        var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
+        let body: UInt32 = 0xB9C98A, bodyDark: UInt32 = 0x8FA36A, shell: UInt32 = 0xC98B4A, shellDark: UInt32 = 0x8A5A35, swirl: UInt32 = 0xE8B26A
+        // Foot along the ground, head at the front (right).
+        for y in 18..<h { for x in 4..<(w - 2) { g[y][x] = y == h - 1 ? bodyDark : body } }
+        for y in 10..<18 { for x in (w - 16)..<(w - 3) where (x - (w - 10)) * (x - (w - 10)) + (y - 15) * (y - 15) * 2 < 50 { g[y][x] = body } }
+        g[15][w - 7] = 0x2B2620                                            // a smile-ish eye spot
+        // Eyestalks: up, tilted, or tucked in.
+        let stalk = [(-1, 7), (1, 6), (0, 2)][look]
+        for i in 0..<stalk.1 { g[10 - i][w - 11 + (i * stalk.0) / 3] = bodyDark; g[10 - i][w - 7 + (i * stalk.0) / 3] = bodyDark }
+        if stalk.1 > 3 { g[10 - stalk.1][w - 11 + (stalk.1 * stalk.0) / 3] = 0x2B2620; g[10 - stalk.1][w - 7 + (stalk.1 * stalk.0) / 3] = 0x2B2620 }
+        // Shell: a big spiral sitting on the foot, its flat top lines up with the platform.
+        let scx = 34.0, scy = 9.0
+        for y in 0..<19 { for x in 6..<62 {
+            let dx = Double(x) - scx, dy = (Double(y) - scy) * 1.6
+            let d = (dx * dx + dy * dy).squareRoot()
+            guard d < 27 else { continue }
+            let ang = atan2(dy, dx)
+            let ring = (d + ang * 4.3).truncatingRemainder(dividingBy: 9)
+            g[y][x] = abs(ring) < 1.4 ? shellDark : (dx < -8 && dy < 0 ? swirl : shell)
+        }}
+        let img = image(g)
+        snailCache[look] = img
+        return img
+    }
+
+    static let bird: [CGImage] = [
+        image(grid(["..k.", ".bbo", "bbb.", ".b..", ], ["b": 0x6F8FA6, "k": 0x2B2620, "o": 0xFFB35C])),
+        image(grid(["b..b", ".bbo", "bbb.", "....", ], ["b": 0x6F8FA6, "k": 0x2B2620, "o": 0xFFB35C])),
+    ]
 
     static let balloonColors: [UInt32] = [0xFF6F7E, 0xFFD84A, 0x6FB8F0, 0xA98BEA, 0x6CC04A, 0xFF8FBF]
     static func balloon(_ id: Int) -> CGImage {

@@ -41,6 +41,10 @@ public final class World {
     public var userActive = true
     /// At most this many Gremlets on a hobby at once.
     public var maxHobbies = 2
+    /// Tops of visible desktop icons (set by the platform layer when icon play is on). Owner ids at or below
+    /// `iconOwnerBase`.
+    public var iconSurfaces: [Surface] = []
+    public static let iconOwnerBase = -200_000
     var _gardenSpots: [Double] = []
     /// Pending wishes: the next seed planted is epic or better.
     public internal(set) var wishes = 0
@@ -75,7 +79,7 @@ public final class World {
     static let creatureOwnerBase = -1000
     static func creatureOwner(_ id: Int) -> Int { creatureOwnerBase - id }
     static func carrierID(_ owner: Int?) -> Int? {
-        guard let o = owner, o <= creatureOwnerBase, o > shelfOwnerBase else { return nil }
+        guard let o = owner, o <= creatureOwnerBase, o > iconOwnerBase else { return nil }
         return creatureOwnerBase - o
     }
 
@@ -87,7 +91,8 @@ public final class World {
         var newWindows: [Int: Rect] = [:]
         for w in windowsFrontToBack { newWindows[w.id] = w.frame }
         for c in creatures where c.isGrounded {
-            guard let owner = windowFor(owner: c.groundOwner), let old = windows[owner], let new = newWindows[owner] else { continue }
+            // Window tops only; shelves carry their own riders (carryRiders).
+            guard let owner = c.groundOwner, owner >= 0, let old = windows[owner], let new = newWindows[owner] else { continue }
             let d = Vec2(new.minX - old.minX, new.maxY - old.maxY)
             c.pos += d
             // Anyone standing on this creature's head comes along for the ride.
@@ -96,7 +101,7 @@ public final class World {
         self.screens = screens
         self.windows = newWindows
         self.windowOrder = windowsFrontToBack.map(\.id)
-        surfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
+        surfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack) + iconSurfaces
     }
 
     // MARK: Creatures
@@ -228,6 +233,7 @@ public final class World {
             lastCursor = cur
         }
         for c in creatures { c.prevPos = c.pos }
+        carryRiders()
         // Lower creatures first so a carrier has moved before the friend standing on its head.
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()

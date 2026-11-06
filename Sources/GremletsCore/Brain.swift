@@ -26,6 +26,16 @@ struct Brain {
             return
         }
 
+        // Sitting on a desktop icon: stay a while (it's tiny, so no wandering), look around, show off, then hop off.
+        if world.iconUnder(c) != nil {
+            add("sit", 3.0) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(2.5, 5)) }
+            add("special", 0.4) { world.startSpecial(c) }
+            add("dance", 0.25) { world.startDance(c, invite: false) }
+            add("hopOff", 0.35) { world.launch(c, velocity: Vec2(c.facing * 120, 420)) }
+            pickAndStart(choices, world)
+            return
+        }
+
         // --- Solo
         add("idle", 1.0) {
             c.idleVariant = world.rng.chance(0.35) ? "look" : "idle"
@@ -47,6 +57,9 @@ struct Brain {
             add("fly", 0.8 * (0.3 + e)) { world.startFlight(c) }
         }
         add("special", 0.3 * (0.3 + e)) { world.startSpecial(c) }
+        if let icon = world.iconToVisit(for: c) {
+            add("icon", 0.25) { world.startIconVisit(c, icon) }
+        }
         if let x = world.flowerToTend(for: c) {
             add("tend", 0.3) { world.startTending(c, x: x) }
         }

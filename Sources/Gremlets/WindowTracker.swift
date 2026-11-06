@@ -25,9 +25,23 @@ enum WindowTracker {
                   let b = w[kCGWindowBounds as String] as? [String: Double],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"],
                   width >= 80, height >= 40 else { continue }
-            out.append(WindowInfo(id: id, frame: Rect(x: x, y: primaryHeight - y - height, w: width, h: height)))
+            let owner = w[kCGWindowOwnerName as String] as? String ?? ""
+            out.append(WindowInfo(id: id, frame: Rect(x: x, y: primaryHeight - y - height, w: width, h: height), ledges: ledges(for: owner)))
         }
         return out
+    }
+
+    /// Where apps keep a ledge Gremlets can walk along inside the window: the bottom edge of the tab strip + address
+    /// bar in browsers, the toolbar in Finder. Measured from the window's top edge, in points (default layouts).
+    static func ledges(for app: String) -> [Double] {
+        switch app {
+        case "Google Chrome", "Google Chrome Canary", "Brave Browser", "Microsoft Edge", "Chromium", "Vivaldi", "Opera": return [88]
+        case "Arc": return [52]
+        case "Safari", "Safari Technology Preview": return [80]
+        case "Firefox", "Firefox Nightly", "Zen Browser": return [84]
+        case "Finder": return [52]
+        default: return []
+        }
     }
 
     /// Usable area of every screen (above the Dock, below the menu bar).

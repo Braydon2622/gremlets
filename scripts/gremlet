@@ -6,8 +6,8 @@
 #   gremlet unfocus              stop the focus timer
 #   gremlet hide | show          hide them (e.g. before you present) / bring them back  (same as ⌃⌥G)
 #   gremlet say "text" [seconds] the Gremlet nearest your cursor pops up with a speech bubble (default 8 s)
-#   gremlet hobby [shelf|floor]  the Gremlet nearest your cursor starts a window-box garden now (on a shelf by a window,
-#                                or on the floor)
+#   gremlet hobby [shelf|floor|<platform>]  the Gremlet nearest your cursor starts a window-box garden now; platforms:
+#                                plank stone leaf cloud mushroom branch swing basket carpet treehouse snail
 #   gremlet pair                 pair with your phone (opens a QR code to scan)
 #   gremlet send [name]          send a Gremlet through the portal to your phone
 #   gremlet status               what's out and whether a focus timer is running
@@ -33,7 +33,10 @@ case "${1:-}" in
   hobby)
     q="hobby?"
     for a in "${@:2}"; do
-      case "$a" in shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;; esac
+      case "$a" in
+        shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;;
+        plank|stone|leaf|cloud|mushroom|branch|swing|basket|carpet|treehouse|snail) q="${q}style=$a&" ;;
+      esac
     done
     call "$q" >/dev/null ;;
   pair)    call phone/pair && echo && open "http://127.0.0.1:${PORT}/pair" ;;

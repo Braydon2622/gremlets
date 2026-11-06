@@ -1,6 +1,6 @@
 /// A one-way horizontal platform creatures can stand on: a screen floor or the visible part of a window's top edge.
 public struct Surface: Equatable, Sendable {
-    public enum Kind: Sendable { case floor, windowTop, creature, shelf }
+    public enum Kind: Sendable { case floor, windowTop, creature, shelf, windowLedge, icon }
     /// Window number for window tops; negative ids for screen floors.
     public var ownerID: Int
     public var kind: Kind
@@ -19,7 +19,9 @@ public struct Surface: Equatable, Sendable {
 public struct WindowInfo: Equatable, Sendable {
     public var id: Int
     public var frame: Rect
-    public init(id: Int, frame: Rect) { self.id = id; self.frame = frame }
+    /// Ledges inside the window, as distances below its top edge (e.g. the bottom of a browser's tab and address bar).
+    public var ledges: [Double]
+    public init(id: Int, frame: Rect, ledges: [Double] = []) { self.id = id; self.frame = frame; self.ledges = ledges }
 }
 
 public enum SurfaceBuilder {
@@ -52,6 +54,17 @@ public enum SurfaceBuilder {
             }
             for sp in spans where sp.width >= minSegment {
                 out.append(Surface(ownerID: win.id, kind: .windowTop, y: y, minX: sp.lo, maxX: sp.hi))
+            }
+            // Ledges inside the window (toolbars), where no window in front covers them.
+            for offset in win.ledges where offset + 60 < win.frame.h {
+                let ly = y - offset
+                var inner = [Span(max(win.frame.minX + 8, screen.minX), min(win.frame.maxX - 8, screen.maxX))]
+                for front in windowsFrontToBack[..<i] where front.frame.minY < ly + 100 && front.frame.maxY > ly - 2 {
+                    inner = Span.subtract(inner, Span(front.frame.minX, front.frame.maxX))
+                }
+                for sp in inner where sp.width >= minSegment * 3 {
+                    out.append(Surface(ownerID: win.id, kind: .windowLedge, y: ly, minX: sp.lo, maxX: sp.hi))
+                }
             }
         }
         return out

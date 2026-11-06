@@ -16,10 +16,29 @@ public enum Craft: String, CaseIterable, Sendable {
 /// What a Gremlet's shelf is made of. Some are alive or move: the leaf sways, the cloud bobs, the swing rocks.
 public enum ShelfStyle: String, CaseIterable, Sendable {
     case plank, stone, leaf, cloud, mushroom, branch, swing
+    /// A wicker basket hanging under a hot-air balloon; drifts back and forth beside the window.
+    case basket
+    /// A flying carpet that ripples and drifts.
+    case carpet
+    /// A treehouse porch on a tree that grows up beside the window.
+    case treehouse
+    /// A giant friendly garden snail carrying the window box on its shell, crawling along the bottom of the screen.
+    case snail
 
-    /// Relative chance of each.
+    /// Relative chance of each (the snail is chosen separately, for gardens on the floor).
     var weight: Double {
-        switch self { case .plank: return 1.6; case .branch, .leaf: return 1.3; default: return 1.0 }
+        switch self { case .plank: return 1.4; case .branch, .leaf, .basket, .treehouse: return 1.2; case .snail: return 0; default: return 1.0 }
+    }
+
+    /// Side-to-side drift (points) at time t.
+    func drift(_ t: Double, _ seed: UInt64) -> Double {
+        let phase = Double(seed % 997) / 151
+        switch self {
+        case .basket: return sin(t * 0.22 + phase) * 55
+        case .carpet: return sin(t * 0.35 + phase) * 32
+        case .snail: return sin(t * 0.045 + phase) * 140      // a slow crawl
+        default: return 0
+        }
     }
 
     /// Up-and-down motion (points) at time t.
@@ -29,6 +48,8 @@ public enum ShelfStyle: String, CaseIterable, Sendable {
         case .cloud: return sin(t * 0.9 + phase) * 6
         case .leaf: return sin(t * 1.5 + phase) * 3
         case .swing: return sin(t * 1.2 + phase) * 2.5
+        case .basket: return sin(t * 0.6 + phase) * 9
+        case .carpet: return sin(t * 1.7 + phase) * 4
         default: return 0
         }
     }
@@ -63,6 +84,13 @@ public final class Job {
     public internal(set) var shelfStyle: ShelfStyle = .plank
     /// A shelf on the wall (the side edge of a screen) rather than on a window: screen index and height.
     public internal(set) var wall: (screen: Int, y: Double)?
+    /// The snail's home spot on the floor (screen index, centre x).
+    public internal(set) var snail: (screen: Int, x: Double)?
+    /// Where the platform was last tick, so whoever stands on it moves with it.
+    var lastShelfMinX: Double?
+    var lastShelfY: Double?
+    /// How many times you've clicked the platform (the platform layer plays a reaction each time).
+    public internal(set) var platformPokes = 0
     var rideUp: Ride = .balloon
     /// The bouncy mushroom (where and when), for the platform layer to draw.
     public internal(set) var bounceAt: Double?
@@ -170,6 +198,14 @@ extension World {
                 if !taken.contains(where: { abs($0 - y) < 160 }) { wall = (si, side, y); break }
             }
         }
+        // Gardening on the floor? Sometimes a giant snail offers its shell.
+        var snailAt: (Int, Double)?
+        if windowID == nil && wall == nil && support.kind == .floor && rng.chance(0.45),
+           let si = screens.firstIndex(where: { c.pos.x >= $0.minX && c.pos.x < $0.maxX }), screens[si].w > 700,
+           !creatures.contains(where: { $0.job?.snail != nil }) {
+            let scr = screens[si]
+            snailAt = (si, c.pos.x.clamped(scr.minX + 260, scr.maxX - 260))
+        }
         guard windowID != nil || wall != nil || support.kind == .floor else { return false }
         let job = Job(craft: craft, kind: .hobby, windowID: windowID, seed: rng.next(), now: clock)
         assign(c, job)
@@ -177,16 +213,30 @@ extension World {
             job.wall = (si, y)
             job.shelfSide = side
         }
+        if let (si, x) = snailAt {
+            job.snail = (si, x)
+            job.shelfSide = 1
+            job.shelfStyle = .snail
+        }
         c.set(.idle, duration: 0.3)
         return true
     }
 
     /// The `gremlet hobby` command: the free Gremlet nearest the cursor starts a hobby now.
     @discardableResult
-    public func startHobbyNearCursor(craft: Craft? = nil, onWindow: Bool? = nil) -> Bool {
+    public func startHobbyNearCursor(craft: Craft? = nil, onWindow: Bool? = nil, style: ShelfStyle? = nil) -> Bool {
         let free = creatures.filter { $0.job == nil && $0.isGrounded }
         guard let c = nearestToCursor(free) else { return false }
-        return startHobby(c, craft: craft, onWindow: onWindow) || startHobby(c, craft: craft, onWindow: !(onWindow ?? true))
+        let wantShelf = style == nil ? onWindow : (style != .snail)
+        guard startHobby(c, craft: craft, onWindow: wantShelf) || startHobby(c, craft: craft, onWindow: !(wantShelf ?? true)),
+              let j = c.job else { return false }
+        if let style, style != .snail, j.shelfSide != nil, j.snail == nil { j.shelfStyle = style }
+        if style == .snail, j.snail == nil, let si = screens.firstIndex(where: { c.pos.x >= $0.minX && c.pos.x < $0.maxX }), j.shelfSide == nil {
+            j.snail = (si, c.pos.x.clamped(screens[si].minX + 260, screens[si].maxX - 260))
+            j.shelfSide = 1
+            j.shelfStyle = .snail
+        }
+        return true
     }
 
     private func assign(_ c: Creature, _ j: Job) {
@@ -197,6 +247,7 @@ extension World {
         c.job = j
         if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x, for: c.id) }
         // Every shelf is a little different, and so is the way up.
+        guard j.snail == nil else { return }
         let total = ShelfStyle.allCases.reduce(0) { $0 + $1.weight }
         var roll = rng.range(0, total)
         j.shelfStyle = ShelfStyle.allCases.first { roll -= $0.weight; return roll <= 0 } ?? .plank
@@ -270,6 +321,27 @@ extension World {
         }
     }
 
+    /// You clicked the platform itself. Each kind reacts its own way (the platform layer animates it); a cloud
+    /// rains on the window box.
+    public func pokePlatform(workerID: Int) {
+        guard let c = creature(id: workerID), let j = c.job else { return }
+        j.platformPokes += 1
+        if j.shelfStyle == .cloud && j.phase == .working { rainOn(j) }
+    }
+
+    /// Moving platforms carry whoever stands on them (called every tick before creatures update).
+    func carryRiders() {
+        for c in creatures {
+            guard let j = c.job, let s = jobShelf(j, workerID: c.id) else { c.job?.lastShelfMinX = nil; c.job?.lastShelfY = nil; continue }
+            if c.groundOwner == World.shelfOwner(c.id) {
+                if let last = j.lastShelfMinX { c.pos.x += s.minX - last }
+                if let lastY = j.lastShelfY { c.pos.y += s.y - lastY }
+            }
+            j.lastShelfMinX = s.minX
+            j.lastShelfY = s.y
+        }
+    }
+
     /// You clicked a busy Gremlet: it shows you what it's making and gets a burst of motivation.
     func encourage(_ c: Creature) {
         guard let j = c.job, j.phase == .working else { return }
@@ -285,13 +357,20 @@ extension World {
 
     /// The shelf for this job, if any: a plank sticking out of the window's side just below its top edge.
     public func jobShelf(_ j: Job, workerID: Int) -> Surface? {
+        if let sn = j.snail, sn.screen < screens.count, j.shelfSide != nil {
+            // On the snail's shell: a moving platform crawling along the floor.
+            let scr = screens[sn.screen]
+            let x = (sn.x + j.shelfStyle.drift(clock, j.seed)).clamped(scr.minX + 120, scr.maxX - 120)
+            return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: scr.minY + 66, minX: x - World.shelfWidth / 2, maxX: x + World.shelfWidth / 2)
+        }
         if let wall = j.wall, let side = j.shelfSide, wall.screen < screens.count {
             // On the wall: the shelf sticks out from the screen's edge into the screen.
             let scr = screens[wall.screen]
             let edge = side > 0 ? scr.minX : scr.maxX
             let y = wall.y + j.shelfStyle.bob(clock, j.seed)
-            let lo = side > 0 ? edge : edge - World.shelfWidth
-            let hi = side > 0 ? edge + World.shelfWidth : edge
+            let dx = abs(j.shelfStyle.drift(clock, j.seed)) * side      // drifting platforms never leave the screen
+            let lo = (side > 0 ? edge : edge - World.shelfWidth) + dx
+            let hi = (side > 0 ? edge + World.shelfWidth : edge) + dx
             return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: y, minX: lo, maxX: hi)
         }
         guard var side = j.shelfSide, let id = j.windowID, let w = windows[id],
@@ -305,8 +384,10 @@ extension World {
         }
         let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60) + j.shelfStyle.bob(clock, j.seed)
         let edge = side > 0 ? w.maxX : w.minX
-        let lo = side > 0 ? edge - 6 : edge - World.shelfWidth
-        let hi = side > 0 ? edge + World.shelfWidth : edge + 6
+        // Drifting platforms swing out away from the window and back, never into it.
+        let dx = abs(j.shelfStyle.drift(clock, j.seed)) * side
+        let lo = (side > 0 ? edge - 6 : edge - World.shelfWidth) + dx
+        let hi = (side > 0 ? edge + World.shelfWidth : edge + 6) + dx
         return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: y, minX: lo, maxX: hi)
     }
 
@@ -419,6 +500,36 @@ extension World {
             }
         }
         return true
+    }
+
+    // MARK: Desktop icons
+
+    /// A visible desktop icon this Gremlet could go and sit on.
+    func iconToVisit(for c: Creature) -> Surface? {
+        guard c.job == nil, c.isGrounded, !iconSurfaces.isEmpty else { return nil }
+        let free = iconSurfaces.filter { s in !creatures.contains { $0.groundOwner == s.ownerID } && abs((s.minX + s.maxX) / 2 - c.pos.x) < 1400 }
+        return free.isEmpty ? nil : free[Int(rng.next() % UInt64(free.count))]
+    }
+
+    /// Off to sit on a desktop icon: flies if it has wings, otherwise floats up on a balloon (or a bubble...).
+    func startIconVisit(_ c: Creature, _ s: Surface) {
+        let target = Vec2((s.minX + s.maxX) / 2, s.y)
+        if c.species.flies {
+            c.flyTarget = target
+            c.groundOwner = nil
+            c.vel = Vec2(0, 200)
+            c.facing = target.x > c.pos.x ? 1 : -1
+            c.set(.fly, duration: 10)
+            emit(.tookOff(c.id))
+        } else {
+            startFloat(c, to: target, ride: [Ride.balloon, .bubble, .dandelion][Int(rng.next() % 3)])
+        }
+    }
+
+    /// Whether a creature is standing on a desktop icon, and which.
+    public func iconUnder(_ c: Creature) -> Int? {
+        guard let o = c.groundOwner, o <= World.iconOwnerBase, o > World.shelfOwnerBase, c.isGrounded else { return nil }
+        return World.iconOwnerBase - o
     }
 
     // MARK: Friends come to watch

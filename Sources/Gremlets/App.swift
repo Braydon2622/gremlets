@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hideHotKey: HotKey?
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
+    private let icons = DesktopIcons()
     private lazy var buddy: ClaudeBuddy = {
         let b = ClaudeBuddy(world: world, overlay: overlay)
         b.onChange = { [weak self] in self?.rebuildMenu() }
@@ -139,6 +140,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let ridden = Set(world.creatures.compactMap { $0.groundOwner }.filter { $0 >= 0 })
             if ridden.contains(where: { lastWindowSignature[$0] != sig[$0] }) { lastWindowChange = lastWindowPoll }
             lastWindowSignature = sig
+        }
+        if icons.enabled {
+            icons.updateVisibility(windows: wins)
+            world.iconSurfaces = icons.surfaces(excluding: overlay.liftedIcons)
+        } else if !world.iconSurfaces.isEmpty {
+            world.iconSurfaces = []
         }
         world.setEnvironment(screens: WindowTracker.screens(), windowsFrontToBack: wins)
     }
@@ -314,6 +321,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             st.isEnabled = false
             st.toolTip = "Gremlets that keep you company through a focus session grow closer to you."
             menu.addItem(st)
+        }
+        let ic = NSMenuItem(title: "Play with Desktop Icons", action: #selector(toggleIcons), keyEquivalent: "")
+        ic.target = self
+        ic.state = icons.enabled ? .on : .off
+        ic.toolTip = icons.lastError ?? "Gremlets sit on your desktop icons, make them boing, and borrow them for a bit. Nothing on your desktop is moved. macOS will ask once to let Gremlets read icon positions from Finder."
+        menu.addItem(ic)
+        if icons.enabled, let err = icons.lastError {
+            let e = NSMenuItem(title: "  ⚠︎ " + err, action: nil, keyEquivalent: ""); e.isEnabled = false
+            menu.addItem(e)
         }
         let bud = NSMenuItem(title: "Claude Buddy", action: #selector(toggleBuddy), keyEquivalent: "")
         bud.target = self
@@ -664,6 +680,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
+        overlay.icons = icons
+        icons.onChange = { [weak self] in self?.rebuildMenu() }
+        icons.refresh()
         phone.onArrive = { [weak self] arrival in self?.arriveFromPhone(arrival) }
         phone.onStatus = { [weak self] in self?.rebuildMenu() }
         if phone.isPaired { phone.start() }
@@ -726,7 +745,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "hobby":
             let craft = query["craft"].flatMap { Craft(rawValue: $0) }
             let shelf: Bool? = query["shelf"].map { $0 == "1" }
-            guard world.startHobbyNearCursor(craft: craft, onWindow: shelf) else {
+            let style = query["style"].flatMap { ShelfStyle(rawValue: $0) }
+            guard world.startHobbyNearCursor(craft: craft, onWindow: shelf, style: style) else {
                 return (409, #"{"ok":false,"error":"no free Gremlet on the floor or a window"}"#)
             }
         case "claude":
@@ -817,6 +837,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updatePresence()
         focus.update()
         buddy.tick()
+        if icons.enabled && Int(Date().timeIntervalSince1970) % 15 == 0 { icons.refresh() }
         // Seasons and night-time for the garden; now and then a shooting star at night grants a wish.
         let cal = Calendar.current, nowDate = Date()
         world.month = cal.component(.month, from: nowDate)
@@ -926,6 +947,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func clearGarden() {
         overlay.clearKeepsakes()
+        rebuildMenu()
+    }
+
+    @objc private func toggleIcons() {
+        icons.enabled.toggle()
+        if icons.enabled { icons.refresh() }
         rebuildMenu()
     }
 

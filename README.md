@@ -91,9 +91,13 @@ source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) w
 **Gardening.** While you're at your Mac, a Gremlet now and then takes up gardening. Usually it hangs a shelf on the
 side of a nearby window, or on the wall (the screen's edge) when no window has room, and gets up there on a balloon, in a
 soap bubble, holding a giant dandelion puff, or bounced up by a mushroom that pops out of the ground; it comes back down
-under an umbrella or a big leaf. Every shelf is different: a wooden plank, a mossy stone ledge, a living leaf that sways,
-a cloud that bobs, a bracket fungus, the branch of a tree that grows up beside the window, or a swing held up by
-balloons. One Gremlet per shelf; window shelves ride along when you move the window and don't care if another window
+under an umbrella or a big leaf. Every platform is different: a wooden plank, a mossy stone ledge, a living leaf that sways,
+a cloud that bobs, a bracket fungus, the branch of a tree that grows up beside the window, a swing held up by
+balloons, a treehouse porch with a little cabin, a flying carpet that ripples and drifts, the basket of a hot-air
+balloon that drifts beside the window with its burner flickering, or (for floor gardens) the mossy shell of a giant
+garden snail that crawls slowly along the bottom of the screen, eyestalks wiggling. Moving platforms carry their
+gardener along. Click a platform and it reacts: the cloud rains on the plants, the leaf rustles, the balloon's burner
+roars, the snail pulls its eyes in, the treehouse chimney puffs smoke. Birds drop by to perch on the end now and then. One Gremlet per shelf; window shelves ride along when you move the window and don't care if another window
 covers it. Sometimes it gardens right on the floor instead. On the shelf
 sits a window box with three spots. The Gremlet plants a seed in each, waters whichever plant is getting dry (the soil
 darkens when it's wet), shoos off aphids and pulls weeds, and the plants grow through five stages: seed, sprout, young
@@ -152,12 +156,21 @@ swift run spritegen                                     # regenerate all 50 spri
 No permissions are required: window *positions* are readable without Screen Recording access (only window
 titles need it, and Gremlets never reads them).
 
+**Inside windows and on the desktop.** Browser windows (Chrome, Safari, Arc, Edge, Firefox...) have a ledge along the
+bottom of their tab and address bar, and Finder windows one along the toolbar, so Gremlets can hop down into a window
+and walk along it (where nothing covers it). Turn on **Play with Desktop Icons** and your desktop icons become tiny
+platforms too: Gremlets float or fly up to sit on them, an icon boings when one lands on it, and now and then a Gremlet
+borrows one, carries it around over its head and tosses it back into place. Nothing on your desktop is moved: the
+carried icon is a copy, and its spot is covered with a matching piece of your wallpaper until it's back. Icon positions
+come from Finder, so macOS asks once to let Gremlets control Finder.
+
 ## Gremlets on your phone
 
 **Pair with Phone…** in the menu (or `gremlet pair`) shows a QR code; scan it with your iPhone and the web habitat opens
 already linked (Share → Add to Home Screen keeps it one tap away). Then **Send to Phone** (or `gremlet send kindlet`):
 the Gremlet hops into a swirling portal on your Mac and pops out of one on your phone, where it sets up a window box on a
-ledge and keeps gardening: same plants, same art, tap the box to water it or shoo a bug. **Send home** on the phone brings
+ledge and keeps gardening: same plants, same art, tap the box to water it or shoo a bug. Tilt the phone and everyone
+slides that way; tip it far enough and they tumble off their ledges. **Send home** on the phone brings
 it back through the portal with everything it grew, which goes into the Seed Book and the garden along the bottom of
 your screen.
 

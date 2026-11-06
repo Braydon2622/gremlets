@@ -22,6 +22,8 @@ const zzzTimers = new Map();
 const link = showcase ? null : new Link();
 const visitors = new Map();     // creature id -> { species, garden, spot, poseTimer, hop }
 const portals = [];             // { x, y, t }
+let tilt = 0;                   // -1 (phone tipped left) ... 1 (right)
+let tiltAsked = false;
 const bubbles = [];             // { el, id, until }
 let W = 0, H = 0, DPR = 1, PX = 3, GROUND = 0, TOP = 0;
 let platforms = [];
@@ -265,6 +267,7 @@ let press = null;
 let lastHover = null;
 
 canvas.addEventListener('pointerdown', (e) => {
+  askForTilt();
   const p = toWorld(e), t = performance.now() / 1000;
   world.cursor = p;
   const c = world.creatureAt(p);
@@ -328,6 +331,7 @@ function frame(now) {
     else zzzTimers.set(c.id, t);
   }
   updateVisitors(dt, now / 1000);
+  applyTilt(dt);
   particles.update(dt);
   draw();
   drawPortals(now / 1000);
@@ -364,6 +368,45 @@ function draw() {
     ctx.restore();
   }
   particles.draw(ctx, toScreen, PX);
+}
+
+// ---------------------------------------------------------------- tilt (phones): tip it and they slide
+
+function onOrientation(e) {
+  const angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  let side = e.gamma ?? 0;                                   // portrait: left-right tilt
+  if (angle === 90) side = -(e.beta ?? 0);
+  else if (angle === -90 || angle === 270) side = e.beta ?? 0;
+  else if (angle === 180) side = -side;
+  const t = Math.max(-1, Math.min(1, side / 40));
+  tilt = Math.abs(t) < 0.12 ? 0 : t;                         // a little dead zone so they don't drift when held level
+}
+
+/** iPhones only share motion after a tap, so ask on the first one. */
+function askForTilt() {
+  if (tiltAsked || showcase) return;
+  tiltAsked = true;
+  const D = window.DeviceOrientationEvent;
+  if (!D) return;
+  if (typeof D.requestPermission === 'function') {
+    D.requestPermission().then((r) => { if (r === 'granted') addEventListener('deviceorientation', onOrientation); }).catch(() => {});
+  } else {
+    addEventListener('deviceorientation', onOrientation);
+  }
+}
+
+function applyTilt(dt) {
+  if (!tilt) return;
+  for (const c of world.creatures) {
+    if (c.activity === 'airborne') c.vel = V(c.vel.x + tilt * 900 * dt, c.vel.y);
+    else if (c.isGrounded && c.activity !== 'dragged' && !visitors.has(c.id) && Math.abs(tilt) > 0.45 && Math.random() < dt * 1.2 * Math.abs(tilt)) {
+      // Tipped far enough: whoops, off they tumble downhill.
+      c.ground = null;
+      c.vel = V(tilt * 380, 160);
+      c.facing = tilt > 0 ? 1 : -1;
+      c.set('airborne');
+    }
+  }
 }
 
 // ---------------------------------------------------------------- phone link: visitors from the Mac

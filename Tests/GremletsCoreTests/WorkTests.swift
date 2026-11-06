@@ -431,7 +431,7 @@ import Testing
             if let j = c.job { styles.insert(j.shelfStyle); rides.insert(j.rideUp) }
             w.remove(c.id)
         }
-        #expect(styles.count == ShelfStyle.allCases.count)
+        #expect(styles == Set(ShelfStyle.allCases.filter { $0 != .snail }))   // the snail is for floor gardens
         #expect(rides == Set(Ride.up))
     }
 
@@ -447,5 +447,68 @@ import Testing
         #expect(c.groundOwner == World.shelfOwner(c.id) && c.job?.phase == .working)
         let shelf = w.jobShelf(c.job!, workerID: c.id)!
         #expect(shelf.minX == 0 && shelf.y > 200 && shelf.y < 650)
+    }
+
+    @Test func ridesADriftingBalloonBasketWithoutFallingOff() {
+        let w = World(seed: 90)
+        let small = WindowInfo(id: 9, frame: Rect(x: 380, y: 100, w: 240, h: 450))
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [small])
+        let c = grounded(w, [100])[0]
+        w.startJob(windowID: 9, craft: .garden)
+        c.job!.shelfStyle = .basket
+        c.job!.rideUp = .balloon
+        run(w, 30)
+        #expect(c.groundOwner == World.shelfOwner(c.id))
+        var xs: [Double] = [], fell = false
+        run(w, 90) {
+            xs.append(c.pos.x)
+            if c.groundOwner != World.shelfOwner(c.id) { fell = true }
+        }
+        #expect(!fell)
+        #expect((xs.max()! - xs.min()!) > 20)           // carried along as the basket drifts
+        let s = w.jobShelf(c.job!, workerID: c.id)!
+        #expect(s.maxX <= 1000 && s.minX >= 0)
+    }
+
+    @Test func aGiantSnailCarriesTheGardenAlongTheFloor() {
+        let w = World(seed: 91)
+        let wide = Rect(x: 0, y: 0, w: 1600, h: 900)
+        w.setEnvironment(screens: [wide], windowsFrontToBack: [])
+        let c = w.spawn(testSpecies(), at: Vec2(800, 0))
+        run(w, 1)
+        var tries = 0
+        while c.job?.snail == nil && tries < 200 {
+            w.endJob(c.id); c.job = nil; c.hobbyRestUntil = 0; c.set(.idle, duration: 1)
+            _ = w.startHobby(c, onWindow: false); tries += 1
+        }
+        #expect(c.job?.snail != nil)
+        c.job!.rideUp = .balloon
+        run(w, 40)
+        #expect(c.groundOwner == World.shelfOwner(c.id) && c.job?.phase == .working)
+        let x0 = c.pos.x
+        run(w, 60)
+        #expect(abs(c.pos.x - x0) > 5 && c.groundOwner == World.shelfOwner(c.id))
+    }
+
+    @Test func browserWindowsHaveALedgeInsideThatCanBeCovered() {
+        let browser = WindowInfo(id: 5, frame: Rect(x: 100, y: 100, w: 600, h: 500), ledges: [88])
+        var s = SurfaceBuilder.build(screens: [screen], windowsFrontToBack: [browser])
+        #expect(s.contains { $0.ownerID == 5 && $0.kind == .windowLedge && $0.y == 512 })
+        let front = WindowInfo(id: 6, frame: Rect(x: 50, y: 300, w: 700, h: 300))
+        s = SurfaceBuilder.build(screens: [screen], windowsFrontToBack: [front, browser])
+        #expect(!s.contains { $0.kind == .windowLedge })
+    }
+
+    @Test func gremletsVisitDesktopIconsAndIconsAreNotHeads() {
+        let w = World(seed: 92)
+        w.iconSurfaces = [Surface(ownerID: World.iconOwnerBase - 3, kind: .icon, y: 700, minX: 880, maxX: 926)]
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = grounded(w, [500])[0]
+        w.maxHobbies = 0
+        let icon = w.iconToVisit(for: c)!
+        w.startIconVisit(c, icon)
+        var sat = 0.0
+        run(w, 40) { if w.iconUnder(c) == 3 { sat += 1.0 / 60; #expect(World.carrierID(c.groundOwner) == nil) } }
+        #expect(sat > 6)                          // sat on the icon for a good while
     }
 }

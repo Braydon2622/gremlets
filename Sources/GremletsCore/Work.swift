@@ -118,12 +118,12 @@ extension World {
         var windowID: Int?
         let wantsShelf = onWindow ?? (support.kind == .windowTop || rng.chance(0.35))
         if wantsShelf {
-            if support.kind == .windowTop, shelfSideFor(window: support.ownerID, near: c.pos.x) != nil {
+            if support.kind == .windowTop, shelfSideFor(window: support.ownerID, near: c.pos.x, for: c.id) != nil {
                 windowID = support.ownerID
             } else {
                 windowID = windows.keys.filter { id in
                     guard let w = windows[id], abs(w.midX - c.pos.x) < 700 else { return false }
-                    return shelfSideFor(window: id, near: c.pos.x) != nil && !workers.contains { $0.job?.windowID == id }
+                    return shelfSideFor(window: id, near: c.pos.x, for: c.id) != nil
                 }.min { abs(windows[$0]!.midX - c.pos.x) < abs(windows[$1]!.midX - c.pos.x) }
             }
         }
@@ -147,7 +147,7 @@ extension World {
         c.tendX = nil
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j
-        if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x) }
+        if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x, for: c.id) }
     }
 
     /// Finishes the creation now (Claude is done); the Gremlet shows it off.
@@ -215,7 +215,7 @@ extension World {
         // The window moved and the shelf no longer fits on this side: move it to the other side, or take it down.
         let fits = side > 0 ? w.maxX + World.shelfWidth <= scr.maxX : w.minX - World.shelfWidth >= scr.minX
         if !fits {
-            guard let other = shelfSideFor(window: id, near: side > 0 ? w.minX : w.maxX) else { j.shelfSide = nil; return nil }
+            guard let other = shelfSideFor(window: id, near: side > 0 ? w.minX : w.maxX, for: workerID) else { j.shelfSide = nil; return nil }
             side = other; j.shelfSide = other
         }
         let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60)
@@ -243,7 +243,7 @@ extension World {
     }
 
     /// Which side of a window has room for a shelf (closest to `x` first), or nil if neither does.
-    func shelfSideFor(window id: Int, near x: Double) -> Double? {
+    func shelfSideFor(window id: Int, near x: Double, for workerID: Int) -> Double? {
         guard let w = windows[id], let scr = screens.first(where: { w.midX >= $0.minX && w.midX < $0.maxX }) ?? screens.first
         else { return nil }
         guard w.maxY - World.shelfDrop > scr.minY + 60 else { return nil }
@@ -257,7 +257,8 @@ extension World {
             let lo = side > 0 ? w.maxX : w.minX - World.shelfWidth, hi = side > 0 ? w.maxX + World.shelfWidth : w.minX
             let cornerShowing = tops.contains { side > 0 ? $0.maxX >= w.maxX - 1 : $0.minX <= w.minX + 1 }
             let blocked = front.contains { $0.minX < hi && $0.maxX > lo && $0.minY < y + 110 && $0.maxY > y - 30 }
-            return cornerShowing && !blocked
+            let taken = creatures.contains { $0.id != workerID && $0.job?.windowID == id && $0.job?.shelfSide == side }
+            return cornerShowing && !blocked && !taken
         }
         var sides: [Double] = []
         if scr.maxX - w.maxX >= need && clear(1) { sides.append(1) }

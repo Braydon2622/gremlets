@@ -224,4 +224,16 @@ import Testing
         #expect(watered)
         #expect(cs.allSatisfy { $0.tendX == nil || $0.activity == .walk || $0.activity == .work || $0.activity == .idle })
     }
+
+    @Test func twoGremletsNeverShareAShelfSpot() {
+        let w = World(seed: 63)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        let cs = grounded(w, [100, 150, 200])
+        w.startJob(windowID: 9, craft: .garden, prefer: cs[0].id)
+        w.startJob(windowID: 9, craft: .paint, prefer: cs[1].id)
+        #expect(cs[0].job?.shelfSide != nil && cs[1].job?.shelfSide != nil)
+        #expect(cs[0].job?.shelfSide != cs[1].job?.shelfSide)
+        w.startJob(windowID: 9, craft: .knit, prefer: cs[2].id)
+        #expect(cs[2].job?.shelfSide == nil)          // both sides taken: works on the floor below
+    }
 }

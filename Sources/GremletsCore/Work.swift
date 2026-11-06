@@ -150,13 +150,21 @@ extension World {
             if c.isGrounded { beginWork(c, j) }
         }
         // Everything in the box bursts into bloom (Claude jobs finish this way; hobbies already have).
-        for i in j.garden.plants.indices {
-            if j.garden.plants[i] == nil { j.garden.plants[i] = Plant(kind: pickSeed(boost: true)) }
-            if (j.garden.plants[i]?.growth ?? 0) < 1, let k = j.garden.plants[i]?.kind {
-                j.garden.plants[i]?.growth = 1
-                j.garden.bloomed.append(k)
+        let g = j.garden
+        if g.giant == nil {
+            for i in g.plants.indices where g.plants[i] == nil {
+                var seed = pickSeed(boost: true)
+                if seed.kind.isGiant { seed = Plant(kind: .sunflower, golden: seed.golden) }
+                g.plants[i] = seed
             }
-            j.garden.plants[i]?.bug = false
+        }
+        for i in g.activeSlots {
+            if (g.plants[i]?.growth ?? 0) < 1, var p = g.plants[i] {
+                p.growth = 1
+                g.plants[i] = p
+                g.bloomed.append(p)
+            }
+            g.plants[i]?.bug = false
         }
         j.garden.lastAction = .harvest
         j.beats += 1
@@ -205,7 +213,7 @@ extension World {
     func encourage(_ c: Creature) {
         guard let j = c.job, j.phase == .working else { return }
         // A pat on the head: it gets a little burst of energy for whatever is growing.
-        if let i = j.garden.plants.indices.first(where: { (j.garden.plants[$0]?.growth ?? 1) < 1 }) {
+        if let i = j.garden.activeSlots.first(where: { (j.garden.plants[$0]?.growth ?? 1) < 1 }) {
             j.garden.plants[i]?.growth += 0.03
             j.garden.lastAction = .weed(i)
         }

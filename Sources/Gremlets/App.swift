@@ -328,21 +328,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let book = overlay.seedBook
         let sb = NSMenuItem(title: "Seed Book (\(book.found)/\(PlantKind.allCases.count))", action: nil, keyEquivalent: "")
         let sbMenu = NSMenu()
-        for rarity in 0...2 {
+        for rarity in 0...4 {
+            if rarity > 0 { sbMenu.addItem(.separator()) }
             for k in PlantKind.allCases where k.rarity == rarity {
-                let n = book.count(k)
-                let line = n > 0 ? "\(k.name) · \(k.rarityName) · grown \(n)×" : "??? · \(k.rarityName)"
+                let n = book.count(k), gold = book.goldenCount(k)
+                let when = k.seasonName.map { " · \($0) only" } ?? ""
+                var line = n > 0 ? "\(k.name) · \(k.rarityName) · grown \(n)×" : "??? · \(k.rarityName)\(when)"
+                if gold > 0 { line += " · ✨ \(gold) golden" }
                 let it = NSMenuItem(title: line, action: nil, keyEquivalent: "")
                 it.isEnabled = false
                 sbMenu.addItem(it)
             }
         }
         sbMenu.addItem(.separator())
-        let tip = NSMenuItem(title: "Rare seeds turn up more often during focus sessions", action: nil, keyEquivalent: "")
-        tip.isEnabled = false
-        sbMenu.addItem(tip)
+        for text in ["Rare seeds turn up more often during focus sessions", "Some plants only grow in their season, or at night",
+                     "Legend says poking a busy gardener can dig something up"] {
+            let tip = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+            tip.isEnabled = false
+            sbMenu.addItem(tip)
+        }
         sb.submenu = sbMenu
         menu.addItem(sb)
+        if world.wishes > 0 {
+            let wi = NSMenuItem(title: "✨ A wish is waiting: the next seed will be special", action: nil, keyEquivalent: "")
+            wi.isEnabled = false
+            menu.addItem(wi)
+        }
         if book.today > 0 {
             let t = NSMenuItem(title: "Grown today: \(book.today) plant\(book.today == 1 ? "" : "s")", action: nil, keyEquivalent: "")
             t.isEnabled = false
@@ -654,6 +665,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "wish":   // shh: a little easter egg, not in the help text
+            wishOnAStar()
+            return (200, #"{"ok":true,"wish":"granted"}"#)
         case "hobby":
             let craft = query["craft"].flatMap { Craft(rawValue: $0) }
             let shelf: Bool? = query["shelf"].map { $0 == "1" }
@@ -748,6 +762,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updatePresence()
         focus.update()
         buddy.tick()
+        // Seasons and night-time for the garden; now and then a shooting star at night grants a wish.
+        let cal = Calendar.current, nowDate = Date()
+        world.month = cal.component(.month, from: nowDate)
+        world.isNight = PropArt.isEvening
+        if world.isNight && world.userActive && !presence.isHidden && Double.random(in: 0..<1) < elapsed / (40 * 60) {
+            wishOnAStar()
+        }
         let title = focus.label
         if title != lastTitle {
             statusItem.button?.title = title.map { " " + $0 } ?? ""
@@ -783,6 +804,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         focus.stop()
         world.focusMode = false
         world.receive(.wake)
+        rebuildMenu()
+    }
+
+    /// A shooting star: the next seed planted will be something special.
+    private func wishOnAStar() {
+        overlay.shootingStar()
+        world.makeWish()
+        if let c = world.creatures.filter({ $0.isGrounded }).randomElement() {
+            overlay.showBubble("A shooting star! Make a wish ✨", on: c.id, seconds: 4)
+        }
+        schedule(rate: 60)
         rebuildMenu()
     }
 

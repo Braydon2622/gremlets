@@ -70,6 +70,9 @@ public final class Creature {
     public internal(set) var job: Job?
     /// Which animation plays while working ("crouch" = tending, "look", "pet" = happy wiggle, "sleep" = dozing).
     var workPose = "crouch"
+    /// Pokes in quick succession (five in a row while gardening digs up a mystery seed).
+    var pokeStreak = 0
+    var lastPoke = -10.0
     /// Going to water a planted flower at this x.
     var tendX: Double?
     /// Watching a friend work (their id) and until when.

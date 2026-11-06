@@ -34,6 +34,7 @@ case "${1:-}" in
       case "$a" in shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;; esac
     done
     call "$q" >/dev/null ;;
+  wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
   run)
     shift

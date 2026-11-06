@@ -95,7 +95,16 @@ sits a window box with three spots. The Gremlet plants a seed in each, waters wh
 darkens when it's wet), shoos off aphids and pulls weeds, and the plants grow through five stages: seed, sprout, young
 plant, bud, bloom. Eight kinds turn up, from common (tulip, daisy, carrot) to uncommon (strawberry, tomato, cactus) to
 rare (sunflower, mushroom); rare seeds show up more often during a focus session, when everything also grows faster.
-Butterflies visit while something's in bloom. When the whole box has bloomed it's harvested and planted along the
+Butterflies visit while something's in bloom.
+
+There's a lot to find. Sixteen plants in five tiers: common (tulip, daisy, carrot, lavender), uncommon (strawberry,
+tomato, cactus, bluebell), rare (sunflower, mushroom, plus cherry blossom in spring and frostbell in winter), epic
+(crystal rose, and the moonflower, which is only planted after dark and glows when it opens) and legendary giants
+(a giant pumpkin, likelier in autumn, and a wishing tree with glowing fruit) that take up the whole window box.
+About one plant in forty comes up golden and sparkles. A rain cloud sometimes drifts over a box and waters everything,
+leaving a rainbow; a ladybug sometimes beats the gardener to an aphid; fireflies come out around the gardens at night;
+and a shooting star now and then grants a wish (the next seed will be epic or better). When a harvest has something
+special in it, the gardener offers it to you. A few things are left for you to discover. When the whole box has bloomed it's harvested and planted along the
 bottom of the screen, so a busy week leaves a real little garden, which the Gremlets come by to water.
 
 You can help: rest the cursor on the gardener or its box to see how each plant is doing ("Tulip 60% · Carrot is

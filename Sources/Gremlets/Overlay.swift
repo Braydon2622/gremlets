@@ -65,7 +65,11 @@ final class OverlayController {
     private struct PropState {
         var screen: Int
         var anchorX: Double = 0
-        var harvest: [PlantKind] = []
+        var harvest: [Plant] = []
+        var nextSparkle = 0.0
+        var nextFirefly = 0.0
+        var glow = ""
+        var contentRows = 10
         var recorded = 0
         let item = CALayer()
         var shelf: CALayer?
@@ -146,7 +150,7 @@ final class OverlayController {
         guard let main = NSScreen.screens.first, !screens.isEmpty else { return }
         let floorY = main.visibleFrame.minY - main.frame.minY
         for item in keepsakes.items {
-            guard let img = PropArt.keepsakeImage(item.kind) else { continue }
+            guard let img = PropArt.keepsakeImage(item.kind, golden: item.variant == 1) else { continue }
             let l = pixelLayer(0, anchor: CGPoint(x: 0.5, y: 0))
             setImage(l, img)
             l.position = CGPoint(x: (item.x * main.frame.width).rounded(), y: floorY)
@@ -517,10 +521,92 @@ final class OverlayController {
         case .bloom(let i):
             let p = slotPoint(st, i, j)
             burst([Effects.sparkle, Effects.petal, Effects.smallStar], si: si, at: CGPoint(x: p.x, y: p.top - 6), count: 7, dx: -24...24, dy: 0...30, duration: 1.0, stagger: 0.04)
+        case .rain:
+            rainShower(st)
+        case .ladybug(let i):
+            let p = slotPoint(st, i, j)
+            let l = particle(PropArt.ladybug, si, scale: 3)
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: p.x - 90, y: p.top + 70))
+            path.addQuadCurve(to: CGPoint(x: p.x + 4, y: p.top - 8), control: CGPoint(x: p.x - 50, y: p.top + 10))
+            path.addLine(to: CGPoint(x: p.x + 6, y: p.top - 6))
+            path.addQuadCurve(to: CGPoint(x: p.x + 100, y: p.top + 90), control: CGPoint(x: p.x + 60, y: p.top + 10))
+            let move = CAKeyframeAnimation(keyPath: "position")
+            move.path = path; move.calculationMode = .paced
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.1, 0.85, 1]
+            let g = CAAnimationGroup(); g.animations = [move, fade]; g.duration = 2.6
+            run(l, g)
+            burst([Effects.smallHeart], si: si, at: CGPoint(x: p.x + 4, y: p.top), count: 1, dx: -4...4, dy: 14...22, duration: 0.8, delay: 1.2)
+        case .mystery(let i):
+            let p = slotPoint(st, i, j)
+            burst([Effects.sparkle, Effects.smallStar], si: si, at: CGPoint(x: p.x, y: p.soil + 10), count: 10, dx: -30...30, dy: 0...40, duration: 1.1, stagger: 0.03)
         case .harvest:
             let f = st.item.frame
             burst([Effects.sparkle, Effects.heart, Effects.smallStar, Effects.petal], si: si, at: CGPoint(x: f.midX, y: f.maxY), count: 12, dx: -60...60, dy: 10...60, duration: 1.4, stagger: 0.05)
         }
+    }
+
+    /// A little rain cloud drifts over the box, rains for a few seconds, and leaves a rainbow behind.
+    private func rainShower(_ st: PropState) {
+        let si = st.screen, f = st.item.frame
+        let top = f.minY + CGFloat(PropArt.boxRows) * 3 + 70
+        let cloud = particle(Effects.cloud, si, scale: 5)
+        let move = CABasicAnimation(keyPath: "position")
+        move.fromValue = NSValue(point: CGPoint(x: f.minX - 60, y: top + 20))
+        move.toValue = NSValue(point: CGPoint(x: f.maxX + 40, y: top + 20))
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [0, 0.95, 0.95, 0]; fade.keyTimes = [0, 0.15, 0.85, 1]
+        let g = CAAnimationGroup(); g.animations = [move, fade]; g.duration = 4.5
+        run(cloud, g)
+        for k in 0..<8 {
+            let x = f.minX - 20 + (f.width + 40) * CGFloat(k) / 7
+            burst([Effects.rain], si: si, at: CGPoint(x: x, y: top + 8), count: 4, dx: -6...6, dy: -70 ... -50, duration: 0.6, delay: 0.5 + Double(k) * 0.4, stagger: 0.08)
+        }
+        let bow = particle(PropArt.rainbow, si, scale: 4)
+        bow.position = CGPoint(x: f.midX, y: top + 10)
+        bow.opacity = 0
+        let bf = CAKeyframeAnimation(keyPath: "opacity")
+        bf.values = [0, 0.85, 0.85, 0]; bf.keyTimes = [0, 0.2, 0.75, 1]
+        bf.duration = 4; bf.beginTime = CACurrentMediaTime() + 3.8
+        bf.fillMode = .both
+        run(bow, bf)
+    }
+
+    /// Fireflies drift around a garden after dark.
+    private func spawnFirefly(_ st: PropState) {
+        let si = st.screen, f = st.item.frame
+        let l = particle(PropArt.firefly, si, scale: 3)
+        l.shadowColor = NSColor(red: 0.95, green: 1, blue: 0.5, alpha: 1).cgColor
+        l.shadowOpacity = 1; l.shadowRadius = 5; l.shadowOffset = .zero
+        let path = CGMutablePath()
+        let start = CGPoint(x: f.minX + CGFloat.random(in: 0...f.width), y: f.minY + CGFloat.random(in: 10...60))
+        path.move(to: start)
+        path.addCurve(to: CGPoint(x: start.x + CGFloat.random(in: -60...60), y: start.y + CGFloat.random(in: 20...70)),
+                      control1: CGPoint(x: start.x + 40, y: start.y + 10), control2: CGPoint(x: start.x - 40, y: start.y + 40))
+        let move = CAKeyframeAnimation(keyPath: "position")
+        move.path = path
+        let blink = CAKeyframeAnimation(keyPath: "opacity")
+        blink.values = [0, 1, 0.2, 1, 0]; blink.keyTimes = [0, 0.2, 0.5, 0.75, 1]
+        let g = CAAnimationGroup(); g.animations = [move, blink]; g.duration = 4
+        run(l, g)
+    }
+
+    /// A shooting star streaks across the top of the main screen.
+    func shootingStar() {
+        guard !screens.isEmpty, !hidden else { return }
+        let f = screens[0].frame
+        let l = particle(PropArt.shootingStar, 0, scale: 4)
+        l.shadowColor = NSColor.white.cgColor; l.shadowOpacity = 1; l.shadowRadius = 6; l.shadowOffset = .zero
+        let y = f.height - CGFloat.random(in: 60...160)
+        let move = CABasicAnimation(keyPath: "position")
+        move.fromValue = NSValue(point: CGPoint(x: f.width * 0.15, y: y))
+        move.toValue = NSValue(point: CGPoint(x: f.width * 0.75, y: y - 120))
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.1, 0.7, 1]
+        let g = CAAnimationGroup(); g.animations = [move, fade]; g.duration = 1.4
+        g.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        run(l, g)
     }
 
     /// A butterfly that flutters a loop around the blooms, then drifts off.
@@ -642,20 +728,54 @@ final class OverlayController {
                 }
                 // New blooms go in the seed book; the first of a kind gets a speech bubble.
                 while st.recorded < j.garden.bloomed.count {
-                    let k = j.garden.bloomed[st.recorded]
+                    let p = j.garden.bloomed[st.recorded]
                     st.recorded += 1
-                    if seedBook.record(k) {
-                        showBubble("New seed: \(k.name)! (\(k.rarityName), \(seedBook.found)/\(PlantKind.allCases.count))", on: c.id, seconds: 5)
+                    if seedBook.record(p) {
+                        showBubble("New seed: \(p.kind.name)! (\(p.kind.rarityName), \(seedBook.found)/\(PlantKind.allCases.count))", on: c.id, seconds: 5)
+                    } else if p.golden {
+                        showBubble("Ooh, a golden \(p.kind.name.lowercased())!", on: c.id, seconds: 4)
                     }
                     onGardenChange()
                 }
-                st.harvest = j.garden.planted.filter { $0.stage == 4 }.map(\.kind)
+                st.harvest = j.garden.planted.filter { $0.stage == 4 }
+                st.contentRows = j.garden.plants.compactMap { $0.map { PropArt.plantRows($0).count } }.max() ?? 1
+                // Special blooms glow; golden ones sparkle now and then.
+                let glow = st.harvest.contains { $0.kind == .moonflower } ? "moon" : st.harvest.contains { $0.golden } ? "gold"
+                    : st.harvest.contains { $0.kind == .crystalRose } ? "crystal" : st.harvest.contains { $0.kind == .wishingTree } ? "gold" : ""
+                if glow != st.glow {
+                    st.glow = glow
+                    let color: NSColor? = glow == "moon" ? NSColor(red: 0.85, green: 0.8, blue: 1, alpha: 1)
+                        : glow == "gold" ? NSColor(red: 1, green: 0.85, blue: 0.3, alpha: 1)
+                        : glow == "crystal" ? NSColor(red: 0.6, green: 0.95, blue: 1, alpha: 1) : nil
+                    st.item.shadowColor = color?.cgColor
+                    st.item.shadowOpacity = color == nil ? 0 : 0.9
+                    st.item.shadowRadius = 8
+                    st.item.shadowOffset = .zero
+                }
+                if st.harvest.contains(where: { $0.golden }) && now >= st.nextSparkle {
+                    st.nextSparkle = now + Double.random(in: 2.5...4.5)
+                    burst([Effects.sparkle, Effects.smallStar], si: si, at: top, count: 2, dx: -40...40, dy: -30...10, duration: 0.8)
+                }
+                // Fireflies after dark.
+                if PropArt.isEvening && !j.garden.planted.isEmpty && now >= st.nextFirefly {
+                    st.nextFirefly = now + Double.random(in: 1.5...3.5)
+                    spawnFirefly(st)
+                }
                 // Butterflies come to visit while something is in bloom.
                 if !st.harvest.isEmpty, now >= (nextButterfly[c.id] ?? 0) {
                     nextButterfly[c.id] = now + Double.random(in: 5...10)
                     spawnButterfly(st)
                 }
-                if (j.phase == .finished || j.phase == .leaving) && !st.celebrated { st.celebrated = true }
+                if (j.phase == .finished || j.phase == .leaving) && !st.celebrated {
+                    st.celebrated = true
+                    // Something special in this harvest? The gardener offers it to you.
+                    if let best = st.harvest.max(by: { ($0.golden ? 10 : 0) + $0.kind.rarity < ($1.golden ? 10 : 0) + $1.kind.rarity }),
+                       best.isSpecial || best.kind.rarity >= 2 {
+                        let what = (best.golden ? "a golden " + best.kind.name.lowercased() : (best.kind.isGiant ? "a " : "a ") + best.kind.name.lowercased())
+                        showBubble("For you! \(what.prefix(1).uppercased() + what.dropFirst()) \(best.golden || best.kind.rarity >= 3 ? "✨" : "")", on: c.id, seconds: 5)
+                        burst([Effects.heart, Effects.smallHeart, Effects.sparkle], si: si, at: CGPoint(x: c.pos.x - o.x, y: c.pos.y - o.y + c.size.y), count: 9, dx: -40...40, dy: 20...70, duration: 1.4, stagger: 0.05)
+                    }
+                }
             }
             st.screen = si
             if let a = anchor { st.anchorX = a.x }
@@ -672,8 +792,8 @@ final class OverlayController {
                 // The harvest gets planted in the garden along the bottom of the screen.
                 if !st.harvest.isEmpty, let main = NSScreen.screens.first {
                     let x = (st.anchorX - main.frame.minX) / main.frame.width
-                    for (i, k) in st.harvest.enumerated() {
-                        keepsakes.add(kind: k.rawValue, x: x + Double(i - 1) * 0.03, variant: 0)
+                    for (i, p) in st.harvest.enumerated() {
+                        keepsakes.add(kind: p.kind.rawValue, x: x + Double(i - 1) * (p.kind.isGiant ? 0 : 0.03), variant: p.golden ? 1 : 0)
                     }
                     refreshKeepsakes()
                     for l in keepsakeLayers.suffix(st.harvest.count) { popIn(l) }
@@ -690,7 +810,10 @@ final class OverlayController {
     private func propOwner(at p: Vec2) -> Int? {
         for (id, st) in props where st.item.superlayer != nil && st.lingerUntil == nil && st.screen < screens.count {
             let o = screens[st.screen].frame.origin
-            let f = st.item.frame.insetBy(dx: -4, dy: -4).offsetBy(dx: o.x, dy: o.y)
+            // Only the planter and what's actually growing in it, not the empty air above.
+            var box = st.item.frame
+            box.size.height = CGFloat(PropArt.boxRows + st.contentRows) * 3
+            let f = box.insetBy(dx: -4, dy: -4).offsetBy(dx: o.x, dy: o.y)
             if f.contains(CGPoint(x: p.x, y: p.y)) { return id }
         }
         return nil

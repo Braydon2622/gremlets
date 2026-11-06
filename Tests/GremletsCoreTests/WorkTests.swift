@@ -267,12 +267,87 @@ import Testing
         #expect(grown(calm: true) > grown(calm: false) * 1.2)
     }
 
-    @Test func seedsAreMostlyCommonSometimesRare() {
+    @Test func seedsFollowTheirRarity() {
         let w = World(seed: 68)
-        var tiers = [0, 0, 0]
-        for _ in 0..<3000 { tiers[w.pickSeed(boost: false).rarity] += 1 }
-        #expect(tiers[0] > tiers[1] && tiers[1] > tiers[2] && tiers[2] > 100)
+        var tiers = [0, 0, 0, 0, 0]
+        for _ in 0..<20000 { tiers[w.pickSeed(boost: false, emptyBox: true).kind.rarity] += 1 }
+        #expect(tiers[0] > tiers[1] && tiers[1] > tiers[2] && tiers[2] > tiers[3] && tiers[3] > tiers[4] && tiers[4] > 50)
     }
+
+    @Test func giantsOnlyInAnEmptyBox() {
+        let w = World(seed: 69)
+        for _ in 0..<20000 { #expect(!w.pickSeed(boost: true, emptyBox: false).kind.isGiant) }
+    }
+
+    @Test func seasonalAndNightPlantsOnlyAtTheRightTime() {
+        let w = World(seed: 70)
+        w.month = 7; w.isNight = false
+        var seen = Set<PlantKind>()
+        for _ in 0..<30000 { seen.insert(w.pickSeed(boost: true, emptyBox: true).kind) }
+        #expect(!seen.contains(.cherryBlossom) && !seen.contains(.frostbell) && !seen.contains(.moonflower))
+        w.month = 4; w.isNight = true
+        seen = []
+        for _ in 0..<30000 { seen.insert(w.pickSeed(boost: true, emptyBox: true).kind) }
+        #expect(seen.contains(.cherryBlossom) && seen.contains(.moonflower) && !seen.contains(.frostbell))
+    }
+
+    @Test func goldenPlantsAreRare() {
+        let w = World(seed: 71)
+        let golden = (0..<20000).filter { _ in w.pickSeed(boost: false).golden }.count
+        #expect(golden > 300 && golden < 800)            // about 1 in 40
+    }
+
+    @Test func aWishMakesTheNextSeedSpecial() {
+        let w = World(seed: 72)
+        w.makeWish()
+        #expect(w.pickSeed(boost: false).kind.rarity >= 3)
+        #expect(w.wishes == 0)
+    }
+
+    @Test func aGiantFillsTheWholeBoxAndGrowsAsOne() {
+        let w = World(seed: 73)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = grounded(w, [400])[0]
+        w.startHobby(c, onWindow: false)
+        run(w, 6)
+        let g = c.job!.garden
+        g.plants = [nil, Plant(kind: .giantPumpkin), nil]
+        #expect(g.planted.count == 1 && g.giant?.kind == .giantPumpkin)
+        run(w, 60)
+        #expect(g.plants[0] == nil && g.plants[2] == nil)   // nothing planted around it
+        #expect(g.progress > 0.05)
+        w.finishJob(c.id)
+        #expect(g.allBloomed && g.bloomed.count == 1 && g.plants[0] == nil)
+    }
+
+    @Test func rainWatersEverything() {
+        let w = World(seed: 74)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = grounded(w, [400])[0]
+        w.startHobby(c, onWindow: false)
+        run(w, 15)
+        let j = c.job!
+        for i in 0..<3 { j.garden.plants[i]?.water = 0.05 }
+        w.rainOn(j)
+        #expect(j.garden.planted.allSatisfy { $0.water == 1 })
+        #expect(j.garden.lastAction == .rain)
+    }
+
+    @Test func fivePokesDigUpAMysterySeed() {
+        let w = World(seed: 75)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let c = grounded(w, [400])[0]
+        w.startHobby(c, onWindow: false)
+        run(w, 8)
+        for _ in 0..<5 {
+            c.set(.work, duration: 9999)
+            w.poke(c)
+            run(w, 0.2)
+        }
+        if case .mystery = c.job!.garden.lastAction! {} else { Issue.record("no mystery seed: \(String(describing: c.job!.garden.lastAction))") }
+        #expect(c.job!.garden.planted.contains { $0.kind.rarity >= 2 } || w.wishes > 0)
+    }
+
 
     @Test func gremletsWaterThePlantedGarden() {
         let w = World(seed: 62)

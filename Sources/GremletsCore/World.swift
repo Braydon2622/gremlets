@@ -42,6 +42,11 @@ public final class World {
     /// At most this many Gremlets on a hobby at once.
     public var maxHobbies = 2
     var _gardenSpots: [Double] = []
+    /// Pending wishes: the next seed planted is epic or better.
+    public internal(set) var wishes = 0
+    /// Calendar month (1-12) and whether it's night, set by the platform layer (seasonal and night-only plants).
+    public var month = 6
+    public var isNight = false
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
@@ -155,6 +160,7 @@ public final class World {
         c.energy = min(1, c.energy + 0.1)
         endSocial(c)
         encourage(c)
+        countPokeForMystery(c)
         c.set(.react, duration: c.animationLength(for: .react) + 0.15)
         emit(.poked(c.id))
     }

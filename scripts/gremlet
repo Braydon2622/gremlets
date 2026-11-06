@@ -6,8 +6,8 @@
 #   gremlet unfocus              stop the focus timer
 #   gremlet hide | show          hide them (e.g. before you present) / bring them back  (same as ⌃⌥G)
 #   gremlet say "text" [seconds] the Gremlet nearest your cursor pops up with a speech bubble (default 8 s)
-#   gremlet hobby [craft] [shelf] the Gremlet nearest your cursor starts a hobby now (garden, paint, build, knit;
-#                                add "shelf" to have it float up to a shelf on a nearby window)
+#   gremlet hobby [shelf|floor]  the Gremlet nearest your cursor starts a window-box garden now (on a shelf by a window,
+#                                or on the floor)
 #   gremlet status               what's out and whether a focus timer is running
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -31,7 +31,7 @@ case "${1:-}" in
   hobby)
     q="hobby?"
     for a in "${@:2}"; do
-      case "$a" in garden|paint|build|knit) q="${q}craft=$a&" ;; shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;; esac
+      case "$a" in shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;; esac
     done
     call "$q" >/dev/null ;;
   status)  call status GET; echo ;;

@@ -57,12 +57,16 @@ final class OverlayController {
     private var props: [Int: PropState] = [:]
     private var balloons: [Int: CALayer] = [:]
     let keepsakes = KeepsakeStore()
+    let seedBook = SeedBook()
+    /// Called when the seed book or today's harvest changes (the menu shows them).
+    var onGardenChange: () -> Void = {}
+    private var nextButterfly: [Int: Double] = [:]
     private var keepsakeLayers: [CALayer] = []
     private struct PropState {
         var screen: Int
-        var craft: Craft?
         var anchorX: Double = 0
-        var seed: UInt64 = 0
+        var harvest: [PlantKind] = []
+        var recorded = 0
         let item = CALayer()
         var shelf: CALayer?
         var shelfPx = 0
@@ -142,15 +146,14 @@ final class OverlayController {
         guard let main = NSScreen.screens.first, !screens.isEmpty else { return }
         let floorY = main.visibleFrame.minY - main.frame.minY
         for item in keepsakes.items {
-            let img = item.kind == "painting" ? PropArt.miniPainting(item.variant) : PropArt.groundFlower(item.variant)
+            guard let img = PropArt.keepsakeImage(item.kind) else { continue }
             let l = pixelLayer(0, anchor: CGPoint(x: 0.5, y: 0))
             setImage(l, img)
             l.position = CGPoint(x: (item.x * main.frame.width).rounded(), y: floorY)
-            l.opacity = item.kind == "painting" ? 0.95 : 1
             screens[0].root.insertSublayer(l, at: 0)
             keepsakeLayers.append(l)
         }
-        world.gardenSpots = keepsakes.items.filter { $0.kind == "flower" }.map { main.frame.minX + $0.x * main.frame.width }
+        world.gardenSpots = keepsakes.items.filter { PropArt.keepsakeImage($0.kind) != nil }.map { main.frame.minX + $0.x * main.frame.width }
     }
 
     var keepsakeCount: Int { keepsakes.items.count }
@@ -473,22 +476,71 @@ final class OverlayController {
     var hasProps: Bool { !props.isEmpty || !balloons.isEmpty }
 
     private func artKey(_ j: Job) -> (String, () -> CGImage) {
-        let p = j.progress, done = j.phase == .finished || j.phase == .leaving
-        switch j.craft {
-        case .garden:
-            let stage = done ? 5 : min(4, Int(p / 0.9 * 4.999))
-            return ("g\(stage)", { PropArt.garden(stage: stage) })
-        case .paint:
-            let n = done ? 108 : Int((p / 0.9 * 100).rounded() / 4) * 4
-            let pic = Int(j.seed % 4)
-            return ("p\(n)", { PropArt.painting(picture: pic, revealed: n, seed: j.seed) })
-        case .build:
-            let blocks = done ? 8 : 1 + min(6, Int(p / 0.9 * 6.999))
-            return ("b\(blocks)\(done)", { PropArt.tower(blocks: blocks, finished: done, seed: j.seed) })
-        case .knit:
-            let rows = done ? 10 : 1 + min(9, Int(p / 0.9 * 9.999))
-            return ("k\(rows)\(done)", { PropArt.knitting(rows: rows, finished: done, seed: j.seed) })
+        (PropArt.boxKey(j.garden), { PropArt.windowBox(j.garden) })
+    }
+
+    /// Centre of a planting spot (0...2) in the box, in screen-local points, and the top of what's growing there.
+    private func slotPoint(_ st: PropState, _ i: Int, _ j: Job?) -> (x: CGFloat, soil: CGFloat, top: CGFloat) {
+        let f = st.item.frame
+        let x = f.midX + CGFloat(PropArt.slotCenters[i] - PropArt.boxWidth / 2) * 3
+        let soil = f.minY + CGFloat(PropArt.boxRows) * 3
+        let rows = j?.garden.plants[i].map { PropArt.plantRows($0).count } ?? 1
+        return (x, soil, soil + CGFloat(rows) * 3)
+    }
+
+    /// The little effect for each chore, right where it happens.
+    private func gardenEffect(_ action: GardenAction, _ st: PropState, _ j: Job) {
+        let si = st.screen
+        switch action {
+        case .plant(let i):
+            let p = slotPoint(st, i, j)
+            burst([Effects.dust], si: si, at: CGPoint(x: p.x, y: p.soil), count: 3, dx: -14...14, dy: 0...8, duration: 0.45)
+            burst([Effects.seed], si: si, at: CGPoint(x: p.x, y: p.soil + 26), count: 1, dx: -2...2, dy: -24 ... -20, duration: 0.5)
+        case .water(let i):
+            let p = slotPoint(st, i, j)
+            let can = particle(PropArt.wateringCan, si, scale: 3)
+            can.position = CGPoint(x: p.x - 20, y: p.top + 26)
+            let tilt = CABasicAnimation(keyPath: "transform.rotation")
+            tilt.fromValue = 0; tilt.toValue = -0.5
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.15, 0.8, 1]
+            let g = CAAnimationGroup(); g.animations = [tilt, fade]; g.duration = 1.3
+            run(can, g)
+            burst([Effects.rain], si: si, at: CGPoint(x: p.x + 4, y: p.top + 18), count: 7, dx: -10...10, dy: -30 ... -16, duration: 0.6, delay: 0.25, stagger: 0.07)
+        case .shoo(let i):
+            let p = slotPoint(st, i, j)
+            burst([PropArt.aphid], si: si, at: CGPoint(x: p.x + 6, y: p.top - 10), count: 1, dx: 40...70, dy: 50...80, duration: 0.9)
+            burst([Effects.dust], si: si, at: CGPoint(x: p.x + 6, y: p.top - 10), count: 2, dx: -10...10, dy: -4...6, duration: 0.35)
+        case .weed(let i):
+            let p = slotPoint(st, i, j)
+            burst([Effects.leaf, Effects.leaf2], si: si, at: CGPoint(x: p.x - 10, y: p.soil + 4), count: 2, dx: -30 ... -10, dy: 10...26, duration: 0.7)
+        case .bloom(let i):
+            let p = slotPoint(st, i, j)
+            burst([Effects.sparkle, Effects.petal, Effects.smallStar], si: si, at: CGPoint(x: p.x, y: p.top - 6), count: 7, dx: -24...24, dy: 0...30, duration: 1.0, stagger: 0.04)
+        case .harvest:
+            let f = st.item.frame
+            burst([Effects.sparkle, Effects.heart, Effects.smallStar, Effects.petal], si: si, at: CGPoint(x: f.midX, y: f.maxY), count: 12, dx: -60...60, dy: 10...60, duration: 1.4, stagger: 0.05)
         }
+    }
+
+    /// A butterfly that flutters a loop around the blooms, then drifts off.
+    private func spawnButterfly(_ st: PropState) {
+        let si = st.screen, f = st.item.frame
+        let l = particle(PropArt.butterflies.randomElement()!, si, scale: 3)
+        let path = CGMutablePath()
+        let start = CGPoint(x: f.minX - 30, y: f.maxY + 40)
+        path.move(to: start)
+        path.addCurve(to: CGPoint(x: f.midX, y: f.maxY + 6), control1: CGPoint(x: f.minX, y: f.maxY + 70), control2: CGPoint(x: f.midX - 30, y: f.maxY - 10))
+        path.addCurve(to: CGPoint(x: f.maxX - 10, y: f.maxY + 20), control1: CGPoint(x: f.midX + 20, y: f.maxY + 30), control2: CGPoint(x: f.maxX - 30, y: f.maxY))
+        path.addCurve(to: CGPoint(x: f.maxX + 40, y: f.maxY + 90), control1: CGPoint(x: f.maxX + 10, y: f.maxY + 40), control2: CGPoint(x: f.maxX + 20, y: f.maxY + 60))
+        let move = CAKeyframeAnimation(keyPath: "position")
+        move.path = path; move.calculationMode = .paced
+        let flap = CABasicAnimation(keyPath: "transform.scale.x")
+        flap.fromValue = 1; flap.toValue = 0.3; flap.duration = 0.12; flap.autoreverses = true; flap.repeatCount = 30
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.1, 0.85, 1]
+        let g = CAAnimationGroup(); g.animations = [move, flap, fade]; g.duration = 6
+        run(l, g)
     }
 
     private func pixelLayer(_ si: Int, anchor: CGPoint) -> CALayer {
@@ -583,29 +635,29 @@ final class OverlayController {
                 if st.item.position != pos { st.item.position = pos }
                 let top = CGPoint(x: pos.x, y: pos.y + st.item.bounds.height)
 
-                // A bit of work: water drops, a brush dab, a block clunk, a puff of yarn fluff.
+                // Each chore gets its own little effect, right at that plant.
                 if j.beat != st.beat {
                     st.beat = j.beat
-                    if c.activity == .work || c.activity == .react {
-                        switch j.craft {
-                        case .garden:
-                            burst([Effects.rain], si: si, at: CGPoint(x: top.x - j.propSide * 6, y: top.y + 14), count: 4, dx: -8...8, dy: -22 ... -12, duration: 0.6, stagger: 0.08)
-                        case .paint:
-                            burst([Effects.petal, Effects.pollen, Effects.rain], si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.6), count: 3, dx: -12...12, dy: -6...10, duration: 0.5, stagger: 0.07)
-                        case .build:
-                            burst([Effects.dust], si: si, at: top, count: 2, dx: -16...16, dy: 0...6, duration: 0.4)
-                        case .knit:
-                            burst([Effects.smallHeart, Effects.pollen], si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.5), count: 2, dx: -10...10, dy: 6...18, duration: 0.7, stagger: 0.1)
-                        }
+                    if let act = j.garden.lastAction { gardenEffect(act, st, j) }
+                }
+                // New blooms go in the seed book; the first of a kind gets a speech bubble.
+                while st.recorded < j.garden.bloomed.count {
+                    let k = j.garden.bloomed[st.recorded]
+                    st.recorded += 1
+                    if seedBook.record(k) {
+                        showBubble("New seed: \(k.name)! (\(k.rarityName), \(seedBook.found)/\(PlantKind.allCases.count))", on: c.id, seconds: 5)
                     }
+                    onGardenChange()
                 }
-                if (j.phase == .finished || j.phase == .leaving) && !st.celebrated {
-                    st.celebrated = true
-                    burst([Effects.sparkle, Effects.heart, Effects.smallStar], si: si, at: top, count: 10, dx: -50...50, dy: 10...60, duration: 1.4, stagger: 0.05)
+                st.harvest = j.garden.planted.filter { $0.stage == 4 }.map(\.kind)
+                // Butterflies come to visit while something is in bloom.
+                if !st.harvest.isEmpty, now >= (nextButterfly[c.id] ?? 0) {
+                    nextButterfly[c.id] = now + Double.random(in: 5...10)
+                    spawnButterfly(st)
                 }
+                if (j.phase == .finished || j.phase == .leaving) && !st.celebrated { st.celebrated = true }
             }
             st.screen = si
-            st.craft = j.craft; st.seed = j.seed
             if let a = anchor { st.anchorX = a.x }
             props[c.id] = st
         }
@@ -617,12 +669,15 @@ final class OverlayController {
             if now >= st.lingerUntil! || st.item.superlayer == nil {
                 fadeOut(st.item, 0.8)
                 props[id] = nil
-                // Finished flowers get planted in the garden along the bottom of the screen; paintings lean there too.
-                if st.celebrated, let craft = st.craft, craft == .garden || craft == .paint, let main = NSScreen.screens.first {
+                // The harvest gets planted in the garden along the bottom of the screen.
+                if !st.harvest.isEmpty, let main = NSScreen.screens.first {
                     let x = (st.anchorX - main.frame.minX) / main.frame.width
-                    keepsakes.add(kind: craft == .garden ? "flower" : "painting", x: x, variant: Int(st.seed % 24))
+                    for (i, k) in st.harvest.enumerated() {
+                        keepsakes.add(kind: k.rawValue, x: x + Double(i - 1) * 0.03, variant: 0)
+                    }
                     refreshKeepsakes()
-                    if let l = keepsakeLayers.last { popIn(l) }
+                    for l in keepsakeLayers.suffix(st.harvest.count) { popIn(l) }
+                    onGardenChange()
                 }
             } else {
                 props[id] = st
@@ -641,19 +696,15 @@ final class OverlayController {
         return nil
     }
 
-    /// You helped with a creation: water for the plant, a dab of paint, a block, a row of stitches.
+    /// You clicked the window box: shoo a bug if there is one, otherwise water the driest plant.
     private func tend(_ workerID: Int) {
-        guard let c = world.creatures.first(where: { $0.id == workerID }), let j = c.job, let st = props[workerID] else { return }
-        world.tendCreation(workerID: workerID)
+        guard let c = world.creatures.first(where: { $0.id == workerID }), let j = c.job, var st = props[workerID],
+              let did = world.helpGarden(workerID: workerID) else { return }
+        gardenEffect(did, st, j)
+        st.beat = j.beat
+        props[workerID] = st
         let si = st.screen
-        let f = st.item.frame
-        let top = CGPoint(x: f.midX, y: f.maxY)
-        switch j.craft {
-        case .garden: burst([Effects.rain], si: si, at: CGPoint(x: top.x, y: top.y + 24), count: 8, dx: -14...14, dy: -40 ... -24, duration: 0.7, stagger: 0.04)
-        case .paint: burst([Effects.petal, Effects.pollen, Effects.rain, Effects.leaf], si: si, at: CGPoint(x: f.midX, y: f.midY), count: 6, dx: -18...18, dy: -8...14, duration: 0.6, stagger: 0.04)
-        case .build: burst([Effects.dust, Effects.sparkle], si: si, at: top, count: 4, dx: -18...18, dy: 0...12, duration: 0.5)
-        case .knit: burst([Effects.smallHeart, Effects.heart], si: si, at: CGPoint(x: f.midX, y: f.midY), count: 4, dx: -16...16, dy: 8...26, duration: 0.8, stagger: 0.06)
-        }
+        burst([Effects.smallHeart], si: si, at: CGPoint(x: st.item.frame.midX, y: st.item.frame.maxY + 10), count: 1, dx: -6...6, dy: 20...30, duration: 0.9)
     }
 
     /// Rest the cursor on a busy Gremlet (or its creation) and it tells you what it's making.

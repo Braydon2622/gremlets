@@ -8,16 +8,9 @@ import Foundation  // exp(), sin()
 /// This file decides where the work happens and how the Gremlet gets there. The platform layer draws the shelf,
 /// balloon and creation.
 public enum Craft: String, CaseIterable, Sendable {
-    case garden, paint, build, knit
+    case garden
 
-    public var noun: String {
-        switch self {
-        case .garden: return "flower"
-        case .paint: return "painting"
-        case .build: return "tower"
-        case .knit: return "scarf"
-        }
-    }
+    public var noun: String { "window box" }
 }
 
 public final class Job {
@@ -25,8 +18,8 @@ public final class Job {
     public enum Kind: Equatable, Sendable {
         /// Lasts as long as Claude works; the platform layer finishes and ends it.
         case claude
-        /// A hobby: finishes on its own after `length` seconds of work (only counted while you're at the Mac).
-        case hobby(length: Double)
+        /// A hobby: finishes on its own once everything in the window box has bloomed.
+        case hobby
     }
 
     public let craft: Craft
@@ -49,7 +42,8 @@ public final class Job {
     var poseTimer = 0.0
     var beats = 0
     /// You poked it while it worked: a little burst of progress.
-    var bonus = 0.0
+    /// The window box: three plants.
+    public let garden = GardenBox()
 
     init(craft: Craft, kind: Kind, windowID: Int?, seed: UInt64, now: Double) {
         self.craft = craft; self.kind = kind; self.windowID = windowID; self.seed = seed; self.started = now
@@ -62,8 +56,7 @@ public final class Job {
     public var progress: Double {
         if phase == .finished || phase == .leaving { return 1 }
         switch kind {
-        case .claude: return min(0.9, 0.9 * (1 - exp(-workSeconds / 75)) + bonus)
-        case .hobby(let length): return min(0.95, workSeconds / length + bonus)
+        case .claude, .hobby: return garden.progress
         }
     }
 
@@ -76,7 +69,7 @@ extension World {
     static let shelfOwnerBase = -500_000
     static func shelfOwner(_ creatureID: Int) -> Int { shelfOwnerBase - creatureID }
 
-    public static let shelfWidth: Double = 132
+    public static let shelfWidth: Double = 176
     /// How far below the window's top edge the shelf hangs.
     static let shelfDrop: Double = 36
 
@@ -111,12 +104,11 @@ extension World {
 
     /// Starts a hobby: right here on the floor, or now and then on a shelf on a nearby window.
     @discardableResult
-    public func startHobby(_ c: Creature, craft: Craft? = nil, length: Double? = nil, onWindow: Bool? = nil) -> Bool {
+    public func startHobby(_ c: Creature, craft: Craft? = nil, onWindow: Bool? = nil) -> Bool {
         guard c.job == nil, c.isGrounded, let support = supportingSurface(for: c) else { return false }
         let craft = craft ?? Craft.allCases[Int(rng.next() % UInt64(Craft.allCases.count))]
-        let length = length ?? rng.range(100, 260)
         var windowID: Int?
-        let wantsShelf = onWindow ?? (support.kind == .windowTop || rng.chance(0.35))
+        let wantsShelf = onWindow ?? (support.kind == .windowTop || rng.chance(0.75))
         if wantsShelf {
             if support.kind == .windowTop, shelfSideFor(window: support.ownerID, near: c.pos.x, for: c.id) != nil {
                 windowID = support.ownerID
@@ -128,7 +120,7 @@ extension World {
             }
         }
         guard windowID != nil || support.kind == .floor else { return false }
-        assign(c, Job(craft: craft, kind: .hobby(length: length), windowID: windowID, seed: rng.next(), now: clock))
+        assign(c, Job(craft: craft, kind: .hobby, windowID: windowID, seed: rng.next(), now: clock))
         c.set(.idle, duration: 0.3)
         return true
     }
@@ -157,6 +149,17 @@ extension World {
             // Didn't make it there in time: it finishes up right where it is.
             if c.isGrounded { beginWork(c, j) }
         }
+        // Everything in the box bursts into bloom (Claude jobs finish this way; hobbies already have).
+        for i in j.garden.plants.indices {
+            if j.garden.plants[i] == nil { j.garden.plants[i] = Plant(kind: pickSeed(boost: true)) }
+            if (j.garden.plants[i]?.growth ?? 0) < 1, let k = j.garden.plants[i]?.kind {
+                j.garden.plants[i]?.growth = 1
+                j.garden.bloomed.append(k)
+            }
+            j.garden.plants[i]?.bug = false
+        }
+        j.garden.lastAction = .harvest
+        j.beats += 1
         j.phase = .finished
         j.finishedAt = clock
         endSocial(c)
@@ -201,7 +204,11 @@ extension World {
     /// You clicked a busy Gremlet: it shows you what it's making and gets a burst of motivation.
     func encourage(_ c: Creature) {
         guard let j = c.job, j.phase == .working else { return }
-        j.bonus = min(0.25, j.bonus + 0.04)
+        // A pat on the head: it gets a little burst of energy for whatever is growing.
+        if let i = j.garden.plants.indices.first(where: { (j.garden.plants[$0]?.growth ?? 1) < 1 }) {
+            j.garden.plants[i]?.growth += 0.03
+            j.garden.lastAction = .weed(i)
+        }
         j.beats += 1
     }
 
@@ -230,7 +237,7 @@ extension World {
         if j.shelfSide != nil, let s = jobShelf(j, workerID: workerID), let side = j.shelfSide {
             guard j.phase != .travel else { return nil }
             let edge = side > 0 ? s.minX + 6 : s.maxX - 6
-            return Vec2(edge + side * 26, s.y)
+            return Vec2(edge + side * 60, s.y)
         }
         return j.spot
     }
@@ -239,7 +246,7 @@ extension World {
     func standPoint(_ j: Job, workerID: Int) -> Vec2? {
         guard let side = j.shelfSide, let s = jobShelf(j, workerID: workerID) else { return nil }
         let edge = side > 0 ? s.minX + 6 : s.maxX - 6
-        return Vec2(edge + side * 88, s.y)
+        return Vec2(edge + side * 146, s.y)
     }
 
     /// Which side of a window has room for a shelf (closest to `x` first), or nil if neither does.
@@ -458,7 +465,8 @@ extension World {
             }
             let resting = j.isHobby && !userActive
             if !resting { j.workSeconds += dt }
-            if case .hobby(let length) = j.kind, j.workSeconds >= length * (1 - j.bonus) {
+            growGarden(j, dt, tending: !resting)
+            if j.isHobby && j.garden.allBloomed {
                 finishJob(c.id); return true
             }
             c.facing = j.propSide
@@ -468,10 +476,14 @@ extension World {
                     c.workPose = "sleep"
                     j.poseTimer = 5
                 } else {
-                    let r = rng.next() % 10
-                    c.workPose = r < 5 ? "crouch" : (r < 8 ? "look" : "pet")
-                    j.poseTimer = rng.range(1.6, 3.0)
-                    if c.workPose == "crouch" { j.beats += 1 }
+                    // Every couple of seconds: a chore (planting, watering, shooing a bug, weeding), or a moment
+                    // to admire the plants.
+                    if doGardenChore(j) {
+                        c.workPose = "crouch"
+                    } else {
+                        c.workPose = rng.chance(0.6) ? "look" : "pet"
+                    }
+                    j.poseTimer = rng.range(1.8, 3.2)
                 }
                 c.set(.work, duration: 9999)
             }
@@ -488,7 +500,7 @@ extension World {
             return c.groundOwner != World.shelfOwner(c.id) || abs(sp.x - c.pos.x) > 30
         }
         guard let a = j.spot else { return true }
-        return abs(a.x - j.propSide * c.size.x * 0.55 - c.pos.x) > 40 || abs(a.y - c.pos.y) > 4
+        return abs(a.x - j.propSide * c.size.x * 0.85 - c.pos.x) > 40 || abs(a.y - c.pos.y) > 4
     }
 
     private func travel(_ c: Creature, _ j: Job, _ dt: Double, on support: Surface) -> Bool {
@@ -533,6 +545,9 @@ extension World {
             if pushed > support.minX + 100 && pushed < support.maxX - 100 { want = pushed }
         }
         if j.spot == nil && abs(want - c.pos.x) >= 8 && clock - j.started > 20 { want = c.pos.x }  // don't wander forever
+        // Peeking around a screen edge can leave a Gremlet past where it may walk: step back in first.
+        let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y + 1)
+        c.pos.x = c.pos.x.clamped(lo, hi)
         if abs(want - c.pos.x) < 8 { beginWork(c, j); return true }
         c.facing = want > c.pos.x ? 1 : -1
         if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { beginWork(c, j) }
@@ -549,7 +564,7 @@ extension World {
                 j.propSide = (s.maxX - c.pos.x) >= (c.pos.x - s.minX) ? 1 : -1
                 if min(s.maxX - c.pos.x, c.pos.x - s.minX) > 80 { j.propSide = rng.chance(0.5) ? 1 : -1 }
             }
-            j.spot = Vec2(c.pos.x + j.propSide * c.size.x * 0.55, c.pos.y)
+            j.spot = Vec2(c.pos.x + j.propSide * c.size.x * 0.85, c.pos.y)
         }
         j.phase = .working
         j.poseTimer = 0

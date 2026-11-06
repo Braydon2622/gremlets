@@ -104,7 +104,7 @@ final class CreationLog {
         let today = days[BondStore.dayKey()] ?? [:]
         let parts = Craft.allCases.compactMap { c -> String? in
             guard let n = today[c.rawValue], n > 0 else { return nil }
-            return "\(n) \(c.noun)\(n == 1 ? "" : "s")"
+            return "\(n) \(c.noun)\(n == 1 ? "" : c.noun.hasSuffix("x") ? "es" : "s")"
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

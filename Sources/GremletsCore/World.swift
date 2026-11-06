@@ -522,7 +522,8 @@ public final class World {
 
     /// Static surfaces plus the tops of other creatures' heads (so friends can stand on each other).
     func allSurfaces(excluding c: Creature) -> [Surface] {
-        var out = surfaces + shelfSurfaces
+        // A shelf only holds the Gremlet who put it up.
+        var out = surfaces + shelfSurfaces.filter { $0.ownerID == World.shelfOwner(c.id) }
         for o in creatures where o !== c && o.groundOwner != c.carrierOwnerID
             && World.carrierID(o.groundOwner) == nil && ![.airborne, .fly, .dragged].contains(o.activity) {
             let half = o.size.x * 0.17

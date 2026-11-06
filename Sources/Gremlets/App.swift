@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         overlay = OverlayController(world: world, species: species)
+        overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
         setUpAccess()
         restoreRoster()
@@ -322,6 +323,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let m = NSMenuItem(title: "Made with Claude today: \(made)", action: nil, keyEquivalent: "")
             m.isEnabled = false
             menu.addItem(m)
+        }
+        // The seed book: which plants you've grown so far.
+        let book = overlay.seedBook
+        let sb = NSMenuItem(title: "Seed Book (\(book.found)/\(PlantKind.allCases.count))", action: nil, keyEquivalent: "")
+        let sbMenu = NSMenu()
+        for rarity in 0...2 {
+            for k in PlantKind.allCases where k.rarity == rarity {
+                let n = book.count(k)
+                let line = n > 0 ? "\(k.name) · \(k.rarityName) · grown \(n)×" : "??? · \(k.rarityName)"
+                let it = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+                it.isEnabled = false
+                sbMenu.addItem(it)
+            }
+        }
+        sbMenu.addItem(.separator())
+        let tip = NSMenuItem(title: "Rare seeds turn up more often during focus sessions", action: nil, keyEquivalent: "")
+        tip.isEnabled = false
+        sbMenu.addItem(tip)
+        sb.submenu = sbMenu
+        menu.addItem(sb)
+        if book.today > 0 {
+            let t = NSMenuItem(title: "Grown today: \(book.today) plant\(book.today == 1 ? "" : "s")", action: nil, keyEquivalent: "")
+            t.isEnabled = false
+            menu.addItem(t)
         }
         if overlay.keepsakeCount > 0 {
             let g = NSMenuItem(title: "Clear Garden (\(overlay.keepsakeCount))", action: #selector(clearGarden), keyEquivalent: "")

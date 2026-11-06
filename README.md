@@ -88,20 +88,25 @@ scripts/gremlet say "Deploy finished" 10   # a Gremlet pops up with a speech bub
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
 
-**Hobbies.** While you're at your Mac, Gremlets now and then settle down to a hobby: they grow a flower in a pot,
-paint a picture on an easel, build a block tower or knit a scarf. Sometimes they work right on the floor; sometimes one
-floats up on a balloon to a little wooden shelf it puts up on the side of a nearby window and works up there (the shelf
-rides along when you move the window and doesn't care if another window covers it). The creation grows as they work,
-friends wander over to watch and clap, clicking a busy Gremlet cheers it on (a little burst of progress), and when you
-step away they doze off beside their work until you're back. Finished flowers get planted along the bottom of the
-screen and finished paintings lean there too, so a busy week leaves a little garden (menu → *Clear Garden*). Rest the cursor
-on a busy Gremlet and it tells you what it's making ("Painting a starry night · 40%"); click the creation itself to
-help (water the plant, add a dab of paint). Gremlets also wander over to water the planted garden, and in the evening
-shelves get a little glowing lantern. At most two hobbies run at once, with a few minutes' rest in between. `gremlet hobby [garden|paint|build|knit] [shelf]` starts one now.
+**Gardening.** While you're at your Mac, a Gremlet now and then takes up gardening. Usually it floats up on a balloon
+to a little wooden shelf it hangs on the side of a nearby window (one Gremlet per shelf; the shelf rides along when you
+move the window and doesn't care if another window covers it), sometimes it gardens right on the floor. On the shelf
+sits a window box with three spots. The Gremlet plants a seed in each, waters whichever plant is getting dry (the soil
+darkens when it's wet), shoos off aphids and pulls weeds, and the plants grow through five stages: seed, sprout, young
+plant, bud, bloom. Eight kinds turn up, from common (tulip, daisy, carrot) to uncommon (strawberry, tomato, cactus) to
+rare (sunflower, mushroom); rare seeds show up more often during a focus session, when everything also grows faster.
+Butterflies visit while something's in bloom. When the whole box has bloomed it's harvested and planted along the
+bottom of the screen, so a busy week leaves a real little garden, which the Gremlets come by to water.
+
+You can help: rest the cursor on the gardener or its box to see how each plant is doing ("Tulip 60% · Carrot is
+thirsty · Daisy has a bug!"), and click the box to shoo a bug or water the driest plant. The menu's *Seed Book* shows
+which kinds you've grown (new ones get a speech bubble), plus how many plants you grew today. When you step away the
+gardener dozes beside its box until you're back, and in the evening a lantern glows under the shelf. At most two
+gardens run at once, with a few minutes' rest in between. `gremlet hobby [shelf|floor]` starts one now.
 
 **Claude buddy.** Send Claude Code a prompt and a Gremlet floats up to a shelf on the side of that Claude window (or
-flies, if it has wings) and works there for as long as Claude does; the creation is finished the moment Claude is. Then
-it shows it off and says "SalesCheatCodeLive: Claude is done ✓" (or "PhotoToPart: Claude needs your OK" when Claude is
+flies, if it has wings) and tends a window box for as long as Claude works; the plants never quite bloom until Claude
+is done, then the whole box bursts into flower (rare seeds are a bit likelier on Claude's shelf). Then it shows it off and says "SalesCheatCodeLive: Claude is done ✓" (or "PhotoToPart: Claude needs your OK" when Claude is
 waiting on you), and floats back down a little later. Each Claude session gets its own Gremlet, the menu counts what
 they made today, and *Claude Buddy* in the menu turns it off.
 

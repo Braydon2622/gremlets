@@ -29,7 +29,7 @@ import Testing
         let w = World(seed: 42)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = grounded(w, [100])[0]
-        w.startJob(windowID: 9, craft: .paint)
+        w.startJob(windowID: 9, craft: .garden)
         run(w, 30)
         let cover = WindowInfo(id: 1, frame: Rect(x: 0, y: 500, w: 1000, h: 250))
         w.setEnvironment(screens: [screen], windowsFrontToBack: [cover, tall])
@@ -43,7 +43,7 @@ import Testing
         let w = World(seed: 43)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = grounded(w, [100])[0]
-        w.startJob(windowID: 9, craft: .build)
+        w.startJob(windowID: 9, craft: .garden)
         run(w, 30)
         let before = c.pos
         var moved = tall; moved.frame = Rect(x: 340, y: 60, w: 500, h: 550)
@@ -57,12 +57,12 @@ import Testing
         let w = World(seed: 44)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = grounded(w, [100])[0]
-        w.startJob(windowID: 9, craft: .knit)
+        w.startJob(windowID: 9, craft: .garden)
         run(w, 30)
         let early = c.job!.progress
         run(w, 240)
         let later = c.job!.progress
-        #expect(early > 0 && later > early && later <= 0.9)
+        #expect(early > 0 && later > early && later <= 0.95)
         #expect(c.job!.beat > 3)
         w.finishJob(c.id)
         #expect(c.job!.phase == .finished && c.job!.progress == 1)
@@ -79,7 +79,7 @@ import Testing
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let c = w.spawn(flyer(), at: Vec2(100, 0))
         run(w, 1)
-        w.startJob(windowID: 9, craft: .build)
+        w.startJob(windowID: 9, craft: .garden)
         var floated = false
         run(w, 30) { if c.activity == .float { floated = true } }
         #expect(!floated)
@@ -120,23 +120,22 @@ import Testing
         #expect(c.groundOwner == World.shelfOwner(c.id) && c.job?.phase == .working)
     }
 
-    @Test func hobbyPausesWhileYoureAwayThenFinishesOnItsOwn() {
+    @Test func gardenPausesWhileYoureAwayThenBloomsAndEndsOnItsOwn() {
         let w = World(seed: 48)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [])
         let c = grounded(w, [500])[0]
-        #expect(w.startHobby(c, craft: .garden, length: 60, onWindow: false))
+        #expect(w.startHobby(c, onWindow: false))
         run(w, 20)
         #expect(c.job?.phase == .working)
+        #expect(c.job!.garden.planted.count == 3)       // planted all three spots
         w.userActive = false
-        let paused = c.job!.workSeconds
+        let paused = c.job!.garden.progress
         run(w, 30)
-        #expect(c.job!.workSeconds == paused)
+        #expect(c.job!.garden.progress - paused < 0.05)  // barely grows while you're away
         #expect(c.isDozingAtWork)
         w.userActive = true
-        run(w, 60)
-        #expect(c.job == nil || c.job?.phase == .finished)
-        run(w, 30)
-        #expect(c.job == nil)                      // admired it, then back to normal life
+        run(w, 900)
+        #expect(c.job == nil)                            // all bloomed, admired, back to normal life
     }
 
     @Test func gremletsTakeUpHobbiesOnTheirOwnButNotTooMany() {
@@ -167,7 +166,7 @@ import Testing
         let w = World(seed: 51)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [])
         let cs = grounded(w, [400, 450])
-        w.startJob(windowID: nil, craft: .build, prefer: cs[0].id)
+        w.startJob(windowID: nil, craft: .garden, prefer: cs[0].id)
         run(w, 2)
         #expect(!w.nearbyFriends(of: cs[1]).contains { $0 === cs[0] })
         w.focusMode = true
@@ -184,7 +183,8 @@ import Testing
         let w = World(seed: 60)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [])
         let cs = grounded(w, [10, 480, 520])
-        for c in cs { #expect(w.startHobby(c, craft: .knit, length: 300, onWindow: false)) }
+        cs[0].pos.x = 5          // just peeked around the screen edge
+        for c in cs { #expect(w.startHobby(c, onWindow: false)) }
         w.maxHobbies = 3
         run(w, 20)
         let anchors = cs.compactMap { c in c.job.flatMap { w.jobAnchor($0, workerID: c.id) } }
@@ -195,20 +195,83 @@ import Testing
         #expect(cs[0].pos.x >= 90)
     }
 
-    @Test func helpingWithTheCreationSpeedsItUp() {
+    @Test func clickingTheBoxShoosBugsThenWaters() {
         let w = World(seed: 61)
         w.setEnvironment(screens: [screen], windowsFrontToBack: [])
         let a = grounded(w, [300])[0]
-        w.startHobby(a, craft: .garden, length: 200, onWindow: false)
-        run(w, 10)
-        let before = a.job!.progress
+        w.startHobby(a, onWindow: false)
+        run(w, 15)
+        let g = a.job!.garden
+        g.plants[1]?.bug = true
+        g.plants[2]?.water = 0.05
         w.drainEvents()
-        w.tendCreation(workerID: a.id)
-        #expect(a.job!.progress > before + 0.03)
-        #expect(a.activity == .pet)
-        #expect(w.drainEvents().contains(.petted(a.id)))
+        #expect(w.helpGarden(workerID: a.id) == .shoo(1))
+        #expect(g.plants[1]?.bug == false)
+        #expect(a.activity == .pet && w.drainEvents().contains(.petted(a.id)))
+        let before = g.plants[2]!.growth
+        #expect(w.helpGarden(workerID: a.id) == .water(2))
+        #expect(g.plants[2]!.water == 1 && g.plants[2]!.growth > before)
+    }
+
+    @Test func gardenerWatersDryPlantsAndShoosBugsItself() {
+        let w = World(seed: 64)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let a = grounded(w, [300])[0]
+        w.startHobby(a, onWindow: false)
+        run(w, 15)
+        let g = a.job!.garden
+        g.plants[0]?.water = 0.02
+        g.plants[1]?.bug = true
+        run(w, 25)
+        #expect((g.plants[0]?.water ?? 0) > 0.5)
+        #expect(g.plants[1]?.bug == false)
+    }
+
+    @Test func onlyOneGremletPerShelf() {
+        let w = World(seed: 65)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        let cs = grounded(w, [100, 600])
+        w.startJob(windowID: 9, craft: .garden, prefer: cs[0].id)
+        run(w, 30)
+        let shelf = w.jobShelf(cs[0].job!, workerID: cs[0].id)!
+        // Drop the other Gremlet right onto the shelf: it falls through instead of landing.
+        w.beginDrag(cs[1], at: cs[1].pos, time: 0)
+        w.drag(cs[1], to: Vec2(shelf.minX + 20, shelf.y + 40), time: 0.1)
+        w.endDrag(cs[1], time: 1)
         run(w, 3)
-        #expect(a.activity == .work)                  // back to it
+        #expect(cs[1].groundOwner != World.shelfOwner(cs[0].id))
+        #expect(cs[1].pos.y < shelf.y)
+    }
+
+    @Test func claudeFinishingMakesEverythingBloom() {
+        let w = World(seed: 66)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
+        let c = grounded(w, [100])[0]
+        w.startJob(windowID: 9, craft: .garden)
+        run(w, 40)
+        #expect(!c.job!.garden.allBloomed)
+        w.finishJob(c.id)
+        #expect(c.job!.garden.allBloomed && c.job!.garden.bloomed.count == 3)
+    }
+
+    @Test func focusMakesThingsGrowFaster() {
+        func grown(calm: Bool) -> Double {
+            let w = World(seed: 67)
+            w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+            let c = grounded(w, [300])[0]
+            w.startHobby(c, onWindow: false)
+            w.focusMode = calm
+            run(w, 50)
+            return c.job?.garden.progress ?? 1
+        }
+        #expect(grown(calm: true) > grown(calm: false) * 1.2)
+    }
+
+    @Test func seedsAreMostlyCommonSometimesRare() {
+        let w = World(seed: 68)
+        var tiers = [0, 0, 0]
+        for _ in 0..<3000 { tiers[w.pickSeed(boost: false).rarity] += 1 }
+        #expect(tiers[0] > tiers[1] && tiers[1] > tiers[2] && tiers[2] > 100)
     }
 
     @Test func gremletsWaterThePlantedGarden() {
@@ -230,10 +293,10 @@ import Testing
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         let cs = grounded(w, [100, 150, 200])
         w.startJob(windowID: 9, craft: .garden, prefer: cs[0].id)
-        w.startJob(windowID: 9, craft: .paint, prefer: cs[1].id)
+        w.startJob(windowID: 9, craft: .garden, prefer: cs[1].id)
         #expect(cs[0].job?.shelfSide != nil && cs[1].job?.shelfSide != nil)
         #expect(cs[0].job?.shelfSide != cs[1].job?.shelfSide)
-        w.startJob(windowID: 9, craft: .knit, prefer: cs[2].id)
+        w.startJob(windowID: 9, craft: .garden, prefer: cs[2].id)
         #expect(cs[2].job?.shelfSide == nil)          // both sides taken: works on the floor below
     }
 }

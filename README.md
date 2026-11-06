@@ -11,7 +11,7 @@ session for you), watch them tend window-box gardens on platforms they build bes
 a treehouse, a giant snail...), let one keep you company while Claude Code works and tell you when it's done, and send
 one through a portal to your phone and back.
 
-- **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon and Intel) ·
+- **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon) ·
   **Try it in a browser:** [braydonhartai.com/gremlets](https://braydonhartai.com/gremlets/) · **Guide:** see below
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract

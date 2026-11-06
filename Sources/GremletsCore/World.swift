@@ -239,6 +239,9 @@ public final class World {
             c.timer -= dt
             updateFlight(c, dt)
             return
+        case .climb:
+            updateClimb(c, dt)
+            return
         default:
             break
         }
@@ -262,6 +265,7 @@ public final class World {
         c.groundOwner = support.ownerID
 
         c.timer -= dt
+        if let job = c.job, updateJob(c, job, dt, on: support) { return }
         switch c.activity {
         case .idle:
             faceCursorIfNear(c)
@@ -307,7 +311,7 @@ public final class World {
         if c.timer <= 0 && c.activity != .crouch {
             if c.activity == .run { endTag(c) }
             endSocial(c)
-            Brain.decide(c, in: self)
+            if c.job != nil { c.set(.idle, duration: 0.2) } else { Brain.decide(c, in: self) }
         }
     }
 

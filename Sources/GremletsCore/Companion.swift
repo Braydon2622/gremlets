@@ -55,7 +55,7 @@ extension World {
             guard newValue != calm else { return }
             calm = newValue
             if newValue {
-                for c in creatures where c.isGrounded && !c.isAsleep && c.activity != .dragged {
+                for c in creatures where c.isGrounded && !c.isAsleep && c.activity != .dragged && c.job == nil {
                     endSocial(c)
                     c.set(.yawn, duration: c.animationLength(for: .yawn))
                 }

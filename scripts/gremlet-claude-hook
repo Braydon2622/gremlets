@@ -1,32 +1,39 @@
 #!/bin/bash
-# Claude Code hook: a Gremlet tells you when Claude finishes or needs you, and in which project.
+# Claude Code hook for the Gremlets "Claude buddy". While Claude works, a Gremlet goes to that Claude window and
+# gardens, paints or builds; when Claude is done (or needs you) it tells you, naming the project.
 #
-# Add to ~/.claude/settings.json (Stop = Claude finished its turn, Notification = it's waiting on you):
+# Add to ~/.claude/settings.json (one command for every event):
 #   "hooks": {
-#     "Stop":         [{ "hooks": [{ "type": "command", "command": "/path/to/gremlet-claude-hook" }] }],
-#     "Notification": [{ "hooks": [{ "type": "command", "command": "/path/to/gremlet-claude-hook" }] }]
+#     "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "Stop":             [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "Notification":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
 #   }
 #
-# Never blocks or fails Claude: it reads the hook's JSON, makes one 2-second local request, and always exits 0.
-# Only the project folder's name goes into the bubble; nothing leaves your Mac.
-DIR="$(cd "$(dirname "$(readlink "$0" || echo "$0")")" && pwd)"
+# Never blocks or fails Claude: prints nothing (UserPromptSubmit output would reach Claude), makes one 1-second local
+# request and always exits 0. Sends only the event, the session id, the project folder's name and a process id
+# (used to find the window). Nothing leaves your Mac.
+PORT="${GREMLETS_PORT:-47920}"
 input="$(cat)"
-msg="$(printf '%s' "$input" | /usr/bin/python3 -c '
-import json, os, sys
+query="$(printf '%s' "$input" | /usr/bin/python3 -c '
+import json, os, sys, urllib.parse
 try:
     d = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
-project = os.path.basename((d.get("cwd") or "").rstrip("/")) or "Claude"
-event = d.get("hook_event_name", "")
-if event == "Stop":
-    print(f"{project}: Claude is done ✓")
-elif event == "Notification":
-    text = (d.get("message") or "").lower()
-    if "permission" in text:
-        print(f"{project}: Claude needs your OK")
-    else:
-        print(f"{project}: Claude is waiting for you")
-' 2>/dev/null)"
-[ -n "$msg" ] && "$DIR/gremlet" say "$msg" 10 >/dev/null 2>&1
+name = d.get("hook_event_name", "")
+event = {"UserPromptSubmit": "start", "Stop": "done", "Notification": "attention", "SessionEnd": "end"}.get(name)
+if not event:
+    sys.exit(0)
+q = {
+    "event": event,
+    "session": d.get("session_id", "default"),
+    "project": os.path.basename((d.get("cwd") or "").rstrip("/")) or "Claude",
+    "pid": sys.argv[1],
+}
+if event == "attention":
+    q["kind"] = "permission" if "permission" in (d.get("message") or "").lower() else "waiting"
+print(urllib.parse.urlencode(q))
+' "$PPID" 2>/dev/null)"
+[ -n "$query" ] && curl -s -m 1 -X POST -H 'X-Gremlets: 1' "http://127.0.0.1:${PORT}/claude?${query}" >/dev/null 2>&1
 exit 0

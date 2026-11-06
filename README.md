@@ -88,9 +88,18 @@ scripts/gremlet say "Deploy finished" 10   # a Gremlet pops up with a speech bub
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
 
-**Claude Code buddy.** `scripts/gremlet-claude-hook` turns Claude Code's `Stop` and `Notification` hooks into speech
-bubbles: "SalesCheatCodeLive: Claude is done ✓" or "PhotoToPart: Claude needs your OK", so you can work in another
-window and still know which terminal needs you. Setup is in the script's header. Only the project folder name is shown.
+**Claude buddy.** Send Claude Code a prompt and a Gremlet heads for that Claude window: it walks, hops or flies up,
+or puts up a ladder against the window's side and climbs it. While Claude works it grows a flower in a pot, paints a
+picture on an easel or builds a block tower on the window's top edge; the longer Claude works, the further along it
+gets, and it's finished the moment Claude is. Then the Gremlet shows it off and says "SalesCheatCodeLive: Claude is
+done ✓" (or "PhotoToPart: Claude needs your OK" when Claude is waiting on you). Each Claude session gets its own
+Gremlet, the menu counts what they made today, and *Claude Buddy* in the menu turns it off.
+
+`scripts/gremlet-claude-hook` connects Claude Code's `UserPromptSubmit`, `Stop`, `Notification` and `SessionEnd` hooks
+(setup is in the script's header). It sends only the event, the session id, the project folder's name and a process id.
+The app finds the window by walking up from that process to the terminal or editor that owns it (process ids and
+window bounds only, never titles or contents). If the window's top edge is hidden, the Gremlet works on the floor
+below it. The engine side (`GremletsCore/Work.swift`) is pure Swift with its own tests.
 
 It listens on `127.0.0.1:47920` only, every request needs an `X-Gremlets` header (so a web page can't trigger it
 cross-site without a CORS preflight, which it never approves), and it can only trigger animations and the timer.

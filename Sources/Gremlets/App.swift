@@ -42,6 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var manuallyHidden = false
     private var hideHotKey: HotKey?
     private let focusLog = FocusLogStore()
+    private lazy var buddy: ClaudeBuddy = {
+        let b = ClaudeBuddy(world: world, overlay: overlay)
+        b.onChange = { [weak self] in self?.rebuildMenu() }
+        return b
+    }()
     private var hideDuringCalls: Bool {
         get { UserDefaults.standard.object(forKey: "hideDuringCalls") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "hideDuringCalls") }
@@ -116,7 +121,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
-        if overlay.hasBubbles { wanted = max(wanted, 30) }   // keep a speech bubble following its Gremlet smoothly
+        if overlay.hasBubbles { wanted = max(wanted, 30) }
+        if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
     }
@@ -306,6 +312,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             st.isEnabled = false
             st.toolTip = "Gremlets that keep you company through a focus session grow closer to you."
             menu.addItem(st)
+        }
+        let bud = NSMenuItem(title: "Claude Buddy", action: #selector(toggleBuddy), keyEquivalent: "")
+        bud.target = self
+        bud.state = buddy.enabled ? .on : .off
+        bud.toolTip = "While Claude Code works, a Gremlet works next to its window, and tells you when Claude is done or needs you."
+        menu.addItem(bud)
+        if let made = buddy.log.todaySummary {
+            let m = NSMenuItem(title: "Made with Claude today: \(made)", action: nil, keyEquivalent: "")
+            m.isEnabled = false
+            menu.addItem(m)
         }
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
@@ -601,6 +617,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "claude":
+            let r = buddy.handle(query)
+            schedule(rate: 60)
+            return r
         case "say":
             guard let text = SpeechText.clean(query["text"]) else { return (400, #"{"ok":false,"error":"text is required"}"#) }
             let seconds = min(max(Double(query["seconds"] ?? "") ?? 8, 2), 60)
@@ -683,6 +703,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func housekeeping(elapsed: Double) {
         updatePresence()
         focus.update()
+        buddy.tick()
         let title = focus.label
         if title != lastTitle {
             statusItem.button?.title = title.map { " " + $0 } ?? ""
@@ -718,6 +739,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         focus.stop()
         world.focusMode = false
         world.receive(.wake)
+        rebuildMenu()
+    }
+
+    @objc private func toggleBuddy() {
+        buddy.enabled.toggle()
         rebuildMenu()
     }
 

@@ -53,6 +53,18 @@ final class OverlayController {
     private var sleepBubbleTimer: [Int: Double] = [:]
     /// Speech bubbles: creature id → bubble layer, the screen it's on, and when it goes away.
     private var bubbles: [Int: (layer: CALayer, screen: Int, until: CFTimeInterval)] = [:]
+    /// Claude-buddy props per worker (creature id): the creation and the ladder.
+    private var props: [Int: PropState] = [:]
+    private struct PropState {
+        var screen: Int
+        let item = CALayer()
+        var ladder: CALayer?
+        var ladderPx = 0
+        var key = ""
+        var beat = 0
+        var celebrated = false
+        var lingerUntil: CFTimeInterval?
+    }
 
     // Input state.
     private var pressed: Creature?
@@ -156,6 +168,7 @@ final class OverlayController {
             }
         }
         updateBubbles(alive: alive)
+        updateProps()
         for id in layers.keys where !alive.contains(id) {
             layers[id]?.removeFromSuperlayer()
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
@@ -416,6 +429,131 @@ final class OverlayController {
         CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
         l.add(group, forKey: "float")
         CATransaction.commit()
+    }
+
+    // MARK: Claude buddy props
+
+    var hasProps: Bool { !props.isEmpty }
+
+    private func propLayer(_ img: CGImage, _ si: Int) -> CALayer {
+        let l = CALayer()
+        l.magnificationFilter = .nearest
+        l.anchorPoint = CGPoint(x: 0.5, y: 0)
+        l.contentsScale = screens[si].panel.backingScaleFactor
+        l.contents = img
+        l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+        return l
+    }
+
+    private func artKey(_ j: Job) -> (String, () -> CGImage) {
+        let p = j.progress
+        switch j.craft {
+        case .garden:
+            let stage = j.phase == .finished ? 5 : min(4, Int(p / 0.9 * 4.999))
+            return ("g\(stage)", { PropArt.garden(stage: stage) })
+        case .paint:
+            let n = j.phase == .finished ? 108 : Int((p / 0.9 * 100).rounded() / 4) * 4
+            let pic = Int(j.seed % 4)
+            return ("p\(n)", { PropArt.painting(picture: pic, revealed: n, seed: j.seed) })
+        case .build:
+            let blocks = j.phase == .finished ? 8 : 1 + min(6, Int(p / 0.9 * 6.999))
+            return ("b\(blocks)\(j.phase == .finished)", { PropArt.tower(blocks: blocks, finished: j.phase == .finished, seed: j.seed) })
+        }
+    }
+
+    /// Keeps each worker's creation and ladder in place (they ride along with the window), grows the creation,
+    /// shows a little effect for each bit of work, and lets finished creations linger for a minute afterwards.
+    private func updateProps() {
+        let now = CACurrentMediaTime()
+        var working = Set<Int>()
+        for c in world.creatures {
+            guard let j = c.job else { continue }
+            working.insert(c.id)
+            let anchor = world.jobAnchor(j)
+            let lad = world.jobLadder(j)
+            guard anchor != nil || lad != nil else { continue }
+            let ref = anchor ?? Vec2(lad!.x, lad!.top)
+            let si = screenIndex(for: ref + Vec2(0, 1))
+            if props[c.id] == nil { props[c.id] = PropState(screen: si) }
+            guard var st = props[c.id] else { continue }
+            st.lingerUntil = nil
+            let o = screens[si].frame.origin
+
+            // Ladder (stays up while the job lasts).
+            if let lad {
+                let px = max(4, Int(((lad.top - lad.bottom) / 3).rounded()))
+                if st.ladder == nil || st.ladderPx != px || st.screen != si {
+                    st.ladder?.removeFromSuperlayer()
+                    let l = propLayer(PropArt.ladder(heightPx: px), si)
+                    screens[si].root.insertSublayer(l, at: 0)
+                    st.ladder = l; st.ladderPx = px
+                }
+                st.ladder?.position = CGPoint(x: (lad.x - o.x).rounded(), y: (lad.bottom - o.y).rounded())
+            } else if let l = st.ladder { l.removeFromSuperlayer(); st.ladder = nil }
+
+            // The creation.
+            if let a = anchor {
+                let (key, make) = artKey(j)
+                if st.key != key || st.item.superlayer == nil || st.screen != si {
+                    let img = make()
+                    st.item.removeFromSuperlayer()
+                    st.item.magnificationFilter = .nearest
+                    st.item.anchorPoint = CGPoint(x: 0.5, y: 0)
+                    st.item.contentsScale = screens[si].panel.backingScaleFactor
+                    st.item.contents = img
+                    st.item.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    screens[si].root.addSublayer(st.item)
+                    if !st.key.isEmpty && st.key != key {
+                        burst([Effects.sparkle], si: si, at: CGPoint(x: a.x - o.x, y: a.y - o.y + st.item.bounds.height), count: 2, dx: -14...14, dy: 4...16, duration: 0.6)
+                    }
+                    st.key = key
+                }
+                let pos = CGPoint(x: (a.x - o.x).rounded(), y: (a.y - o.y).rounded())
+                if st.item.position != pos { st.item.position = pos }
+                let top = CGPoint(x: pos.x, y: pos.y + st.item.bounds.height)
+
+                // A bit of work: water drops, a brush dab, a block clunk.
+                if j.beat != st.beat {
+                    st.beat = j.beat
+                    if c.activity == .work {
+                        switch j.craft {
+                        case .garden:
+                            burst([Effects.rain], si: si, at: CGPoint(x: top.x - j.propSide * 6, y: top.y + 14), count: 4, dx: -8...8, dy: -22 ... -12, duration: 0.6, stagger: 0.08)
+                        case .paint:
+                            let colors = [Effects.petal, Effects.pollen, Effects.rain]
+                            burst(colors, si: si, at: CGPoint(x: pos.x, y: pos.y + st.item.bounds.height * 0.6), count: 3, dx: -12...12, dy: -6...10, duration: 0.5, stagger: 0.07)
+                        case .build:
+                            burst([Effects.dust], si: si, at: top, count: 2, dx: -16...16, dy: 0...6, duration: 0.4)
+                        }
+                    }
+                }
+                // Claude finished: the creation is complete. Celebrate it once.
+                if j.phase == .finished && !st.celebrated {
+                    st.celebrated = true
+                    burst([Effects.sparkle, Effects.heart, Effects.smallStar], si: si, at: top, count: 10, dx: -50...50, dy: 10...60, duration: 1.4, stagger: 0.05)
+                }
+            }
+            st.screen = si
+            props[c.id] = st
+        }
+        // Job over: take the ladder down now, let the creation linger for a minute, then fade it out.
+        for (id, var st) in props where !working.contains(id) {
+            if let l = st.ladder { l.removeFromSuperlayer(); st.ladder = nil }
+            if st.lingerUntil == nil { st.lingerUntil = now + 60 }
+            if now >= st.lingerUntil! || st.item.superlayer == nil {
+                let l = st.item
+                props[id] = nil
+                CATransaction.begin()
+                CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.8
+                fade.isRemovedOnCompletion = false; fade.fillMode = .forwards
+                l.add(fade, forKey: "fade")
+                CATransaction.commit()
+            } else {
+                props[id] = st
+            }
+        }
     }
 
     // MARK: Speech bubbles

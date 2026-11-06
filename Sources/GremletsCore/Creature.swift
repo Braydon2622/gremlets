@@ -22,6 +22,8 @@ public enum Activity: Equatable, Sendable {
     case run          // playing tag (chasing or fleeing)
     case follow       // walking to / after a friend (greet, follow, nap together)
     case peek         // sneaking to a screen edge to peek around it
+    case climb        // climbing a ladder up to a Claude window (Claude buddy)
+    case work         // gardening / painting / building next to a Claude window (pose in `workPose`)
 }
 
 enum SocialMode { case none, greet, follow, nap, chaser, runner }
@@ -64,6 +66,10 @@ public final class Creature {
     var tagImmunity = 0.0
     var beatTimer = 0.0
     var animSpeed = 1.0
+    /// The Claude-buddy job this Gremlet is on, if any (see Work.swift).
+    public internal(set) var job: Job?
+    /// Which animation plays while working ("crouch" = tending, "idle", "pet" = happy wiggle).
+    var workPose = "crouch"
     /// 0...1: how close this Gremlet is to you (see `Bond`).
     public internal(set) var bond = 0.0
 
@@ -75,7 +81,7 @@ public final class Creature {
     }
 
     public var size: Vec2 { species.pointSize }
-    public var isGrounded: Bool { groundOwner != nil && activity != .airborne && activity != .dragged && activity != .fly }
+    public var isGrounded: Bool { groundOwner != nil && ![.airborne, .dragged, .fly, .climb].contains(activity) }
     public var isAsleep: Bool { activity == .sleep || activity == .yawn }
 
     /// Name of the animation that matches the current activity.
@@ -101,11 +107,16 @@ public final class Creature {
         case .run: return "run"
         case .follow: return "walk"
         case .peek: return "walk"
+        case .climb: return "walk"
+        case .work: return workPose
         }
     }
 
     /// One-shot animations play once and hold their last frame; everything else loops.
-    var animationLoops: Bool { ![.yawn, .wake, .react, .land, .alert, .crouch, .special].contains(activity) }
+    var animationLoops: Bool {
+        if activity == .work { return workPose != "crouch" }
+        return ![.yawn, .wake, .react, .land, .alert, .crouch, .special].contains(activity)
+    }
 
     public var currentFrame: Int { species.frame(animationName, at: animTime, loop: animationLoops) }
 

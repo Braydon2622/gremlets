@@ -1,9 +1,9 @@
 {
   "name": "Mosswarden · Gremlet #36",
   "description": "An old guardian machine that stood watch so long a meadow grew on its head. It guards the flowers now.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mosswarden in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/36.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mosswarden",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mosswarden",
+  "image": "https://braydonhartai.com/gremlets/nft/images/36.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mosswarden",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mosswarden",
   "attributes": [
     {
       "trait_type": "Family",

@@ -1,9 +1,9 @@
 {
   "name": "Rainlet · Gremlet #32",
   "description": "The first raindrop of a storm, very proud of having arrived first.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rainlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/32.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rainlet",
+  "image": "https://braydonhartai.com/gremlets/nft/images/32.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=rainlet",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=rainlet",
   "attributes": [
     {
       "trait_type": "Family",

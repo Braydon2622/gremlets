@@ -1,9 +1,9 @@
 {
   "name": "Marimoss · Gremlet #25",
   "description": "A moss ball from the bottom of a quiet lake. Floats up whenever it's happy, which is always.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Marimoss in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/25.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=marimoss",
+  "image": "https://braydonhartai.com/gremlets/nft/images/25.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=marimoss",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=marimoss",
   "attributes": [
     {
       "trait_type": "Family",

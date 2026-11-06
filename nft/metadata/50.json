@@ -1,9 +1,9 @@
 {
   "name": "Frostmote · Gremlet #50",
   "description": "A mote of winter light that paints frost on windows when nobody is looking.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Frostmote in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/50.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=frostmote",
+  "image": "https://braydonhartai.com/gremlets/nft/images/50.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=frostmote",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=frostmote",
   "attributes": [
     {
       "trait_type": "Family",

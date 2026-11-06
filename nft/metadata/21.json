@@ -1,9 +1,9 @@
 {
   "name": "Shibun · Gremlet #21",
   "description": "A shiba pup with a curly tail and a smile that never quite turns off.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Shibun in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/21.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=shibun",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=shibun",
+  "image": "https://braydonhartai.com/gremlets/nft/images/21.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=shibun",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=shibun",
   "attributes": [
     {
       "trait_type": "Family",

@@ -1,9 +1,9 @@
 {
   "name": "Glowmote · Gremlet #34",
   "description": "A mote of evening light that forgot to go home with the sunset.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Glowmote in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/34.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=glowmote",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=glowmote",
+  "image": "https://braydonhartai.com/gremlets/nft/images/34.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=glowmote",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=glowmote",
   "attributes": [
     {
       "trait_type": "Family",

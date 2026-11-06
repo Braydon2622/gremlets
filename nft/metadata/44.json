@@ -1,9 +1,9 @@
 {
   "name": "Rotorlet · Gremlet #44",
   "description": "A tiny scout machine with a rotor on its head. Hovers just high enough to see over the grass.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Rotorlet in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/44.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rotorlet",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=rotorlet",
+  "image": "https://braydonhartai.com/gremlets/nft/images/44.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=rotorlet",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=rotorlet",
   "attributes": [
     {
       "trait_type": "Family",

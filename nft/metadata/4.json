@@ -1,9 +1,9 @@
 {
   "name": "Mossfawn · Gremlet #4",
   "description": "A forest fawn whose antlers sprout tiny red mushrooms after it rains.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mossfawn in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/4.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mossfawn",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mossfawn",
+  "image": "https://braydonhartai.com/gremlets/nft/images/4.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mossfawn",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mossfawn",
   "attributes": [
     {
       "trait_type": "Family",

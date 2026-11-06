@@ -1,9 +1,9 @@
 {
   "name": "Beaconbit · Gremlet #48",
   "description": "A little machine with a beacon on its head. It lights the way home for anything lost after dark.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Beaconbit in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/48.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=beaconbit",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=beaconbit",
+  "image": "https://braydonhartai.com/gremlets/nft/images/48.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=beaconbit",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=beaconbit",
   "attributes": [
     {
       "trait_type": "Family",

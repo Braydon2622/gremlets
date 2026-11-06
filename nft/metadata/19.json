@@ -1,9 +1,9 @@
 {
   "name": "Mintwyrm · Gremlet #19",
   "description": "A tiny mint-green wyrm that smells faintly of jasmine tea.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Mintwyrm in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/19.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=mintwyrm",
+  "image": "https://braydonhartai.com/gremlets/nft/images/19.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mintwyrm",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=mintwyrm",
   "attributes": [
     {
       "trait_type": "Family",

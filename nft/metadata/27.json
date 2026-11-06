@@ -1,9 +1,9 @@
 {
   "name": "Turnipkin · Gremlet #27",
   "description": "A turnip that pulled itself up out of the field one morning and never went back.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Turnipkin in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/27.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=turnipkin",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=turnipkin",
+  "image": "https://braydonhartai.com/gremlets/nft/images/27.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=turnipkin",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=turnipkin",
   "attributes": [
     {
       "trait_type": "Family",

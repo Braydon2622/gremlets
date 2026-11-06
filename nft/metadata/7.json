@@ -1,9 +1,9 @@
 {
   "name": "Seedcheek · Gremlet #7",
   "description": "A dwarf hamster whose cheeks are always stuffed with snacks it's saving for later.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Seedcheek in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/7.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seedcheek",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=seedcheek",
+  "image": "https://braydonhartai.com/gremlets/nft/images/7.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=seedcheek",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=seedcheek",
   "attributes": [
     {
       "trait_type": "Family",

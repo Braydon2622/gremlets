@@ -1,9 +1,9 @@
 {
   "name": "Listenling · Gremlet #41",
   "description": "A machine with a listening dish on its head. It was built to hear far-off signals; now it mostly listens to birdsong.\n\nOne of 50 one-of-a-kind Gremlets. Owning this token unlocks Listenling in the Gremlets desktop app, where it walks on your windows, naps, plays with other Gremlets and shows off its signature move.",
-  "image": "https://REPLACE-WITH-HOSTING-URL/nft/images/41.png",
-  "animation_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=listenling",
-  "external_url": "https://REPLACE-WITH-HOSTING-URL/web/index.html?showcase=listenling",
+  "image": "https://braydonhartai.com/gremlets/nft/images/41.png",
+  "animation_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=listenling",
+  "external_url": "https://braydonhartai.com/gremlets/web/index.html?showcase=listenling",
   "attributes": [
     {
       "trait_type": "Family",

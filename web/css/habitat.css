@@ -186,7 +186,8 @@ body.showcase #bar, body.showcase #hint { display: none; }
 .lk-small { margin: 4px 2px 0; font-size: 12.5px; font-weight: 500; color: rgba(43, 36, 51, 0.65); }
 .linklike { appearance: none; border: 0; background: none; padding: 0; font: inherit; color: #a3282c; text-decoration: underline; cursor: pointer; }
 .btn.icon { padding: 8px 10px; }
-@media (max-width: 560px) { .wide { display: none; } #bar { gap: 6px; padding-left: 10px; } .count { display: none; } }
+@media (min-width: 561px) { .narrow { display: none; } }
+@media (max-width: 560px) { .wide { display: none; } #bar .btn { padding-left: 10px; padding-right: 10px; } #bar { gap: 6px; padding-left: 10px; } .count { display: none; } }
 
 /* ---------- drive mode ---------- */
 #drivehint { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: rgba(255, 122, 77, 0.95);
@@ -198,3 +199,5 @@ body.showcase #bar, body.showcase #hint { display: none; }
 #pad button { width: 64px; height: 64px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255, 250, 241, 0.9); font-size: 24px; color: var(--ink);
   touch-action: none; user-select: none; -webkit-user-select: none; }
 #pad button:active { background: #ffe3d6; }
+
+#boss.on { background: #ffe3d6; border-color: #ff7a4d; }

@@ -602,6 +602,46 @@ final class OverlayController {
         }
     }
 
+    /// A swirling portal (to and from the phone).
+    func portal(at p: Vec2) {
+        guard !screens.isEmpty else { return }
+        let si = screenIndex(for: p)
+        let o = screens[si].frame.origin
+        let c = CGPoint(x: p.x - o.x, y: p.y - o.y)
+        for (i, color) in [NSColor(red: 0.66, green: 0.55, blue: 0.92, alpha: 1), NSColor(red: 0.44, green: 0.72, blue: 0.94, alpha: 1), NSColor(red: 1, green: 0.56, blue: 0.75, alpha: 1)].enumerated() {
+            let ring = CAShapeLayer()
+            let r = CGFloat(54 - i * 12)
+            ring.bounds = CGRect(x: 0, y: 0, width: r * 2, height: r * 2.6)
+            ring.position = c
+            ring.path = CGPath(ellipseIn: ring.bounds.insetBy(dx: 3, dy: 3), transform: nil)
+            ring.fillColor = i == 2 ? NSColor(red: 0.2, green: 0.12, blue: 0.35, alpha: 0.55).cgColor : NSColor.clear.cgColor
+            ring.strokeColor = color.cgColor
+            ring.lineWidth = 5
+            ring.lineDashPattern = [10, 6]
+            ring.shadowColor = color.cgColor; ring.shadowOpacity = 0.9; ring.shadowRadius = 8; ring.shadowOffset = .zero
+            screens[si].root.addSublayer(ring)
+            let spin = CABasicAnimation(keyPath: "lineDashPhase")
+            spin.fromValue = 0; spin.toValue = i % 2 == 0 ? 64 : -64
+            let scale = CAKeyframeAnimation(keyPath: "transform.scale")
+            scale.values = [0.05, 1.1, 1.0, 1.0, 0.05]; scale.keyTimes = [0, 0.2, 0.3, 0.8, 1]
+            let g = CAAnimationGroup(); g.animations = [spin, scale]; g.duration = 1.6
+            run(ring, g)
+        }
+        burst([Effects.sparkle, Effects.smallStar], si: si, at: c, count: 12, dx: -70...70, dy: -60...80, duration: 1.2, stagger: 0.04)
+    }
+
+    /// Plants grown on the phone go in the seed book and get planted in the garden here.
+    func receiveHarvest(_ plants: [Plant], nearX x: Double) {
+        guard !plants.isEmpty, let main = NSScreen.screens.first else { return }
+        for (i, p) in plants.enumerated() {
+            seedBook.record(p)
+            keepsakes.add(kind: p.kind.rawValue, x: (x - main.frame.minX) / main.frame.width - 0.04 * Double(i), variant: p.golden ? 1 : 0)
+        }
+        refreshKeepsakes()
+        for l in keepsakeLayers.suffix(plants.count) { popIn(l) }
+        onGardenChange()
+    }
+
     /// A mushroom pops out of the ground, squashes, and springs a Gremlet up.
     private func springMushroom(at p: CGPoint, _ si: Int) {
         let l = particle(PropArt.springMushroom, si, scale: 3)

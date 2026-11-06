@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var manuallyHidden = false
     private var hideHotKey: HotKey?
     private let focusLog = FocusLogStore()
+    private let phone = PhoneLink()
     private lazy var buddy: ClaudeBuddy = {
         let b = ClaudeBuddy(world: world, overlay: overlay)
         b.onChange = { [weak self] in self?.rebuildMenu() }
@@ -152,7 +153,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             ids = UserDefaults.standard.stringArray(forKey: rosterKey) ?? []
         }
-        ids = ids.filter { species[$0] != nil }
+        ids = ids.filter { species[$0] != nil && !phone.onPhone.contains($0) }
         if ids.isEmpty {
             // First launch: your own Gremlets if you have any, otherwise the three starters as a demo.
             let owned = access.ownedSpecies.filter { species[$0] != nil }.sorted()
@@ -326,6 +327,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         // The seed book: which plants you've grown so far.
         let book = overlay.seedBook
+        // Phone: pair, send a Gremlet over, see who's visiting.
+        if !phone.isPaired {
+            let pairItem = NSMenuItem(title: "Pair with Phone…", action: #selector(pairPhone), keyEquivalent: "")
+            pairItem.target = self
+            pairItem.toolTip = "Gremlets can hop over to your iPhone's web habitat and come back with what they grew."
+            menu.addItem(pairItem)
+        } else {
+            let ph = NSMenuItem(title: phone.connected ? "Phone · linked" : "Phone · connecting…", action: nil, keyEquivalent: "")
+            let phMenu = NSMenu()
+            if !world.creatures.isEmpty {
+                let send = NSMenuItem(title: "Send to Phone", action: nil, keyEquivalent: "")
+                let sendMenu = NSMenu()
+                for c in world.creatures {
+                    let it = NSMenuItem(title: c.species.name, action: #selector(sendToPhone(_:)), keyEquivalent: "")
+                    it.target = self
+                    it.representedObject = c.id
+                    sendMenu.addItem(it)
+                }
+                send.submenu = sendMenu
+                phMenu.addItem(send)
+            }
+            let away = phone.onPhone.compactMap { species[$0]?.info.name }
+            if !away.isEmpty {
+                let it = NSMenuItem(title: "On your phone: " + away.joined(separator: ", "), action: nil, keyEquivalent: "")
+                it.isEnabled = false
+                phMenu.addItem(it)
+            }
+            let show = NSMenuItem(title: "Show Pairing Code…", action: #selector(pairPhone), keyEquivalent: "")
+            show.target = self
+            phMenu.addItem(show)
+            phMenu.addItem(.separator())
+            let unlink = NSMenuItem(title: "Unlink Phone", action: #selector(unlinkPhone), keyEquivalent: "")
+            unlink.target = self
+            phMenu.addItem(unlink)
+            ph.submenu = phMenu
+            menu.addItem(ph)
+        }
         let sb = NSMenuItem(title: "Seed Book (\(book.found)/\(PlantKind.allCases.count))", action: nil, keyEquivalent: "")
         let sbMenu = NSMenu()
         for rarity in 0...4 {
@@ -625,6 +663,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return self.handleControl(method: method, path: path, query: query)
         }
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
+        server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
+        phone.onArrive = { [weak self] arrival in self?.arriveFromPhone(arrival) }
+        phone.onStatus = { [weak self] in self?.rebuildMenu() }
+        if phone.isPaired { phone.start() }
         server.start()
         control = server
         // Boss key: ⌃⌥G hides/shows every Gremlet instantly.
@@ -665,6 +707,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "phone/pair":
+            phone.pair()
+            rebuildMenu()
+            return (200, #"{"ok":true,"url":"\#(phone.pairURL ?? "")"}"#)
+        case "phone/send":
+            guard phone.isPaired else { return (409, #"{"ok":false,"error":"not paired: run gremlet pair first"}"#) }
+            let want = (query["name"] ?? "").lowercased()
+            guard let c = world.creatures.first(where: { $0.species.id == want || $0.species.name.lowercased() == want }) ?? (want.isEmpty ? world.creatures.first : nil) else {
+                return (404, #"{"ok":false,"error":"no Gremlet by that name is out"}"#)
+            }
+            let item = NSMenuItem(); item.representedObject = c.id
+            sendToPhone(item)
+            return (200, #"{"ok":true}"#)
         case "wish":   // shh: a little easter egg, not in the help text
             wishOnAStar()
             return (200, #"{"ok":true,"wish":"granted"}"#)
@@ -816,6 +871,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         schedule(rate: 60)
         rebuildMenu()
+    }
+
+    @objc private func pairPhone() {
+        phone.pair()
+        if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/pair") { NSWorkspace.shared.open(url) }
+        rebuildMenu()
+    }
+
+    @objc private func unlinkPhone() {
+        phone.unpair()
+        rebuildMenu()
+    }
+
+    /// Into the portal it goes; it pops out on the phone.
+    @objc private func sendToPhone(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? Int, let c = world.creatures.first(where: { $0.id == id }) else { return }
+        let speciesID = c.species.id
+        world.endJob(id)
+        overlay.showBubble("Off to your phone! 📱", on: id, seconds: 1.5)
+        overlay.portal(at: Vec2(c.pos.x, c.pos.y + c.size.y * 0.45))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            guard let self else { return }
+            self.world.remove(id)
+            self.overlay.render()
+            self.phone.sendToPhone(species: speciesID)
+            self.saveRoster()
+            self.rebuildMenu()
+        }
+    }
+
+    /// Back from the phone: out of a portal near the bottom of the screen, with whatever it grew there.
+    private func arriveFromPhone(_ a: PhoneLink.Arrival) {
+        guard let sp = species[a.species] else { return }
+        phone.onPhone = phone.onPhone.filter { $0 != a.species }
+        let screens = WindowTracker.screens()
+        guard let main = screens.first else { return }
+        let x = main.maxX - 160
+        let at = Vec2(x, main.minY + 60)
+        overlay.portal(at: at)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self else { return }
+            let c = self.world.spawn(sp.info, at: Vec2(x, main.minY + 20))
+            self.saveRoster()
+            self.overlay.render()
+            let grew = a.harvest.map { ($0.golden ? "golden " : "") + $0.kind.name.lowercased() }
+            let text = grew.isEmpty ? "I'm back! 📱→💻" : "I'm back! Grew: " + grew.prefix(4).joined(separator: ", ") + (grew.count > 4 ? "…" : "")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.overlay.showBubble(text, on: c.id, seconds: 6) }
+            self.overlay.receiveHarvest(a.harvest, nearX: x)
+            self.schedule(rate: 60)
+            self.rebuildMenu()
+        }
     }
 
     @objc private func clearGarden() {

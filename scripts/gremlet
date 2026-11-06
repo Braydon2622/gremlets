@@ -8,6 +8,8 @@
 #   gremlet say "text" [seconds] the Gremlet nearest your cursor pops up with a speech bubble (default 8 s)
 #   gremlet hobby [shelf|floor]  the Gremlet nearest your cursor starts a window-box garden now (on a shelf by a window,
 #                                or on the floor)
+#   gremlet pair                 pair with your phone (opens a QR code to scan)
+#   gremlet send [name]          send a Gremlet through the portal to your phone
 #   gremlet status               what's out and whether a focus timer is running
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -34,6 +36,8 @@ case "${1:-}" in
       case "$a" in shelf) q="${q}shelf=1&" ;; floor) q="${q}shelf=0&" ;; esac
     done
     call "$q" >/dev/null ;;
+  pair)    call phone/pair && echo && open "http://127.0.0.1:${PORT}/pair" ;;
+  send)    curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "name=${2:-}" "${URL}/phone/send"; echo ;;
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
   run)
@@ -42,6 +46,6 @@ case "${1:-}" in
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

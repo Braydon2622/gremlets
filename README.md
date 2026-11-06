@@ -152,6 +152,21 @@ swift run spritegen                                     # regenerate all 50 spri
 No permissions are required: window *positions* are readable without Screen Recording access (only window
 titles need it, and Gremlets never reads them).
 
+## Gremlets on your phone
+
+**Pair with Phone…** in the menu (or `gremlet pair`) shows a QR code; scan it with your iPhone and the web habitat opens
+already linked (Share → Add to Home Screen keeps it one tap away). Then **Send to Phone** (or `gremlet send kindlet`):
+the Gremlet hops into a swirling portal on your Mac and pops out of one on your phone, where it sets up a window box on a
+ledge and keeps gardening: same plants, same art, tap the box to water it or shoo a bug. **Send home** on the phone brings
+it back through the portal with everything it grew, which goes into the Seed Book and the garden along the bottom of
+your screen.
+
+How it works: both sides pass tiny JSON notes through [ntfy.sh](https://ntfy.sh), a free public relay that needs no
+account, on a channel named after a long random pairing code ("kindlet is jumping to the phone", "kindlet is coming home
+with a carrot and a crystal rose"). Only Gremlet names and plant kinds are sent. The Mac keeps one streaming connection
+open (no polling) and the page uses Server-Sent Events; the code is removed from the page's address bar as soon as it's
+saved. Anyone who learned the code could read those notes, so **Unlink Phone** makes a fresh one next time.
+
 ## Web habitat (phones, tablets, any browser)
 
 `web/` is the same world in a browser tab: a JavaScript port of the engine (`web/js/engine.js`, same rules

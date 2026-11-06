@@ -160,3 +160,12 @@ body.showcase #bar, body.showcase #hint { display: none; }
   position: fixed; inset: auto 12px 12px; padding: 12px 14px; border-radius: 12px;
   background: #fff; color: #a3282c; border: 1px solid #f0c0c0;
 }
+
+/* Phone link: a chip in the bar, speech bubbles over visiting Gremlets. */
+.chip-link { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,0.75); color: #3f7d4e; white-space: nowrap; }
+.chip-link.off { color: #8a8f8a; }
+#bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.say { position: absolute; transform: translate(-50%, -100%); background: #fffdf8; color: #1d211e; border: 2px solid #1d211e; border-radius: 8px;
+  padding: 3px 9px; font: 700 13px/1.35 -apple-system, system-ui, sans-serif; white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis; }
+.say::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 9px; height: 9px; background: #fffdf8; border-right: 2px solid #1d211e;
+  border-bottom: 2px solid #1d211e; transform: translateX(-50%) rotate(45deg); }

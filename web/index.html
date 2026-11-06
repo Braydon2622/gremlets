@@ -15,6 +15,8 @@
     <span class="logo">Gremlets</span>
     <span id="count" class="count"></span>
     <span class="spacer"></span>
+    <span id="linkchip" class="chip-link" hidden>📱 Linked</span>
+    <button id="home" class="btn" hidden title="Send visiting Gremlets back to your Mac">Send home</button>
     <button id="party" class="btn ghost" title="Swap in a random group">Shuffle</button>
     <button id="add" class="btn">+ Add</button>
   </header>
@@ -31,6 +33,7 @@
 
   <div id="hint">Tap to poke · Hold to pet · Drag to throw</div>
   <div id="plate" hidden></div>
+  <div id="bubbles" aria-live="polite"></div>
 
   <script type="module" src="js/habitat.js"></script>
 </body>

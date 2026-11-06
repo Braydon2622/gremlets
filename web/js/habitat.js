@@ -5,6 +5,8 @@
 import { World, V } from './engine.js';
 import { loadIndex, loadSpecies, speciesBase } from './sprites.js';
 import { FX, Particles } from './effects.js';
+import { Link } from './link.js';
+import { Garden } from './garden.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -17,6 +19,10 @@ const world = new World();
 const particles = new Particles();
 const art = new Map();          // creature id -> { image, rects }
 const zzzTimers = new Map();
+const link = showcase ? null : new Link();
+const visitors = new Map();     // creature id -> { species, garden, spot, poseTimer, hop }
+const portals = [];             // { x, y, t }
+const bubbles = [];             // { el, id, until }
 let W = 0, H = 0, DPR = 1, PX = 3, GROUND = 0, TOP = 0;
 let platforms = [];
 let scenery = null;
@@ -183,7 +189,8 @@ function removeGremlet(id) { world.remove(id); art.delete(id); saveRoster(); upd
 
 function saveRoster() {
   if (showcase) return;
-  try { localStorage.setItem('gremlets.roster', JSON.stringify(world.creatures.map((c) => c.species.id))); } catch { /* private mode */ }
+  // Visitors from the Mac are saved separately (they go home again).
+  try { localStorage.setItem('gremlets.roster', JSON.stringify(world.creatures.filter((c) => !visitors.has(c.id)).map((c) => c.species.id))); } catch { /* private mode */ }
 }
 function loadRoster() { try { return JSON.parse(localStorage.getItem('gremlets.roster') || 'null'); } catch { return null; } }
 
@@ -261,7 +268,8 @@ canvas.addEventListener('pointerdown', (e) => {
   const p = toWorld(e), t = performance.now() / 1000;
   world.cursor = p;
   const c = world.creatureAt(p);
-  if (!c) return;
+  if (!c) { tapGarden(p); return; }
+  if (visitors.has(c.id)) say(c.id, visitors.get(c.id).garden.describe(), 3.5);
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic or already-released pointer */ }
   press = { c, start: p, dragging: false, petted: false };
   // Hold still on a Gremlet to pet it (touch-friendly).
@@ -319,8 +327,11 @@ function frame(now) {
     if (t <= 0) { particles.burst(FX.zzz, head(c, 0.85), { dx: [14 * c.facing, 22 * c.facing], dy: [40, 48], duration: 1.4, spin: 0 }); zzzTimers.set(c.id, 1.6); }
     else zzzTimers.set(c.id, t);
   }
+  updateVisitors(dt, now / 1000);
   particles.update(dt);
   draw();
+  drawPortals(now / 1000);
+  placeBubbles(now / 1000);
   requestAnimationFrame(frame);
 }
 
@@ -334,6 +345,10 @@ function draw() {
     if (!c.isGrounded) continue;
     const s = toScreen(c.pos.x, c.pos.y);
     ctx.beginPath(); ctx.ellipse(s.x, s.y - 1, c.size.x * 0.26, PX * 1.2, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  for (const [, v] of visitors) {
+    const s = toScreen(v.spot.boxX, v.spot.y);
+    v.garden.draw(ctx, s.x, s.y, PX);
   }
   for (const c of world.creatures) {
     const a = art.get(c.id);
@@ -349,6 +364,152 @@ function draw() {
     ctx.restore();
   }
   particles.draw(ctx, toScreen, PX);
+}
+
+// ---------------------------------------------------------------- phone link: visitors from the Mac
+
+const VKEY = 'gremlets.visitors';
+function saveVisitors() {
+  try { localStorage.setItem(VKEY, JSON.stringify([...visitors.values()].map((v) => ({ species: v.species, harvest: v.garden.harvested })))); } catch { /* private mode */ }
+}
+function loadVisitors() { try { return JSON.parse(localStorage.getItem(VKEY) || '[]'); } catch { return []; } }
+
+/** Where a visitor gardens: its own ledge (widest free one), or the ground. World coordinates. */
+function gardenSpot() {
+  const need = 38 * PX + 70;
+  const taken = new Set([...visitors.values()].map((v) => v.spot.key));
+  const ledge = [...platforms].filter((p) => p.w >= need && !taken.has('p' + p.id)).sort((a, b) => b.w - a.w)[0];
+  if (ledge) return { key: 'p' + ledge.id, y: ledge.y + ledge.h, boxX: ledge.x + 19 * PX + 6, standX: ledge.x + 38 * PX + 40, ground: false };
+  const n = taken.size;
+  const boxX = Math.min(W - 60, W * 0.22 + n * (38 * PX + 90));
+  return { key: 'g' + n, y: GROUND, boxX, standX: boxX + 19 * PX + 34, ground: true };
+}
+
+async function arrive(species, harvest = [], quiet = false) {
+  if (!index.some((s) => s.id === species)) return;
+  const spot = gardenSpot();
+  portals.push({ x: spot.standX, y: spot.y + 40, t: performance.now() / 1000 });
+  await new Promise((r) => setTimeout(r, quiet ? 0 : 600));
+  const c = await addGremlet(species, V(spot.standX, spot.y + 30));
+  const garden = new Garden();
+  garden.harvested = harvest;
+  visitors.set(c.id, { species, garden, spot, poseTimer: 0, hop: 0 });
+  saveVisitors();
+  saveRoster();
+  updateLinkUI();
+  if (!quiet) setTimeout(() => say(c.id, 'Hi! I hopped over from your Mac ✨', 4), 700);
+}
+
+/** Keeps each visitor at its window box, tending it; the garden grows while it does. */
+function updateVisitors(dt, t) {
+  for (const [id, v] of visitors) {
+    const c = byId(id);
+    if (!c) { visitors.delete(id); saveVisitors(); updateLinkUI(); continue; }
+    const there = c.isGrounded && Math.abs(c.pos.y - v.spot.y) < 3 && Math.abs(c.pos.x - v.spot.standX) < 14;
+    const event = v.garden.update(dt, there, t);
+    if (event) gardenFx(v, event);
+    if (event === 'harvest') { say(id, v.garden.msg, 5); saveVisitors(); }
+    if (c.activity === 'dragged' || !c.isGrounded) continue;
+    if (there) {
+      if ((v.poseTimer -= dt) <= 0 || c.activity !== 'idle') {
+        v.poseTimer = 1.8 + Math.random() * 1.4;
+        c.set('idle', 30);
+        c.idleVariant = ['crouch', 'crouch', 'look', 'pet'][Math.floor(Math.random() * 4)];
+        c.facing = v.spot.boxX < c.pos.x ? -1 : 1;
+      }
+    } else if (['idle', 'walk', 'follow', 'wave', 'peek', 'chase', 'land'].includes(c.activity) && t > v.hop) {
+      // Hop back to the box.
+      v.hop = t + 2.5;
+      world.launch(c, world.ballistic(c.pos, v.spot.standX, v.spot.y, 40));
+    }
+  }
+}
+
+function gardenFx(v, event) {
+  const top = V(v.spot.boxX, v.spot.y + PX * 20);
+  if (event === 'water') particles.burst(FX.rain, top, { count: 6, dx: [-30, 30], dy: [-40, -20], duration: 0.6, stagger: 0.06, spin: 0 });
+  else if (event === 'plant') particles.burst(FX.dust, V(v.spot.boxX, v.spot.y + PX * 6), { count: 3, dx: [-20, 20], dy: [0, 8], duration: 0.45, spin: 0 });
+  else if (event === 'shoo') particles.burst(FX.smallBang, top, { dy: [10, 16], duration: 0.6, spin: 0 });
+  else if (event === 'harvest') particles.burst(null, top, { imgs: [FX.sparkle, FX.heart, FX.smallStar, FX.petal], count: 12, dx: [-60, 60], dy: [10, 60], duration: 1.4, stagger: 0.05 });
+}
+
+function tapGarden(p) {
+  for (const [id, v] of visitors) {
+    const halfW = 19 * PX + 6;
+    if (Math.abs(p.x - v.spot.boxX) < halfW && p.y > v.spot.y - 4 && p.y < v.spot.y + PX * 22) {
+      const did = v.garden.help();
+      if (did) { gardenFx(v, did); particles.burst(FX.smallHeart, V(v.spot.boxX, v.spot.y + PX * 18), { dy: [20, 30], duration: 0.9 }); }
+      say(id, v.garden.describe(), 3);
+      return true;
+    }
+  }
+  return false;
+}
+
+async function sendHome() {
+  const btn = document.getElementById('home');
+  btn.disabled = true;
+  for (const [id, v] of [...visitors]) {
+    const c = byId(id);
+    try {
+      await link.sendHome(v.species, v.garden.harvested);
+    } catch (err) {
+      if (c) say(id, "Couldn't reach your Mac. Try again in a moment.", 4);
+      continue;
+    }
+    if (c) { say(id, 'Bye! See you on the Mac 💻', 1.4); portals.push({ x: c.pos.x, y: c.pos.y + c.size.y * 0.45, t: performance.now() / 1000 }); }
+    visitors.delete(id);
+    setTimeout(() => removeGremlet(id), 700);
+  }
+  saveVisitors();
+  btn.disabled = false;
+  updateLinkUI();
+}
+
+function drawPortals(t) {
+  for (let i = portals.length - 1; i >= 0; i--) {
+    const p = portals[i], age = t - p.t;
+    if (age > 1.6) { portals.splice(i, 1); continue; }
+    const k = age < 0.3 ? age / 0.3 : age > 1.3 ? (1.6 - age) / 0.3 : 1;
+    const s = toScreen(p.x, p.y);
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ['#a98bea', '#6fb8f0', '#ff8fbf'].forEach((col, j) => {
+      const r = (40 - j * 10) * k;
+      ctx.strokeStyle = col; ctx.lineWidth = 4;
+      ctx.setLineDash([9, 6]); ctx.lineDashOffset = (j % 2 ? 1 : -1) * age * 60;
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, Math.max(1, r), Math.max(1, r * 1.3), 0, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.restore();
+  }
+}
+
+function say(id, text, secs) {
+  const host = document.getElementById('bubbles');
+  if (!host || !text) return;
+  for (const b of bubbles.filter((b) => b.id === id)) { b.el.remove(); bubbles.splice(bubbles.indexOf(b), 1); }
+  const el = document.createElement('div');
+  el.className = 'say'; el.textContent = text;
+  host.appendChild(el);
+  bubbles.push({ el, id, until: performance.now() / 1000 + secs });
+}
+function placeBubbles(t) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i], c = byId(b.id);
+    if (!c || t > b.until) { b.el.remove(); bubbles.splice(i, 1); continue; }
+    const s = toScreen(c.pos.x, c.pos.y + c.size.y + 8);
+    b.el.style.left = Math.round(Math.min(W - 40, Math.max(40, s.x))) + 'px';
+    b.el.style.top = Math.round(s.y) + 'px';
+  }
+}
+
+function updateLinkUI() {
+  if (!link) return;
+  const chip = document.getElementById('linkchip'), home = document.getElementById('home');
+  chip.hidden = !link.paired;
+  chip.textContent = link.connected ? '📱 Linked' : '📱 Connecting…';
+  chip.classList.toggle('off', !link.connected);
+  home.hidden = !link.paired || visitors.size === 0;
 }
 
 // ---------------------------------------------------------------- UI
@@ -412,6 +573,14 @@ async function start() {
       for (const id of picks) addGremlet(id);
     });
     setTimeout(() => document.getElementById('hint')?.classList.add('gone'), 7000);
+    if (link?.paired) {
+      for (const v of loadVisitors()) await arrive(v.species, v.harvest || [], true);
+      link.onArrive = ({ species }) => arrive(species);
+      link.onStatus = updateLinkUI;
+      link.start();
+      document.getElementById('home').addEventListener('click', sendHome);
+      updateLinkUI();
+    }
   }
   if (params.has('debug')) window.gremlets = { world, toScreen, particles };
   requestAnimationFrame((t) => { last = t; frame(t); });

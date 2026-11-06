@@ -19,9 +19,10 @@
     <span id="roomchip" class="chip-link" hidden>🔗 Linked</span>
     <button id="home" class="btn" hidden title="Send visiting Gremlets back to your Mac">Send home</button>
     <button id="rain" class="btn ghost icon" title="A rain cloud drifts by" aria-label="Make it rain">🌧</button>
+    <button id="boss" class="btn ghost icon" title="Summon the Grumble King (then drive a Gremlet and press X to fight)" aria-label="Summon a boss">👑</button>
     <button id="link" class="btn ghost" title="Link another screen so Gremlets can walk between them">🔗 <span class="wide">Link a screen</span></button>
-    <button id="party" class="btn ghost" title="Swap in a random group">Shuffle</button>
-    <button id="add" class="btn">+ Add</button>
+    <button id="party" class="btn ghost" title="Swap in a random group" aria-label="Shuffle"><span class="narrow">🔀</span><span class="wide">Shuffle</span></button>
+    <button id="add" class="btn">+<span class="wide"> Add</span></button>
   </header>
 
   <div id="picker" hidden>
@@ -68,9 +69,10 @@
     <button data-k="left" aria-label="Walk left">◀</button>
     <button data-k="jump" aria-label="Jump">⤒</button>
     <button data-k="right" aria-label="Walk right">▶</button>
+    <button data-k="mine" aria-label="Swing pickaxe">⛏</button>
   </div>
 
-  <div id="hint">Tap to poke · Hold to pet · Drag to throw · Double-click to drive</div>
+  <div id="hint">Tap to poke · Hold to pet · Drag to throw · Double-click to drive · 👑 for a boss fight</div>
   <div id="plate" hidden></div>
   <div id="bubbles" aria-live="polite"></div>
 

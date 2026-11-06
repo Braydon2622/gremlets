@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
     private let icons = DesktopIcons()
+    private let companion = CompanionAI()
+    private var lastMorning = UserDefaults.standard.string(forKey: "companion.lastMorning") ?? ""
+    private var lastEvening = UserDefaults.standard.string(forKey: "companion.lastEvening") ?? ""
     private lazy var buddy: ClaudeBuddy = {
         let b = ClaudeBuddy(world: world, overlay: overlay)
         b.onChange = { [weak self] in self?.rebuildMenu() }
@@ -331,6 +334,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let e = NSMenuItem(title: "  ⚠︎ " + err, action: nil, keyEquivalent: ""); e.isEnabled = false
             menu.addItem(e)
         }
+        let chat = NSMenuItem(title: "Chat with a Gremlet…", action: #selector(openChatMenu), keyEquivalent: "")
+        chat.target = self
+        chat.toolTip = "Talk with any of your Gremlets (or double-click one). Replies come from Claude when you add an API key."
+        menu.addItem(chat)
         let bud = NSMenuItem(title: "Claude Buddy", action: #selector(toggleBuddy), keyEquivalent: "")
         bud.target = self
         bud.state = buddy.enabled ? .on : .off
@@ -680,6 +687,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
+        server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
+        overlay.onDoubleClick = { [weak self] id in self?.openChat(with: id) }
         overlay.icons = icons
         icons.onChange = { [weak self] in self?.rebuildMenu() }
         icons.refresh()
@@ -726,6 +735,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "chat/state":
+            return (200, chatState(query["name"]))
+        case "chat/send":
+            guard let c = chatTarget(query["name"]), let raw = query["_body"]?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+                return (400, #"{"ok":false,"error":"say something"}"#)
+            }
+            sendChat(String(raw.prefix(800)), to: c)
+            return (202, #"{"ok":true,"pending":true}"#)
+        case "chat/key":
+            companion.setKey(query["_body"]?.trimmingCharacters(in: .whitespacesAndNewlines))
+            return (200, #"{"ok":true,"ai":\#(companion.hasKey)}"#)
+        case "chat/nick":
+            guard let c = chatTarget(query["name"]) else { return (404, "{}") }
+            companion.setNickname(c.species.id, query["_body"])
+            rebuildMenu()
+            return (200, #"{"ok":true}"#)
+        case "chat/me":
+            companion.userName = query["_body"].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            return (200, #"{"ok":true}"#)
+        case "chat/forget":
+            if let c = chatTarget(query["name"]) { companion.forget(c.species.id) }
+            return (200, #"{"ok":true}"#)
         case "phone/pair":
             phone.pair()
             rebuildMenu()
@@ -837,6 +868,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updatePresence()
         focus.update()
         buddy.tick()
+        dailyMoments()
         if icons.enabled && Int(Date().timeIntervalSince1970) % 15 == 0 { icons.refresh() }
         // Seasons and night-time for the garden; now and then a shooting star at night grants a wish.
         let cal = Calendar.current, nowDate = Date()
@@ -881,6 +913,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.focusMode = false
         world.receive(.wake)
         rebuildMenu()
+    }
+
+    // MARK: AI companion
+
+    private func dayStats() -> CompanionAI.Day {
+        var d = CompanionAI.Day()
+        d.focusMinutes = Int(focusLog.todayMinutes.rounded())
+        d.streak = focusLog.streak
+        d.plantsToday = overlay.seedBook.today
+        d.seedsFound = overlay.seedBook.found
+        d.seedsTotal = PlantKind.allCases.count
+        d.claudeToday = buddy.log.todayCount
+        d.gremletsOut = world.creatures.map { companion.nickname($0.species.id) ?? $0.species.name }
+        return d
+    }
+
+    private func chatTarget(_ name: String?) -> Creature? {
+        let want = (name ?? "").lowercased()
+        return world.creatures.first { $0.species.id == want } ?? (want.isEmpty ? world.creatures.first : nil)
+    }
+
+    /// The chat page talks to a Gremlet; the reply also pops up in a speech bubble on the desktop, and any action
+    /// it asks for (focus, garden, dance...) happens.
+    private func sendChat(_ text: String, to c: Creature) {
+        guard let sp = species[c.species.id] else { return }
+        let bond = bonds.bond(c.species.id)
+        world.receive(.wave)
+        companion.reply(to: text, as: sp.info, bond: bond, day: dayStats()) { [weak self] reply, action in
+            guard let self, let c = self.world.creatures.first(where: { $0.species.id == sp.info.id }) else { return }
+            self.overlay.showBubble(String(reply.prefix(118)) + (reply.count > 118 ? "…" : ""), on: c.id, seconds: 7)
+            if let action { self.perform(action, by: c) }
+            self.bonds.addPet(c.species.id)        // talking counts as quality time
+            self.schedule(rate: 60)
+        }
+    }
+
+    private func perform(_ action: CompanionAI.Action, by c: Creature) {
+        switch action {
+        case .focus: focus.startFocus(minutes: 25); rebuildMenu()
+        case .garden: _ = world.startHobby(c) || world.startHobbyNearCursor()
+        case .dance: world.receive(.dance)
+        case .wave: world.receive(.wave)
+        case .hide: manuallyHidden = true; updatePresence(); rebuildMenu()
+        case .nap: world.receive(.sleep)
+        case .wish: wishOnAStar()
+        case .water: for w in world.workers { _ = world.helpGarden(workerID: w.id) }
+        }
+    }
+
+    private func openChat(with id: Int) {
+        let name = world.creatures.first { $0.id == id }?.species.id ?? ""
+        if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/chat#\(name)") { NSWorkspace.shared.open(url) }
+    }
+
+    @objc private func openChatMenu() { openChat(with: world.creatures.first?.id ?? 0) }
+
+    /// Good morning the first time you're around each day; a recap of the day in the evening.
+    private func dailyMoments() {
+        guard world.userActive, !presence.isHidden, let c = world.creatures.filter({ $0.isGrounded && $0.job == nil }).randomElement(),
+              let sp = species[c.species.id] else { return }
+        let today = BondStore.dayKey()
+        let hour = Calendar.current.component(.hour, from: Date())
+        var kind: String?
+        if lastMorning != today && hour >= 5 && hour < 12 { kind = "morning"; lastMorning = today; UserDefaults.standard.set(today, forKey: "companion.lastMorning") }
+        else if lastEvening != today && hour >= 18 { kind = "evening"; lastEvening = today; UserDefaults.standard.set(today, forKey: "companion.lastEvening") }
+        guard let kind else { return }
+        let id = c.id
+        companion.moment(kind, as: sp.info, bond: bonds.bond(sp.info.id), day: dayStats()) { [weak self] line in
+            self?.world.receive(.wave)
+            self?.overlay.showBubble(line, on: id, seconds: 8)
+        }
+    }
+
+    /// gremlets://say?text=…, gremlets://focus?minutes=50, gremlets://hobby, gremlets://chat?name=kindlet,
+    /// gremlets://send?name=kindlet, gremlets://wish, gremlets://dance … (for Shortcuts, Raycast, Alfred, scripts).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "gremlets" {
+            let action = (url.host ?? "") + url.path
+            var q: [String: String] = [:]
+            for item in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [] { q[item.name] = item.value.map { $0.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0 } }
+            switch action {
+            case "chat": openChat(with: chatTarget(q["name"])?.id ?? 0)
+            case "pair": pairPhone()
+            case "send": _ = handleControl(method: "POST", path: "/phone/send", query: q)
+            default: _ = handleControl(method: "POST", path: "/" + action, query: q)
+            }
+        }
     }
 
     /// A shooting star: the next seed planted will be something special.
@@ -943,6 +1062,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.schedule(rate: 60)
             self.rebuildMenu()
         }
+    }
+
+    private func chatState(_ name: String?) -> String {
+        func esc(_ s: String) -> String {
+            let d = try? JSONSerialization.data(withJSONObject: [s])
+            return String(String(data: d ?? Data(), encoding: .utf8)?.dropFirst().dropLast() ?? "\"\"")
+        }
+        let target = chatTarget(name)
+        let gremlets = world.creatures.map { c -> String in
+            let b = bonds.bond(c.species.id)
+            let busy = c.job != nil ? "gardening" : c.isAsleep ? "napping" : "around"
+            return #"{"id":\#(esc(c.species.id)),"name":\#(esc(c.species.name)),"nick":\#(esc(companion.nickname(c.species.id) ?? "")),"bond":\#(esc(b.name)),"element":\#(esc(c.species.element)),"family":\#(esc(c.species.family)),"doing":\#(esc(busy))}"#
+        }.joined(separator: ",")
+        let history = target.map { companion.history($0.species.id).suffix(40).map { #"{"role":\#(esc($0.role)),"text":\#(esc($0.text))}"# }.joined(separator: ",") } ?? ""
+        let day = dayStats()
+        return #"{"ai":\#(companion.hasKey),"problem":\#(esc(companion.lastProblem ?? "")),"me":\#(esc(companion.userName ?? "")),"target":\#(esc(target?.species.id ?? "")),"gremlets":[\#(gremlets)],"history":[\#(history)],"day":{"focus":\#(day.focusMinutes),"streak":\#(day.streak),"plants":\#(day.plantsToday),"seeds":\#(day.seedsFound),"seedsTotal":\#(day.seedsTotal),"claude":\#(day.claudeToday)}}"#
+    }
+
+    /// The chat page (127.0.0.1 only). Portraits are the Gremlets' own first sprite frames.
+    private func chatPage() -> String {
+        var portraits: [String] = []
+        for c in world.creatures {
+            guard let sp = species[c.species.id], let f = sp.frames.first,
+                  let png = NSBitmapImageRep(cgImage: f).representation(using: .png, properties: [:]) else { continue }
+            portraits.append("\"\(c.species.id)\":\"data:image/png;base64,\(png.base64EncodedString())\"")
+        }
+        return ChatPage.html(portraitsJSON: "{" + portraits.joined(separator: ",") + "}")
     }
 
     @objc private func clearGarden() {

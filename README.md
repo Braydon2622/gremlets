@@ -164,6 +164,25 @@ borrows one, carries it around over its head and tosses it back into place. Noth
 carried icon is a copy, and its spot is covered with a matching piece of your wallpaper until it's back. Icon positions
 come from Finder, so macOS asks once to let Gremlets control Finder.
 
+## Your AI companion
+
+**Chat with any Gremlet**: double-click it, choose **Chat with a Gremlet…** in the menu, or open `gremlets://chat`. Each
+one talks in its own personality (a frost bunny is not a candle sprite), knows its nickname and how close you two are,
+remembers your recent conversation, and knows how your day is going: minutes focused and your streak, plants grown,
+seeds found, Claude tasks finished alongside it. Ask it to help you focus, garden, dance, hide for a meeting or make a
+wish and it does (replies can carry one of a small, fixed set of actions; anything else is ignored). It also says good
+morning the first time you're around each day and recaps your day in the evening.
+
+Replies come from Claude (`claude-opus-5-5` at low effort, about a cent a message, with server-side fallback) once you
+paste an Anthropic API key on the chat page; it's stored in your macOS Keychain, never in a file. Without a key, or if
+the account is out of credits, the Gremlets answer with built-in lines and still do everything above; the page says
+why in plain words.
+
+**Plug it into anything** with the `gremlets://` URL scheme: `gremlets://say?text=Deploy%20done`,
+`gremlets://focus?minutes=50`, `gremlets://hobby`, `gremlets://dance`, `gremlets://wish`, `gremlets://chat?name=kindlet`,
+`gremlets://send?name=kindlet`. That works from Apple Shortcuts, Raycast, Alfred, Stream Deck, cron or any script
+(`open "gremlets://..."`), alongside the `gremlet` command and the Claude Code hooks.
+
 ## Gremlets on your phone
 
 **Pair with Phone…** in the menu (or `gremlet pair`) shows a QR code; scan it with your iPhone and the web habitat opens

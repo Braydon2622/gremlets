@@ -31,7 +31,10 @@ final class OverlayView: NSView {
     weak var controller: OverlayController?
     override var isFlipped: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func mouseDown(with e: NSEvent) { controller?.mouseDown(at: NSEvent.mouseLocation, time: e.timestamp) }
+    override func mouseDown(with e: NSEvent) {
+        if e.clickCount == 2, let c = controller, let id = c.creatureID(at: NSEvent.mouseLocation) { c.onDoubleClick(id); return }
+        controller?.mouseDown(at: NSEvent.mouseLocation, time: e.timestamp)
+    }
     override func mouseDragged(with e: NSEvent) { controller?.mouseDragged(to: NSEvent.mouseLocation, time: e.timestamp) }
     override func mouseUp(with e: NSEvent) { controller?.mouseUp(at: NSEvent.mouseLocation, time: e.timestamp) }
 }
@@ -57,6 +60,9 @@ final class OverlayController {
     private var props: [Int: PropState] = [:]
     private var balloons: [Int: CALayer] = [:]
     let keepsakes = KeepsakeStore()
+    /// Double-clicking a Gremlet (the app opens a chat with it).
+    var onDoubleClick: (Int) -> Void = { _ in }
+    func creatureID(at p: CGPoint) -> Int? { world.creature(at: Vec2(Double(p.x), Double(p.y)))?.id }
     /// Desktop icon play (set by the app; nil or disabled = off).
     var icons: DesktopIcons?
     /// Icons currently "picked up" (their platform is gone until they're put back).

@@ -33,6 +33,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Gremlets</string>
   <key>CFBundleDisplayName</key><string>Gremlets</string>
   <key>CFBundleIdentifier</key><string>com.braydonhart.gremlets</string>
+  <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>Gremlets</string><key>CFBundleURLSchemes</key><array><string>gremlets</string></array></dict></array>
   <key>CFBundleExecutable</key><string>Gremlets</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>

@@ -98,6 +98,7 @@ final class CreationLog {
     }
 
     var total: Int { days.values.reduce(0) { $0 + $1.values.reduce(0, +) } }
+    var todayCount: Int { (days[BondStore.dayKey()] ?? [:]).values.reduce(0, +) }
 
     /// e.g. "2 flowers · 1 painting", or nil if nothing yet today.
     var todaySummary: String? {

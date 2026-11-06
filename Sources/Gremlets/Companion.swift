@@ -220,6 +220,10 @@ final class ControlServer {
                 if kv.count == 2 { query[kv[0]] = kv[1] }
             }
         }
+        if method == "POST", let split = request.range(of: "\r\n\r\n") {
+            let body = String(request[split.upperBound...])
+            if !body.isEmpty { query["_body"] = String(body.prefix(4000)) }
+        }
         let (status, body) = handle(method, pathAndQuery[0], query)
         return (status, body, Self.json)
     }

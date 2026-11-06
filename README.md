@@ -6,6 +6,20 @@ mote of evening light) and old guardian machines that nature reclaimed (one has 
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
 
+**What it is now:** a desktop AI companion. Talk to any Gremlet (it knows how your day is going and can start a focus
+session for you), watch them tend window-box gardens on platforms they build beside your windows (a hot-air balloon,
+a treehouse, a giant snail...), let one keep you company while Claude Code works and tell you when it's done, and send
+one through a portal to your phone and back.
+
+- **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon and Intel) ·
+  **Try it in a browser:** [braydonhartai.com/gremlets](https://braydonhartai.com/gremlets/) · **Guide:** see below
+- **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
+  JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
+  (testnet), and a free pub/sub relay for the phone link.
+- **Engineering:** 89 engine tests (physics, gardens, platforms, a 10-minute soak test), 1–3% CPU with eight creatures,
+  adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
+  server with header and Host checks.
+
 > 🎥 _Demo GIF coming soon (recorded on a real desktop)._
 
 ![The 50 Gremlets](Species/lineup.png)

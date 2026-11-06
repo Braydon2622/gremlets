@@ -2,6 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import CoreAudio
 import CoreMediaIO
+import GremletsCore
 
 /// Cheap facts about what you're doing, read without any permission prompts:
 /// - camera / microphone "in use by some app" flags (never the audio or video itself),
@@ -64,7 +65,10 @@ enum SystemSignals {
             for process in audioArray(system, kAudioHardwarePropertyProcessObjectList) {
                 var pid: pid_t = 0, input: UInt32 = 0
                 guard audioProperty(process, kAudioProcessPropertyPID, &pid), pid != me else { continue }
-                if audioProperty(process, kAudioProcessPropertyIsRunningInput, &input), input != 0 { return true }
+                guard audioProperty(process, kAudioProcessPropertyIsRunningInput, &input), input != 0 else { continue }
+                // "Hey Siri" / dictation (corespeechd) listen all the time; that's not a call.
+                if CallDetection.isBackgroundListener(path: executablePath(pid)) { continue }
+                return true
             }
             return false
         }
@@ -74,6 +78,12 @@ enum SystemSignals {
         guard audioProperty(system, kAudioHardwarePropertyDefaultInputDevice, &device), device != 0 else { return false }
         guard audioArray(device, kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput).isEmpty else { return false }
         return audioProperty(device, kAudioDevicePropertyDeviceIsRunningSomewhere, &running) && running != 0
+    }
+
+    /// Full path of a process's executable ("" if it can't be read).
+    private static func executablePath(_ pid: pid_t) -> String {
+        var buf = [CChar](repeating: 0, count: 4096)
+        return proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 ? String(cString: buf) : ""
     }
 
     // MARK: Idle & power

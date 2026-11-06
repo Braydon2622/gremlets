@@ -59,7 +59,7 @@ that wakes up) without copying any existing character. No Gremlet wears clothing
 ## Companion features
 
 **Safe to keep running at work.** Gremlets slip off screen whenever any app is using your camera or microphone
-(Zoom, Meet, FaceTime...), so they never show up in a screen share, and come back a few seconds after the call
+(Zoom, Meet, FaceTime...), so they never show up in a screen share, and come back a few seconds after the call (macOS's own "Hey Siri" and dictation listeners don't count as a call)
 ends. *Hide During Calls* turns this off. **⌃⌥G** hides or shows them from anywhere (or `gremlet hide` / `gremlet show`
 in a presentation script). Hidden panels are removed from the screen entirely, not just made transparent, and the
 app drops to about 0% CPU. No permissions are needed: macOS reports whether a camera or mic is in use without
@@ -84,8 +84,13 @@ make && scripts/gremlet pass || scripts/gremlet fail
 scripts/gremlet done              # after any long job: the nearest Gremlet pops up and waves
 scripts/gremlet focus 50          # start a focus session from the terminal
 scripts/gremlet hide              # before presenting; `gremlet show` brings them back
+scripts/gremlet say "Deploy finished" 10   # a Gremlet pops up with a speech bubble (plain text, max 120 chars)
 source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) when any command takes over 30 s
 ```
+
+**Claude Code buddy.** `scripts/gremlet-claude-hook` turns Claude Code's `Stop` and `Notification` hooks into speech
+bubbles: "SalesCheatCodeLive: Claude is done ✓" or "PhotoToPart: Claude needs your OK", so you can work in another
+window and still know which terminal needs you. Setup is in the script's header. Only the project folder name is shown.
 
 It listens on `127.0.0.1:47920` only, every request needs an `X-Gremlets` header (so a web page can't trigger it
 cross-site without a CORS preflight, which it never approves), and it can only trigger animations and the timer.

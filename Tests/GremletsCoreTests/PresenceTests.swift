@@ -77,4 +77,12 @@ import Testing
         #expect(Bond(focusSessions: 4).level == 1)
         #expect(Bond(focusSessions: 4).score > Bond(pets: 4).score)
     }
+
+    @Test func siriListeningIsNotACall() {
+        #expect(CallDetection.isBackgroundListener(path: "/System/Library/PrivateFrameworks/CoreSpeech.framework/corespeechd"))
+        #expect(CallDetection.isBackgroundListener(path: "/usr/libexec/someaudiod"))
+        #expect(!CallDetection.isBackgroundListener(path: "/System/Applications/FaceTime.app/Contents/MacOS/FaceTime"))
+        #expect(!CallDetection.isBackgroundListener(path: "/Applications/zoom.us.app/Contents/MacOS/zoom.us"))
+        #expect(!CallDetection.isBackgroundListener(path: ""))   // unknown process: assume it's a call
+    }
 }

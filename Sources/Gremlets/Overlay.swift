@@ -51,6 +51,8 @@ final class OverlayController {
     private var shownFrame: [Int: Int] = [:]
     private var layerScreen: [Int: Int] = [:]
     private var sleepBubbleTimer: [Int: Double] = [:]
+    /// Speech bubbles: creature id → bubble layer, the screen it's on, and when it goes away.
+    private var bubbles: [Int: (layer: CALayer, screen: Int, until: CFTimeInterval)] = [:]
 
     // Input state.
     private var pressed: Creature?
@@ -153,6 +155,7 @@ final class OverlayController {
                 }
             }
         }
+        updateBubbles(alive: alive)
         for id in layers.keys where !alive.contains(id) {
             layers[id]?.removeFromSuperlayer()
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
@@ -414,6 +417,89 @@ final class OverlayController {
         l.add(group, forKey: "float")
         CATransaction.commit()
     }
+
+    // MARK: Speech bubbles
+
+    /// Shows `text` in a speech bubble over a Gremlet's head for `seconds`. The text is drawn as plain text (never
+    /// interpreted), and the bubble is click-through like everything else that isn't a creature.
+    func showBubble(_ text: String, on id: Int, seconds: Double) {
+        guard let c = creature(id), let si = layerScreen[c.id] else { return }
+        bubbles[id]?.layer.removeFromSuperlayer()
+        let font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor(white: 0.12, alpha: 1)]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let maxW: CGFloat = 240, pad: CGFloat = 9
+        let size = str.boundingRect(with: CGSize(width: maxW, height: 200), options: [.usesLineFragmentOrigin, .usesFontLeading]).size
+        let w = ceil(size.width) + pad * 2, h = ceil(size.height) + pad * 2 - 4
+        let scale = screens[si].panel.backingScaleFactor
+
+        let bubble = CALayer()
+        bubble.bounds = CGRect(x: 0, y: 0, width: w, height: h + 7)
+        bubble.anchorPoint = CGPoint(x: 0.5, y: 0)
+        bubble.contentsScale = scale
+        let bg = CAShapeLayer()
+        let path = CGMutablePath()
+        path.addRoundedRect(in: CGRect(x: 1, y: 8, width: w - 2, height: h - 2), cornerWidth: 9, cornerHeight: 9)
+        // Little tail pointing down at the Gremlet.
+        path.move(to: CGPoint(x: w / 2 - 6, y: 9)); path.addLine(to: CGPoint(x: w / 2, y: 1)); path.addLine(to: CGPoint(x: w / 2 + 6, y: 9))
+        bg.path = path
+        bg.fillColor = NSColor(white: 1, alpha: 0.97).cgColor
+        bg.strokeColor = NSColor(white: 0.15, alpha: 1).cgColor
+        bg.lineWidth = 2
+        bg.contentsScale = scale
+        bubble.addSublayer(bg)
+        // Cover the stroke where the tail joins the box so it reads as one shape.
+        let seam = CALayer()
+        seam.backgroundColor = bg.fillColor
+        seam.frame = CGRect(x: w / 2 - 5, y: 8, width: 10, height: 3)
+        bubble.addSublayer(seam)
+        let label = CATextLayer()
+        label.string = str
+        label.isWrapped = true
+        label.contentsScale = scale
+        label.frame = CGRect(x: pad, y: 8 + pad - 4, width: w - pad * 2, height: ceil(size.height) + 2)
+        bubble.addSublayer(label)
+
+        screens[si].root.addSublayer(bubble)
+        bubbles[id] = (bubble, si, CACurrentMediaTime() + seconds)
+        positionBubble(id)
+        let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+        pop.values = [0.3, 1.08, 1.0]
+        pop.keyTimes = [0, 0.6, 1]
+        pop.duration = 0.25
+        bubble.add(pop, forKey: "pop")
+    }
+
+    private func positionBubble(_ id: Int) {
+        guard let b = bubbles[id], let c = creature(id) else { return }
+        let frame = screens[b.screen].frame
+        let half = b.layer.bounds.width / 2
+        let x = min(max(c.pos.x - frame.minX, half + 4), frame.width - half - 4)
+        let y = min(c.pos.y - frame.minY + c.size.y * 0.95 + 26, frame.height - b.layer.bounds.height - 4)
+        let p = CGPoint(x: x.rounded(), y: y.rounded())
+        if b.layer.position != p { b.layer.position = p }
+    }
+
+    private func updateBubbles(alive: Set<Int>) {
+        let now = CACurrentMediaTime()
+        for (id, b) in bubbles {
+            if !alive.contains(id) || now >= b.until || layerScreen[id] != b.screen {
+                let l = b.layer
+                bubbles[id] = nil
+                CATransaction.begin()
+                CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.3
+                fade.isRemovedOnCompletion = false; fade.fillMode = .forwards
+                l.add(fade, forKey: "fade")
+                CATransaction.commit()
+            } else {
+                positionBubble(id)
+            }
+        }
+    }
+
+    var hasBubbles: Bool { !bubbles.isEmpty }
 
     // MARK: Click-through + input
 

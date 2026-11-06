@@ -105,3 +105,12 @@ public struct FocusLog: Codable, Equatable, Sendable {
         return n
     }
 }
+
+/// Which microphone users count as "you're on a call".
+public enum CallDetection {
+    /// macOS system services that keep the mic open in the background ("Hey Siri", dictation, Voice Control...).
+    /// They live under /System/Library or /usr; real apps (including FaceTime in /System/Applications) still count.
+    public static func isBackgroundListener(path: String) -> Bool {
+        path.hasPrefix("/System/Library/") || path.hasPrefix("/usr/")
+    }
+}

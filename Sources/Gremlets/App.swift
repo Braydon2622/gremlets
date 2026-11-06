@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
+        if overlay.hasBubbles { wanted = max(wanted, 30) }   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
     }
@@ -600,6 +601,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true}"#)
         case "unfocus":
             focus.stop(); world.focusMode = false; rebuildMenu()
+        case "say":
+            guard let text = SpeechText.clean(query["text"]) else { return (400, #"{"ok":false,"error":"text is required"}"#) }
+            let seconds = min(max(Double(query["seconds"] ?? "") ?? 8, 2), 60)
+            guard let id = world.say() else { return (409, #"{"ok":false,"error":"no Gremlets are out"}"#) }
+            overlay.handle(world.drainEvents())
+            overlay.render()
+            overlay.showBubble(text, on: id, seconds: seconds)
         default:
             guard let signal = Signal(rawValue: name) else { return (404, #"{"ok":false,"error":"unknown action"}"#) }
             world.receive(signal)

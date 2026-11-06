@@ -5,6 +5,7 @@
 #   gremlet focus [minutes]      start a focus session (they doze, then dance when the break starts)
 #   gremlet unfocus              stop the focus timer
 #   gremlet hide | show          hide them (e.g. before you present) / bring them back  (same as ⌃⌥G)
+#   gremlet say "text" [seconds] the Gremlet nearest your cursor pops up with a speech bubble (default 8 s)
 #   gremlet status               what's out and whether a focus timer is running
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -21,6 +22,10 @@ case "${1:-}" in
   focus)   call "focus?minutes=${2:-25}" >/dev/null ;;
   unfocus) call unfocus >/dev/null ;;
   hide|show) call "$1" >/dev/null ;;
+  say)
+    [ -n "${2:-}" ] || { echo 'usage: gremlet say "text" [seconds]' >&2; exit 2; }
+    curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "text=$2" --data-urlencode "seconds=${3:-8}" "${URL}/say" >/dev/null \
+      || { echo "gremlet: the Gremlets app isn't running" >&2; exit 1; } ;;
   status)  call status GET; echo ;;
   run)
     shift
@@ -28,6 +33,6 @@ case "${1:-}" in
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

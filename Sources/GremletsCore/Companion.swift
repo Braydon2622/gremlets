@@ -1,3 +1,4 @@
+import Foundation  // percent-decoding for speech bubble text
 /// Companion features: focus mode, celebrations, reactions to your work, and the bond each Gremlet builds with you.
 /// Pure engine logic; the platform layer decides when to call these (timers, local commands, saved stats).
 
@@ -87,11 +88,7 @@ extension World {
                 emit(.dizzy(c.id))
             }
         case .done, .wave, .water, .stretch:
-            guard let c = nearestToCursor(ground) else { return }
-            endSocial(c)
-            if c.isAsleep { emit(.wokeUp(c.id)) }
-            if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
-            c.set(.wave, duration: 2.0)
+            guard let c = getAttention(from: ground) else { return }
             switch signal {
             case .water: emit(.special(c.id, effect: "rain"))
             case .stretch: emit(.special(c.id, effect: "sparkle"))
@@ -104,6 +101,27 @@ extension World {
         case .special:
             for c in ground where !c.isAsleep { endSocial(c); startSpecial(c) }
         }
+    }
+
+    /// The Gremlet nearest your cursor stops what it's doing, turns to you and waves. Returns it (nil if none is out).
+    @discardableResult
+    func getAttention(from candidates: [Creature]? = nil) -> Creature? {
+        let pool = candidates ?? creatures.filter { $0.isGrounded }
+        // A signal reacts only with Gremlets on the ground; a message falls back to anyone (e.g. one that's flying).
+        guard let c = nearestToCursor(pool) ?? (candidates == nil ? nearestToCursor(creatures) : nil) else { return nil }
+        endSocial(c)
+        if c.isAsleep { emit(.wokeUp(c.id)) }
+        if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
+        if c.isGrounded { c.set(.wave, duration: 2.0) }
+        return c
+    }
+
+    /// A Gremlet comes over to tell you something (the platform layer shows `text` in a speech bubble).
+    /// Returns the speaker's id, or nil if no Gremlet is out.
+    public func say() -> Int? {
+        guard let c = getAttention() else { return nil }
+        emit(.alert(c.id))
+        return c.id
     }
 
     func nearestToCursor(_ cs: [Creature]) -> Creature? {
@@ -126,5 +144,24 @@ extension World {
         if c.isAsleep { emit(.wokeUp(c.id)) }
         if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
         if c.isGrounded { c.set(.wave, duration: 1.6) }
+    }
+}
+
+/// Text for a speech bubble, from a URL query value: decoded, one line, no control characters, at most 120 characters.
+public enum SpeechText {
+    public static let maxLength = 120
+
+    public static func clean(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let plus = raw.replacingOccurrences(of: "+", with: " ")
+        let decoded = plus.removingPercentEncoding ?? plus
+        var out = ""
+        for ch in decoded {
+            let isControl = ch.unicodeScalars.contains { $0.properties.generalCategory == .control || $0.properties.generalCategory == .format && $0.value != 0x200D }
+            out.append(isControl || ch.isWhitespace ? " " : ch)
+        }
+        let squashed = out.split(separator: " ", omittingEmptySubsequences: true).joined(separator: " ")
+        guard !squashed.isEmpty else { return nil }
+        return squashed.count > maxLength ? String(squashed.prefix(maxLength - 1)) + "…" : squashed
     }
 }

@@ -430,7 +430,7 @@ final class OverlayController {
         let str = NSAttributedString(string: text, attributes: attrs)
         let maxW: CGFloat = 240, pad: CGFloat = 9
         let size = str.boundingRect(with: CGSize(width: maxW, height: 200), options: [.usesLineFragmentOrigin, .usesFontLeading]).size
-        let w = ceil(size.width) + pad * 2, h = ceil(size.height) + pad * 2 - 4
+        let w = ceil(size.width) + pad * 2 + 8, h = ceil(size.height) + pad * 2 - 4
         let scale = screens[si].panel.backingScaleFactor
 
         let bubble = CALayer()

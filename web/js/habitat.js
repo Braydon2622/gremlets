@@ -7,6 +7,7 @@ import { loadIndex, loadSpecies, speciesBase } from './sprites.js';
 import { FX, Particles } from './effects.js';
 import { Link } from './link.js';
 import { Garden } from './garden.js';
+import { Bridge } from './bridge.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -20,6 +21,15 @@ const particles = new Particles();
 const art = new Map();          // creature id -> { image, rects }
 const zzzTimers = new Map();
 const link = showcase ? null : new Link();
+const bridge = showcase ? null : new Bridge();
+const DOOR = 120;               // how far the floor runs past a linked edge before a Gremlet is "through"
+let door = null;                // 'left' | 'right' when another screen is linked and open
+let driven = null;              // creature id steered with the keyboard (or the on-screen pad)
+let remoteDrive = false;        // our driven Gremlet walked to the other screen: forward the keys there
+let drivenByPeer = false;       // the Gremlet we're showing is being steered from the other screen
+const keys = { left: false, right: false };
+const travellers = [];          // rain clouds drifting across: { x, y, dir, speed, art, t }
+let cloudArt = null;
 const visitors = new Map();     // creature id -> { species, garden, spot, poseTimer, hop }
 const portals = [];             // { x, y, t }
 let tilt = 0;                   // -1 (phone tipped left) ... 1 (right)
@@ -51,8 +61,15 @@ function layout() {
   GROUND = PX * 9;
   TOP = showcase ? PX * 10 : 64;
   platforms = makePlatforms();
-  world.setEnvironment([{ x: 0, y: GROUND, w: W, h: H - GROUND - TOP }], platforms);
+  applyDoor();
   scenery = drawScenery();
+}
+
+/** The habitat's screen, stretched past a linked edge so Gremlets can walk out through it. */
+function applyDoor() {
+  door = bridge?.linked && bridge.peerOnline ? bridge.side : null;
+  const x = door === 'left' ? -DOOR : 0, w = W + (door ? DOOR : 0);
+  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], platforms);
 }
 
 /** Floating ledges to climb (the web stand-in for app windows). Spaced so every species can jump between them. */
@@ -265,6 +282,7 @@ function special(effect, c) {
 
 let press = null;
 let lastHover = null;
+let lastTap = null;
 
 canvas.addEventListener('pointerdown', (e) => {
   askForTilt();
@@ -272,6 +290,9 @@ canvas.addEventListener('pointerdown', (e) => {
   world.cursor = p;
   const c = world.creatureAt(p);
   if (!c) { tapGarden(p); return; }
+  const now2 = performance.now();
+  if (lastTap && lastTap.id === c.id && now2 - lastTap.t < 320) { lastTap = null; takeControl(c); e.preventDefault(); return; }
+  lastTap = { id: c.id, t: now2 };
   if (visitors.has(c.id)) say(c.id, visitors.get(c.id).garden.describe(), 3.5);
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic or already-released pointer */ }
   press = { c, start: p, dragging: false, petted: false };
@@ -322,8 +343,11 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  steer(dt);
   world.step(dt);
   handleEvents(world.drainEvents());
+  checkCrossings(now / 1000);
+  updateTravellers(dt, now / 1000);
   for (const c of world.creatures) {
     if (c.activity !== 'sleep') continue;
     const t = (zzzTimers.get(c.id) || 0) - dt;
@@ -335,6 +359,9 @@ function frame(now) {
   particles.update(dt);
   draw();
   drawPortals(now / 1000);
+  drawDoor(now / 1000);
+  drawTravellers(now / 1000);
+  drawDriveMarker(now / 1000);
   placeBubbles(now / 1000);
   requestAnimationFrame(frame);
 }
@@ -555,6 +582,311 @@ function updateLinkUI() {
   home.hidden = !link.paired || visitors.size === 0;
 }
 
+// ---------------------------------------------------------------- screen bridge: walk off one screen, onto the next
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const usableH = () => Math.max(1, H - GROUND - TOP);
+const inward = () => (bridge?.side === 'right' ? -1 : 1);
+
+function checkCrossings(t) {
+  if (!bridge) return;
+  for (const c of [...world.creatures]) {
+    if (visitors.has(c.id) || c.activity === 'dragged') continue;
+    // How far past the linked edge it is (negative while still on this screen).
+    const out = door === 'right' ? c.pos.x - W : door === 'left' ? -c.pos.x : -Infinity;
+    if (door && c.isGrounded && c.id !== driven && out > -c.size.x * 0.25 && c.facing !== inward()) {
+      // A Gremlet wandering into the doorway thinks twice, so a screen doesn't empty itself. Just-arrived ones turn back.
+      if (c.doorChoice == null) c.doorChoice = t - (c.arrived ?? -99) > 10 && Math.random() < 0.3;
+      if (!c.doorChoice) c.facing = inward();
+    } else if (out < -c.size.x * 1.5) c.doorChoice = null;
+    const outward = c.isGrounded || c.activity === 'crouch' ? c.facing !== inward() : c.vel.x * inward() < 0;
+    if (door && out > c.size.x * 0.35 && outward) leave(c);
+  }
+}
+
+function leave(c) {
+  const wasDriven = c.id === driven;
+  bridge.cross({
+    type: 'walk', species: c.species.id, y: clamp01((c.pos.y - GROUND) / usableH()),
+    vx: Math.round(c.vel.x), vy: Math.round(c.vel.y), air: !c.isGrounded, drive: wasDriven,
+  });
+  particles.burst(null, V(door === 'right' ? W - 14 : 14, c.pos.y + c.size.y * 0.5), { imgs: [FX.sparkle, FX.smallStar], count: 6, dx: [-30, 30], dy: [-20, 40], duration: 0.8, stagger: 0.04 });
+  if (wasDriven) { driven = null; remoteDrive = !drivenByPeer; drivenByPeer = false; updateDriveUI(); }
+  zzzTimers.delete(c.id);
+  removeGremlet(c.id);
+}
+
+async function arriveThroughDoor(note) {
+  if (!index.some((s) => s.id === note.species)) return;
+  if (!door) applyDoor();
+  const a = await loadSpecies(note.species, PX);
+  const half = a.species.size.x * 0.4, dir = inward();
+  const x = bridge.side === 'right' ? W + half : -half;
+  const air = !!note.air;
+  const y = air ? GROUND + clamp01(note.y) * usableH() : GROUND;
+  const c = await addGremlet(note.species, V(x, y));
+  c.facing = dir; c.arrived = performance.now() / 1000; c.doorChoice = false;
+  if (air) { c.vel = V(Math.max(160, Math.abs(note.vx || 0)) * dir, note.vy || 120); c.set('airborne'); }
+  else { c.ground = -1; c.edgeDecided = false; c.set('walk', 2.2 + Math.random()); }
+  particles.burst(null, V(bridge.side === 'right' ? W - 14 : 14, y + c.size.y * 0.5), { imgs: [FX.sparkle, FX.smallStar], count: 6, dx: [-30, 30], dy: [-20, 40], duration: 0.8, stagger: 0.04 });
+  if (note.drive) {
+    driven = c.id; drivenByPeer = !remoteDrive; remoteDrive = false;
+    c.autoWalk = performance.now() / 1000 + 0.9;      // step fully onto this screen before waiting for keys
+    updateDriveUI();
+  }
+  if (Math.random() < 0.6) setTimeout(() => say(c.id, ['Made it! ✨', 'Hello, other screen!', 'Whoa, new screen!', 'I walked here!'][Math.floor(Math.random() * 4)], 2.4), 500);
+}
+
+function drawDoor(t) {
+  if (!door) return;
+  const x = door === 'right' ? W - 3 : 3, top = H - GROUND - 150, bottom = H - GROUND;
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const g = ctx.createLinearGradient(0, top, 0, bottom);
+  g.addColorStop(0, 'rgba(169,139,234,0)'); g.addColorStop(1, 'rgba(169,139,234,0.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(door === 'right' ? W - 26 : 0, top, 26, bottom - top);
+  ctx.strokeStyle = '#a98bea'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 40;
+  ctx.beginPath(); ctx.moveTo(x, top + 20); ctx.lineTo(x, bottom); ctx.stroke();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- travelling rain cloud (crosses linked screens too)
+
+async function summonCloud(fromSide = null, y = null) {
+  if (travellers.length >= 2) return;
+  if (!cloudArt) cloudArt = await loadSpecies('puffcloud', PX).catch(() => null);
+  if (!cloudArt) return;
+  const dir = fromSide === 'left' ? 1 : fromSide === 'right' ? -1 : Math.random() < 0.5 ? 1 : -1;
+  const s = PX * 3, w = 32 * s;
+  travellers.push({
+    x: dir > 0 ? -w * 0.5 : W + w * 0.5, y: y ?? GROUND + usableH() * 0.66, dir, speed: 70 + Math.random() * 30,
+    s, w, rainT: 0, touched: new Set(), t0: performance.now() / 1000,
+  });
+}
+
+function updateTravellers(dt, t) {
+  for (let i = travellers.length - 1; i >= 0; i--) {
+    const v = travellers[i];
+    v.x += v.dir * v.speed * dt;
+    v.rainT -= dt;
+    const bottom = v.y - v.w * 0.25;
+    if (v.rainT <= 0) {
+      v.rainT = 0.045;
+      const fall = bottom - GROUND;
+      particles.burst(FX.rain, V(v.x + (Math.random() - 0.5) * v.w * 0.6, bottom), { dy: [-fall, -fall + 6], dx: [-6, 6], duration: Math.max(0.3, fall / 520), spin: 0 });
+    }
+    for (const c of world.creatures) {
+      if (v.touched.has(c.id) || !c.isGrounded || c.isAsleep || c.id === driven || visitors.has(c.id)) continue;
+      if (Math.abs(c.pos.x - v.x) > v.w * 0.35) continue;
+      v.touched.add(c.id);
+      c.facing = v.x > c.pos.x ? 1 : -1;
+      if (Math.random() < 0.6) world.startDance(c, 2.6, false);
+      else world.poke(c);
+    }
+    const gone = v.dir > 0 ? v.x - v.w * 0.5 > W : v.x + v.w * 0.5 < 0;
+    if (gone) {
+      const through = v.dir > 0 ? 'right' : 'left';
+      if (door === through) bridge.cross({ type: 'visitor', kind: 'raincloud', y: clamp01((v.y - GROUND) / usableH()) });
+      travellers.splice(i, 1);
+    }
+  }
+}
+
+function drawTravellers(t) {
+  if (!cloudArt) return;
+  for (const v of travellers) {
+    const f = cloudArt.species.frame('idle', t - v.t0), r = cloudArt.rects[f];
+    if (!r) continue;
+    const w = r.w * v.s, h = r.h * v.s, s = toScreen(v.x, v.y);
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(s.x), Math.round(s.y + Math.sin(t * 2) * 4));
+    if (v.dir < 0) ctx.scale(-1, 1);
+    ctx.drawImage(cloudArt.image, r.x, r.y, r.w, r.h, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- drive one yourself (keyboard, or the on-screen pad)
+
+function steer(dt) {
+  if (driven == null) return;
+  const c = byId(driven);
+  if (!c) { driven = null; updateDriveUI(); return; }
+  c.speedBoost = 2.4;
+  let dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (!dir && c.autoWalk && performance.now() / 1000 < c.autoWalk) dir = inward();
+  if (c.activity === 'airborne') {
+    if (dir) c.vel = V(c.vel.x + (dir * c.species.walkSpeed * 2.6 - c.vel.x) * Math.min(1, dt * 5), c.vel.y);
+    return;
+  }
+  if (!c.isGrounded) return;
+  if (dir) {
+    c.facing = dir; c.edgeDecided = true; c.doorChoice = true;
+    if (c.activity !== 'walk') c.set('walk', 0.3); else c.timer = 0.3;
+    return;
+  }
+  if (c.activity === 'walk') { c.idleVariant = 'idle'; c.set('idle', 0.4); return; }
+  if (c.activity === 'idle') { c.timer = Math.max(c.timer, 0.3); return; }
+  if (c.timer < 0.05 && !['crouch', 'sleep', 'yawn', 'wake'].includes(c.activity)) { c.idleVariant = 'idle'; c.set('idle', 0.4); }
+}
+
+function act(name) {
+  if (remoteDrive && driven == null) { bridge?.cross({ type: 'keys', keys: { ...keys }, act: name }); return; }
+  const c = byId(driven);
+  if (!c) return;
+  if (name === 'jump') {
+    if (!c.isGrounded) return;
+    const moving = keys.left || keys.right;
+    world.launch(c, V(moving ? c.facing * c.species.walkSpeed * 2.6 : c.facing * 30, Math.sqrt(2 * world.gravity * 190 * (c.species.jumpPower || 1))));
+  } else if (!c.isGrounded) return;
+  else if (name === 'wave') c.set('wave', 1.3);
+  else if (name === 'special') world.startSpecial(c);
+  else if (name === 'dance') world.startDance(c, 3, true);
+}
+
+function setKey(k, down) {
+  if (keys[k] === down) return;
+  keys[k] = down;
+  if (remoteDrive && driven == null) bridge?.cross({ type: 'keys', keys: { ...keys } });
+}
+
+function takeControl(c) {
+  if (driven === c?.id) c = null;
+  if (driven != null) { const old = byId(driven); if (old) old.speedBoost = 1; }
+  driven = c ? c.id : null;
+  remoteDrive = false; drivenByPeer = false;
+  keys.left = keys.right = false;
+  if (c) say(c.id, 'You drive! 🎮', 1.6);
+  updateDriveUI();
+}
+
+function updateDriveUI() {
+  const hint = document.getElementById('drivehint'), pad = document.getElementById('pad');
+  if (!hint) return;
+  const c = byId(driven);
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (c && drivenByPeer) {
+    hint.innerHTML = `<b>${c.species.name}</b> is being driven from the other screen`;
+  } else if (c) {
+    hint.innerHTML = touch
+      ? `Driving <b>${c.species.name}</b>. Use the pad · Double-tap it again to let go`
+      : `Driving <b>${c.species.name}</b> · ← → walk · ↑ or Space jump · E wave · Q special · F dance · Esc let go`;
+  } else if (remoteDrive) {
+    hint.innerHTML = 'Your Gremlet is on the other screen. Keep driving with the same keys · Esc to stop';
+  }
+  hint.hidden = !(c || remoteDrive);
+  if (pad) pad.hidden = !(touch && (c || remoteDrive));
+}
+
+function drawDriveMarker(t) {
+  const c = byId(driven);
+  if (!c) return;
+  const s = toScreen(c.pos.x, c.pos.y + c.size.y + 10 + Math.abs(Math.sin(t * 5)) * 6);
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#ff7a4d';
+  const p = Math.max(2, PX - 1), x = Math.round(s.x), y = Math.round(s.y);
+  for (let row = 0; row < 4; row++) ctx.fillRect(x - (3 - row) * p, y - (4 - row) * p, (7 - row * 2) * p, p);
+  ctx.restore();
+}
+
+addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea')) return;
+  if (e.key === 'Escape') { if (driven != null || remoteDrive) { takeControl(null); e.preventDefault(); } return; }
+  if (e.key === 'Tab' && driven == null && !remoteDrive && world.creatures.length) {
+    const mid = W / 2, pick = [...world.creatures].filter((c) => !visitors.has(c.id)).sort((a, b) => Math.abs(a.pos.x - mid) - Math.abs(b.pos.x - mid))[0];
+    if (pick) { takeControl(pick); e.preventDefault(); }
+    return;
+  }
+  if (driven == null && !remoteDrive) return;
+  const k = e.key.toLowerCase();
+  if (k === 'arrowleft' || k === 'a') { setKey('left', true); e.preventDefault(); }
+  else if (k === 'arrowright' || k === 'd') { setKey('right', true); e.preventDefault(); }
+  else if ((k === 'arrowup' || k === 'w' || k === ' ') && !e.repeat) { act('jump'); e.preventDefault(); }
+  else if (k === 'e' && !e.repeat) act('wave');
+  else if (k === 'q' && !e.repeat) act('special');
+  else if (k === 'f' && !e.repeat) act('dance');
+});
+addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'arrowleft' || k === 'a') setKey('left', false);
+  if (k === 'arrowright' || k === 'd') setKey('right', false);
+});
+addEventListener('blur', () => { setKey('left', false); setKey('right', false); });
+
+function wirePad() {
+  const pad = document.getElementById('pad');
+  if (!pad) return;
+  for (const b of pad.querySelectorAll('[data-k]')) {
+    const k = b.dataset.k;
+    const on = (e) => { e.preventDefault(); if (k === 'jump') act('jump'); else setKey(k, true); };
+    const off = (e) => { e.preventDefault(); if (k !== 'jump') setKey(k, false); };
+    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  }
+}
+
+// ---------------------------------------------------------------- link sheet
+
+function updateRoomUI() {
+  if (!bridge) return;
+  applyDoor();
+  const chip = document.getElementById('roomchip');
+  if (chip) {
+    chip.hidden = !bridge.linked;
+    chip.textContent = bridge.peerOnline ? `🔗 Linked ${bridge.side === 'right' ? '→' : '←'}` : '🔗 Waiting…';
+    chip.classList.toggle('off', !bridge.peerOnline);
+  }
+  const sheet = document.getElementById('linker');
+  if (!sheet || sheet.hidden) return;
+  const choose = document.getElementById('lk-choose'), share = document.getElementById('lk-share');
+  choose.hidden = bridge.linked; share.hidden = !bridge.linked;
+  if (bridge.linked) {
+    const url = bridge.inviteUrl();
+    document.getElementById('lk-url').value = url;
+    document.getElementById('lk-status').textContent = bridge.peerOnline
+      ? `Linked! Gremlets can walk off the ${bridge.side} edge of this screen.`
+      : `Open this link on the other screen. Its ${bridge.side === 'right' ? 'left' : 'right'} edge will lead back here.`;
+    drawQR(url);
+  }
+}
+
+function drawQR(text) {
+  const holder = document.getElementById('lk-qr');
+  if (!holder || holder.dataset.text === text || !window.qrcode) return;
+  const qr = window.qrcode(0, 'M');
+  qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), cell = Math.max(3, Math.floor(200 / (n + 8)));
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = (n + 8) * cell;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = '#2b2433';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect((c + 4) * cell, (r + 4) * cell, cell, cell);
+  holder.replaceChildren(cv);
+  holder.dataset.text = text;
+}
+
+function wireLinker() {
+  const sheet = document.getElementById('linker');
+  if (!sheet || !bridge) return;
+  const open = () => { sheet.hidden = false; updateRoomUI(); };
+  const close = () => { sheet.hidden = true; };
+  document.getElementById('link').addEventListener('click', open);
+  document.getElementById('lk-close').addEventListener('click', close);
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) close(); });
+  for (const b of sheet.querySelectorAll('[data-side]')) b.addEventListener('click', () => { bridge.create(b.dataset.side); updateRoomUI(); });
+  document.getElementById('lk-copy').addEventListener('click', async (e) => {
+    const input = document.getElementById('lk-url');
+    try { await navigator.clipboard.writeText(input.value); e.target.textContent = 'Copied'; }
+    catch { input.select(); e.target.textContent = 'Selected'; }
+    setTimeout(() => (e.target.textContent = 'Copy link'), 1800);
+  });
+  document.getElementById('lk-unlink').addEventListener('click', () => { bridge.unlink(); updateRoomUI(); });
+  document.getElementById('lk-rain').addEventListener('click', () => { summonCloud(bridge.side === 'right' ? 'left' : 'right'); close(); });
+}
+
 // ---------------------------------------------------------------- UI
 
 function updateCount() {
@@ -616,6 +948,25 @@ async function start() {
       for (const id of picks) addGremlet(id);
     });
     setTimeout(() => document.getElementById('hint')?.classList.add('gone'), 7000);
+    if (bridge) {
+      bridge.onWalk = arriveThroughDoor;
+      bridge.onVisitor = (n) => summonCloud(bridge.side, GROUND + clamp01(n.y) * usableH());
+      bridge.onKeys = (n) => {
+        if (driven == null) return;
+        keys.left = !!n.keys?.left; keys.right = !!n.keys?.right;
+        if (n.act) act(n.act);
+      };
+      bridge.onStatus = updateRoomUI;
+      wireLinker();
+      bridge.start();
+      setInterval(updateRoomUI, 5000);
+      if (bridge.justJoined) setTimeout(() => { document.getElementById('linker').hidden = false; updateRoomUI(); }, 400);
+      updateRoomUI();
+    }
+    wirePad();
+    document.getElementById('rain')?.addEventListener('click', () => summonCloud());
+    // Now and then a rain cloud drifts by on its own.
+    setInterval(() => { if (!document.hidden && Math.random() < 0.1) summonCloud(); }, 60_000);
     if (link?.paired) {
       for (const v of loadVisitors()) await arrive(v.species, v.harvest || [], true);
       link.onArrive = ({ species }) => arrive(species);
@@ -625,7 +976,7 @@ async function start() {
       updateLinkUI();
     }
   }
-  if (params.has('debug')) window.gremlets = { world, toScreen, particles };
+  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, get driven() { return driven; }, get door() { return door; } };
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 

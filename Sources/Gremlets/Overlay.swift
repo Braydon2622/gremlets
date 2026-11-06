@@ -66,6 +66,7 @@ final class OverlayController {
         let item = CALayer()
         var shelf: CALayer?
         var shelfPx = 0
+        var lantern: CALayer?
         var wasOnShelf = false
         var key = ""
         var beat = 0
@@ -75,6 +76,11 @@ final class OverlayController {
 
     // Input state.
     private var pressed: Creature?
+    /// A creation you pressed on (worker id).
+    private var pressedProp: Int?
+    private var hoverID: Int?
+    private var hoverSince = 0.0
+    private var hoverShown: [Int: Double] = [:]
     private var pressStart: Vec2 = .zero
     private var dragging = false
     private var lastMouse: Vec2?
@@ -144,6 +150,7 @@ final class OverlayController {
             screens[0].root.insertSublayer(l, at: 0)
             keepsakeLayers.append(l)
         }
+        world.gardenSpots = keepsakes.items.filter { $0.kind == "flower" }.map { main.frame.minX + $0.x * main.frame.width }
     }
 
     var keepsakeCount: Int { keepsakes.items.count }
@@ -198,6 +205,7 @@ final class OverlayController {
         }
         updateBubbles(alive: alive)
         updateProps()
+        updateHover()
         for id in layers.keys where !alive.contains(id) {
             layers[id]?.removeFromSuperlayer()
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
@@ -537,7 +545,22 @@ final class OverlayController {
                 let p = CGPoint(x: (s.minX - o.x).rounded() + (flip < 0 ? s.width : 0), y: (s.y - o.y).rounded())
                 st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
                 if st.shelf?.position != p { st.shelf?.position = p }
-            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil }
+                // A little lantern at the outer end in the evening.
+                if PropArt.isEvening {
+                    if st.lantern == nil {
+                        let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 1))   // hangs from the underside
+                        setImage(l, PropArt.lantern)
+                        l.shadowColor = NSColor(red: 1, green: 0.8, blue: 0.35, alpha: 1).cgColor
+                        l.shadowOpacity = 0.9; l.shadowRadius = 9; l.shadowOffset = .zero
+                        screens[si].root.addSublayer(l)
+                        popIn(l)
+                        st.lantern = l
+                    }
+                    let side = j.shelfSide ?? 1
+                    let lx = side > 0 ? s.maxX - 12 : s.minX + 12
+                    st.lantern?.position = CGPoint(x: (lx - o.x).rounded(), y: (s.y - o.y - 9).rounded())
+                } else if let l = st.lantern { l.removeFromSuperlayer(); st.lantern = nil }
+            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil }
 
             // The creation.
             if let a = anchor {
@@ -589,6 +612,7 @@ final class OverlayController {
         // Job over: the shelf comes down now; the creation lingers a minute (on the floor, or where it was), then fades.
         for (id, var st) in props where !busy.contains(id) {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
+            if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
             if st.lingerUntil == nil { st.lingerUntil = now + (st.wasOnShelf ? 0 : 60) }
             if now >= st.lingerUntil! || st.item.superlayer == nil {
                 fadeOut(st.item, 0.8)
@@ -605,6 +629,44 @@ final class OverlayController {
             }
         }
         for c in world.creatures where c.job?.shelfSide != nil { props[c.id]?.wasOnShelf = true }
+    }
+
+    /// The worker whose creation is under the cursor, if any (creations are clickable: tap to help out).
+    private func propOwner(at p: Vec2) -> Int? {
+        for (id, st) in props where st.item.superlayer != nil && st.lingerUntil == nil && st.screen < screens.count {
+            let o = screens[st.screen].frame.origin
+            let f = st.item.frame.insetBy(dx: -4, dy: -4).offsetBy(dx: o.x, dy: o.y)
+            if f.contains(CGPoint(x: p.x, y: p.y)) { return id }
+        }
+        return nil
+    }
+
+    /// You helped with a creation: water for the plant, a dab of paint, a block, a row of stitches.
+    private func tend(_ workerID: Int) {
+        guard let c = world.creatures.first(where: { $0.id == workerID }), let j = c.job, let st = props[workerID] else { return }
+        world.tendCreation(workerID: workerID)
+        let si = st.screen
+        let f = st.item.frame
+        let top = CGPoint(x: f.midX, y: f.maxY)
+        switch j.craft {
+        case .garden: burst([Effects.rain], si: si, at: CGPoint(x: top.x, y: top.y + 24), count: 8, dx: -14...14, dy: -40 ... -24, duration: 0.7, stagger: 0.04)
+        case .paint: burst([Effects.petal, Effects.pollen, Effects.rain, Effects.leaf], si: si, at: CGPoint(x: f.midX, y: f.midY), count: 6, dx: -18...18, dy: -8...14, duration: 0.6, stagger: 0.04)
+        case .build: burst([Effects.dust, Effects.sparkle], si: si, at: top, count: 4, dx: -18...18, dy: 0...12, duration: 0.5)
+        case .knit: burst([Effects.smallHeart, Effects.heart], si: si, at: CGPoint(x: f.midX, y: f.midY), count: 4, dx: -16...16, dy: 8...26, duration: 0.8, stagger: 0.06)
+        }
+    }
+
+    /// Rest the cursor on a busy Gremlet (or its creation) and it tells you what it's making.
+    private func updateHover() {
+        guard !paused, let cur = world.cursor else { return }
+        let now = CACurrentMediaTime()
+        let id = world.creature(at: cur).flatMap { $0.job != nil ? $0.id : nil } ?? propOwner(at: cur)
+        guard let id else { hoverID = nil; return }
+        if hoverID != id { hoverID = id; hoverSince = now; return }
+        guard now - hoverSince > 0.6, now - (hoverShown[id] ?? 0) > 8,
+              let c = world.creatures.first(where: { $0.id == id }), let j = c.job else { return }
+        hoverShown[id] = now
+        showBubble(PropArt.describe(j, dozing: c.isDozingAtWork), on: id, seconds: 3.5)
     }
 
     private func fadeOut(_ l: CALayer, _ d: Double) {
@@ -749,7 +811,7 @@ final class OverlayController {
         if paused { return }
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
-        setClickThrough(world.creature(at: p) != nil ? screenIndex(for: p) : nil)
+        setClickThrough(world.creature(at: p) != nil || propOwner(at: p) != nil ? screenIndex(for: p) : nil)
     }
 
     private func setClickThrough(_ activeScreen: Int?) {
@@ -769,7 +831,9 @@ final class OverlayController {
     }
 
     func mouseDown(at p: CGPoint, time: Double) {
-        guard !paused, let c = world.creature(at: vec(p)) else { return }
+        guard !paused else { return }
+        if world.creature(at: vec(p)) == nil, let owner = propOwner(at: vec(p)) { pressedProp = owner; return }
+        guard let c = world.creature(at: vec(p)) else { return }
         pressed = c
         pressStart = vec(p)
         dragging = false
@@ -787,6 +851,12 @@ final class OverlayController {
     }
 
     func mouseUp(at p: CGPoint, time: Double) {
+        if let owner = pressedProp {
+            pressedProp = nil
+            if propOwner(at: vec(p)) == owner { tend(owner) }
+            updateClickThrough()
+            return
+        }
         guard let c = pressed else { return }
         if dragging {
             world.drag(c, to: vec(p), time: time)

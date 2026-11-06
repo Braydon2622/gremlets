@@ -70,6 +70,8 @@ public final class Creature {
     public internal(set) var job: Job?
     /// Which animation plays while working ("crouch" = tending, "look", "pet" = happy wiggle, "sleep" = dozing).
     var workPose = "crouch"
+    /// Going to water a planted flower at this x.
+    var tendX: Double?
     /// Watching a friend work (their id) and until when.
     var visitingID: Int?
     var visitUntil = 0.0

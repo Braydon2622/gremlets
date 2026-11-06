@@ -94,8 +94,10 @@ floats up on a balloon to a little wooden shelf it puts up on the side of a near
 rides along when you move the window and doesn't care if another window covers it). The creation grows as they work,
 friends wander over to watch and clap, clicking a busy Gremlet cheers it on (a little burst of progress), and when you
 step away they doze off beside their work until you're back. Finished flowers get planted along the bottom of the
-screen and finished paintings lean there too, so a busy week leaves a little garden (menu → *Clear Garden*). At most two
-hobbies run at once, with a few minutes' rest in between. `gremlet hobby [garden|paint|build|knit] [shelf]` starts one now.
+screen and finished paintings lean there too, so a busy week leaves a little garden (menu → *Clear Garden*). Rest the cursor
+on a busy Gremlet and it tells you what it's making ("Painting a starry night · 40%"); click the creation itself to
+help (water the plant, add a dab of paint). Gremlets also wander over to water the planted garden, and in the evening
+shelves get a little glowing lantern. At most two hobbies run at once, with a few minutes' rest in between. `gremlet hobby [garden|paint|build|knit] [shelf]` starts one now.
 
 **Claude buddy.** Send Claude Code a prompt and a Gremlet floats up to a shelf on the side of that Claude window (or
 flies, if it has wings) and works there for as long as Claude does; the creation is finished the moment Claude is. Then

@@ -41,6 +41,7 @@ public final class World {
     public var userActive = true
     /// At most this many Gremlets on a hobby at once.
     public var maxHobbies = 2
+    var _gardenSpots: [Double] = []
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
@@ -275,6 +276,7 @@ public final class World {
         c.timer -= dt
         if let job = c.job, updateJob(c, job, dt, on: support) { return }
         if c.visitingID != nil, updateVisit(c, dt, on: support) { return }
+        if c.tendX != nil, updateTending(c, dt, on: support) { return }
         switch c.activity {
         case .idle:
             faceCursorIfNear(c)

@@ -47,6 +47,9 @@ struct Brain {
             add("fly", 0.8 * (0.3 + e)) { world.startFlight(c) }
         }
         add("special", 0.3 * (0.3 + e)) { world.startSpecial(c) }
+        if let x = world.flowerToTend(for: c) {
+            add("tend", 0.3) { world.startTending(c, x: x) }
+        }
         if let busy = world.workerToVisit(from: c) {
             add("visit", 0.7) { world.startVisit(c, busy) }
         }

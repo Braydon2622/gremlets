@@ -179,4 +179,49 @@ import Testing
         w.setEnvironment(screens: [screen], windowsFrontToBack: [tall])
         #expect(w.startJob(windowID: 9, craft: .garden) == nil)
     }
+
+    @Test func floorProjectsKeepAwayFromEdgesAndEachOther() {
+        let w = World(seed: 60)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let cs = grounded(w, [10, 480, 520])
+        for c in cs { #expect(w.startHobby(c, craft: .knit, length: 300, onWindow: false)) }
+        w.maxHobbies = 3
+        run(w, 20)
+        let anchors = cs.compactMap { c in c.job.flatMap { w.jobAnchor($0, workerID: c.id) } }
+        #expect(anchors.count == 3)
+        for a in anchors { #expect(a.x > 40 && a.x < 960) }
+        let xs = cs.map(\.pos.x).sorted()
+        #expect(xs[1] - xs[0] > 60 && xs[2] - xs[1] > 60)
+        #expect(cs[0].pos.x >= 90)
+    }
+
+    @Test func helpingWithTheCreationSpeedsItUp() {
+        let w = World(seed: 61)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let a = grounded(w, [300])[0]
+        w.startHobby(a, craft: .garden, length: 200, onWindow: false)
+        run(w, 10)
+        let before = a.job!.progress
+        w.drainEvents()
+        w.tendCreation(workerID: a.id)
+        #expect(a.job!.progress > before + 0.03)
+        #expect(a.activity == .pet)
+        #expect(w.drainEvents().contains(.petted(a.id)))
+        run(w, 3)
+        #expect(a.activity == .work)                  // back to it
+    }
+
+    @Test func gremletsWaterThePlantedGarden() {
+        let w = World(seed: 62)
+        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+        let cs = grounded(w, [200, 700])
+        w.gardenSpots = [450]
+        w.maxHobbies = 0
+        var watered = false
+        run(w, 600) {
+            for e in w.drainEvents() { if case .special(_, "rain") = e { watered = true } }
+        }
+        #expect(watered)
+        #expect(cs.allSatisfy { $0.tendX == nil || $0.activity == .walk || $0.activity == .work || $0.activity == .idle })
+    }
 }

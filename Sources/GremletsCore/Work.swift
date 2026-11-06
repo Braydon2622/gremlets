@@ -144,6 +144,7 @@ extension World {
     private func assign(_ c: Creature, _ j: Job) {
         endSocial(c)
         c.visitingID = nil
+        c.tendX = nil
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j
         if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x) }
@@ -184,6 +185,17 @@ extension World {
         c.job = nil
         if c.activity == .float { c.floatTarget = nil; c.set(.airborne) }
         if c.activity == .work { c.set(.idle, duration: 0.5) }
+    }
+
+    /// You clicked a Gremlet's creation (watering the plant, adding a brush stroke...): it does a happy wiggle and
+    /// the work jumps ahead a little.
+    public func tendCreation(workerID: Int) {
+        guard let c = creature(id: workerID), let j = c.job, j.phase == .working else { return }
+        encourage(c)
+        if c.isGrounded && !c.isDozingAtWork {
+            c.set(.pet, duration: 1.2)
+            emit(.petted(c.id))
+        }
     }
 
     /// You clicked a busy Gremlet: it shows you what it's making and gets a burst of motivation.
@@ -271,6 +283,58 @@ extension World {
             ?? surfaces.filter { $0.kind == .floor }.min { abs($0.minX + $0.width / 2 - x) < abs($1.minX + $1.width / 2 - x) }
     }
 
+    // MARK: Tending the garden
+
+    /// Where the keepsake garden's flowers are (global x on the main screen's floor). Set by the platform layer.
+    public var gardenSpots: [Double] {
+        get { _gardenSpots }
+        set { _gardenSpots = newValue }
+    }
+
+    /// A planted flower on this Gremlet's floor that it could go and water.
+    func flowerToTend(for c: Creature) -> Double? {
+        guard c.job == nil, c.isGrounded, let s = supportingSurface(for: c), s.kind == .floor else { return nil }
+        let near = gardenSpots.filter { s.supports(x: $0) && abs($0 - c.pos.x) < 700 }
+        guard !near.isEmpty else { return nil }
+        return near[Int(rng.next() % UInt64(near.count))]
+    }
+
+    func startTending(_ c: Creature, x: Double) {
+        endSocial(c)
+        c.tendX = x
+        c.visitUntil = clock + 25
+        c.set(.walk, duration: 9999)
+    }
+
+    /// Walks over to a planted flower, waters it (a little rain from above), admires it, and wanders off.
+    func updateTending(_ c: Creature, _ dt: Double, on support: Surface) -> Bool {
+        guard [.idle, .walk, .work].contains(c.activity), let x = c.tendX else { return false }
+        let stand = x - 34 * (x >= c.pos.x ? 1 : -1)
+        if clock > c.visitUntil || support.kind != .floor { c.tendX = nil; c.set(.idle, duration: 0.5); return true }
+        if c.activity == .walk {
+            if abs(stand - c.pos.x) > 6 {
+                c.facing = stand > c.pos.x ? 1 : -1
+                if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 1) { c.tendX = nil; c.set(.idle, duration: 1) }
+                return true
+            }
+            c.facing = x > c.pos.x ? 1 : -1
+            c.workPose = "crouch"
+            c.set(.work, duration: 2.4)
+            emit(.special(c.id, effect: "rain"))
+            return true
+        }
+        if c.timer <= 0 {
+            if c.activity == .work {
+                c.idleVariant = "look"
+                c.set(.idle, duration: 2.0)
+            } else {
+                c.tendX = nil
+                c.set(.idle, duration: 0.3)
+            }
+        }
+        return true
+    }
+
     // MARK: Friends come to watch
 
     /// A busy friend on the same floor or window edge, within walking distance.
@@ -299,7 +363,7 @@ extension World {
             c.set(.idle, duration: 0.5)
             return true
         }
-        let want = (a.x + j.propSide * 48).clamped(support.minX + 20, support.maxX - 20)
+        let want = (a.x + j.propSide * 82).clamped(support.minX + 20, support.maxX - 20)
         if abs(want - c.pos.x) > 8 && c.activity != .pet {
             c.facing = want > c.pos.x ? 1 : -1
             if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 1) { c.visitingID = nil; c.set(.idle, duration: 1) }
@@ -457,10 +521,17 @@ extension World {
             startFloat(c, to: Vec2(c.pos.x, floor.y))
             return true
         }
-        var want = c.pos.x
+        var want = c.pos.x.clamped(support.minX + 100, max(support.minX + 100, support.maxX - 100))
         if let id = j.windowID, let w = windows[id] {
-            want = (w.maxX - 80).clamped(max(support.minX + 50, w.minX + 30), min(support.maxX - 50, max(w.minX + 31, w.maxX - 30)))
+            want = (w.maxX - 80).clamped(max(support.minX + 100, w.minX + 30), min(support.maxX - 100, max(w.minX + 31, w.maxX - 30)))
         }
+        // Give other Gremlets' projects some elbow room.
+        for o in creatures where o !== c {
+            guard let oj = o.job, let a = jobAnchor(oj, workerID: o.id), abs(a.y - support.y) < 2, abs(a.x - want) < 130 else { continue }
+            let pushed = a.x + (want >= a.x ? 130 : -130)
+            if pushed > support.minX + 100 && pushed < support.maxX - 100 { want = pushed }
+        }
+        if j.spot == nil && abs(want - c.pos.x) >= 8 && clock - j.started > 20 { want = c.pos.x }  // don't wander forever
         if abs(want - c.pos.x) < 8 { beginWork(c, j); return true }
         c.facing = want > c.pos.x ? 1 : -1
         if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { beginWork(c, j) }

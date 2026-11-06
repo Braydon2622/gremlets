@@ -187,6 +187,48 @@ enum PropArt {
         return image(grid(rows, ["x": c, "h": hi]))
     }
 
+    // MARK: What it's making (hover text)
+
+    static let pictureNames = ["sunny hills", "a starry night", "a big heart", "a sunset"]
+
+    static func describe(_ j: Job, dozing: Bool) -> String {
+        if dozing { return "Zzz… waiting for you to come back" }
+        let pct = Int((j.progress * 100).rounded())
+        let done = j.phase == .finished || j.phase == .leaving
+        let what: String
+        switch j.craft {
+        case .garden:
+            what = done ? "Ta-da! A flower" : j.progress < 0.25 ? "Planting a seed" : j.progress < 0.55 ? "Growing a sprout" : "Growing a flower"
+        case .paint:
+            let name = pictureNames[Int(j.seed % UInt64(pictureNames.count))]
+            what = done ? "Ta-da! \(name.prefix(1).uppercased() + name.dropFirst())" : "Painting \(name)"
+        case .build:
+            what = done ? "Ta-da! A tower with a star on top" : "Building a tower"
+        case .knit:
+            what = done ? "Ta-da! A cozy scarf" : "Knitting a scarf"
+        }
+        let claude = j.kind == .claude ? " while Claude works" : ""
+        return done ? what : "\(what)\(claude) · \(pct)%"
+    }
+
+    // MARK: Lantern (shelves light up in the evening)
+
+    static let lantern: CGImage = image(grid([
+        "..d..",
+        "..d..",
+        "..d..",
+        ".ddd.",
+        "dyYyd",
+        "dYYYd",
+        "dyYyd",
+        ".ddd.",
+    ], ["d": 0x4A3424, "y": 0xFFC94A, "Y": 0xFFF2B0]))
+
+    static var isEvening: Bool {
+        let h = Calendar.current.component(.hour, from: Date())
+        return h >= 19 || h < 6
+    }
+
     // MARK: Keepsakes (the garden along the bottom of the screen)
 
     static let flowerColors: [(UInt32, UInt32)] = [(0xFF8FBF, 0xE0588F), (0xFFD84A, 0xE0A92E), (0xA98BEA, 0x7A5FC9), (0xFF6F7E, 0xD8455A), (0x6FB8F0, 0x3F8CC9), (0xFFFFFF, 0xD8E4EC)]

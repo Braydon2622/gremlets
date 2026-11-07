@@ -58,6 +58,10 @@ public final class World {
     var pendingEvents: [SpectacleKind] = []
     var lastSpectacle: Spectacle?
     var claudeEvents: [ClaudeWorkEvent] = []
+    /// Bridges Gremlets have built between windows, and what's happened with them and the village lately.
+    public internal(set) var bridges: [Bridge] = []
+    var nextBridgeID = 0
+    var buildEvents: [BuildEvent] = []
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
     var pendingThrows: [(at: Double, from: Int, to: Int)] = []
@@ -121,11 +125,12 @@ public final class World {
         self.windows = newWindows
         self.windowOrder = windowsFrontToBack.map(\.id)
         builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
+        validateBridges()
         rebuildGroveSurfaces()
         setSurfacesDirty()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces }
 
     // MARK: Creatures
 
@@ -322,6 +327,7 @@ public final class World {
 
         c.timer -= dt
         if let job = c.job, updateJob(c, job, dt, on: support) { return }
+        if c.building != nil, c.job == nil, updateBuilding(c, dt, on: support) { return }
         if c.visitingID != nil, updateVisit(c, dt, on: support) { return }
         if c.tendX != nil, updateTending(c, dt, on: support) { return }
         switch c.activity {
@@ -434,6 +440,7 @@ public final class World {
     }
 
     private func integrateAirborne(_ c: Creature, _ dt: Double) {
+        if updateGrapple(c, dt) { return }
         let prev = c.pos
         c.vel.y = max(c.vel.y - gravity * dt, -maxFallSpeed)
         var next = prev + c.vel * dt

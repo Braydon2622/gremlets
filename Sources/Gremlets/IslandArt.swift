@@ -297,3 +297,36 @@ enum BuildArt {
         }
     }
 }
+
+/// Plank bridges and the grappling hook.
+enum BridgeArt {
+    static func image(blocks: Int, fromLeft: Bool, total: Int) -> CGImage {
+        let n = max(1, min(blocks, total)), bw = BuildArt.block
+        var cv = PixelCanvas(n * bw, 7)
+        for i in 0..<n {
+            let x = i * bw
+            // Deck plank (bottom 2 rows), a post at every other block, and the rope rail on top.
+            cv.rect(x, 0, bw, 2, i % 2 == 0 ? 0xC98B4A : 0xB97E42)
+            cv.rect(x + bw - 1, 0, 1, 2, 0x8A5A35)
+            if i % 2 == 0 { cv.rect(x + 1, 2, 1, 4, 0x8A5A35) }
+            cv.rect(x, 5, bw, 1, 0xD9C08A)
+        }
+        cv.rect(0, 0, n * bw, 1, 0x7A5232)
+        if !fromLeft { cv = flipped(cv) }
+        return cv.image
+    }
+
+    static func flipped(_ c: PixelCanvas) -> PixelCanvas {
+        var out = PixelCanvas(c.w, c.h)
+        for y in 0..<c.h { for x in 0..<c.w { if let p = c.get(x, y) { out.set(c.w - 1 - x, y, p) } } }
+        return out
+    }
+
+    static let plank = Effects.pixels(["wwwww", "ddddd"], ["w": 0xC98B4A, "d": 0x8A5A35])
+    static let hook = Effects.pixels([
+        ".kkk.",
+        "k...k",
+        "k..k.",
+        "..k..",
+    ], ["k": 0xB8C2CC])
+}

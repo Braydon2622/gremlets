@@ -16,6 +16,9 @@ final class SpectacleRenderer {
     private var bossSI = -1
     private var hpBar: (root: CALayer, fill: CALayer, title: CATextLayer)?
     private var bolts: [CAShapeLayer] = []
+    private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
+    private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
+    private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var projectiles: [CALayer] = []
     private var balls: [CALayer] = []
     private var shards: [Int: CALayer] = [:]
@@ -59,6 +62,9 @@ final class SpectacleRenderer {
 
     func render() {
         renderGrove()
+        renderVillage()
+        renderBridges()
+        renderRopes()
         renderSpectacle()
         renderBalls()
         let now = CACurrentMediaTime()
@@ -162,6 +168,12 @@ final class SpectacleRenderer {
                 }
             case .chomp(let i):
                 snapUntil[i] = CACurrentMediaTime() + 0.35
+            case .houseAdded(let n):
+                guard n < world.grove.village.count else { continue }
+                let h = world.grove.village[n]
+                if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + h.h * 0.5)) {
+                    overlay.burst([Effects.sparkle, Effects.star, Effects.dust], si: si, at: pt, count: 12, dx: -h.w * 0.6...h.w * 0.6, dy: -10...h.h * 0.7, duration: 1.2, stagger: 0.04)
+                }
             }
         }
     }
@@ -213,6 +225,116 @@ final class SpectacleRenderer {
         let a = CAKeyframeAnimation(keyPath: "transform.scale")
         a.values = [0.1, 1.15, 0.95, 1]; a.duration = 0.6
         l.add(a, forKey: "pop")
+    }
+
+    // MARK: Village, bridges, ropes
+
+    private func renderVillage() {
+        guard let floor = world.groveFloor else { return }
+        let night = world.isNight
+        for (n, h) in world.grove.village.enumerated() {
+            guard let b = Biome(rawValue: h.biome), let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }
+            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)"
+            var entry = houses[n] ?? {
+                let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4
+                // A strip of its biome's ground under it, so each house sits in its own little patch of world.
+                let g = pixelLayer(); g.anchorPoint = CGPoint(x: 0.5, y: 1); g.zPosition = -4.1
+                popIn(l)
+                return (l, g, "")
+            }()
+            attach(entry.layer, si); attach(entry.ground, si)
+            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night) {
+                entry.layer.contents = img
+                entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                let gw = Int(h.w / 3) + 8
+                let ground = IslandArt.body(b, widthPx: gw, seed: UInt64(n * 13 + 1))
+                entry.ground.contents = ground
+                entry.ground.bounds = CGRect(x: 0, y: 0, width: ground.width * 3, height: 6)   // only the top soil shows
+                entry.ground.contentsRect = CGRect(x: 0, y: 0, width: 1, height: 2.0 / Double(ground.height))
+                entry.key = key
+            }
+            entry.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y)
+            entry.ground.position = CGPoint(x: pt.x.rounded(), y: pt.y + 6)
+            houses[n] = entry
+        }
+        for n in houses.keys where n >= world.grove.village.count {
+            houses[n]?.layer.removeFromSuperlayer(); houses[n]?.ground.removeFromSuperlayer(); houses[n] = nil
+        }
+    }
+
+    private func renderBridges() {
+        var alive = Set<Int>()
+        for b in world.bridges where b.blocks > 0 {
+            alive.insert(b.id)
+            let (lo, hi) = b.builtSpan
+            guard let (si, pt) = local(Vec2(lo, b.y)) else { continue }
+            var e = bridgeLayers[b.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 1); l.zPosition = -0.3; return (l, -1) }()
+            attach(e.layer, si)
+            if e.blocks != b.blocks {
+                let img = BridgeArt.image(blocks: b.blocks, fromLeft: b.fromLeft, total: b.totalBlocks)
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                e.blocks = b.blocks
+            }
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y + 9)   // rails stick up above the deck
+            _ = hi
+            bridgeLayers[b.id] = e
+        }
+        for (id, e) in bridgeLayers where !alive.contains(id) { e.layer.removeFromSuperlayer(); bridgeLayers[id] = nil }
+    }
+
+    private func renderRopes() {
+        var alive = Set<Int>()
+        for c in world.creatures {
+            guard let a = c.grapple, let (si, hand) = local(c.pos + Vec2(c.facing * c.size.x * 0.15, c.size.y * 0.6)) else { continue }
+            alive.insert(c.id)
+            let o = screens[si].frame.origin
+            let anchor = CGPoint(x: a.x - o.x, y: a.y - o.y)
+            let r = ropes[c.id] ?? {
+                let line = CAShapeLayer()
+                line.strokeColor = NSColor(red: 0.85, green: 0.72, blue: 0.5, alpha: 1).cgColor
+                line.lineWidth = 2; line.fillColor = nil; line.zPosition = 20
+                line.actions = ["path": NSNull()]
+                let hook = pixelLayer(); hook.contents = BridgeArt.hook; hook.bounds = CGRect(x: 0, y: 0, width: 15, height: 12)
+                hook.anchorPoint = CGPoint(x: 0.5, y: 0); hook.zPosition = 21
+                return (line, hook)
+            }()
+            attach(r.line, si); attach(r.hook, si)
+            let path = CGMutablePath()
+            path.move(to: hand)
+            // A little sag in the rope.
+            let mid = CGPoint(x: (hand.x + anchor.x) / 2, y: (hand.y + anchor.y) / 2 - 10)
+            path.addQuadCurve(to: anchor, control: mid)
+            r.line.path = path
+            r.hook.position = anchor
+            ropes[c.id] = r
+        }
+        for (id, r) in ropes where !alive.contains(id) { r.line.removeFromSuperlayer(); r.hook.removeFromSuperlayer(); ropes[id] = nil }
+    }
+
+    func handle(_ events: [BuildEvent]) {
+        for e in events {
+            switch e {
+            case .bridgeBlock(let p, _):
+                if let (si, pt) = local(p) { overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: -6...10, duration: 0.4) }
+            case .bridgeDone(let id):
+                if let b = world.bridges.first(where: { $0.id == id }), let (si, pt) = local(Vec2((b.minX + b.maxX) / 2, b.y + 10)) {
+                    overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 8, dx: -60...60, dy: 0...40, duration: 0.9, stagger: 0.03)
+                }
+            case .bridgeCrumbled(let lo, let hi, let y):
+                var x = lo
+                while x < hi {
+                    if let (si, pt) = local(Vec2(x, y)) {
+                        overlay.burst([BridgeArt.plank, Effects.dust], si: si, at: pt, count: 1, dx: -10...10, dy: -160 ... -60, duration: 0.9)
+                    }
+                    x += Bridge.blockWidth
+                }
+            case .grapple:
+                break
+            case .houseAdded:
+                break
+            }
+        }
     }
 
     // MARK: Spectacles

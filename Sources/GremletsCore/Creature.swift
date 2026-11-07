@@ -58,6 +58,12 @@ public final class Creature {
     var campfire = false
     /// Two-Gremlet play (toss, catch, high five) in progress.
     var play: PlayState?
+    /// Building a bridge (its id) and when the next block goes down.
+    var building: Int?
+    var buildTimer = 0.0
+    /// Reeling in on a grappling hook toward this point.
+    public internal(set) var grapple: Vec2?
+    var grappleTime = 0.0
     var petAmount: Double = 0
     var edgeDecisionMade = false
     var grabOffset: Vec2 = .zero

@@ -102,6 +102,18 @@ public final class Grove: Codable {
     public internal(set) var tasks = 0
     /// Tasks since the last boss (bosses come every so often as work gets done).
     public internal(set) var tasksSinceBoss = 0
+    /// Finished Claude buildings along the bottom of the screen.
+    public internal(set) var village: [House] = []
+    public static let maxHouses = 14
+
+    enum CodingKeys: String, CodingKey { case plants, tasks, tasksSinceBoss, village }
+    public required init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        plants = try c.decodeIfPresent([GrovePlant].self, forKey: .plants) ?? []
+        tasks = try c.decodeIfPresent(Int.self, forKey: .tasks) ?? 0
+        tasksSinceBoss = try c.decodeIfPresent(Int.self, forKey: .tasksSinceBoss) ?? 0
+        village = try c.decodeIfPresent([House].self, forKey: .village) ?? []
+    }
 
     public static let maxPlots = 6
     /// Plot unlock schedule: total tasks needed for plot n (the first two are free).
@@ -176,6 +188,11 @@ public final class Grove: Codable {
                 break
             }
         }
+        // Village roofs (plot = -1 - house index).
+        for (n, h) in village.enumerated() {
+            let x = floor.minX + h.x * floor.w
+            out.append(GroveLedge(plot: -1 - n, y: floor.minY + h.h - 4, minX: x - h.w * 0.3, maxX: x + h.w * 0.3, bouncy: false))
+        }
         return out
     }
 
@@ -195,6 +212,7 @@ public enum GroveEvent: Equatable, Sendable {
     case wish(Int)
     case bounce(Int, by: Int)
     case chomp(Int)
+    case houseAdded(Int)
 }
 
 extension World {

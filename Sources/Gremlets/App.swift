@@ -131,16 +131,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.handle(events)
         let groveEvents = world.drainGroveEvents()
         overlay.fx.handle(groveEvents)
-        if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; return false }) { saveGrove() }
+        if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; if case .houseAdded = $0 { return true }; return false }) { saveGrove() }
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
+        overlay.fx.handle(world.drainBuildEvents())
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         if overlay.hasBubbles { wanted = max(wanted, 30) }
-        if world.spectacle != nil || !world.playBalls.isEmpty { wanted = 60 }
+        if world.spectacle != nil || !world.playBalls.isEmpty || world.creatures.contains(where: { $0.grapple != nil }) { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)

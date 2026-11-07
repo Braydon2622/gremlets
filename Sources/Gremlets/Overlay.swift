@@ -101,6 +101,10 @@ final class OverlayController {
         /// Claude buddy: the building going up (one block per edit) and the tiny helpers (one per subagent).
         var build: CALayer?
         var buildKey = ""
+        /// Remembered so the finished building can move to the village when the job ends.
+        var lastBiome: Biome?
+        var lastBlocks = 0
+        var project: String?
         var helpers: [CALayer] = []
         var lantern: CALayer?
         /// The tree a branch grows on, or the balloons a swing hangs from.
@@ -803,6 +807,7 @@ final class OverlayController {
         guard j.kind == .claude else { return }
         let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
         let key = "\(b.rawValue)-\(j.blocks)-\(world.isNight)-\(si)"
+        st.lastBiome = b; st.lastBlocks = j.blocks
         if st.buildKey != key {
             st.buildKey = key
             if let img = BuildArt.image(b, blocks: j.blocks, night: world.isNight) {
@@ -1376,7 +1381,16 @@ final class OverlayController {
         for (id, var st) in props where !busy.contains(id) {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
             if let d = st.decor { fadeOut(d, 0.4); st.decor = nil; st.decorKey = "" }
-            if let b = st.build { fadeOut(b, 0.8); st.build = nil; st.buildKey = "" }
+            if let b = st.build {
+                // The finished building moves down to the village and stays.
+                if let biome = st.lastBiome, st.lastBlocks >= 4 {
+                    let (cols, rows) = BuildArt.size(biome)
+                    world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks,
+                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project)
+                    st.lastBlocks = 0
+                }
+                fadeOut(b, 0.8); st.build = nil; st.buildKey = ""
+            }
             for h in st.helpers { fadeOut(h, 0.4) }
             st.helpers.removeAll()
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }

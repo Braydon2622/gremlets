@@ -180,3 +180,66 @@ import Testing
         #expect(ev.contains(.look(id)) && ev.contains(.run(id)) && ev.contains(.web(id)) && ev.contains(.plan(id)))
     }
 }
+
+@Suite struct ConstructionTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func gremletBuildsABridgeAcrossAGapAndItCrumblesWhenAWindowMoves() throws {
+        let w = World(seed: 4)
+        w.maxHobbies = 0
+        let a = WindowInfo(id: 1, frame: Rect(x: 100, y: 200, w: 400, h: 300))
+        var b = WindowInfo(id: 2, frame: Rect(x: 700, y: 210, w: 400, h: 300))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [a, b])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(420, 520))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(c.groundOwner == 1)
+        #expect(w.bridgeCandidate(for: c) != nil)
+        w.startBridge(c)
+        var done = false
+        for _ in 0..<(60 * 30) where !done {
+            w.step(1.0 / 60)
+            done = w.drainBuildEvents().contains { if case .bridgeDone = $0 { return true }; return false }
+        }
+        #expect(done)
+        let bridge = try #require(w.bridges.first)
+        #expect(bridge.isComplete)
+        #expect(w.surfaces.contains { World.isBridgeOwner($0.ownerID) && abs($0.minX - 500) < 2 && abs($0.maxX - 700) < 2 })
+        // Move the far window away: the bridge crumbles.
+        b.frame.x = 1000
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [a, b])
+        #expect(w.bridges.isEmpty)
+        #expect(w.drainBuildEvents().contains { if case .bridgeCrumbled = $0 { return true }; return false })
+    }
+
+    @Test func grapplingHookReachesAHighWindow() {
+        let w = World(seed: 6)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 3, frame: Rect(x: 300, y: 100, w: 500, h: 420))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(500, 30))
+        // Wait until it's standing on the floor, then hold it there (it might grapple up on its own otherwise).
+        for _ in 0..<600 where !(c.isGrounded && c.groundOwner == -1) { w.step(1.0 / 60) }
+        c.set(.idle, duration: 30)
+        let target = w.grappleTarget(for: c)
+        #expect(target != nil, "grounded=\(c.isGrounded) \(c.activity) y=\(c.pos.y) surfaces=\(w.surfaces.map { "\($0.kind)@\($0.y)" })")
+        if let t = target { w.startGrapple(c, to: t) }
+        var landed = false, maxY = 0.0
+        for _ in 0..<(60 * 4) where !landed { w.step(1.0 / 60); maxY = max(maxY, c.pos.y); landed = c.groundOwner == 3 }
+        #expect(landed, "landed on top of the window (max height \(maxY), now \(c.pos), \(c.activity))")
+    }
+
+    @Test func villageHousesPersistAndOldSavesStillLoad() throws {
+        let w = World(seed: 8)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        for i in 0..<5 { #expect(w.addHouse(biome: "meadow", blocks: 10 + i, size: Vec2(90, 120), project: nil) != nil) }
+        #expect(w.grove.village.count == 5)
+        #expect(w.groveLedges.filter { $0.plot < 0 }.count == 5, "roofs to stand on")
+        let data = try #require(w.grove.encoded())
+        let back = try #require(Grove.decode(data))
+        #expect(back.village == w.grove.village)
+        // A save from before the village existed.
+        let old = #"{"plants":[{"kind":"sunberry","x":0.16,"sparks":3,"berries":2,"lastWishDay":-1,"golden":false}],"tasks":3,"tasksSinceBoss":3}"#
+        let g = try #require(Grove.decode(Data(old.utf8)))
+        #expect(g.tasks == 3 && g.village.isEmpty && g.plants.count == 1)
+    }
+}

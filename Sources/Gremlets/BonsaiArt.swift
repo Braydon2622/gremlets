@@ -49,8 +49,15 @@ enum BonsaiArt {
             cv.line(x0, y0, x1, y1, col, width: max(1, width))
         }
 
-        // Pot.
+        // Pot, with a ribbon for each round number reached.
         drawPot(&cv, style: b.pot, potW: layout.potWidth * k, potH: layout.potHeight * k, origin: px(.zero), ageDays: ageDays, winter: winter)
+        let (ox, oy) = px(.zero)
+        let ribbons = min(5, b.milestones.count)
+        for n in 0..<ribbons {
+            let x = Int(ox - layout.potWidth * k / 2) + 3 + n * 3, y = Int(oy) - Int(layout.potHeight * k) + 2
+            let col: UInt32 = [0xE8574A, 0xFFD45E, 0x5FB8FF, 0xB98CFF, 0xFFFFFF][n]
+            cv.rect(x, y, 2, 3, col); cv.set(x, y - 1, col)
+        }
 
         // Trunk (behind the limbs), tapering, with a lit side and a shaded side.
         var trunkPixels: [(Int, Int)] = []

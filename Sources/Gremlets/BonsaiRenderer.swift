@@ -304,6 +304,13 @@ final class BonsaiRenderer {
                 }
             case .moved(let project, _):
                 moveBurst.insert(project)
+            case .milestone(let project, let text):
+                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }),
+                      let (si, pt) = local(p.base + Vec2(0, p.layout.bounds.maxY * p.scale * 0.6)) else { continue }
+                overlay.burst([Effects.star, Effects.sparkle, Effects.heart, Effects.petal], si: si, at: pt, count: 18,
+                              dx: -p.layout.bounds.w * p.scale * 0.5...p.layout.bounds.w * p.scale * 0.5, dy: -20...80, duration: 1.8, stagger: 0.04)
+                overlay.fx.floatText("\(project) · \(text)", si: si, at: CGPoint(x: pt.x, y: pt.y + p.layout.bounds.maxY * p.scale * 0.5 + 16), color: .systemYellow, size: 14, rise: 34, duration: 3.2)
+                if let l = trees[project]?.layer { boing(l) }
             }
         }
     }

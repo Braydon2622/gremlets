@@ -534,3 +534,20 @@ import Testing
         #expect(napped, "asleep up in the foliage (\(c.activity), on \(String(describing: c.groundOwner)))")
     }
 }
+
+@Suite struct MilestoneTests {
+    @Test func roundNumbersEarnRibbonsOnce() {
+        let w = World(seed: 71)
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [])
+        w.loadBonsai(BonsaiBook())
+        w.bonsaiStart(project: "Big", session: "a", windowID: nil)
+        w.bonsaiGrow(project: "Big", .leaf, count: 49)
+        _ = w.drainBonsaiEvents()
+        w.bonsaiGrow(project: "Big", .leaf)
+        let e = w.drainBonsaiEvents()
+        #expect(e.contains(.milestone("Big", "50 edits")))
+        w.bonsaiGrow(project: "Big", .leaf)
+        #expect(!w.drainBonsaiEvents().contains { if case .milestone = $0 { return true }; return false }, "only once")
+        #expect(w.bonsaiBook["Big"]?.milestones == ["edits-50"])
+    }
+}

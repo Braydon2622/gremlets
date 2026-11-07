@@ -88,6 +88,7 @@ enum Journal {
             <div class="tree"><img src="\(pngDataURI(img))" width="\(img.width * 3)" height="\(img.height * 3)" alt="">
             <h3>\(esc(t.project)) \(live ? "<span class=live>growing now</span>" : "")</h3>
             <p>\(t.species.name) · \(t.form.name) · planted \(planted)</p>
+            \(t.milestones.isEmpty ? "" : "<p>Milestones: " + t.milestones.map { $0.replacingOccurrences(of: "-", with: " ") }.joined(separator: ", ") + "</p>")
             <p><b>\(t.sessions)</b> session\(t.sessions == 1 ? "" : "s") · <b>\(t.edits)</b> edit\(t.edits == 1 ? "" : "s") · <b>\(t.blooms)</b> task\(t.blooms == 1 ? "" : "s") finished · <b>\(t.fruit)</b> test pass\(t.fruit == 1 ? "" : "es")\(hours >= 0.1 ? String(format: " · %.1f h", hours) : "")</p></div>
             """
         }

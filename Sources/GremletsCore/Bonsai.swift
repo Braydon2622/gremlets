@@ -65,6 +65,24 @@ public struct Bonsai: Codable, Equatable, Sendable {
 
     public static let maxBranches = 12
 
+    enum CodingKeys: String, CodingKey { case project, seed, species, form, pot, branches, sessions, minutes, firstSeen, lastSeen, currentSession, currentBranch, milestones }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        project = try c.decode(String.self, forKey: .project)
+        seed = try c.decode(UInt64.self, forKey: .seed)
+        species = try c.decode(BonsaiSpecies.self, forKey: .species)
+        form = try c.decode(BonsaiForm.self, forKey: .form)
+        pot = try c.decode(Int.self, forKey: .pot)
+        branches = try c.decodeIfPresent([BonsaiBranch].self, forKey: .branches) ?? []
+        sessions = try c.decodeIfPresent(Int.self, forKey: .sessions) ?? 0
+        minutes = try c.decodeIfPresent(Double.self, forKey: .minutes) ?? 0
+        firstSeen = try c.decodeIfPresent(Double.self, forKey: .firstSeen) ?? 0
+        lastSeen = try c.decodeIfPresent(Double.self, forKey: .lastSeen) ?? 0
+        currentSession = try c.decodeIfPresent(String.self, forKey: .currentSession)
+        currentBranch = try c.decodeIfPresent(Int.self, forKey: .currentBranch)
+        milestones = try c.decodeIfPresent([String].self, forKey: .milestones) ?? []
+    }
+
     public init(project: String, now: Double) {
         self.project = project
         seed = Bonsai.hash(project)
@@ -82,6 +100,8 @@ public struct Bonsai: Codable, Equatable, Sendable {
         return h
     }
 
+    /// Milestones reached so far (ribbons on the pot): "edits-100", "sessions-10", ...
+    public var milestones: [String] = []
     public var edits: Int { branches.reduce(0) { $0 + $1.edits } }
     public var blooms: Int { branches.reduce(0) { $0 + $1.blooms } }
     public var fruit: Int { branches.reduce(0) { $0 + $1.fruit } }
@@ -306,6 +326,8 @@ public enum BonsaiEvent: Equatable, Sendable {
     case sprouted(String, branch: Int)
     case grew(String, part: String, branch: Int)
     case moved(String, live: Bool)
+    /// A round number reached: edits 50/100/250/500, sessions 5/10/25, tasks 25/100.
+    case milestone(String, String)
 }
 
 /// A live Claude session: which window the tree is rooted on.
@@ -341,6 +363,7 @@ extension World {
         if bonsaiBook.trees[i].startSession(session, now: now), let b = bonsaiBook.trees[i].currentBranch {
             bonsaiEvents.append(.sprouted(project, branch: b))
         }
+        checkMilestones(i)
         let wasLive = liveBonsai[project] != nil
         liveBonsai[project] = LiveBonsai(windowID: windowID, floorX: floorX)
         if !wasLive { bonsaiEvents.append(.moved(project, live: true)) }
@@ -372,7 +395,27 @@ extension World {
         }
         bonsaiBook.trees[i].lastSeen = Date().timeIntervalSince1970
         bonsaiEvents.append(.grew(project, part: "\(part)", branch: b))
+        checkMilestones(i)
         rebuildAttached()
+    }
+
+    /// Round numbers worth a ribbon and a little dance.
+    func checkMilestones(_ i: Int) {
+        let t = bonsaiBook.trees[i]
+        var reached: [(String, String)] = []
+        for n in [50, 100, 250, 500, 1000] where t.edits >= n { reached.append(("edits-\(n)", "\(n) edits")) }
+        for n in [5, 10, 25, 50] where t.sessions >= n { reached.append(("sessions-\(n)", "\(n) sessions")) }
+        for n in [25, 100, 250] where t.blooms >= n { reached.append(("tasks-\(n)", "\(n) tasks finished")) }
+        for (key, text) in reached where !t.milestones.contains(key) {
+            bonsaiBook.trees[i].milestones.append(key)
+            bonsaiEvents.append(.milestone(t.project, text))
+            // Everyone nearby celebrates.
+            if let p = bonsaiPlacements.first(where: { $0.project == t.project }) {
+                for c in creatures where c.job == nil && c.isGrounded && abs(c.pos.x - p.base.x) < 500 && abs(c.pos.y - p.base.y) < 300 {
+                    startDance(c, duration: rng.range(3, 5), invite: false)
+                }
+            }
+        }
     }
 
     public func drainBonsaiEvents() -> [BonsaiEvent] {

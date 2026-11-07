@@ -65,14 +65,17 @@ final class ClaudeBuddy {
             // Claude used a tool: the Gremlet beside its window acts it out (an edit places a block, and so on).
             if var s = sessions[session], let c = worker(s.creatureID) {
                 world.claudeTool(workerID: c.id, ClaudeTool.from(q["tool"] ?? ""))
+                if q["kind"] == "test" { world.claudeTestsPassed(workerID: c.id) }
                 s.lastEvent = Date(); sessions[session] = s
             }
+        case "toolfail":
+            if let s = sessions[session] { world.claudeToolFailed(workerID: s.creatureID, tests: q["kind"] == "test") }
         case "helperdone":
             if let s = sessions[session] { world.claudeHelperDone(workerID: s.creatureID) }
         case "end":
             if let s = sessions.removeValue(forKey: session) { world.endJob(s.creatureID) }
         default:
-            return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool or helperdone"}"#)
+            return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool, toolfail or helperdone"}"#)
         }
         return (200, #"{"ok":true}"#)
     }

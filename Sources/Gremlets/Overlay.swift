@@ -109,6 +109,10 @@ final class OverlayController {
         var flag: CALayer?
         var doneCelebrated = false
         var nextAmbient = 0.0
+        var weatherLayer: CALayer?
+        var weatherKind = ""
+        var nextRain = 0.0
+        var nextHelperBlock = 0.0
         var helpers: [CALayer] = []
         var lantern: CALayer?
         /// The tree a branch grows on, or the balloons a swing hangs from.
@@ -856,6 +860,42 @@ final class OverlayController {
                 flag.position = CGPoint(x: f.midX, y: f.maxY - 2)
                 st.flag = flag
             } else if let fl = st.flag { fadeOut(fl, 0.3); st.flag = nil }
+            // Weather following how Claude's work is going: a shower when a command fails, a storm when it keeps
+            // failing, sunshine and a rainbow when the tests pass.
+            let wk = j.weather.rawValue
+            if wk != st.weatherKind {
+                st.weatherKind = wk
+                st.weatherLayer.map { fadeOut($0, 0.6) }
+                st.weatherLayer = nil
+                if j.weather != .clear {
+                    let img = j.weather == .sunny ? WeatherArt.rainbow : WeatherArt.cloud(storm: j.weather == .storm)
+                    let wl = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                    setImage(wl, img)
+                    wl.zPosition = 30
+                    screens[si].root.addSublayer(wl)
+                    popIn(wl)
+                    if j.weather != .sunny {
+                        let drift = CABasicAnimation(keyPath: "transform.translation.x")
+                        drift.fromValue = -8; drift.toValue = 8; drift.duration = 2.2; drift.autoreverses = true; drift.repeatCount = .infinity
+                        wl.add(drift, forKey: "drift")
+                    }
+                    st.weatherLayer = wl
+                }
+            }
+            if let wl = st.weatherLayer {
+                wl.position = CGPoint(x: f.midX, y: f.minY + max(f.height, 30) + (j.weather == .sunny ? 4 : 46))
+                if j.weather != .sunny && now >= st.nextRain {
+                    st.nextRain = now + (j.weather == .storm ? 0.12 : 0.25)
+                    let wf = wl.frame
+                    burst([Effects.rain], si: si, at: CGPoint(x: wf.minX + .random(in: 8...(wf.width - 8)), y: wf.minY + 4), count: 1, dx: -3...3, dy: -(wf.minY - f.minY) ... -(wf.minY - f.minY) + 10, duration: 0.6)
+                    if j.weather == .storm && Int.random(in: 0..<14) == 0 {
+                        burst([Effects.sparkle, Effects.smallStar], si: si, at: CGPoint(x: wf.midX, y: wf.minY), count: 3, dx: -10...10, dy: -40 ... -10, duration: 0.3)
+                    }
+                } else if j.weather == .sunny && now >= st.nextRain {
+                    st.nextRain = now + 0.5
+                    burst([WeatherArt.sun, Effects.sparkle], si: si, at: CGPoint(x: wl.frame.midX, y: wl.frame.maxY - 10), count: 1, dx: -40...40, dy: -10...20, duration: 1.2)
+                }
+            }
             if j.phase == .finished && !st.doneCelebrated {
                 st.doneCelebrated = true
                 burst([Effects.sparkle, Effects.star, Effects.smallStar], si: si, at: CGPoint(x: f.midX, y: f.maxY), count: 9, dx: -40...40, dy: 10...70, duration: 1.3, stagger: 0.05)
@@ -878,7 +918,17 @@ final class OverlayController {
             st.helpers.append(h)
         }
         while st.helpers.count > j.helpers, let h = st.helpers.popLast() {
+            // The subagent is done: its helper brings the result (a little scroll) to the Gremlet, then pops home.
             let pos = h.position
+            let to = CGPoint(x: c.pos.x - o.x, y: c.pos.y - o.y + c.size.y * 0.6)
+            let sc = particle(WeatherArt.scroll, si)
+            sc.position = pos
+            let fly = CAKeyframeAnimation(keyPath: "position")
+            fly.values = [CGPoint(x: pos.x, y: pos.y + 20), CGPoint(x: (pos.x + to.x) / 2, y: max(pos.y, to.y) + 50), to].map { NSValue(point: $0) }
+            fly.duration = 0.8
+            fly.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            run(sc, fly)
+            burst([Effects.sparkle, Effects.heart], si: si, at: to, count: 3, dx: -14...14, dy: 10...30, duration: 0.8, delay: 0.75)
             fadeOut(h, 0.4)
             burst([Effects.heart, Effects.sparkle], si: si, at: CGPoint(x: pos.x, y: pos.y + 14), count: 3, dx: -14...14, dy: 10...30, duration: 0.8)
         }
@@ -887,6 +937,21 @@ final class OverlayController {
             let dx = side * (34 + Double(n / 2) * 22)
             h.position = CGPoint(x: (x + dx - o.x).rounded(), y: (ground - o.y).rounded())
             h.setAffineTransform(CGAffineTransform(scaleX: side < 0 ? 1 : -1, y: 1))
+        }
+        // Helpers lug blocks up to the building now and then.
+        let now0 = CACurrentMediaTime()
+        if !st.helpers.isEmpty, now0 >= st.nextHelperBlock, let l = st.build {
+            st.nextHelperBlock = now0 + Double.random(in: 0.9...1.8)
+            let h = st.helpers[Int.random(in: 0..<st.helpers.count)]
+            let blk = particle(WeatherArt.block, si)
+            let from = CGPoint(x: h.position.x, y: h.position.y + 22)
+            let top = CGPoint(x: l.frame.midX + .random(in: -20...20), y: l.frame.minY + CGFloat(BuildArt.builtHeight(b, blocks: j.blocks) * 3))
+            blk.position = from
+            let arc = CAKeyframeAnimation(keyPath: "position")
+            arc.values = [from, CGPoint(x: (from.x + top.x) / 2, y: max(from.y, top.y) + 40), top].map { NSValue(point: $0) }
+            arc.duration = 0.7
+            run(blk, arc)
+            burst([Effects.dust], si: si, at: top, count: 2, dx: -8...8, dy: 0...10, duration: 0.4, delay: 0.65)
         }
     }
 
@@ -926,7 +991,7 @@ final class OverlayController {
                 }
             case .plan(let id):
                 if let c = creature(id) { spawnEffect(ClaudeIcons.flag, above: c, drift: 0) }
-            case .helperJoined, .helperLeft:
+            case .helperJoined, .helperLeft, .weather:
                 break   // drawn by updateBuild
             }
         }
@@ -1454,6 +1519,7 @@ final class OverlayController {
             }
             for h in st.helpers { fadeOut(h, 0.4) }
             if let fl = st.flag { fadeOut(fl, 0.3); st.flag = nil }
+            if let wl = st.weatherLayer { fadeOut(wl, 0.4); st.weatherLayer = nil; st.weatherKind = "" }
             st.helpers.removeAll()
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
             if let l = st.extra { fadeOut(l, 0.5); st.extra = nil }

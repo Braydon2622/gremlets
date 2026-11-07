@@ -268,6 +268,7 @@ public final class World {
         checkStartle()
         updatePlay(dt)
         updateSpectacle(dt)
+        updateSessionWeather()
     }
 
     private func update(_ c: Creature, _ dt: Double) {

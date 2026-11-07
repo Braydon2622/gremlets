@@ -121,6 +121,10 @@ public final class Job {
     public internal(set) var label: String?
     public internal(set) var needsYou = false
     public internal(set) var lastToolTime = -100.0
+    /// Weather over this session's island, following how Claude's work is going (until `weatherUntil`).
+    public internal(set) var weather: SessionWeather = .clear
+    public internal(set) var weatherUntil = 0.0
+    var failStreak = 0
 
     init(craft: Craft, kind: Kind, windowID: Int?, seed: UInt64, now: Double) {
         self.craft = craft; self.kind = kind; self.windowID = windowID; self.seed = seed; self.started = now

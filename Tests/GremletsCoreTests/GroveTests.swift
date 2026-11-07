@@ -282,3 +282,22 @@ import Testing
         #expect(!j.needsYou, "Claude got going again")
     }
 }
+
+@Suite struct SessionWeatherTests {
+    @Test func failuresBringRainThenStormsAndPassingTestsBringSun() throws {
+        let w = World(seed: 14)
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [WindowInfo(id: 5, frame: Rect(x: 300, y: 100, w: 600, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 0))
+        for _ in 0..<30 { w.step(1.0 / 30) }
+        let id = try #require(w.startJob(windowID: 5, craft: .garden, prefer: c.id))
+        let j = try #require(w.creatures.first { $0.id == id }?.job)
+        w.claudeToolFailed(workerID: id, tests: false)
+        #expect(j.weather == .rain)
+        w.claudeToolFailed(workerID: id, tests: false); w.claudeToolFailed(workerID: id, tests: false)
+        #expect(j.weather == .storm)
+        w.claudeTestsPassed(workerID: id)
+        #expect(j.weather == .sunny)
+        for _ in 0..<(30 * 20) { w.step(1.0 / 30) }
+        #expect(j.weather == .clear, "weather passes")
+    }
+}

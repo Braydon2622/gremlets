@@ -9,7 +9,8 @@
 #     "Notification":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "PostToolUse":      [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
-#     "SubagentStop":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
+#     "SubagentStop":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
 #
 # PostToolUse sends only the tool's *name* (Edit, Read, Bash...), never its input or output: an edit places a block on
 # the Gremlet's island, a subagent brings a tiny helper along.
@@ -28,7 +29,7 @@ except Exception:
     sys.exit(0)
 name = d.get("hook_event_name", "")
 event = {"UserPromptSubmit": "start", "Stop": "done", "Notification": "attention", "SessionEnd": "end",
-         "PostToolUse": "tool", "SubagentStop": "helperdone"}.get(name)
+         "PostToolUse": "tool", "PostToolUseFailure": "toolfail", "SubagentStop": "helperdone"}.get(name)
 if not event:
     sys.exit(0)
 q = {
@@ -37,8 +38,13 @@ q = {
     "project": os.path.basename((d.get("cwd") or "").rstrip("/")) or "Claude",
     "pid": sys.argv[1],
 }
-if event == "tool":
+if event in ("tool", "toolfail"):
     q["tool"] = str(d.get("tool_name", ""))[:60]
+    # Only a yes/no "was this a test run?", never the command itself (it drives the weather).
+    cmd = str((d.get("tool_input") or {}).get("command", "")) if q["tool"] == "Bash" else ""
+    import re
+    if re.search(r"\b(test|tests|pytest|jest|vitest|mocha|rspec|go test|cargo test|swift test|xcodebuild test|npm t)\b", cmd):
+        q["kind"] = "test"
 if event == "attention":
     q["kind"] = "permission" if "permission" in (d.get("message") or "").lower() else "waiting"
 print(urllib.parse.urlencode(q))

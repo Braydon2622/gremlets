@@ -26,7 +26,12 @@ public enum ClaudeTool: String, Sendable {
     }
 }
 
+/// Weather over a Claude session's island: a passing shower when a command fails, a little storm when things keep
+/// failing, sunshine and a rainbow when the tests pass.
+public enum SessionWeather: String, Sendable { case clear, rain, storm, sunny }
+
 public enum ClaudeWorkEvent: Equatable, Sendable {
+    case weather(worker: Int, SessionWeather)
     case placedBlock(worker: Int, count: Int)
     case look(Int), run(Int), web(Int), plan(Int)
     case helperJoined(worker: Int, count: Int)
@@ -43,6 +48,7 @@ extension World {
         j.beats += 1
         switch tool {
         case .build:
+            j.failStreak = 0
             j.blocks += 1
             claudeEvents.append(.placedBlock(worker: c.id, count: j.blocks))
             if c.isGrounded && !c.isDozingAtWork { c.set(.special, duration: min(0.7, c.animationLength(for: .special))) }
@@ -55,6 +61,34 @@ extension World {
             claudeEvents.append(.helperJoined(worker: c.id, count: j.helpers))
         case .other: break
         }
+    }
+
+    /// A tool call went badly (PostToolUseFailure): rain, or a storm if it keeps happening.
+    public func claudeToolFailed(workerID: Int, tests: Bool) {
+        guard let c = creature(id: workerID), let j = c.job else { return }
+        j.failStreak += 1
+        j.lastToolTime = clock
+        setWeather(c, j, j.failStreak >= 3 || tests ? .storm : .rain, for: j.failStreak >= 3 ? 40 : 22)
+        if c.isGrounded && !c.isDozingAtWork { c.set(.dizzy, duration: 1.2) }
+    }
+
+    /// Tests passed: the clouds part, sunshine and a rainbow.
+    public func claudeTestsPassed(workerID: Int) {
+        guard let c = creature(id: workerID), let j = c.job else { return }
+        j.failStreak = 0
+        setWeather(c, j, .sunny, for: 14)
+        if c.isGrounded { startDance(c, duration: 2.5, invite: false) }
+    }
+
+    func setWeather(_ c: Creature, _ j: Job, _ w: SessionWeather, for seconds: Double) {
+        j.weather = w
+        j.weatherUntil = clock + seconds
+        claudeEvents.append(.weather(worker: c.id, w))
+    }
+
+    /// Weather passes on its own.
+    func updateSessionWeather() {
+        for c in creatures { if let j = c.job, j.weather != .clear, clock > j.weatherUntil { j.weather = .clear } }
     }
 
     /// Names the Claude session a Gremlet is helping with (the project folder), for the village journal.

@@ -336,3 +336,33 @@ enum BridgeArt {
         "..k..",
     ], ["k": 0xB8C2CC])
 }
+
+/// Weather over a Claude session's island.
+enum WeatherArt {
+    static func cloud(storm: Bool) -> CGImage {
+        var cv = PixelCanvas(26, 12)
+        let (b, l, s): (UInt32, UInt32, UInt32) = storm ? (0x6E7790, 0x9AA3BA, 0x4A5168) : (0xDCE6F2, 0xFFFFFF, 0xB4C2D6)
+        for (x, y, r) in [(7.0, 5.0, 5.0), (13, 7, 6), (19, 5, 5), (11, 3, 4), (16, 3, 4)] { cv.blob(x, y, r, r * 0.8, base: b, light: l, shade: s) }
+        cv.outline(0.7)
+        return cv.image
+    }
+    static let rainbow: CGImage = {
+        var cv = PixelCanvas(40, 21)
+        let bands: [UInt32] = [0xFF6B6B, 0xFFB45C, 0xFFE45C, 0x7BD66A, 0x5FB8FF, 0xB98CFF]
+        for y in 0..<21 { for x in 0..<40 {
+            let d = ((Double(x) - 19.5) * (Double(x) - 19.5) + Double(y) * Double(y)).squareRoot()
+            let k = Int(20 - d)
+            if k >= 0 && k < bands.count { cv.set(x, y, bands[k]) }
+        }}
+        return cv.image
+    }()
+    static let sun = Effects.pixels([
+        "..y..",
+        ".yYy.",
+        "yYYYy",
+        ".yYy.",
+        "..y..",
+    ], ["y": 0xFFC845, "Y": 0xFFF3A0])
+    static let block = Effects.pixels(["wwww", "wddw", "wwww"], ["w": 0xC98B4A, "d": 0xA9743F])
+    static let scroll = Effects.pixels(["kwwwk", ".www.", ".www.", "kwwwk"], ["k": 0xC98B4A, "w": 0xFFF6DA])
+}

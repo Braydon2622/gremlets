@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
     private let icons = DesktopIcons()
+    private let controls = AppControls()
     private let companion = CompanionAI()
     private var lastMorning = UserDefaults.standard.string(forKey: "companion.lastMorning") ?? ""
     private var lastEvening = UserDefaults.standard.string(forKey: "companion.lastEvening") ?? ""
@@ -158,12 +159,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if ridden.contains(where: { lastWindowSignature[$0] != sig[$0] }) { lastWindowChange = lastWindowPoll }
             lastWindowSignature = sig
         }
+        var extra: [Surface] = []
         if icons.enabled {
             icons.updateVisibility(windows: wins)
-            world.iconSurfaces = icons.surfaces(excluding: overlay.liftedIcons)
-        } else if !world.iconSurfaces.isEmpty {
-            world.iconSurfaces = []
+            extra = icons.surfaces(excluding: overlay.liftedIcons)
         }
+        // Real controls in the front app (address bars, search fields, buttons), if you've turned it on.
+        extra += controls.surfaces(now: CACurrentMediaTime())
+        if !extra.isEmpty || !world.iconSurfaces.isEmpty { world.iconSurfaces = extra }
         world.setEnvironment(screens: WindowTracker.screens(), windowsFrontToBack: wins)
     }
 
@@ -363,6 +366,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(m)
         }
         menu.addItem(groveMenuItem())
+        let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on App Controls (needs Accessibility)" : "Stand on App Controls",
+                             action: #selector(toggleControls), keyEquivalent: "")
+        ctl.target = self
+        ctl.state = controls.enabled ? .on : .off
+        ctl.toolTip = "Gremlets can stand on the address bar, search fields and buttons of the app you're using. Needs Accessibility access (System Settings › Privacy & Security › Accessibility). Reads only where controls are, never what's in them, and skips web page content."
+        menu.addItem(ctl)
         // The seed book: which plants you've grown so far.
         let book = overlay.seedBook
         // Phone: pair, send a Gremlet over, see who's visiting.
@@ -1167,6 +1176,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func toggleEpic() { epicEvents.toggle(); rebuildMenu() }
+
+    @objc private func toggleControls() {
+        controls.enabled.toggle()
+        if controls.enabled && !controls.trusted { controls.requestAccess() }
+        rebuildMenu()
+    }
 
     @objc private func clearGarden() {
         overlay.clearKeepsakes()

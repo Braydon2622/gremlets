@@ -365,7 +365,7 @@ export class World {
       }
     }
     const chase = c.activity === 'chase';
-    if (!this.move(c, dt, c.species.walkSpeed * (chase ? 1.6 : 1), support, chase ? 1 : 0.65) && chase) c.set('idle', 1);
+    if (!this.move(c, dt, c.species.walkSpeed * (chase ? 1.6 : 1) * (c.speedBoost || 1), support, chase ? 1 : 0.65) && chase) c.set('idle', 1);
   }
 
   faceCursorIfNear(c) {

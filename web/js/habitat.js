@@ -7,6 +7,7 @@ import { loadIndex, loadSpecies, speciesBase } from './sprites.js';
 import { FX, Particles } from './effects.js';
 import { Link } from './link.js';
 import { Garden } from './garden.js';
+import { Bridge } from './bridge.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -20,6 +21,15 @@ const particles = new Particles();
 const art = new Map();          // creature id -> { image, rects }
 const zzzTimers = new Map();
 const link = showcase ? null : new Link();
+const bridge = showcase ? null : new Bridge();
+const DOOR = 120;               // how far the floor runs past a linked edge before a Gremlet is "through"
+let door = null;                // 'left' | 'right' when another screen is linked and open
+let driven = null;              // creature id steered with the keyboard (or the on-screen pad)
+let remoteDrive = false;        // our driven Gremlet walked to the other screen: forward the keys there
+let drivenByPeer = false;       // the Gremlet we're showing is being steered from the other screen
+const keys = { left: false, right: false, up: false };
+const travellers = [];          // rain clouds drifting across: { x, y, dir, speed, art, t }
+let cloudArt = null;
 const visitors = new Map();     // creature id -> { species, garden, spot, poseTimer, hop }
 const portals = [];             // { x, y, t }
 let tilt = 0;                   // -1 (phone tipped left) ... 1 (right)
@@ -51,8 +61,15 @@ function layout() {
   GROUND = PX * 9;
   TOP = showcase ? PX * 10 : 64;
   platforms = makePlatforms();
-  world.setEnvironment([{ x: 0, y: GROUND, w: W, h: H - GROUND - TOP }], platforms);
+  applyDoor();
   scenery = drawScenery();
+}
+
+/** The habitat's screen, stretched past a linked edge so Gremlets can walk out through it. */
+function applyDoor() {
+  door = bridge?.linked && bridge.peerOnline ? bridge.side : null;
+  const x = door === 'left' ? -DOOR : 0, w = W + (door ? DOOR : 0);
+  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], platforms.filter((p) => !p.broken));
 }
 
 /** Floating ledges to climb (the web stand-in for app windows). Spaced so every species can jump between them. */
@@ -124,7 +141,7 @@ function drawScenery() {
     g.fillRect(x, gy - PX * 2, PX, PX);
   }
 
-  for (const p of platforms) drawPlatform(g, p);
+  for (const p of platforms) if (!p.broken) drawPlatform(g, p);
   return cv;
 }
 
@@ -265,6 +282,7 @@ function special(effect, c) {
 
 let press = null;
 let lastHover = null;
+let lastTap = null;
 
 canvas.addEventListener('pointerdown', (e) => {
   askForTilt();
@@ -272,6 +290,9 @@ canvas.addEventListener('pointerdown', (e) => {
   world.cursor = p;
   const c = world.creatureAt(p);
   if (!c) { tapGarden(p); return; }
+  const now2 = performance.now();
+  if (lastTap && lastTap.id === c.id && now2 - lastTap.t < 320) { lastTap = null; takeControl(c); e.preventDefault(); return; }
+  lastTap = { id: c.id, t: now2 };
   if (visitors.has(c.id)) say(c.id, visitors.get(c.id).garden.describe(), 3.5);
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic or already-released pointer */ }
   press = { c, start: p, dragging: false, petted: false };
@@ -322,8 +343,14 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  steer(dt);
   world.step(dt);
   handleEvents(world.drainEvents());
+  checkCrossings(now / 1000);
+  updateTravellers(dt, now / 1000);
+  updateBoss(dt);
+  updateDebris(dt);
+  respawnPlatforms(now / 1000);
   for (const c of world.creatures) {
     if (c.activity !== 'sleep') continue;
     const t = (zzzTimers.get(c.id) || 0) - dt;
@@ -335,12 +362,17 @@ function frame(now) {
   particles.update(dt);
   draw();
   drawPortals(now / 1000);
+  drawDoor(now / 1000);
+  drawTravellers(now / 1000);
+  drawAdventure(now / 1000);
+  drawDriveMarker(now / 1000);
   placeBubbles(now / 1000);
   requestAnimationFrame(frame);
 }
 
 function draw() {
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const shake = performance.now() / 1000 < shakeUntil ? PX * 1.5 : 0;
+  ctx.setTransform(DPR, 0, 0, DPR, (Math.random() - 0.5) * shake * DPR, (Math.random() - 0.5) * shake * DPR);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(scenery, 0, 0, W, H);
   // Soft shadows under grounded Gremlets.
@@ -357,7 +389,8 @@ function draw() {
   for (const c of world.creatures) {
     const a = art.get(c.id);
     if (!a) continue;
-    const r = a.rects[c.currentFrame];
+    if (c.id === driven && performance.now() / 1000 < life.hurtUntil && Math.floor(performance.now() / 90) % 2) continue;   // blink while hurt
+    const r = a.rects[c.boosting ? c.species.frame('fly', c.animTime) : c.currentFrame];
     if (!r) continue;
     const w = r.w * PX, h = r.h * PX;
     const s = toScreen(c.pos.x, c.pos.y);
@@ -555,6 +588,687 @@ function updateLinkUI() {
   home.hidden = !link.paired || visitors.size === 0;
 }
 
+// ---------------------------------------------------------------- screen bridge: walk off one screen, onto the next
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const usableH = () => Math.max(1, H - GROUND - TOP);
+const inward = () => (bridge?.side === 'right' ? -1 : 1);
+
+function checkCrossings(t) {
+  if (!bridge) return;
+  for (const c of [...world.creatures]) {
+    if (visitors.has(c.id) || c.activity === 'dragged') continue;
+    // How far past the linked edge it is (negative while still on this screen).
+    const out = door === 'right' ? c.pos.x - W : door === 'left' ? -c.pos.x : -Infinity;
+    if (door && c.isGrounded && c.id !== driven && out > -c.size.x * 0.25 && c.facing !== inward()) {
+      // A Gremlet wandering into the doorway thinks twice, so a screen doesn't empty itself. Just-arrived ones turn back.
+      if (c.doorChoice == null) c.doorChoice = t - (c.arrived ?? -99) > 10 && Math.random() < 0.3;
+      if (!c.doorChoice) c.facing = inward();
+    } else if (out < -c.size.x * 1.5) c.doorChoice = null;
+    const outward = c.isGrounded || c.activity === 'crouch' ? c.facing !== inward() : c.vel.x * inward() < 0;
+    if (door && out > c.size.x * 0.35 && outward) leave(c);
+  }
+}
+
+function leave(c) {
+  const wasDriven = c.id === driven;
+  bridge.cross({
+    type: 'walk', species: c.species.id, y: clamp01((c.pos.y - GROUND) / usableH()),
+    vx: Math.round(c.vel.x), vy: Math.round(c.vel.y), air: !c.isGrounded, drive: wasDriven,
+  });
+  particles.burst(null, V(door === 'right' ? W - 14 : 14, c.pos.y + c.size.y * 0.5), { imgs: [FX.sparkle, FX.smallStar], count: 6, dx: [-30, 30], dy: [-20, 40], duration: 0.8, stagger: 0.04 });
+  if (wasDriven) { driven = null; remoteDrive = !drivenByPeer; drivenByPeer = false; updateDriveUI(); }
+  zzzTimers.delete(c.id);
+  removeGremlet(c.id);
+}
+
+async function arriveThroughDoor(note) {
+  if (!index.some((s) => s.id === note.species)) return;
+  if (!door) applyDoor();
+  const a = await loadSpecies(note.species, PX);
+  const half = a.species.size.x * 0.4, dir = inward();
+  const x = bridge.side === 'right' ? W + half : -half;
+  const air = !!note.air;
+  const y = air ? GROUND + clamp01(note.y) * usableH() : GROUND;
+  const c = await addGremlet(note.species, V(x, y));
+  c.facing = dir; c.arrived = performance.now() / 1000; c.doorChoice = false;
+  if (air) { c.vel = V(Math.max(160, Math.abs(note.vx || 0)) * dir, note.vy || 120); c.set('airborne'); }
+  else { c.ground = -1; c.edgeDecided = false; c.set('walk', 2.2 + Math.random()); }
+  particles.burst(null, V(bridge.side === 'right' ? W - 14 : 14, y + c.size.y * 0.5), { imgs: [FX.sparkle, FX.smallStar], count: 6, dx: [-30, 30], dy: [-20, 40], duration: 0.8, stagger: 0.04 });
+  if (note.drive) {
+    driven = c.id; drivenByPeer = !remoteDrive; remoteDrive = false;
+    c.autoWalk = performance.now() / 1000 + 0.9;      // step fully onto this screen before waiting for keys
+    updateDriveUI();
+  }
+  if (Math.random() < 0.6) setTimeout(() => say(c.id, ['Made it! ✨', 'Hello, other screen!', 'Whoa, new screen!', 'I walked here!'][Math.floor(Math.random() * 4)], 2.4), 500);
+}
+
+function drawDoor(t) {
+  if (!door) return;
+  const x = door === 'right' ? W - 3 : 3, top = H - GROUND - 150, bottom = H - GROUND;
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const g = ctx.createLinearGradient(0, top, 0, bottom);
+  g.addColorStop(0, 'rgba(169,139,234,0)'); g.addColorStop(1, 'rgba(169,139,234,0.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(door === 'right' ? W - 26 : 0, top, 26, bottom - top);
+  ctx.strokeStyle = '#a98bea'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 40;
+  ctx.beginPath(); ctx.moveTo(x, top + 20); ctx.lineTo(x, bottom); ctx.stroke();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- travelling rain cloud (crosses linked screens too)
+
+async function summonCloud(fromSide = null, y = null) {
+  if (travellers.length >= 2) return;
+  if (!cloudArt) cloudArt = await loadSpecies('puffcloud', PX).catch(() => null);
+  if (!cloudArt) return;
+  const dir = fromSide === 'left' ? 1 : fromSide === 'right' ? -1 : Math.random() < 0.5 ? 1 : -1;
+  const s = PX * 3, w = 32 * s;
+  travellers.push({
+    x: dir > 0 ? -w * 0.5 : W + w * 0.5, y: y ?? GROUND + usableH() * 0.66, dir, speed: 70 + Math.random() * 30,
+    s, w, rainT: 0, touched: new Set(), t0: performance.now() / 1000,
+  });
+}
+
+function updateTravellers(dt, t) {
+  for (let i = travellers.length - 1; i >= 0; i--) {
+    const v = travellers[i];
+    v.x += v.dir * v.speed * dt;
+    v.rainT -= dt;
+    const bottom = v.y - v.w * 0.25;
+    if (v.rainT <= 0) {
+      v.rainT = 0.045;
+      const fall = bottom - GROUND;
+      particles.burst(FX.rain, V(v.x + (Math.random() - 0.5) * v.w * 0.6, bottom), { dy: [-fall, -fall + 6], dx: [-6, 6], duration: Math.max(0.3, fall / 520), spin: 0 });
+    }
+    for (const c of world.creatures) {
+      if (v.touched.has(c.id) || !c.isGrounded || c.isAsleep || c.id === driven || visitors.has(c.id)) continue;
+      if (Math.abs(c.pos.x - v.x) > v.w * 0.35) continue;
+      v.touched.add(c.id);
+      c.facing = v.x > c.pos.x ? 1 : -1;
+      if (Math.random() < 0.6) world.startDance(c, 2.6, false);
+      else world.poke(c);
+    }
+    const gone = v.dir > 0 ? v.x - v.w * 0.5 > W : v.x + v.w * 0.5 < 0;
+    if (gone) {
+      const through = v.dir > 0 ? 'right' : 'left';
+      if (door === through) bridge.cross({ type: 'visitor', kind: 'raincloud', y: clamp01((v.y - GROUND) / usableH()) });
+      travellers.splice(i, 1);
+    }
+  }
+}
+
+function drawTravellers(t) {
+  if (!cloudArt) return;
+  for (const v of travellers) {
+    const f = cloudArt.species.frame('idle', t - v.t0), r = cloudArt.rects[f];
+    if (!r) continue;
+    const w = r.w * v.s, h = r.h * v.s, s = toScreen(v.x, v.y);
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(s.x), Math.round(s.y + Math.sin(t * 2) * 4));
+    if (v.dir < 0) ctx.scale(-1, 1);
+    ctx.drawImage(cloudArt.image, r.x, r.y, r.w, r.h, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- drive one yourself (keyboard, or the on-screen pad)
+
+function steer(dt) {
+  if (driven == null) return;
+  const c = byId(driven);
+  if (!c) { driven = null; updateDriveUI(); return; }
+  c.speedBoost = 2.4;
+  boots(c, dt);
+  let dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (!dir && c.autoWalk && performance.now() / 1000 < c.autoWalk) dir = inward();
+  if (c.activity === 'airborne') {
+    if (dir) c.vel = V(c.vel.x + (dir * c.species.walkSpeed * 2.6 - c.vel.x) * Math.min(1, dt * 5), c.vel.y);
+    return;
+  }
+  if (!c.isGrounded) return;
+  if (dir) {
+    c.facing = dir; c.edgeDecided = true; c.doorChoice = true;
+    if (c.activity !== 'walk') c.set('walk', 0.3); else c.timer = 0.3;
+    return;
+  }
+  if (c.activity === 'walk') { c.idleVariant = 'idle'; c.set('idle', 0.4); return; }
+  if (c.activity === 'idle') { c.timer = Math.max(c.timer, 0.3); return; }
+  if (c.timer < 0.05 && !['crouch', 'sleep', 'yawn', 'wake'].includes(c.activity)) { c.idleVariant = 'idle'; c.set('idle', 0.4); }
+}
+
+function act(name) {
+  if (remoteDrive && driven == null) { bridge?.cross({ type: 'keys', keys: { ...keys }, act: name }); return; }
+  const c = byId(driven);
+  if (!c) return;
+  if (name === 'mine') { swing(); return; }
+  if (name === 'jump') {
+    if (!c.isGrounded) return;
+    c.jumpAt = performance.now() / 1000;
+    const moving = keys.left || keys.right;
+    world.launch(c, V(moving ? c.facing * c.species.walkSpeed * 2.6 : c.facing * 30, Math.sqrt(2 * world.gravity * 190 * (c.species.jumpPower || 1))));
+  } else if (!c.isGrounded) return;
+  else if (name === 'wave') c.set('wave', 1.3);
+  else if (name === 'special') world.startSpecial(c);
+  else if (name === 'dance') world.startDance(c, 3, true);
+}
+
+function setKey(k, down) {
+  if (keys[k] === down) return;
+  keys[k] = down;
+  if (remoteDrive && driven == null) bridge?.cross({ type: 'keys', keys: { ...keys } });
+}
+
+function takeControl(c) {
+  if (driven === c?.id) c = null;
+  if (driven != null) { const old = byId(driven); if (old) old.speedBoost = 1; }
+  driven = c ? c.id : null;
+  remoteDrive = false; drivenByPeer = false;
+  keys.left = keys.right = keys.up = false;
+  life.n = HEARTS; life.hurtUntil = 0;
+  if (c) say(c.id, 'You drive! 🎮', 1.6);
+  updateDriveUI();
+}
+
+function updateDriveUI() {
+  const hint = document.getElementById('drivehint'), pad = document.getElementById('pad');
+  if (!hint) return;
+  const c = byId(driven);
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (c && drivenByPeer) {
+    hint.innerHTML = `<b>${c.species.name}</b> is being driven from the other screen`;
+  } else if (c) {
+    hint.innerHTML = touch
+      ? `Driving <b>${c.species.name}</b>. Use the pad · Double-tap it again to let go`
+      : `Driving <b>${c.species.name}</b> · ← → walk · Space jump (hold to fly) · X mine · E wave · Q special · F dance · Esc let go`;
+  } else if (remoteDrive) {
+    hint.innerHTML = 'Your Gremlet is on the other screen. Keep driving with the same keys · Esc to stop';
+  }
+  hint.hidden = !(c || remoteDrive);
+  if (pad) pad.hidden = !(touch && (c || remoteDrive));
+}
+
+function drawDriveMarker(t) {
+  const c = byId(driven);
+  if (!c) return;
+  const s = toScreen(c.pos.x, c.pos.y + c.size.y + 10 + Math.abs(Math.sin(t * 5)) * 6);
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#ff7a4d';
+  const p = Math.max(2, PX - 1), x = Math.round(s.x), y = Math.round(s.y);
+  for (let row = 0; row < 4; row++) ctx.fillRect(x - (3 - row) * p, y - (4 - row) * p, (7 - row * 2) * p, p);
+  ctx.restore();
+}
+
+addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea')) return;
+  if (e.key === 'Escape') { if (driven != null || remoteDrive) { takeControl(null); e.preventDefault(); } return; }
+  if (e.key === 'Tab' && driven == null && !remoteDrive && world.creatures.length) {
+    const mid = W / 2, pick = [...world.creatures].filter((c) => !visitors.has(c.id)).sort((a, b) => Math.abs(a.pos.x - mid) - Math.abs(b.pos.x - mid))[0];
+    if (pick) { takeControl(pick); e.preventDefault(); }
+    return;
+  }
+  if (driven == null && !remoteDrive) return;
+  const k = e.key.toLowerCase();
+  if (k === 'arrowleft' || k === 'a') { setKey('left', true); e.preventDefault(); }
+  else if (k === 'arrowright' || k === 'd') { setKey('right', true); e.preventDefault(); }
+  else if (k === 'arrowup' || k === 'w' || k === ' ') { if (!e.repeat) { setKey('up', true); act('jump'); } e.preventDefault(); }
+  else if ((k === 'x' || k === 'j') && !e.repeat) act('mine');
+  else if (k === 'e' && !e.repeat) act('wave');
+  else if (k === 'q' && !e.repeat) act('special');
+  else if (k === 'f' && !e.repeat) act('dance');
+});
+addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'arrowleft' || k === 'a') setKey('left', false);
+  if (k === 'arrowright' || k === 'd') setKey('right', false);
+  if (k === 'arrowup' || k === 'w' || k === ' ') setKey('up', false);
+});
+addEventListener('blur', () => { setKey('left', false); setKey('right', false); setKey('up', false); });
+
+function wirePad() {
+  const pad = document.getElementById('pad');
+  if (!pad) return;
+  for (const b of pad.querySelectorAll('[data-k]')) {
+    const k = b.dataset.k;
+    const on = (e) => { e.preventDefault(); if (k === 'mine') act('mine'); else if (k === 'jump') { setKey('up', true); act('jump'); } else setKey(k, true); };
+    const off = (e) => { e.preventDefault(); if (k === 'jump') setKey('up', false); else if (k !== 'mine') setKey(k, false); };
+    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  }
+}
+
+// ---------------------------------------------------------------- adventure: pickaxe, rocket boots, hearts and the Grumble King
+
+const HEARTS = 5;
+const life = { n: HEARTS, hurtUntil: 0 };
+const swings = [];               // { id, t0 }
+const debris = [];               // pixel chips: { x, y, vx, vy, color, t, life }
+let boss = null;
+let crownHolder = null;          // creature id wearing the crown (beat the boss)
+let shakeUntil = 0;
+const now_ = () => performance.now() / 1000;
+const CHIPS = { shelf: ['#b98552', '#8a5a34', '#d9a673'], moss: ['#9aa0a6', '#6cbf59', '#7a8088'], cloud: ['#ffffff', '#dfe8f4', '#c8d0ec'] };
+
+function chips(x, y, colors, n, spread = 1) {
+  for (let i = 0; i < n; i++) {
+    debris.push({ x: x + (Math.random() - 0.5) * 10 * spread, y, vx: (Math.random() - 0.5) * 360 * spread, vy: 180 + Math.random() * 320,
+      color: colors[i % colors.length], t: 0, life: 0.9 + Math.random() * 0.6 });
+  }
+}
+
+function updateDebris(dt) {
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const d = debris[i];
+    d.t += dt; d.vy -= 1500 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+    if (d.y < GROUND) { d.y = GROUND; d.vy = -d.vy * 0.35; d.vx *= 0.6; }
+    if (d.t > d.life) debris.splice(i, 1);
+  }
+}
+
+/** Swing the pickaxe: bonks Gremlets, chips platforms (four hits breaks one) and hurts the boss. */
+function swing() {
+  const c = byId(driven);
+  if (!c) return;
+  const t = now_();
+  if (c.swingAt && t - c.swingAt < 0.3) return;
+  c.swingAt = t;
+  swings.push({ id: c.id, t0: t });
+  const f = c.facing, w = c.size.x, h = c.size.y;
+  const box = { x0: f > 0 ? c.pos.x - w * 0.1 : c.pos.x - w * 0.95, x1: f > 0 ? c.pos.x + w * 0.95 : c.pos.x + w * 0.1, y0: c.pos.y - PX * 7, y1: c.pos.y + h * 0.9 };
+  const hits = (x0, x1, y0, y1) => x1 > box.x0 && x0 < box.x1 && y1 > box.y0 && y0 < box.y1;
+  const tip = V(c.pos.x + f * w * 0.6, c.pos.y + h * 0.25);
+  let hit = false;
+  if (boss && boss.hp > 0) {
+    const b = bossBox();
+    if (hits(b.x0, b.x1, b.y0, b.y1)) { hurtBoss(boss.state === 'rest' ? 2 : 1, c); hit = true; }
+  }
+  for (const o of world.creatures) {
+    if (o === c || visitors.has(o.id) || o.activity === 'dragged') continue;
+    const b = o.bounds;
+    if (!hits(b.x, b.x + b.w, b.y, b.y + b.h)) continue;
+    hit = true;
+    world.endSocial(o);
+    o.ground = null; o.vel = V(f * 260, 360); o.facing = -f; o.set('airborne');
+    particles.burst(FX.bang, head(o), { dy: [8, 12], duration: 0.7, spin: 0 });
+    if (Math.random() < 0.35) say(o.id, ['Hey!', 'Bonk!', 'Ow!', 'Rude!'][Math.floor(Math.random() * 4)], 1.4);
+  }
+  const p = platforms.find((q) => !q.broken && hits(q.x, q.x + q.w, q.y, q.y + q.h));
+  if (p) {
+    hit = true;
+    p.dmg = (p.dmg || 0) + 1;
+    const at = Math.max(p.x + PX * 2, Math.min(p.x + p.w - PX * 2, tip.x));
+    chips(at, p.y + p.h, CHIPS[p.kind], 6);
+    if (p.dmg >= 4) breakPlatform(p);
+  } else if (!hit && c.isGrounded && c.ground < 0) {
+    chips(tip.x, GROUND, night ? ['#4a3a32', '#3c5a3a'] : ['#a5774f', '#7cc46a', '#8a5f3e'], 4, 0.6);   // just dirt
+  }
+  if (hit) particles.burst(null, tip, { imgs: [FX.smallStar, FX.star], count: 3, dx: [-24, 24], dy: [6, 30], duration: 0.5 });
+}
+
+function breakPlatform(p) {
+  p.broken = true; p.respawnAt = now_() + 25;
+  for (let x = p.x; x < p.x + p.w; x += PX * 6) chips(x, p.y + p.h * 0.5, CHIPS[p.kind], 3, 0.8);
+  applyDoor(); scenery = drawScenery();
+  shakeUntil = now_() + 0.18;
+  const c = byId(driven);
+  if (c && Math.random() < 0.7) say(c.id, ['Mined it! ⛏', 'Timber!', 'Block get!'][Math.floor(Math.random() * 3)], 1.6);
+}
+
+function respawnPlatforms(t) {
+  for (const p of platforms) {
+    if (!p.broken || t < p.respawnAt) continue;
+    if (world.creatures.some((c) => c.pos.x > p.x - 20 && c.pos.x < p.x + p.w + 20 && c.pos.y + c.size.y > p.y && c.pos.y < p.y + p.h)) { p.respawnAt = t + 2; continue; }
+    p.broken = false; p.dmg = 0;
+    applyDoor(); scenery = drawScenery();
+    for (let x = p.x; x < p.x + p.w; x += PX * 12) particles.burst(FX.sparkle, V(x, p.y + p.h), { dy: [10, 30], duration: 0.8, delay: Math.random() * 0.3 });
+  }
+}
+
+/** Rocket boots: hold jump in the air to fly up, while the fuel lasts. */
+function boots(c, dt) {
+  const t = now_();
+  const air = c.activity === 'airborne';
+  c.boosting = !!(air && keys.up && (c.fuel ?? 1) > 0 && t > (c.jumpAt || 0) + 0.18);
+  if (c.boosting) {
+    c.fuel = Math.max(0, (c.fuel ?? 1) - dt * 0.5);
+    c.vel = V(c.vel.x, Math.min(c.vel.y + 2700 * dt, 430));
+    c.bootT = (c.bootT || 0) - dt;
+    if (c.bootT <= 0) {
+      c.bootT = 0.035;
+      particles.burst(null, V(c.pos.x + (Math.random() - 0.5) * c.size.x * 0.25, c.pos.y + 2), { imgs: [FX.flame2, FX.sparkle, FX.flame2], dx: [-10, 10], dy: [-44, -26], duration: 0.35, spin: 0 });
+    }
+  } else if (c.isGrounded) c.fuel = Math.min(1, (c.fuel ?? 1) + dt * 0.9);
+}
+
+function hurtDriven(n, fromX) {
+  const c = byId(driven), t = now_();
+  if (!c || t < life.hurtUntil) return;
+  life.n -= n; life.hurtUntil = t + 1.3;
+  const away = c.pos.x >= fromX ? 1 : -1;
+  world.endSocial(c);
+  c.ground = null; c.vel = V(away * 340, 340); c.set('airborne');
+  particles.burst(FX.bang, head(c), { dy: [8, 12], duration: 0.7, spin: 0 });
+  if (life.n <= 0) {
+    life.n = HEARTS;
+    particles.burst(null, head(c, 0.6), { imgs: [FX.heart, FX.smallHeart], count: 6, dx: [-40, 40], dy: [20, 60], duration: 1.2, stagger: 0.05 });
+    say(c.id, 'Ouch… hearts refilled! 💫', 2);
+  }
+}
+
+// ---- the Grumble King: a giant Gremlet that hovers, slams down and can chase you onto the other screen
+
+async function spawnBoss({ species = null, hp = null, side = null, y = null } = {}) {
+  if (boss || !index.length) return;
+  const pool = index.filter((s) => !['puffcloud'].includes(s.id));
+  const id = species && index.some((s) => s.id === species) ? species : pool[Math.floor(Math.random() * pool.length)].id;
+  const art2 = await loadSpecies(id, PX).catch(() => null);
+  if (!art2 || boss) return;
+  const s = PX * (W < 600 ? 2.2 : 2.7), bw = art2.rects[0].w * s;
+  const hoverY = GROUND + usableH() * 0.55;
+  boss = {
+    art: art2, id, name: `King ${art2.species.name}`, s, bw, bh: art2.rects[0].h * s,
+    x: side === 'left' ? -bw * 0.5 : side === 'right' ? W + bw * 0.5 : W / 2,
+    y: side ? (y ?? hoverY) : H, hoverY, max: 24, hp: hp ?? 24, state: side ? 'hover' : 'enter', timer: 2.2,
+    dir: side === 'right' ? -1 : 1, vy: 0, flash: 0, t0: now_(), helpT: 2.5, targetX: W / 2, arrived: side ? now_() : 0,
+  };
+  for (const c of world.creatures) if (c.isGrounded && !c.isAsleep && c.id !== driven) { c.facing = boss.x > c.pos.x ? 1 : -1; c.set('alert', 0.6); world.emit('alert', { id: c.id }); }
+  updateBossUI();
+}
+
+function bossBox() {
+  return { x0: boss.x - boss.bw * 0.34, x1: boss.x + boss.bw * 0.34, y0: boss.y, y1: boss.y + boss.bh * 0.78 };
+}
+
+function hurtBoss(n, by) {
+  if (!boss || boss.hp <= 0) return;
+  boss.hp = Math.max(0, boss.hp - n);
+  boss.flash = 0.12;
+  if (by) boss.lastHitter = by.id;
+  particles.burst(null, V(boss.x + (Math.random() - 0.5) * boss.bw * 0.4, boss.y + boss.bh * 0.45), { imgs: [FX.star, FX.smallStar], count: 3, dx: [-50, 50], dy: [10, 60], duration: 0.6 });
+  if (boss.hp <= 0) defeatBoss();
+  updateBossUI();
+}
+
+function defeatBoss() {
+  const at = V(boss.x, boss.y + boss.bh * 0.45);
+  particles.burst(null, at, { imgs: [FX.star, FX.sparkle, FX.heart, FX.smallStar], count: 28, dx: [-220, 220], dy: [-60, 220], duration: 1.6, stagger: 0.015 });
+  shakeUntil = now_() + 0.5;
+  const winner = byId(boss.lastHitter) || byId(driven) || [...world.creatures].sort((a, b) => Math.abs(a.pos.x - boss.x) - Math.abs(b.pos.x - boss.x))[0];
+  boss = null;
+  updateBossUI();
+  for (const c of world.creatures) if (c.isGrounded && c.id !== driven) world.startDance(c, 4, false);
+  if (winner) {
+    crownHolder = winner.id;
+    try { localStorage.setItem('gremlets.crown', winner.species.id); } catch { /* private mode */ }
+    setTimeout(() => say(winner.id, 'Victory! 👑', 2.6), 300);
+  }
+}
+
+function updateBoss(dt) {
+  if (!boss) return;
+  const b = boss, t = now_();
+  b.flash = Math.max(0, b.flash - dt);
+  const target = byId(driven) || world.creatures.filter((c) => !visitors.has(c.id))[0];
+  switch (b.state) {
+    case 'enter':
+      b.y += (b.hoverY - b.y) * Math.min(1, dt * 2.2);
+      if (Math.abs(b.y - b.hoverY) < 6) { b.state = 'hover'; b.timer = 2; }
+      break;
+    case 'hover': {
+      b.timer -= dt;
+      if (target && Math.random() < dt * 0.8) b.targetX = target.pos.x;
+      b.x += Math.max(-260, Math.min(260, (b.targetX - b.x) * 1.6)) * dt;
+      b.y += (b.hoverY + Math.sin(t * 2.4) * 14 - b.y) * Math.min(1, dt * 3);
+      // Now and then it storms off to the linked screen. Chase it!
+      if (door && t - b.arrived > 6 && b.timer <= 0 && Math.random() < 0.3) { b.state = 'leave'; b.dir = door === 'right' ? 1 : -1; break; }
+      if (b.timer <= 0) { b.state = 'windup'; b.timer = 0.55; }
+      break;
+    }
+    case 'windup':
+      b.timer -= dt;
+      b.y += 60 * dt;
+      if (b.timer <= 0) { b.state = 'slam'; b.vy = -300; }
+      break;
+    case 'slam':
+      b.vy -= 3200 * dt;
+      b.y += b.vy * dt;
+      if (b.y <= GROUND) { b.y = GROUND; b.state = 'rest'; b.timer = 1.6; shockwave(); }
+      break;
+    case 'rest':
+      b.timer -= dt;
+      if (b.timer <= 0) { b.state = 'rise'; }
+      break;
+    case 'rise':
+      b.y += (b.hoverY - b.y) * Math.min(1, dt * 2.4);
+      if (Math.abs(b.y - b.hoverY) < 10) { b.state = 'hover'; b.timer = 1.6 + Math.random() * 1.6; }
+      break;
+    case 'leave':
+      b.x += b.dir * 300 * dt;
+      b.y += (b.hoverY - b.y) * Math.min(1, dt * 2);
+      if (b.dir > 0 ? b.x - b.bw * 0.5 > W : b.x + b.bw * 0.5 < 0) {
+        if (door) bridge.cross({ type: 'visitor', kind: 'boss', species: b.id, hp: b.hp, y: clamp01((b.y - GROUND) / usableH()) });
+        boss = null; updateBossUI();
+        const c = byId(driven);
+        if (c) say(c.id, 'It went to the other screen! After it! ➡', 2.4);
+        return;
+      }
+      break;
+  }
+  // Arriving through the doorway: drift fully onto this screen first.
+  if (b.arrived && b.state === 'hover' && (b.x < b.bw * 0.4 || b.x > W - b.bw * 0.4)) b.targetX = W / 2;
+  // Touching the boss while it's low hurts.
+  const c = byId(driven);
+  if (c && ['slam', 'rest', 'windup'].includes(b.state)) {
+    const bb = bossBox(), cb = c.bounds;
+    if (cb.x + cb.w > bb.x0 && cb.x < bb.x1 && cb.y + cb.h > bb.y0 && cb.y < bb.y1) hurtDriven(1, b.x);
+  }
+  // The rest of the gang helps out with their special moves.
+  b.helpT -= dt;
+  if (b.helpT <= 0) {
+    b.helpT = 1.8 + Math.random();
+    const helpers = world.creatures.filter((o) => o.id !== driven && o.isGrounded && !o.isAsleep && !visitors.has(o.id) && Math.abs(o.pos.x - b.x) < 340);
+    const h = helpers[Math.floor(Math.random() * helpers.length)];
+    if (h) {
+      h.facing = b.x > h.pos.x ? 1 : -1;
+      world.startSpecial(h);
+      setTimeout(() => hurtBoss(0.5, null), 450);
+    }
+  }
+}
+
+function shockwave() {
+  shakeUntil = now_() + 0.35;
+  dustRing(boss.x);
+  for (const c of world.creatures) {
+    if (!c.isGrounded || c.pos.y > GROUND + 4 || visitors.has(c.id)) continue;
+    const d = c.pos.x - boss.x;
+    if (Math.abs(d) > 260) continue;
+    if (c.id === driven) { if (Math.abs(d) < boss.bw * 0.55) hurtDriven(1, boss.x); continue; }
+    world.endSocial(c);
+    c.ground = null; c.vel = V(Math.sign(d || 1) * (300 - Math.abs(d)), 260 + (260 - Math.abs(d))); c.set('airborne');
+  }
+}
+
+function dustRing(x) {
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 4; i++) particles.burst(FX.dust, V(x + side * (20 + i * 26), GROUND + 4), { dx: side < 0 ? [-90, -40] : [40, 90], dy: [0, 20], duration: 0.55, delay: i * 0.04, spin: 0 });
+  }
+}
+
+function updateBossUI() {
+  const btn = document.getElementById('boss');
+  if (btn) btn.classList.toggle('on', !!boss);
+}
+
+// ---- drawing
+
+const PICK = ['.ggggggg.', 'gGGGGGGGg', 'g...h...g', '....h....', '....h....', '....h....', '....h....', '....h....', '....h....', '....h....'];
+const PICK_COLORS = { g: '#5b616b', G: '#c9cfd6', h: '#8a5a34' };
+const CROWN = ['y.y.y', 'yyyyy', 'yRyRy', 'yyyyy'];
+
+function stampRows(rows, colors, x, y, p) {
+  for (let r = 0; r < rows.length; r++) for (let k = 0; k < rows[r].length; k++) {
+    const col = colors[rows[r][k]];
+    if (!col) continue;
+    ctx.fillStyle = col; ctx.fillRect(x + k * p, y + r * p, p, p);
+  }
+}
+
+let hudCache = { at: 0, y: 0 };
+function hudTop() {     // just under the header bar, however tall it wraps on this screen
+  const t = performance.now();
+  if (t - hudCache.at > 1000) { const bar = document.getElementById('bar'); hudCache = { at: t, y: bar ? Math.round(bar.getBoundingClientRect().bottom) : TOP }; }
+  return hudCache.y;
+}
+
+function drawAdventure(t) {
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  // Cracks on chipped platforms.
+  ctx.fillStyle = 'rgba(40,24,16,0.75)';
+  for (const p of platforms) {
+    if (p.broken || !p.dmg) continue;
+    const top = H - (p.y + p.h), rnd = mulberry(p.id * 31);
+    for (let i = 0; i < p.dmg * 3; i++) {
+      let x = p.x + PX * 2 + Math.floor(rnd() * (p.w - PX * 4) / PX) * PX, y = top;
+      for (let k = 0; k < 3; k++) { ctx.fillRect(x, y, PX, PX); x += (rnd() < 0.5 ? -PX : PX); y += PX; }
+    }
+  }
+  // Debris.
+  for (const d of debris) {
+    ctx.globalAlpha = Math.min(1, (d.life - d.t) * 3);
+    ctx.fillStyle = d.color;
+    const s = toScreen(d.x, d.y);
+    ctx.fillRect(Math.round(s.x), Math.round(s.y) - PX, PX, PX);
+  }
+  ctx.globalAlpha = 1;
+  // Boss (with its ground shadow and crown).
+  if (boss) {
+    const b = boss, name = { hover: 'fly', enter: 'fly', rise: 'fly', leave: 'fly', windup: 'alert', slam: 'fall', rest: 'dizzy' }[b.state] || 'idle';
+    const f = b.art.species.frame(name, t - b.t0), r = b.art.rects[f];
+    const sh = toScreen(b.x, GROUND), lift = Math.max(0, b.y - GROUND);
+    ctx.fillStyle = 'rgba(40,20,40,0.22)';
+    ctx.beginPath(); ctx.ellipse(sh.x, sh.y - 2, b.bw * 0.3 * Math.max(0.4, 1 - lift / 600), PX * 3, 0, 0, Math.PI * 2); ctx.fill();
+    if (r) {
+      const w = r.w * b.s, h = r.h * b.s, s = toScreen(b.x, b.y);
+      const jitter = b.state === 'windup' ? (Math.random() - 0.5) * 6 : 0;
+      ctx.save();
+      ctx.translate(Math.round(s.x + jitter), Math.round(s.y));
+      if (b.dir < 0 || (b.state !== 'leave' && byId(driven) && byId(driven).pos.x < b.x)) ctx.scale(-1, 1);
+      if (b.flash > 0) ctx.filter = 'brightness(2.2)';
+      ctx.drawImage(b.art.image, r.x, r.y, r.w, r.h, -w / 2, -h, w, h);
+      ctx.restore();
+      const cp = Math.max(3, Math.round(b.s * 0.9));
+      const headY = toScreen(0, b.y + b.art.species.headTop * (b.s / b.art.species.scale)).y;
+      stampRows(CROWN, { y: '#ffcf3a', R: '#e8455a' }, Math.round(s.x + jitter - cp * 2.5), Math.round(headY - cp * 4 + Math.sin(t * 3) * 2), cp);
+    }
+    // Health bar.
+    const bw = Math.min(360, W * 0.6), bx = (W - bw) / 2, by = hudTop() + 8;
+    ctx.fillStyle = 'rgba(43,36,51,0.78)'; ctx.fillRect(bx - 4, by - 4, bw + 8, 22);
+    ctx.fillStyle = '#5a2030'; ctx.fillRect(bx, by, bw, 14);
+    ctx.fillStyle = b.flash > 0 ? '#ffb3c4' : '#ff5e7e'; ctx.fillRect(bx, by, Math.round(bw * b.hp / b.max), 14);
+    ctx.font = '700 12px system-ui, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText(`👑 ${b.name}`, W / 2, by + 11);
+  }
+  // Pickaxe swings.
+  for (let i = swings.length - 1; i >= 0; i--) {
+    const sw = swings[i], c = byId(sw.id), k = (t - sw.t0) / 0.22;
+    if (!c || k > 1) { swings.splice(i, 1); continue; }
+    const s = toScreen(c.pos.x + c.facing * c.size.x * 0.12, c.pos.y + c.size.y * 0.42);
+    const p = Math.max(2, PX - 1);
+    ctx.save();
+    ctx.translate(Math.round(s.x), Math.round(s.y));
+    if (c.facing < 0) ctx.scale(-1, 1);
+    ctx.rotate(-1.3 + 3.2 * (1 - (1 - k) * (1 - k)));
+    stampRows(PICK, PICK_COLORS, -4.5 * p, -PICK.length * p, p);
+    ctx.restore();
+  }
+  // Crown on the champion.
+  const champ = byId(crownHolder);
+  if (champ) {
+    const s = toScreen(champ.pos.x, champ.pos.y + champ.species.headTop), p = Math.max(2, PX - 1);
+    stampRows(CROWN, { y: '#ffcf3a', R: '#e8455a' }, Math.round(s.x - p * 2.5), Math.round(s.y - p * 4), p);
+  }
+  // Hearts and boot fuel for the Gremlet you're driving.
+  const c = byId(driven);
+  if (c && !drivenByPeer) {
+    const p = Math.max(2, PX - 1), y0 = hudTop() + (boss ? 36 : 8);
+    for (let i = 0; i < HEARTS; i++) {
+      const full = i < life.n;
+      stampRows(['.rr.rr.', 'rRRrrrr', 'rrrrrrr', '.rrrrr.', '..rrr..', '...r...'], full ? { r: '#ff5e7e', R: '#ffd1dc' } : { r: 'rgba(43,36,51,0.25)', R: 'rgba(43,36,51,0.25)' }, 12 + i * p * 8, y0, p);
+    }
+    const fuel = c.fuel ?? 1;
+    if (fuel < 0.999) {
+      ctx.fillStyle = 'rgba(43,36,51,0.3)'; ctx.fillRect(12, y0 + p * 7 + 4, p * 39, p);
+      ctx.fillStyle = '#6fb8f0'; ctx.fillRect(12, y0 + p * 7 + 4, Math.round(p * 39 * fuel), p);
+    }
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- link sheet
+
+function updateRoomUI() {
+  if (!bridge) return;
+  applyDoor();
+  const chip = document.getElementById('roomchip');
+  if (chip) {
+    chip.hidden = !bridge.linked;
+    chip.textContent = bridge.peerOnline ? `🔗 Linked ${bridge.side === 'right' ? '→' : '←'}` : '🔗 Waiting…';
+    chip.classList.toggle('off', !bridge.peerOnline);
+  }
+  const sheet = document.getElementById('linker');
+  if (!sheet || sheet.hidden) return;
+  const choose = document.getElementById('lk-choose'), share = document.getElementById('lk-share');
+  choose.hidden = bridge.linked; share.hidden = !bridge.linked;
+  if (bridge.linked) {
+    const url = bridge.inviteUrl();
+    document.getElementById('lk-url').value = url;
+    document.getElementById('lk-status').textContent = bridge.peerOnline
+      ? `Linked! Gremlets can walk off the ${bridge.side} edge of this screen.`
+      : `Open this link on the other screen. Its ${bridge.side === 'right' ? 'left' : 'right'} edge will lead back here.`;
+    drawQR(url);
+  }
+}
+
+function drawQR(text) {
+  const holder = document.getElementById('lk-qr');
+  if (!holder || holder.dataset.text === text || !window.qrcode) return;
+  const qr = window.qrcode(0, 'M');
+  qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), cell = Math.max(3, Math.floor(200 / (n + 8)));
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = (n + 8) * cell;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = '#2b2433';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect((c + 4) * cell, (r + 4) * cell, cell, cell);
+  holder.replaceChildren(cv);
+  holder.dataset.text = text;
+}
+
+function wireLinker() {
+  const sheet = document.getElementById('linker');
+  if (!sheet || !bridge) return;
+  const open = () => { sheet.hidden = false; updateRoomUI(); };
+  const close = () => { sheet.hidden = true; };
+  document.getElementById('link').addEventListener('click', open);
+  document.getElementById('lk-close').addEventListener('click', close);
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) close(); });
+  for (const b of sheet.querySelectorAll('[data-side]')) b.addEventListener('click', () => { bridge.create(b.dataset.side); updateRoomUI(); });
+  document.getElementById('lk-copy').addEventListener('click', async (e) => {
+    const input = document.getElementById('lk-url');
+    try { await navigator.clipboard.writeText(input.value); e.target.textContent = 'Copied'; }
+    catch { input.select(); e.target.textContent = 'Selected'; }
+    setTimeout(() => (e.target.textContent = 'Copy link'), 1800);
+  });
+  document.getElementById('lk-unlink').addEventListener('click', () => { bridge.unlink(); updateRoomUI(); });
+  document.getElementById('lk-rain').addEventListener('click', () => { summonCloud(bridge.side === 'right' ? 'left' : 'right'); close(); });
+}
+
 // ---------------------------------------------------------------- UI
 
 function updateCount() {
@@ -615,7 +1329,45 @@ async function start() {
       const picks = index.map((s) => s.id).sort(() => Math.random() - 0.5).slice(0, Math.min(innerWidth, innerHeight) < 600 ? 5 : 8);
       for (const id of picks) addGremlet(id);
     });
+    const hintEl = document.getElementById('hint');
+    if (hintEl && matchMedia('(pointer: coarse)').matches) hintEl.textContent = hintEl.textContent.replace('Double-click', 'Double-tap');
     setTimeout(() => document.getElementById('hint')?.classList.add('gone'), 7000);
+    if (bridge) {
+      bridge.onWalk = arriveThroughDoor;
+      bridge.onVisitor = (n) => {
+        if (n.kind === 'boss') spawnBoss({ species: n.species, hp: Math.max(1, Math.min(24, +n.hp || 24)), side: bridge.side, y: GROUND + clamp01(n.y) * usableH() });
+        else summonCloud(bridge.side, GROUND + clamp01(n.y) * usableH());
+      };
+      bridge.onKeys = (n) => {
+        if (driven == null) return;
+        keys.left = !!n.keys?.left; keys.right = !!n.keys?.right; keys.up = !!n.keys?.up;
+        if (n.act) act(n.act);
+      };
+      bridge.onStatus = updateRoomUI;
+      wireLinker();
+      bridge.start();
+      setInterval(updateRoomUI, 5000);
+      if (bridge.justJoined) setTimeout(() => { document.getElementById('linker').hidden = false; updateRoomUI(); }, 400);
+      updateRoomUI();
+    }
+    wirePad();
+    document.getElementById('rain')?.addEventListener('click', () => summonCloud());
+    document.getElementById('boss')?.addEventListener('click', () => {
+      if (boss) return;
+      spawnBoss();
+      if (driven == null && !remoteDrive) {
+        const mid = W / 2, pick = [...world.creatures].filter((c) => !visitors.has(c.id)).sort((a, b) => Math.abs(a.pos.x - mid) - Math.abs(b.pos.x - mid))[0];
+        if (pick) takeControl(pick);
+      }
+    });
+    if (params.has('boss')) setTimeout(() => spawnBoss(), 1200);
+    try {
+      const champ = localStorage.getItem('gremlets.crown');
+      const c = champ && world.creatures.find((o) => o.species.id === champ);
+      if (c) crownHolder = c.id;
+    } catch { /* private mode */ }
+    // Now and then a rain cloud drifts by on its own.
+    setInterval(() => { if (!document.hidden && Math.random() < 0.1) summonCloud(); }, 60_000);
     if (link?.paired) {
       for (const v of loadVisitors()) await arrive(v.species, v.harvest || [], true);
       link.onArrive = ({ species }) => arrive(species);
@@ -625,7 +1377,7 @@ async function start() {
       updateLinkUI();
     }
   }
-  if (params.has('debug')) window.gremlets = { world, toScreen, particles };
+  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; } };
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 

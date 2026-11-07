@@ -97,6 +97,8 @@ export class Bridge {
     try { note = JSON.parse(msg.message); } catch { return; }
     if (!note || note.v !== 1 || note.from === this.device) return;
     this.peerSeen = Date.now();
+    // The Mac says how mossy it is: this screen's branches grow to match.
+    if (typeof note.moss === 'number' && note.moss !== this.peerMoss) { this.peerMoss = note.moss; this.onMoss?.(); }
     if (note.type === 'hello') { this.onStatus(); if (!note.reply) this.send({ type: 'hello', side: this.side, reply: true }); return; }
     // Notes are addressed to the edge they arrive through, which is our doorway.
     if (note.to !== this.side) return;

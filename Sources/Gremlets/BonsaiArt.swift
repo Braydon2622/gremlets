@@ -393,6 +393,35 @@ enum MossArt {
 }
 
 extension MossArt {
+    /// A bridge the moss has woven between two windows: a deck of moss on twisted stems, a vine rail sagging above
+    /// it, a few tendrils and a flower hanging below.
+    static func bridge(lengthPx: Int, seed: UInt64, night: Bool) -> CGImage {
+        let w = max(8, lengthPx), h = 12
+        var cv = PixelCanvas(w, h)
+        var r = ArtRNG(s: seed &* 31 &+ 5)
+        // Stems underneath, then the mossy deck (row 3 is the walking surface, like the carpets).
+        for x in 0..<w { cv.set(x, 2, (x / 3) % 2 == 0 ? 0x6B4428 : 0x8A5A35) }
+        var x = 0.0
+        while x < Double(w) { let rad = r.range(1.6, 2.6); cv.blob(x, 3.6, rad, 1.3, base: mid, light: light, shade: deep); x += rad * 1.2 }
+        cv.hspan(0, w - 1, 3, mid)
+        // The vine rail, sagging between the ends, with leaves.
+        for xx in 0..<w {
+            let t = Double(xx) / Double(max(1, w - 1))
+            let y = 9 - Int((sin(t * .pi) * 3).rounded())
+            cv.set(xx, y, deep)
+            if xx % 5 == 2 { cv.set(xx, y + 1, light) }
+            if xx % 9 == 4 { cv.vspan(xx, 4, y, deep) }    // a strand tying rail to deck
+        }
+        // Tendrils hanging under it, and a flower (or a glowing cap after dark).
+        for xx in stride(from: 3, to: w - 2, by: 6) where r.next() < 0.7 {
+            for k in 0..<Int(r.range(1, 3.9)) { cv.set(xx, 1 - k, k % 2 == 0 ? mid : light) }
+        }
+        let fx = w / 2
+        if night { cv.set(fx, 5, 0xEBDDC3); cv.hspan(fx - 1, fx + 1, 6, 0x5FE8FF) } else { cv.set(fx, 5, 0xFF8FB1); cv.set(fx - 1, 5, 0xFFD6E6) }
+        cv.outline(0.75)
+        return cv.image
+    }
+
     /// A platform woven into an edge vine: a mat of moss on a few twisted stems, a little hanging below.
     static func pad(seed: UInt64, night: Bool) -> CGImage {
         let w = Int(MossPad.width / 3), h = 9

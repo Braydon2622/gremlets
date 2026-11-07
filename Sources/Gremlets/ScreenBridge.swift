@@ -21,6 +21,8 @@ final class ScreenBridge {
     private(set) var connected = false
     private(set) var peerSeen: Date?
     var onWalk: (Walk) -> Void = { _ in }
+    /// How mossy this Mac is (minutes), sent with every hello so the other screen's branches grow to match.
+    var moss: () -> Int = { 0 }
     /// The sky ferry sailing in from the other screen, with passengers (species ids) and how high up it was.
     var onFerry: ([String], Double) -> Void = { _, _ in }
     var onStatus: () -> Void = {}
@@ -50,6 +52,22 @@ final class ScreenBridge {
         var rng = SystemRandomNumberGenerator()
         return String((0..<n).map { _ in alphabet[Int(rng.next() % UInt64(alphabet.count))] })
     }
+
+    /// Joins a friend's room (their code), with the doorway on the opposite edge to theirs: their Gremlets walk
+    /// off their right edge and in from our left.
+    func join(code: String) -> Bool {
+        let room = code.lowercased().filter { $0.isLetter || $0.isNumber }
+        guard room.count >= 8, room.count <= 24 else { return false }
+        stop()
+        UserDefaults.standard.set(room, forKey: roomKey)
+        UserDefaults.standard.set("left", forKey: sideKey)
+        peerSeen = nil
+        start()
+        return true
+    }
+
+    /// The other side is a Mac (a friend's), not the web habitat.
+    private(set) var peerIsMac = false
 
     /// Starts a new room with the doorway on `side` of this screen.
     func create(side: String) {
@@ -81,7 +99,7 @@ final class ScreenBridge {
                     req.timeoutInterval = 300
                     let (bytes, response) = try await URLSession.shared.bytes(for: req)
                     guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
-                    await MainActor.run { self.connected = true; self.onStatus(); self.send(["type": "hello", "side": self.side ?? "right"]) }
+                    await MainActor.run { self.connected = true; self.onStatus(); self.send(["type": "hello", "side": self.side ?? "right", "moss": self.moss(), "device": "mac"]) }
                     backoff = 2
                     for try await line in bytes.lines { self.handle(line) }
                 } catch {
@@ -95,7 +113,7 @@ final class ScreenBridge {
         beat?.invalidate()
         beat = Timer.scheduledTimer(withTimeInterval: 45, repeats: true) { [weak self] _ in
             guard let self else { return }
-            self.send(["type": "hello", "side": self.side ?? "right"])
+            self.send(["type": "hello", "side": self.side ?? "right", "moss": self.moss(), "device": "mac"])
             self.onStatus()   // lets the door close when the other screen has gone quiet
         }
     }
@@ -125,7 +143,8 @@ final class ScreenBridge {
             self.peerSeen = Date()
             switch note["type"] as? String {
             case "hello":
-                if note["reply"] == nil { self.send(["type": "hello", "side": self.side ?? "right", "reply": true]) }
+                self.peerIsMac = note["device"] as? String == "mac"
+                if note["reply"] == nil { self.send(["type": "hello", "side": self.side ?? "right", "reply": true, "moss": self.moss(), "device": "mac"]) }
                 self.onStatus()
             case "walk":
                 // Notes are addressed to the edge they arrive through, which is our doorway.

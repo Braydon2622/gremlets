@@ -194,8 +194,9 @@ struct Brain {
 
     static func reweighted(_ choices: [Choice], _ world: World) -> [Choice] {
         if world.claudeWorking {
+            // Busy while Claude works: lots of gardening, less standing about.
             return choices.map { ch in
-                let k = gardening.contains(ch.name) ? 4.0 : (ch.name == "sleep" || ch.name == "goHome" ? 0.4 : 1.0)
+                let k = gardening.contains(ch.name) ? 4.0 : (ch.name == "sleep" || ch.name == "goHome" ? 0.4 : (ch.name == "idle" ? 0.5 : 1.0))
                 return Choice(name: ch.name, weight: ch.weight * k, start: ch.start)
             }
         }

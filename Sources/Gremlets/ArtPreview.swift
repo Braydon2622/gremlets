@@ -107,12 +107,12 @@ enum ArtPreview {
         }
         ctxW.draw(ClimateArt.leafUmbrella, in: CGRect(x: 460, y: 100, width: 25 * 7, height: 15 * 7))
         ctxW.draw(ClimateArt.splash, in: CGRect(x: 660, y: 140, width: 7 * 10, height: 4 * 10))
-        for (i, lit) in [false, true].enumerated() {
-            let h = NotchArt.house(lit: lit)
-            ctxW.draw(h, in: CGRect(x: 120 + i * 190, y: 20, width: h.width * 6, height: h.height * 6))
+        for (i, month) in [4, 7, 10, 1].enumerated() {
+            let h = NotchArt.house(lit: i % 2 == 1, month: month, mail: i == 2)
+            ctxW.draw(h, in: CGRect(x: 10 + i * 150, y: 10, width: h.width * 5, height: h.height * 5))
         }
-        let hm = NotchArt.hammock(widthPx: 20)
-        ctxW.draw(hm, in: CGRect(x: 520, y: 40, width: hm.width * 6, height: hm.height * 6))
+        let hm = NotchArt.hammock(widthPx: 20, lights: true)
+        ctxW.draw(hm, in: CGRect(x: 620, y: 40, width: hm.width * 6, height: hm.height * 6))
         write(ctxW.makeImage()!, dir.appendingPathComponent("weather.png"))
         // The shelf trees: four seeds at two heights, summer and autumn, the last one mirrored, each with its shelf.
         let tW = PropArt.treeWidthPx * 3 + 30, tH = 120 * 3 + 20

@@ -593,8 +593,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             link.submenu = lm
             menu.addItem(link)
+            let friend = NSMenuItem(title: "Visit a Friend's Mac", action: nil, keyEquivalent: "")
+            let fm = NSMenu()
+            for (title, sel) in [("Invite a Friend…", #selector(inviteFriend)), ("Join a Friend's Code…", #selector(joinFriend))] {
+                let it = NSMenuItem(title: title, action: sel, keyEquivalent: ""); it.target = self; fm.addItem(it)
+            }
+            friend.submenu = fm
+            menu.addItem(friend)
         } else {
-            let st = NSMenuItem(title: bridge.peerOnline ? "iPad linked · \(bridge.side ?? "right") edge" : "iPad link · waiting for it to open…", action: nil, keyEquivalent: "")
+            let other = bridge.peerIsMac ? "Friend's Mac" : "iPad"
+            let st = NSMenuItem(title: bridge.peerOnline ? "\(other) linked · \(bridge.side ?? "right") edge" : "Link · waiting for the other screen…", action: nil, keyEquivalent: "")
             let lm = NSMenu()
             let away = bridge.away.compactMap { species[$0]?.info.name }
             if !away.isEmpty {
@@ -945,6 +953,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         phone.onArrive = { [weak self] arrival in self?.arriveFromPhone(arrival) }
         phone.onStatus = { [weak self] in self?.rebuildMenu() }
         bridge.onWalk = { [weak self] w in self?.arriveThroughBridge(w) }
+        bridge.moss = { [weak self] in Int(self?.world.mossMinutes ?? 0) }
         bridge.onFerry = { [weak self] riders, y in self?.ferryArrivesThroughBridge(riders: riders, yFrac: y) }
         bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
         bridge.start()
@@ -1730,6 +1739,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         showLinkCode()
     }
 
+    /// Visiting a friend's Mac: a room on the relay both Macs join; the doorway is this Mac's right edge.
+    @objc private func inviteFriend() {
+        if !bridge.linked { bridge.create(side: "right"); updateDoor() }
+        let code = bridge.room ?? ""
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
+        let a = NSAlert()
+        a.messageText = "Your friend code: \(code)"
+        a.informativeText = "It's copied. Send it to a friend who has Gremlets; they choose Join a Friend's Mac and paste it. Your Gremlets walk off the right edge of your screen and onto theirs (and theirs onto yours), and wander home when they're ready. Only Gremlet names travel, through a public relay."
+        NSApp.activate(ignoringOtherApps: true)
+        a.runModal()
+        rebuildMenu()
+    }
+
+    @objc private func joinFriend() {
+        let a = NSAlert()
+        a.messageText = "Join a friend's Mac"
+        a.informativeText = "Paste the code your friend sent you."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        a.accessoryView = field
+        a.addButton(withTitle: "Join"); a.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        a.window.initialFirstResponder = field
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        if !bridge.join(code: field.stringValue) {
+            let e = NSAlert(); e.messageText = "That code doesn't look right"; e.informativeText = "It's 12 letters and numbers."; e.runModal()
+        }
+        updateDoor()
+        rebuildMenu()
+    }
+
     @objc private func showLinkCode() {
         if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/link") { NSWorkspace.shared.open(url) }
         rebuildMenu()
@@ -1808,9 +1848,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// A Gremlet comes in from the other screen, through the doorway, keeping its stride.
     private func arriveThroughBridge(_ w: ScreenBridge.Walk) {
         guard let sp = species[w.species], let main = WindowTracker.screens().first else { return }
+        let cameHome = bridge.away.contains(w.species)
         bridge.away = bridge.away.filter { $0 != w.species }
         if world.door == nil { updateDoor() }
         guard let c = world.arriveThroughDoor(sp.info, yFrac: w.y, vx: w.vx, vy: w.vy, airborne: w.air) else { return }
+        // Home from a friend's Mac with a postcard for the mailbox (or a visitor arriving from theirs).
+        if bridge.peerIsMac {
+            if cameHome { world.mailWaiting = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }
+                self.overlay.showBubble(cameHome ? "Back! I brought a postcard 💌" : "Hi! Just visiting 🎒", on: c.id, seconds: 2.6)
+            }
+            saveRoster(); schedule(rate: 60); rebuildMenu()
+            return
+        }
         let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
         overlay.sparkle(at: Vec2(edgeX, c.pos.y + c.size.y * 0.5))
         saveRoster()

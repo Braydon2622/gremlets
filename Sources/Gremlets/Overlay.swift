@@ -1647,7 +1647,8 @@ final class OverlayController {
             return
         }
         guard let si = layerScreen[c.id] else { return }
-        let style = c.ride == .bounce || c.ride == .balloon ? Ride.seed : c.ride
+        // Only the dandelion and the leaf are ever drawn (anything else from an older save becomes a dandelion).
+        let style: Ride = c.ride == .leaf || c.ride == .umbrella ? .leaf : .dandelion
         if let existing = balloons[c.id], existing.name != style.rawValue {
             existing.removeFromSuperlayer(); balloons[c.id] = nil
         }

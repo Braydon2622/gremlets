@@ -76,3 +76,27 @@ import Testing
         #expect(c.isGrounded && c.pos.y < 100, "landed down below (\(c.pos))")
     }
 }
+
+@Suite struct MossBridgeTests {
+    @Test func mossWeavesABridgeBetweenWindowsSideBySide() throws {
+        let w = World(seed: 141)
+        w.maxHobbies = 0
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        let wins = [WindowInfo(id: 1, frame: Rect(x: 100, y: 0, w: 500, h: 400)), WindowInfo(id: 2, frame: Rect(x: 700, y: 0, w: 500, h: 410))]
+        w.setEnvironment(screens: [scr], windowsFrontToBack: wins)
+        w.mossMinutes = 30
+        w.rebuildVines()
+        #expect(w.mossBridges.isEmpty, "not yet")
+        w.mossMinutes = 90
+        w.rebuildVines()
+        let b = try #require(w.mossBridges.first)
+        #expect(b.minX < 600 && b.maxX > 700)
+        // A Gremlet can walk across it from one window to the other.
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(560, 420))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        c.facing = 1; c.targetX = 760
+        w.startMossTask(c, .water(window: 2, offset: 60), walkTo: 760)
+        for _ in 0..<(60 * 15) where c.groundOwner != 2 { w.step(1.0 / 60) }
+        #expect(c.groundOwner == 2, "crossed the bridge (at \(c.pos))")
+    }
+}

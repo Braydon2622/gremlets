@@ -79,6 +79,11 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   wind sends the kites up. It only shows where it lands, never across your work. In the rain the Gremlets hold a
   leaf over their heads and keep the kites in; when the snow is deep they roll a snow-Gremlet together, which melts
   when the snow goes. `gremlet weather rain|storm|snow|wind` previews it for two minutes.
+- **Moss that needs looking after.** It grows all the time (faster while Claude works), carpets the tops of
+  windows, trickles down their sides, and weaves bridges between windows that sit side by side. It dries out and
+  browns unless the Gremlets water it, so they do: they carry the watering can over, plant tufts they bring along,
+  trim the thick carpets, and when a strand hangs past half-way down a window one climbs down and snips it while a
+  friend holds it steady. They also slide down strands like a fire pole.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It
@@ -90,6 +95,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   Battery low, one holds up a little battery sign (and cheers when you plug in); the internet drops, one holds up a
   "no signal" sign until it's back. No permissions: only the screenshot tool's window name, the battery level and
   the network state are read. (`gremlet boost`, `gremlet react screenshot|battery|offline|online`.)
+- **Visit a friend's Mac.** Menu → Visit a Friend's Mac → Invite a Friend gives you a code; your friend joins with
+  it. Your Gremlets walk off your screen onto theirs (theirs onto yours) and wander home when they're ready, and one
+  that comes back brings a postcard: the hanging house's mailbox flag goes up until someone goes home and takes it in.
 - **Walk off the Mac onto your iPad.** Link another screen (an iPad, a phone, a friend's laptop running the web
   habitat; the Gremlets menu shows a QR code) and put it against one edge of your Mac. A Gremlet that wanders to that
   edge walks straight off the Mac and in from the opposite edge of the other screen, keeping its stride and speed

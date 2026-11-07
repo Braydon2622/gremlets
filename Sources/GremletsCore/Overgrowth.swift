@@ -18,6 +18,13 @@ public struct MossVine: Equatable, Sendable {
     public var length: Double { top - bottom }
 }
 
+/// A bridge the moss weaves between two windows whose tops sit close together, side by side.
+public struct MossBridge: Equatable, Sendable {
+    public let key: String
+    public let minX: Double, maxX: Double, y: Double
+    public let leftWindow: Int, rightWindow: Int
+}
+
 public struct MossPad: Equatable, Sendable {
     public let id: Int
     public let vine: String
@@ -111,6 +118,21 @@ extension World {
             }
         }
         mossVines = out
+        // Moss bridges: from an hour of moss, between window tops 24 to 200 points apart at about the same height.
+        var bridges: [MossBridge] = []
+        if m >= 60 {
+            let tops = builtSurfaces.filter { $0.kind == .windowTop && $0.ownerID >= 0 && $0.width >= 40 }
+            for a in tops { for b in tops where a.ownerID != b.ownerID && b.minX > a.maxX {
+                let gap = b.minX - a.maxX
+                guard gap >= 24, gap <= 200, abs(a.y - b.y) < 22,
+                      // Nothing else in the way.
+                      !tops.contains(where: { $0.ownerID != a.ownerID && $0.ownerID != b.ownerID && $0.minX < b.minX && $0.maxX > a.maxX && abs($0.y - a.y) < 60 }),
+                      !bridges.contains(where: { $0.leftWindow == a.ownerID || $0.rightWindow == b.ownerID }) else { continue }
+                bridges.append(MossBridge(key: "\(a.ownerID)-\(b.ownerID)", minX: a.maxX - 6, maxX: b.minX + 6, y: min(a.y, b.y), leftWindow: a.ownerID, rightWindow: b.ownerID))
+            } }
+        }
+        if bridges.count > 3 { bridges = Array(bridges.prefix(3)) }
+        if bridges != mossBridges { mossBridges = bridges; rebuildMossSurfaces() }
         // Pads only stay where their vine still reaches.
         let before = mossPads.count
         mossPads.removeAll { p in
@@ -122,7 +144,7 @@ extension World {
         }
         // Patches only live on windows that are still there.
         mossPatches.removeAll { windows[$0.windowID] == nil }
-        if mossPads.count != before || mossPadSurfaces.count != mossPads.count { rebuildMossSurfaces() }
+        if mossPads.count != before || mossPadSurfaces.count != mossPads.count + mossBridges.count { rebuildMossSurfaces() }
     }
 
     private func lastVine(_ key: String) -> MossVine? { mossVines.first { $0.key == key } }
@@ -133,6 +155,8 @@ extension World {
             let y = v.bottom + p.height
             let lo = side < 0 ? v.x - 8 : v.x + 8 - MossPad.width
             return Surface(ownerID: World.mossPadOwnerBase - p.id, kind: .plant, y: y, minX: lo, maxX: lo + MossPad.width)
+        } + mossBridges.enumerated().map { n, b in
+            Surface(ownerID: World.mossPadOwnerBase - 2800 - n, kind: .plant, y: b.y, minX: b.minX, maxX: b.maxX)
         }
         setSurfacesDirty()
     }
@@ -228,6 +252,11 @@ extension World {
     func startMossTask(_ c: Creature, _ kind: MossTask.Kind, walkTo x: Double) {
         endSocial(c)
         c.mossTask = MossTask(kind: kind, started: clock)
+        switch kind {
+        case .plant: c.carrying = "sprout"
+        case .water, .tend: c.carrying = "can"
+        default: c.carrying = nil
+        }
         c.targetX = x; c.facing = x > c.pos.x ? 1 : -1
         c.set(.walk, duration: 30)
         // While Claude works they're busy gardeners: the next moss job comes round quickly.
@@ -252,6 +281,7 @@ extension World {
 
     /// The next step of a moss task when the current activity ends.
     func mossDecide(_ c: Creature) {
+        defer { if c.mossTask == nil { c.carrying = nil } }
         guard var t = c.mossTask, let s = supportingSurface(for: c) else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
         if clock - t.started > 60 { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
         switch t.kind {
@@ -260,7 +290,7 @@ extension World {
             let x = w.minX + offset
             if !t.acting {
                 if abs(c.pos.x - x) > 6 { c.targetX = x; c.set(.walk, duration: 20); return }
-                t.acting = true; c.mossTask = t
+                t.acting = true; c.mossTask = t; c.carrying = nil
                 c.workPose = "crouch"; c.set(.work, duration: 2.4)
                 return
             }

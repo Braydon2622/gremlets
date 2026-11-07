@@ -67,8 +67,10 @@ public enum Ride: String, CaseIterable, Sendable {
     case bounce
 
     // All from nature: no party balloons or umbrellas.
-    static let up: [Ride] = [.seed, .bubble, .dandelion, .bounce]
-    static let down: [Ride] = [.seed, .leaf, .leaf, .dandelion]
+    // A dandelion to float up on (or a bouncy mushroom), a leaf to drift down under. No spinning seed or bubble:
+    // from across the room they looked like a flying saucer carrying the Gremlet off.
+    static let up: [Ride] = [.dandelion, .dandelion, .bounce]
+    static let down: [Ride] = [.leaf, .leaf, .dandelion]
 }
 
 public final class Job {
@@ -96,7 +98,7 @@ public final class Job {
     var lastShelfY: Double?
     /// How many times you've clicked the platform (the platform layer plays a reaction each time).
     public internal(set) var platformPokes = 0
-    var rideUp: Ride = .seed
+    var rideUp: Ride = .dandelion
     /// The bouncy mushroom (where and when), for the platform layer to draw.
     public internal(set) var bounceAt: Double?
     public internal(set) var bounceSpot: Vec2?
@@ -557,7 +559,7 @@ extension World {
             c.set(.fly, duration: 10)
             emit(.tookOff(c.id))
         } else {
-            startFloat(c, to: target, ride: [Ride.seed, .bubble, .dandelion][Int(rng.next() % 3)])
+            startFloat(c, to: target, ride: [Ride.dandelion, .leaf][Int(rng.next() % 2)])
         }
     }
 
@@ -618,7 +620,7 @@ extension World {
     // MARK: Simulation
 
     /// Balloon ride: rises a little, drifts over, then settles down onto the target. Ignores platforms on the way.
-    func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .seed) {
+    func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .dandelion) {
         endSocial(c)
         c.ride = ride
         c.floatTarget = target
@@ -746,7 +748,7 @@ extension World {
                 let launchX = sp.x.clamped(support.minX + 30, support.maxX - 30)
                 if abs(launchX - c.pos.x) > 8 {
                     c.facing = launchX > c.pos.x ? 1 : -1
-                    if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { j.rideUp = .seed }
+                    if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { j.rideUp = .dandelion }
                     else if c.activity != .walk { c.set(.walk, duration: 9999) }
                     return true
                 }
@@ -769,7 +771,7 @@ extension World {
                 c.set(.fly, duration: 10)
                 emit(.tookOff(c.id))
             } else {
-                startFloat(c, to: sp, ride: j.rideUp == .bounce ? .seed : j.rideUp)
+                startFloat(c, to: sp, ride: j.rideUp == .bounce ? .dandelion : j.rideUp)
             }
             return true
         }

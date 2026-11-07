@@ -136,7 +136,7 @@ enum ClimateArt {
 enum NotchArt {
     /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
     /// window glows (Claude is working, or it's night).
-    static func house(lit: Bool) -> CGImage {
+    static func house(lit: Bool, month: Int = 6, mail: Bool = false) -> CGImage {
         // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each).
         let w = 23, h = 17
         var cv = PixelCanvas(w, h)
@@ -161,12 +161,28 @@ enum NotchArt {
         cv.rect(9, 2, 4, 6, 0x5E3B22); cv.set(12, 5, 0xE0B04A)
         // A tiny lantern on the porch post when it's lit.
         if lit { cv.set(w - 1, 5, 0xFFC845); cv.set(w - 1, 6, 0xFFE9A0) }
+        // The mailbox on the porch, its little red flag up when there's a postcard in it.
+        cv.vspan(18, 2, 3, 0x6B4428); cv.rect(17, 4, 3, 2, 0x8E877B); cv.set(17, 5, 0xB8B1A4)
+        if mail { cv.vspan(20, 4, 6, 0x5E3B22); cv.set(21, 6, 0xE8574A); cv.set(21, 5, 0xE8574A) }
+        // The roof through the seasons.
+        var r = ArtRNG(s: 4242)
+        for y in 10..<17 { for x in -1..<16 {
+            guard let c = cv.get(x, y), [0x5E9E46, 0x8BD66A, 0x3E7A34].contains(c) else { continue }
+            switch month {
+            case 3, 4, 5: if r.next() < 0.3 { cv.set(x, y, r.next() < 0.5 ? 0xFF8FB1 : 0xFFD6E6) }           // blossom
+            case 9, 10, 11: cv.set(x, y, [0xD9853A, 0xC2462E, 0xE8B04A, 0x9E5C34][Int(r.next() * 4)])        // autumn leaves
+            case 12, 1, 2: if y >= 12 || r.next() < 0.5 { cv.set(x, y, r.next() < 0.8 ? 0xF4F8FF : 0xD6E2F2) } // snow
+            default: break
+            }
+        } }
+        if [12, 1, 2].contains(month) { for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 9, 0xBFE3F7) } }   // icicles
+        if [6, 7, 8].contains(month) { cv.set(7, 5, 0xFFC845); cv.set(7, 6, 0x9E5C34) }                           // a sunflower in the box
         cv.outline(0.6)
         return cv.image
     }
 
     /// A hammock, sagging, woven in two colours, `widthPx` long.
-    static func hammock(widthPx: Int) -> CGImage {
+    static func hammock(widthPx: Int, lights: Bool = false) -> CGImage {
         let w = max(10, widthPx), h = 6
         var cv = PixelCanvas(w, h)
         for x in 0..<w {
@@ -175,6 +191,8 @@ enum NotchArt {
             let top = 4 - sag
             cv.set(x, top, x % 4 < 2 ? 0xE8D7B0 : 0xD9855A)
             cv.set(x, top + 1, x % 4 < 2 ? 0xC9B48A : 0xB8683F)
+            // Fairy lights strung along it after dark.
+            if lights && x % 5 == 2 { cv.set(x, top + 2 < h ? top + 2 : top, [0xFFE45C, 0xFF8FB1, 0x8FD3FF][(x / 5) % 3]) }
         }
         cv.outline(0.7)
         return cv.image

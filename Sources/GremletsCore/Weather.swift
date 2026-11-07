@@ -102,7 +102,7 @@ extension World {
     /// In the rain, a Gremlet out and about holds a big leaf over its head.
     public func holdsLeaf(_ c: Creature) -> Bool {
         guard let w = weather, w.sky.isWet, c.isGrounded, c.sign == nil, c.blocksInHand == 0, c.job == nil,
-              c.snowmanTask == nil, [.walk, .idle, .run].contains(c.activity) else { return false }
+              c.snowmanTask == nil, c.carrying == nil, [.walk, .idle, .run].contains(c.activity) else { return false }
         return !World.isBonsaiOwner(c.groundOwner)
     }
 

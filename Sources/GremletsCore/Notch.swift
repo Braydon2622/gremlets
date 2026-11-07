@@ -18,6 +18,8 @@ public struct NotchHome: Equatable, Sendable {
     public var houseBottom: Double { menuBottom - 92 }
     /// The porch: the house's floor, running out to the right.
     public var porch: (minX: Double, maxX: Double, y: Double) { (houseMinX - 2, houseMinX + houseWidth + 22, houseBottom) }
+    /// A plank swing hanging under the porch.
+    public var swing: (minX: Double, maxX: Double, y: Double) { (houseMinX + 6, houseMinX + 34, houseBottom - 34) }
     /// The hammock, strung under the middle of the notch.
     public var hammock: (minX: Double, maxX: Double, y: Double) {
         let mid = max((minX + maxX) / 2, houseMinX + houseWidth + 56)
@@ -26,8 +28,8 @@ public struct NotchHome: Equatable, Sendable {
 }
 
 extension World {
-    static let notchPorchOwner = -430_001, notchHammockOwner = -430_002
-    static func isNotchOwner(_ o: Int?) -> Bool { o == notchPorchOwner || o == notchHammockOwner }
+    static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003
+    static func isNotchOwner(_ o: Int?) -> Bool { o == notchPorchOwner || o == notchHammockOwner || o == notchSwingOwner }
 
     /// The home only shows (and can be reached) while no window is in the space under the notch: it never sits over
     /// a toolbar or a title bar.
@@ -40,7 +42,8 @@ extension World {
     var notchSurfaces: [Surface] {
         guard let n = notchHome, notchHomeShowing else { return [] }
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
-                Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX)]
+                Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
+                Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
     }
 
     /// Who's napping in the hammock.
@@ -66,6 +69,8 @@ extension World {
     /// Arrived at the hanging house: into the hammock if it's free (and it fancies it), otherwise in through the door.
     func settleInHammock(_ c: Creature) {
         guard let n = notchHome else { return }
+        // Whoever gets home first takes in the post.
+        if mailWaiting { mailWaiting = false; mailEvents += 1 }
         nextNotchTripAt = clock + rng.range(300, 700)
         let hammockFree = hammockNapper == nil && hammockSleeper == nil
         if !hammockFree || rng.chance(0.45), let door = notchDoorX, c.groundOwner == World.notchPorchOwner {

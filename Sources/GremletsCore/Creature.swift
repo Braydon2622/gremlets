@@ -83,6 +83,8 @@ public final class Creature {
     public internal(set) var sign: HeldSign?
     /// Something to do with the moss (plant, tend, climb, build a pad), and a climb in progress.
     var mossTask: MossTask?
+    /// Something carried overhead on the way to a job: "sprout" (a tuft of moss to plant), "can" (the watering can).
+    public internal(set) var carrying: String?
     /// The snow-Gremlet it's helping to build (see Weather.swift).
     var snowmanTask: Int?
     /// When it came over from the linked screen on the sky ferry (it gets off here rather than riding straight back).
@@ -130,7 +132,7 @@ public final class Creature {
     /// No new hobby before this (world clock): a breather after finishing one.
     var hobbyRestUntil = 0.0
     /// What it's floating with (balloon, bubble, dandelion, umbrella, leaf), for the platform layer to draw.
-    public internal(set) var ride: Ride = .seed
+    public internal(set) var ride: Ride = .dandelion
     /// Where a balloon ride is headed.
     var floatTarget: Vec2?
     /// Dozing next to its project because you stepped away.

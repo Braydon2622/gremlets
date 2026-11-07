@@ -36,7 +36,7 @@ extension World {
                     age: 0, duration: rng.range(28, 45), seed: rng.next(), dir: dir)
         c.idleVariant = "look"
         c.set(.idle, duration: 9999)
-        nextKiteAt = clock + rng.range(600, 1500)
+        nextKiteAt = clock + rng.range(300, 800)
         return true
     }
 

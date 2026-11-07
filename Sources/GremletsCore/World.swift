@@ -91,6 +91,7 @@ public final class World {
     public static let mossMax = 300.0
     public internal(set) var mossVines: [MossVine] = []
     public internal(set) var mossPads: [MossPad] = []
+    public internal(set) var mossBridges: [MossBridge] = []
     public internal(set) var mossPatches: [MossPatch] = []
     var mossPadSurfaces: [Surface] = []
     var mossEvents: [MossEvent] = []
@@ -127,6 +128,11 @@ public final class World {
     var nextNotchTripAt = 0.0
     /// The Gremlet napping (or about to) in the notch hammock: id, since when, and whether it has dozed off yet.
     var hammockNapper: (Int, Double, Bool)?
+    /// A postcard in the hanging house's mailbox (a Gremlet came back from a friend's Mac); the flag is up until
+    /// someone goes home and takes it in.
+    public var mailWaiting = false
+    /// Counts mail taken in (the platform layer shows a little moment for it).
+    public internal(set) var mailEvents = 0
     /// The huts hanging beside live Claude terminals (see Pod.swift).
     public internal(set) var podPlacements: [PodPlacement] = []
     /// Resting project trees on brackets up the side of the screen (off by default; see rebuildAttached).
@@ -543,6 +549,7 @@ public final class World {
             endSocial(c)
             // A grove errand that ran out of time (or got interrupted) is over: never leave it hanging.
             if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
+            if c.mossTask == nil { c.carrying = nil }
             if compact { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }

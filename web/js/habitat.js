@@ -76,7 +76,7 @@ function applyDoor() {
   const x = door === 'left' ? -DOOR : 0, w = W + (door ? DOOR : 0);
   if (bonsai && isleGone()) placeBonsai();
   // The ledges and the bonsai's foliage pads are the "windows": the engine makes their top edges one-way platforms.
-  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], [...platforms.filter((p) => !p.broken), ...bonsaiPlatforms()]);
+  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], [...platforms.filter((p) => !p.broken), ...bonsaiPlatforms(), ...homePlatforms()]);
 }
 
 /** Floating ledges to climb (the web stand-in for app windows), each a biome island. Spaced so every species can jump between them. */
@@ -85,15 +85,16 @@ function makePlatforms() {
   const rows = showcase ? 1 : Math.max(1, Math.min(4, Math.floor(usable / 140)));
   const out = [];
   let id = 1;
+  // Mossy branches growing in from the screen's sides (like the Mac's shelves: nature, nothing floating): both
+  // sides on a wide screen, alternating on a narrow one, each a little higher than the last.
   for (let r = 1; r <= rows; r++) {
     const y = GROUND + Math.round((usable * r) / (rows + 0.35));
-    const perRow = W > 1000 ? 2 : 1;
-    for (let i = 0; i < perRow; i++) {
-      const w = Math.round(Math.min(Math.max(W * (perRow > 1 ? 0.2 : 0.42), 130), 320) / PX) * PX;
-      const slot = perRow > 1 ? (i === 0 ? 0.08 : 0.58) : 0.08;
-      const shift = (r % 2 === 0 ? 0.24 : 0) * W;
-      const x = Math.round(Math.min(W - w - 12, slot * W + shift) / PX) * PX;
-      out.push({ id, x, y: y - PX * 4, w, h: PX * 4, seed: ledgeSeed(id), biome: ledgeBiome(id, MONTH) });
+    const sides = W >= 600 ? ['left', 'right'] : [r % 2 ? 'left' : 'right'];
+    for (const side of sides) {
+      const w = Math.round(Math.min(Math.max(W * (W >= 600 ? 0.26 : 0.5), 130), 300) / PX) * PX;
+      const x = side === 'left' ? 0 : Math.round((W - w) / PX) * PX;
+      const dy = side === 'right' && W >= 600 ? PX * 12 : 0;
+      out.push({ id, x, y: y - PX * 4 + dy, w, h: PX * 4, seed: ledgeSeed(id), biome: ledgeBiome(id, MONTH), side });
       id++;
     }
   }
@@ -149,7 +150,71 @@ function drawScenery() {
   }
 
   for (const p of platforms) if (!p.broken) drawPlatform(g, p);
+  drawHome(g);
   return cv;
+}
+
+// ---------------------------------------------------------------- the hanging house (like the one under the Mac's notch)
+
+/** Where the little house hangs from the top of the screen, with its porch and the hammock beside it. */
+function homeLayout() {
+  const topY = H - TOP;                                  // world y of the top of the usable area
+  const hx = Math.round((W * 0.5 - 70) / PX) * PX;
+  // Low enough to hang clear of the toolbar card at the top of the page.
+  const porchY = topY - 168, hammockY = topY - 160;
+  return { hx, porchY, hammockX: hx + 46 + 52, hammockY, topY };
+}
+
+function homePlatforms() {
+  if (showcase || H < 420) return [];
+  const L = homeLayout();
+  return [
+    { id: 9001, x: L.hx - 2, y: L.porchY - PX * 2, w: 70, h: PX * 2, home: true },
+    { id: 9002, x: L.hammockX - 30, y: L.hammockY - PX * 2, w: 60, h: PX * 2, home: true },
+  ];
+}
+
+function houseArt() {
+  const w = 23, h = 17, cv = new PixelCanvas(w, h);
+  const plank = 0xB07A47, plankDark = 0x8A5A35, plankLight = 0xC99460;
+  for (let y = 1; y < 10; y++) for (let x = 0; x < 15; x++) cv.set(x, y, y % 3 === 0 ? plankDark : (x === 0 ? plankDark : plank));
+  for (let x = 3; x < 15; x += 5) cv.set(x, 5, plankLight);
+  for (let x = 0; x < w; x++) { cv.set(x, 0, plankDark); cv.set(x, 1, plank); }
+  for (let y = 2; y <= 4; y++) cv.set(w - 1, y, plankDark);
+  for (let x = 15; x < w; x++) cv.set(x, 4, plankLight);
+  const roof = [3, 4, 5].includes(MONTH) ? 0xFF8FB1 : [9, 10, 11].includes(MONTH) ? 0xD9853A : [12, 1, 2].includes(MONTH) ? 0xF4F8FF : 0x5E9E46;
+  for (let k = 0; k < 6; k++) for (let x = -1 + k; x <= 15 - k; x++) cv.set(x, 10 + k, k < 2 ? 0x6E4428 : (k === 2 ? 0x8BD66A : roof));
+  cv.rect(11, 12, 2, 5, 0x8E877B);
+  cv.blob(4.5, 6.5, 2.1, 2.1, night ? 0xFFD36B : 0x3B4660, night ? 0xFFF0B8 : 0x56627E);
+  cv.rect(9, 2, 4, 6, 0x5E3B22); cv.set(12, 5, 0xE0B04A);
+  cv.outline(0.6);
+  return cv.toCanvas();
+}
+
+function hammockArt(wpx) {
+  const cv = new PixelCanvas(wpx, 6);
+  for (let x = 0; x < wpx; x++) {
+    const t = x / (wpx - 1), top = 4 - Math.round(Math.sin(t * Math.PI) * 3.2);
+    cv.set(x, top, x % 4 < 2 ? 0xE8D7B0 : 0xD9855A); cv.set(x, top + 1, x % 4 < 2 ? 0xC9B48A : 0xB8683F);
+    if (night && x % 5 === 2) cv.set(x, Math.min(5, top + 2), [0xFFE45C, 0xFF8FB1, 0x8FD3FF][(x / 5 | 0) % 3]);
+  }
+  cv.outline(0.7);
+  return cv.toCanvas();
+}
+
+function drawHome(g) {
+  if (showcase || H < 420) return;
+  const L = homeLayout(), top = H - L.topY;
+  const house = houseArt(), hm = hammockArt(20);
+  const houseTop = H - L.porchY - house.height * PX;
+  // Ropes up to the top edge.
+  g.strokeStyle = '#8a6b4a'; g.lineWidth = 1.5;
+  g.beginPath();
+  for (const x of [L.hx + 6, L.hx + 40]) { g.moveTo(x, houseTop + PX); g.lineTo(x, top); }
+  for (const x of [L.hammockX - 29, L.hammockX + 29]) { g.moveTo(x, H - L.hammockY - PX * 2); g.lineTo(x + (x < L.hammockX ? -6 : 6), top); }
+  g.stroke();
+  g.drawImage(house, L.hx, H - L.porchY - house.height * PX + PX * 1, house.width * PX, house.height * PX);
+  g.drawImage(hm, L.hammockX - 30, H - L.hammockY - PX * 5, hm.width * PX, hm.height * PX);
 }
 
 const islandArt = new Map();     // `${biome}-${widthPx}-${seed}-${night}` → { body, decor } 1:1 canvases
@@ -168,13 +233,46 @@ function islandImages(p) {
  *  unchanged); the terrain hangs below it and the decor grows above. The landmark stands at the outer end, nearest the
  *  screen edge, so islands on the left are mirrored. */
 function drawPlatform(g, p) {
-  const top = H - (p.y + p.h), a = islandImages(p), flip = p.x + p.w / 2 < W / 2;
+  // A mossy branch growing in from the screen's edge; its top is the walking surface. The moss thickens with the
+  // linked Mac's moss.
+  const top = H - (p.y + p.h), art = branchArt(Math.max(8, Math.round(p.w / PX)), p.seed, mossLevel());
+  const fromRight = p.side === 'right';
   g.save();
-  g.translate(flip ? p.x + p.w : p.x, 0);
-  if (flip) g.scale(-1, 1);
-  g.drawImage(a.decor, 0, top - a.decor.height * PX, a.decor.width * PX, a.decor.height * PX);
-  g.drawImage(a.body, 0, top, a.body.width * PX, a.body.height * PX);
+  g.translate(fromRight ? p.x + p.w : p.x, 0);
+  if (fromRight) g.scale(-1, 1);
+  g.drawImage(art, 0, top - PX * 4, art.width * PX, art.height * PX);
   g.restore();
+}
+
+/** 0 (bare) .. 3 (thick, flowering): the linked Mac's moss, or a little moss of its own. */
+const mossLevel = () => { const m = bridge?.peerMoss ?? 40; return m >= 150 ? 3 : m >= 90 ? 2 : m >= 20 ? 1 : 0; };
+
+const branchArtCache = new Map();
+/** A branch from the screen's edge to the right: bark tapering toward the tip, moss along the top (thicker with
+ *  `moss`), leaf tufts, a few tendrils and flowers hanging. Row 4 from the top is the walking surface. */
+function branchArt(wpx, seed, moss) {
+  const key = `${wpx}-${seed}-${moss}-${night}`;
+  if (branchArtCache.has(key)) return branchArtCache.get(key);
+  const h = 12, cv = new PixelCanvas(wpx, h);
+  const rnd = mulberry(seed);
+  const bark = 0x6B4428, barkLight = 0x8A5A35;
+  for (let x = 0; x < wpx; x++) {
+    const t = x / wpx, thick = t < 0.5 ? 5 : t < 0.8 ? 4 : t < 0.93 ? 3 : 2;
+    for (let y = 0; y < thick; y++) cv.set(x, 7 - y, y === 0 ? barkLight : (y === thick - 1 ? 0x5E3B22 : bark));
+    // Moss along the top.
+    if (moss > 0 && (x < wpx - 3) && rnd() < 0.55 + moss * 0.15) {
+      cv.set(x, 8, rnd() < 0.5 ? 0x5E9E46 : 0x8BD66A);
+      if (moss >= 2 && rnd() < 0.5) cv.set(x, 9, 0x8BD66A);
+      if (rnd() < 0.08 * moss) for (let k = 1; k <= 1 + (rnd() * moss | 0); k++) cv.set(x, 4 - k, 0x5E9E46);   // drips
+    }
+  }
+  for (let x = 4; x < wpx - 2; x += 9 + (rnd() * 6 | 0)) { cv.set(x, 9, 0x6CC04A); cv.set(x + 1, 10, 0x8BD66A); cv.set(x - 1, 10, 0x6CC04A); }   // leaf tufts
+  if (moss >= 2) for (let x = 7; x < wpx - 4; x += 13) cv.set(x, 10, [0xFF8FB1, 0xFFE45C, 0xB98CFF][(x / 13 | 0) % 3]);    // flowers
+  if (night && moss >= 1) cv.set(wpx >> 1, 9, 0x5FE8FF);
+  cv.outline(0.66);
+  const out = cv.toCanvas();
+  branchArtCache.set(key, out);
+  return out;
 }
 
 function pixelDisc(g, cx, cy, r, fill, shade) {
@@ -614,7 +712,8 @@ function checkCrossings(t) {
     const out = door === 'right' ? c.pos.x - W : door === 'left' ? -c.pos.x : -Infinity;
     if (door && c.isGrounded && c.id !== driven && out > -c.size.x * 0.25 && c.facing !== inward()) {
       // A Gremlet wandering into the doorway thinks twice, so a screen doesn't empty itself. Just-arrived ones turn back.
-      if (c.doorChoice == null) c.doorChoice = t - (c.arrived ?? -99) > 10 && Math.random() < 0.3;
+      // Just-arrived visitors from the Mac stay a good while before thinking of going back.
+      if (c.doorChoice == null) c.doorChoice = t - (c.arrived ?? -99) > (c.arrived ? 240 : 10) && Math.random() < 0.3;
       if (!c.doorChoice) c.facing = inward();
     } else if (out < -c.size.x * 1.5) c.doorChoice = null;
     const outward = c.isGrounded || c.activity === 'crouch' ? c.facing !== inward() : c.vel.x * inward() < 0;
@@ -1693,6 +1792,7 @@ async function start() {
         if (n.act) act(n.act);
       };
       bridge.onStatus = updateRoomUI;
+      bridge.onMoss = () => { scenery = drawScenery(); };
       wireLinker();
       bridge.start();
       setInterval(updateRoomUI, 5000);

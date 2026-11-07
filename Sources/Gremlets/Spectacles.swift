@@ -13,7 +13,9 @@ final class SpectacleRenderer {
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
     private var podLayers: [String: (branch: CALayer, pod: CALayer, rope: CAShapeLayer, key: String)] = [:]
     private var liftLayer: CALayer?
+    private var carryLayers: [Int: (layer: CALayer, what: String)] = [:]
     private var nextChimneyPuff: CFTimeInterval = 0
+    private var swingLayer: CAShapeLayer?
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -108,6 +110,7 @@ final class SpectacleRenderer {
         renderPods()
         renderNotch()
         renderLift()
+        renderCarried()
         renderPlans()
         renderRoutes()
         renderRopes()
@@ -1342,6 +1345,13 @@ final class SpectacleRenderer {
                       imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night, dry: world.mossThirsty) }
             }
         }
+        // Bridges the moss has woven between windows.
+        for b in world.mossBridges {
+            guard let (si, pt) = local(Vec2(b.minX, b.y)) else { continue }
+            let px = max(8, Int((b.maxX - b.minX) / artScale))
+            place("br\(b.key)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
+                  imageKey: "\(px)-\(night)") { MossArt.bridge(lengthPx: px, seed: UInt64(b.key.unicodeScalars.reduce(7) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }), night: night) }
+        }
         // Platforms woven into the edge vines.
         for p in world.mossPads {
             guard let v = world.mossVines.first(where: { $0.key == p.vine }), case .screenEdge(_, let side) = v.anchor else { continue }
@@ -1865,9 +1875,11 @@ extension SpectacleRenderer {
     fileprivate func renderNotch() {
         guard let n = world.notchHome, world.notchHomeShowing, let (si, base) = local(Vec2(n.houseMinX, n.houseBottom)) else {
             if let l = notchLayers { l.house.removeFromSuperlayer(); l.hammock.removeFromSuperlayer(); l.ropes.removeFromSuperlayer(); notchLayers = nil }
+            swingLayer?.removeFromSuperlayer(); swingLayer = nil
             return
         }
         let lit = world.claudeWorking || world.isNight
+        swingLayer.map { attach($0, si) }
         var l = notchLayers ?? {
             let house = pixelLayer(); house.anchorPoint = .zero; house.zPosition = 1.15
             let hammock = pixelLayer(); hammock.anchorPoint = CGPoint(x: 0.5, y: 0); hammock.zPosition = 1.15
@@ -1878,12 +1890,12 @@ extension SpectacleRenderer {
             return (house, hammock, ropes, "")
         }()
         for layer in [l.house, l.hammock, l.ropes] as [CALayer] { attach(layer, si) }
-        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))"
+        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))-\(world.month)-\(world.mailWaiting)-\(world.isNight)"
         if l.key != key {
-            let img = NotchArt.house(lit: lit)
+            let img = NotchArt.house(lit: lit, month: world.month, mail: world.mailWaiting)
             l.house.contents = img
             l.house.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
-            let hm = NotchArt.hammock(widthPx: Int((n.hammock.maxX - n.hammock.minX) / 3))
+            let hm = NotchArt.hammock(widthPx: Int((n.hammock.maxX - n.hammock.minX) / 3), lights: world.isNight)
             l.hammock.contents = hm
             l.hammock.bounds = CGRect(x: 0, y: 0, width: hm.width * 3, height: hm.height * 3)
             l.key = key
@@ -1898,6 +1910,23 @@ extension SpectacleRenderer {
         let roofY = base.y - 3 + 17 * 3 - 3
         for x in [base.x + 6, base.x + 40] { path.move(to: CGPoint(x: x, y: roofY)); path.addLine(to: CGPoint(x: x, y: top)) }
         for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
+        // The swing under the porch, swaying.
+        let sw = swingLayer ?? {
+            let s = CAShapeLayer(); s.strokeColor = NSColor(red: 0.54, green: 0.42, blue: 0.29, alpha: 1).cgColor
+            s.lineWidth = 1.5; s.fillColor = NSColor(red: 0.79, green: 0.55, blue: 0.29, alpha: 1).cgColor; s.zPosition = 1.14
+            s.actions = ["path": NSNull()]
+            attach(s, si); popIn(s)
+            return s
+        }()
+        swingLayer = sw
+        let sway = sin(CACurrentMediaTime() * 1.6) * 3
+        let porchY = base.y - 3, seatY = n.swing.y - o.y
+        let sx0 = n.swing.minX - o.x, sx1 = n.swing.maxX - o.x
+        let swingPath = CGMutablePath()
+        swingPath.move(to: CGPoint(x: sx0 + 2, y: porchY)); swingPath.addLine(to: CGPoint(x: sx0 + 2 + sway, y: seatY))
+        swingPath.move(to: CGPoint(x: sx1 - 2, y: porchY)); swingPath.addLine(to: CGPoint(x: sx1 - 2 + sway, y: seatY))
+        swingPath.addRect(CGRect(x: sx0 + sway, y: seatY - 3, width: sx1 - sx0, height: 3))
+        sw.path = swingPath
         l.ropes.path = path
         notchLayers = l
         // Someone's inside: smoke curls from the chimney (and z's drift from the window at night).
@@ -1984,6 +2013,31 @@ extension SpectacleRenderer {
         for (k, e) in podLayers where !alive.contains(k) {
             fade(e.branch, to: 0, remove: true); fade(e.pod, to: 0, remove: true); e.rope.removeFromSuperlayer(); podLayers[k] = nil
         }
+    }
+}
+
+// MARK: Things carried overhead on the way to a job
+
+extension SpectacleRenderer {
+    fileprivate func renderCarried() {
+        var alive = Set<Int>()
+        for c in world.creatures {
+            guard let what = c.carrying, c.homeUntil == nil, let (si, pt) = local(c.pos + Vec2(c.facing * 2, c.species.headTop - 2)) else { continue }
+            alive.insert(c.id)
+            var e = carryLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1; popIn(l); return (l, "") }()
+            attach(e.layer, si)
+            if e.what != what {
+                let img = what == "can" ? PropArt.wateringCan : BonsaiArt.carriedPot
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                e.what = what
+            }
+            let bob = c.activity == .walk ? abs(sin(CACurrentMediaTime() * 9 + Double(c.id))) * 2 : 0
+            e.layer.setAffineTransform(CGAffineTransform(scaleX: c.facing < 0 ? -1 : 1, y: 1))
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: (pt.y + bob).rounded())
+            carryLayers[c.id] = e
+        }
+        for (id, e) in carryLayers where !alive.contains(id) { fade(e.layer, to: 0, remove: true); carryLayers[id] = nil }
     }
 }
 

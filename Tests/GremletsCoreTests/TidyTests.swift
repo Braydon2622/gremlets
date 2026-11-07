@@ -216,3 +216,24 @@ import Testing
         #expect(w.mossCare > 0.5 && w.mossMinutes >= 79)
     }
 }
+
+@Suite struct TwoScreenTests {
+    @Test func fullScreenOnTheMacLeavesTheIPadAsUsual() {
+        let mac = Rect(x: 0, y: 0, w: 1470, h: 900), ipad = Rect(x: 1470, y: 0, w: 1100, h: 740)
+        let w = World(seed: 221)
+        w.maxHobbies = 0
+        w.topCornerPerches = true
+        w.setEnvironment(screens: [mac, ipad], windowsFrontToBack: [])
+        let onMac = w.spawn(testSpecies(scale: 10), at: Vec2(500, 0))
+        let onPad = w.spawn(testSpecies(scale: 10), at: Vec2(2000, 0))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        w.compact = true
+        w.notchHome = NotchHome(minX: mac.maxX - 206, maxX: mac.maxX - 12, menuBottom: mac.maxY)
+        #expect(w.topStructures.count == 2, "the iPad keeps its nest hut and leaf swing")
+        #expect(w.topStructures.allSatisfy { $0.surface.minX >= ipad.minX })
+        for _ in 0..<(60 * 60) { w.step(1.0 / 60) }
+        #expect(World.isNotchOwner(onMac.groundOwner) || onMac.homeUntil != nil, "the Mac one is up in a corner")
+        #expect(onPad.pos.x >= ipad.minX, "the iPad one stays on the iPad")
+        #expect(!w.compactPerches.contains { $0.minX >= ipad.minX }, "full-screen perches are the Mac's own")
+    }
+}

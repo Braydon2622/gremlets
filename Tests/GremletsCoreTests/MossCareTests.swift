@@ -128,7 +128,7 @@ import Testing
     }
 
     @Test func gremletsPickEatAndBlowWhatsReady() {
-        for kind in MossSprout.Kind.allCases {
+        for kind in MossSprout.Kind.wild {
             let w = world(seed: 162)
             w.nextSproutAt = .infinity
             let a = w.spawn(testSpecies(scale: 10), at: Vec2(500, 160))
@@ -344,5 +344,79 @@ import Testing
         #expect(home, "made it to the nest hut (\(c.pos))")
         for _ in 0..<5 { w.step(1.0 / 60) }
         #expect(c.carrying == nil, "lantern put away at home")
+    }
+}
+
+@Suite struct GardenDayTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    func working(_ seed: UInt64) throws -> (World, Creature) {
+        let w = World(seed: seed)
+        w.maxHobbies = 0
+        w.gardenInMoss = true
+        w.wallClock = 1_800_000_000
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 800, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 0))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        _ = try #require(w.startJob(windowID: 1, craft: .garden, prefer: c.id))
+        for _ in 0..<(60 * 40) where c.job?.phase != .working { w.step(1.0 / 60) }
+        return (w, c)
+    }
+
+    @Test func winFlagsLineUpForTheDayAndComeDownTomorrow() throws {
+        let (w, c) = try working(211)
+        for _ in 0..<4 { w.plantWinFlag(workerID: c.id) }
+        #expect(w.winFlags.count == 4)
+        let xs = w.winFlags.map(\.offset).sorted()
+        for (a, b) in zip(xs, xs.dropFirst()) { #expect(b - a >= 12, "side by side") }
+        w.wallClock += 86_400
+        for _ in 0..<(60 * 31) { w.step(1.0 / 60) }
+        #expect(w.winFlags.isEmpty)
+    }
+
+    @Test func theDuckComesOutAfterTwoFailuresAndCheersWhenItWorks() throws {
+        let (w, c) = try working(212)
+        w.claudeToolFailed(workerID: c.id, tests: false)
+        #expect(!w.duckOut(c))
+        w.claudeToolFailed(workerID: c.id, tests: false)
+        #expect(w.duckOut(c))
+        w.claudeTool(workerID: c.id, .run, name: "Bash")
+        #expect(!w.duckOut(c))
+        #expect(w.drainGardenEvents().contains(.duckCheer(by: c.id)))
+    }
+
+    @Test func testsSwayTheMossMoodAndItCalmsDown() throws {
+        let (w, c) = try working(213)
+        for _ in 0..<3 { w.claudeTestsPassed(workerID: c.id) }
+        #expect(w.testMood > 0.5)
+        for _ in 0..<(20 * 60 * 60 * 3) { w.step(1.0 / 20) }
+        #expect(w.testMood < 0.25, "easing back to calm")
+    }
+
+    @Test func picnicBlanketFriendSeedAndHush() {
+        let w = World(seed: 214)
+        w.maxHobbies = 0
+        w.wallClock = 1_800_000_000
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 800, h: 300))])
+        let cs = [200.0, 260, 900].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 0)) }
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.startPicnic())
+        for _ in 0..<(60 * 20) { w.step(1.0 / 60) }
+        let seated = cs.filter { if case .picnic? = $0.mossTask?.kind { return true }; return false }
+        #expect(seated.count >= 2, "friends came to the picnic")
+        for _ in 0..<(60 * 160) { w.step(1.0 / 60) }
+        #expect(w.picnic == nil, "and it's packed up after a while")
+        #expect(w.bringBlanket(towardX: 1300))
+        for _ in 0..<(60 * 30) where w.blanket == nil { w.step(1.0 / 60) }
+        #expect(w.blanket != nil && abs(w.blanket!.x - 1300) < 60, "a blanket left by you")
+        #expect(w.friendSeed(tint: 0x8FD3FF))
+        #expect(w.sprouts.contains { $0.kind == .friendBloom && $0.tint == 0x8FD3FF })
+        // Tiptoeing while you type.
+        let c = cs[2]
+        w.hushed = true
+        let x0 = c.pos.x
+        c.facing = 1; c.targetX = nil
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(abs(c.pos.x - x0) < c.species.walkSpeed * 0.7, "slow and quiet")
     }
 }

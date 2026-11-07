@@ -24,6 +24,9 @@ final class SpectacleRenderer {
     private var nextSeasonDrift = 0.0
     private var propLayers: [Int: (layer: CALayer, what: String)] = [:]
     private var seedlingLayers: [String: CALayer] = [:]
+    private var gardenLayers: [String: CALayer] = [:]
+    private var summaryLayers: [Int: (board: CALayer, text: CATextLayer, key: String)] = [:]
+    private var nextMossGust = 0.0
     private var topStructureLayers: [Int: (art: CALayer, ropes: CAShapeLayer, key: String)] = [:]
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
@@ -119,6 +122,7 @@ final class SpectacleRenderer {
         renderMoods()
         renderHeldProps()
         renderSeedlings()
+        renderGarden2()
         renderSeason()
         renderWeather()
         renderPods()
@@ -1458,14 +1462,14 @@ final class SpectacleRenderer {
             guard let (si, pt) = local(Vec2(x0, top.y)) else { continue }
             let dq = Int(p.size * 4)
             place("p\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                  imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)-\(winter)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty, snow: winter) }
+                  imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)-\(winter)-\(world.testMood > 0.3)") { MossArt.carpet(lengthPx: px, density: min(1, 0.3 + p.size * 0.7 + max(0, world.testMood) * 0.3), seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty, snow: winter) }
         }
         // Little things growing in the moss: daisies, mushrooms, berries, dandelions.
         for sp in world.sprouts {
             guard let b = world.bed(sp.windowID), let top = world.bedSurface(sp.windowID, at: b.minX + sp.offset),
                   let (si, pt) = local(Vec2(b.minX + sp.offset, top.y)) else { continue }
             place("s\(sp.id)", si, at: CGPoint(x: pt.x.rounded(), y: pt.y - 1 * artScale), anchor: CGPoint(x: 0.5, y: 0),
-                  rotate: (windowSway[sp.windowID] ?? 0) * 0.5, imageKey: "\(sp.stage)-\(night)") { SproutArt.image(sp.kind, stage: sp.stage, night: night) }
+                  rotate: (windowSway[sp.windowID] ?? 0) * 0.5, imageKey: "\(sp.stage)-\(night)-\(sp.tint ?? 0)") { SproutArt.image(sp.kind, stage: sp.stage, night: night, tint: sp.tint) }
         }
         // Screens: moss along the bottom of the screen (just above the Dock), creeping in from both corners as the
         // moss grows.
@@ -2069,6 +2073,7 @@ extension SpectacleRenderer {
         out += cornerBranchLayers + cornerStumpLayers
         if let l = liftLayer { out.append(l) }
         out += carryLayers.values.map(\.layer)
+        out += propLayers.values.map(\.layer)   // an anniversary crown
         return out
     }
 
@@ -2104,7 +2109,8 @@ extension SpectacleRenderer {
                 e.key = key
             }
             let k = CGFloat(artScale)
-            let top = CGFloat(world.screens.first?.maxY ?? s.y + 200) - screens[si].frame.origin.y + 2
+            let own = world.screens.first { s.minX >= $0.minX - 1 && s.minX < $0.maxX }
+            let top = CGFloat(own?.maxY ?? s.y + 200) - screens[si].frame.origin.y + 2
             let path = CGMutablePath()
             switch kind {
             case .nestHut:
@@ -2215,6 +2221,110 @@ extension SpectacleRenderer {
         for (k, l) in seedlingLayers where !alive.contains(k) { fade(l, to: 0, remove: true); seedlingLayers[k] = nil }
     }
 
+    /// Win flags in the moss, the rubber duck, the picnic blanket, a blanket left for you, the summary signs, and the
+    /// moss getting windswept after a bad run of tests.
+    fileprivate func renderGarden2() {
+        var alive = Set<String>()
+        func put(_ key: String, _ img: CGImage, at p: Vec2, anchor: CGPoint = CGPoint(x: 0.5, y: 0), scale: Double = artScale, flip: Bool = false) {
+            guard let (si, pt) = local(p) else { return }
+            alive.insert(key)
+            let l = gardenLayers[key] ?? { let l = pixelLayer(); l.zPosition = 1.32; popIn(l); return l }()
+            attach(l, si)
+            if l.contents == nil || (l.contents as! CGImage) !== img {
+                l.contents = img
+                l.anchorPoint = anchor
+                l.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * scale, height: Double(img.height) * scale)
+            }
+            l.setAffineTransform(CGAffineTransform(scaleX: flip ? -1 : 1, y: 1))
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            gardenLayers[key] = l
+        }
+        for (i, f) in world.winFlags.enumerated() {
+            guard let w = world.windows[f.windowID], world.bedSurface(f.windowID, at: w.minX + f.offset) != nil else { continue }
+            put("flag\(i)-\(f.windowID)-\(Int(f.offset))", SproutArt.winFlag(f.tint), at: Vec2(w.minX + f.offset, w.maxY - 2), scale: 2.4)
+        }
+        for c in world.creatures where world.duckOut(c) {
+            put("duck\(c.id)", SproutArt.duck, at: c.pos + Vec2(c.facing * c.size.x * 0.55, 0), scale: 2.4, flip: c.facing > 0)
+        }
+        if let p = world.picnic { put("picnic", SproutArt.picnic, at: Vec2(p.x, p.y - 2), scale: 2.4) }
+        if let b = world.blanket { put("blanket", SproutArt.foldedBlanket, at: Vec2(b.x, b.y - 1), scale: 2.4) }
+        for (k, l) in gardenLayers where !alive.contains(k) { fade(l, to: 0, remove: true); gardenLayers[k] = nil }
+
+        // The summary sign, held up over its head.
+        var signs = Set<Int>()
+        for c in world.creatures {
+            guard let text = world.summarySign(c), let (si, pt) = local(c.pos + Vec2(0, c.species.headTop + 8)) else { continue }
+            signs.insert(c.id)
+            var e = summaryLayers[c.id] ?? {
+                let board = CALayer()
+                board.backgroundColor = NSColor(red: 0.69, green: 0.48, blue: 0.28, alpha: 1).cgColor
+                board.borderColor = NSColor(red: 0.42, green: 0.27, blue: 0.16, alpha: 1).cgColor
+                board.borderWidth = 2; board.cornerRadius = 3; board.zPosition = 2.65
+                board.anchorPoint = CGPoint(x: 0.5, y: 0)
+                let t = CATextLayer()
+                t.font = NSFont.systemFont(ofSize: 10, weight: .semibold); t.fontSize = 10
+                t.foregroundColor = NSColor(red: 0.98, green: 0.95, blue: 0.86, alpha: 1).cgColor
+                t.alignmentMode = .center; t.isWrapped = true; t.truncationMode = .end
+                t.contentsScale = 2
+                board.addSublayer(t)
+                popIn(board)
+                return (board, t, "")
+            }()
+            attach(e.board, si)
+            if e.key != text {
+                let width = min(180.0, max(70.0, Double(text.count) * 5.6 / 1.6 + 20))
+                let lines = Double(text.count) * 5.6 > (width - 12) ? 2.0 : 1.0
+                e.board.bounds = CGRect(x: 0, y: 0, width: width, height: 8 + 13 * lines)
+                e.text.frame = CGRect(x: 6, y: 3, width: width - 12, height: 13 * lines + 2)
+                e.text.string = text
+                e.key = text
+            }
+            e.board.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            summaryLayers[c.id] = e
+        }
+        for (id, e) in summaryLayers where !signs.contains(id) { fade(e.board, to: 0, remove: true); summaryLayers[id] = nil }
+
+        // A bad run of tests: gusts blow leaves off the moss now and then until things pass again.
+        let now = CACurrentMediaTime()
+        if world.testMood < -0.3, now >= nextMossGust, !world.compact {
+            nextMossGust = now + Double.random(in: 2...4)
+            let ends = world.mossVines.compactMap { v -> Vec2? in if case .windowSide = v.anchor { return Vec2(v.x, v.top - 6) }; return nil }
+            if let a = ends.randomElement(), let (si, pt) = local(a) {
+                let dir = Bool.random() ? 1.0 : -1.0
+                overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 3, dx: (dir > 0 ? 80...200 : -200 ... -80), dy: -30...20, duration: 1.4, stagger: 0.1)
+            }
+        }
+    }
+
+    func handle(_ events: [GardenEvent]) {
+        for e in events {
+            switch e {
+            case .flagPlanted(let p, let by):
+                if let (si, pt) = local(p) { overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 4, dx: -12...12, dy: 4...26, duration: 0.8) }
+                if Int.random(in: 0..<2) == 0 { overlay.showBubble(["Another one!", "A win for today.", "Flag planted!"].randomElement()!, on: by, seconds: 1.8) }
+            case .duckOut(let by):
+                overlay.showBubble(["Let's talk it through…", "Okay duck, here's the thing…", "Hmm. Duck time."].randomElement()!, on: by, seconds: 3)
+            case .duckCheer(let by):
+                overlay.showBubble(["It works!", "Thanks, duck!", "There it is!"].randomElement()!, on: by, seconds: 2.5)
+            case .picnicStarted(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.sparkle, Effects.heart], si: si, at: pt, count: 4, dx: -30...30, dy: 4...30, duration: 1.0) }
+                if let c = world.creatures.min(by: { abs($0.pos.x - p.x) + abs($0.pos.y - p.y) < abs($1.pos.x - p.x) + abs($1.pos.y - p.y) }) {
+                    overlay.showBubble("Lunchtime! Picnic in the moss.", on: c.id, seconds: 3)
+                }
+            case .blanketGiven(_, let by):
+                overlay.showBubble("It's late… here's a little blanket. Night night.", on: by, seconds: 4)
+            case .friendSeed(let by):
+                if let by { overlay.showBubble("I brought you a seed from home!", on: by, seconds: 3.5) }
+            case .stretchBreak(let ids):
+                for (k, id) in ids.enumerated() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(k) * 0.4) { [weak self] in
+                        self?.overlay.showBubble(["*stretch*", "Break time!", "Ahh."].randomElement()!, on: id, seconds: 1.8)
+                    }
+                }
+            }
+        }
+    }
+
     /// The seasons, on their own: now and then a cherry petal (spring), an autumn leaf, or a snowflake (winter) lets
     /// go of a mossy window corner, a corner branch or the hanging house and drifts down. (Summer is calm.)
     fileprivate func renderSeason() {
@@ -2308,7 +2418,8 @@ extension SpectacleRenderer {
         let branches = world.cornerBranches
         while cornerBranchLayers.count > branches.count { cornerBranchLayers.removeLast().removeFromSuperlayer() }
         for (i, b) in branches.enumerated() {
-            let fromRight = b.maxX >= (screens.first?.frame.maxX ?? .infinity) - 1
+            let own = world.screens.first { b.minX >= $0.minX - 1 && b.minX < $0.maxX }
+            let fromRight = b.maxX >= (own?.maxX ?? .infinity) - 1 && b.minX > (own?.minX ?? 0) + 1
             guard let (si, pt) = local(Vec2(fromRight ? b.maxX : b.minX, b.y)) else { continue }
             if i >= cornerBranchLayers.count {
                 let l = pixelLayer(); l.contents = PodArt.branch
@@ -2386,7 +2497,7 @@ extension SpectacleRenderer {
             attach(e.layer, si)
             if e.what != what {
                 let picked = MossSprout.Kind(rawValue: what)
-                let img = what == "can" ? PropArt.wateringCan : what == "lantern" ? PropArt.lantern : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
+                let img = what == "can" ? PropArt.wateringCan : what == "lantern" ? PropArt.lantern : what == "blanket" ? SproutArt.foldedBlanket : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
                 let k = picked == nil ? 3 : 2
                 e.layer.contents = img
                 e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * k, height: img.height * k)

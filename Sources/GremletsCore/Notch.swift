@@ -30,10 +30,15 @@ public struct NotchHome: Equatable, Sendable {
 extension World {
     static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003, cornerBranchOwner = -430_004
     static let cornerStumpOwner = -430_010
-    public static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerStumpOwner - 1 }
+    public static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return (o <= notchPorchOwner && o >= cornerStumpOwner - 1) || isOtherScreenSpot(o) }
+    /// Corner places on a second screen (an iPad over Sidecar, another monitor): their own range.
+    static let otherScreenSpotBase = -431_000
+    static func isOtherScreenSpot(_ o: Int) -> Bool { o <= otherScreenSpotBase && o > otherScreenSpotBase - 1_000 }
+    /// The owner id of corner place `k` (1 left branch, 2 right branch, 3 nest hut, 4 leaf swing) on screen `i`.
+    static func cornerOwner(screen i: Int, _ k: Int) -> Int { i == 0 ? cornerBranchOwner - k : otherScreenSpotBase - i * 10 - k }
     /// The house itself: porch, hammock and swing.
     public static func isHouseOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= notchSwingOwner }
-    public static func isCornerSpot(_ o: Int) -> Bool { o <= cornerBranchOwner && o >= cornerStumpOwner - 1 }
+    public static func isCornerSpot(_ o: Int) -> Bool { (o <= cornerBranchOwner && o >= cornerStumpOwner - 1) || isOtherScreenSpot(o) }
 
     /// Full screen: mossy branches out from the screen's top corners, added a few at a time as more Gremlets need
     /// room (two Gremlets only get one; a crowd gets five), fewest first.
@@ -48,12 +53,16 @@ extension World {
     }
 
     public var cornerBranches: [Surface] {
-        if compact { return Array(compactBranchTiers().prefix(compactTiers)) }
-        guard topCornerPerches, let scr = screens.first else { return [] }
-        // Out of full screen: a mossy branch low in each top corner (the nest hut and the leaf swing hang above them).
-        let o = World.cornerBranchOwner
-        return [Surface(ownerID: o - 1, kind: .plant, y: scr.maxY - 215, minX: scr.minX, maxX: scr.minX + 100),
-                Surface(ownerID: o - 2, kind: .plant, y: scr.maxY - 210, minX: scr.maxX - 110, maxX: scr.maxX)]
+        // Full screen: the tiers on the full-screen (main) screen, the usual branches on any other screen.
+        let tiers = compact ? Array(compactBranchTiers().prefix(compactTiers)) : []
+        guard topCornerPerches else { return tiers }
+        // Out of full screen: a mossy branch low in each top corner of every screen (the nest hut and the leaf swing
+        // hang above them), so an iPad over Sidecar gets its own.
+        return tiers + screens.indices.filter { !compact || $0 > 0 }.flatMap { i -> [Surface] in
+            let scr = screens[i]
+            return [Surface(ownerID: World.cornerOwner(screen: i, 1), kind: .plant, y: scr.maxY - 215, minX: scr.minX, maxX: scr.minX + 100),
+                    Surface(ownerID: World.cornerOwner(screen: i, 2), kind: .plant, y: scr.maxY - 210, minX: scr.maxX - 110, maxX: scr.maxX)]
+        }
     }
 
     public enum TopStructure: Sendable { case nestHut, leafSwing }
@@ -61,19 +70,36 @@ extension World {
     /// Out of full screen: little places hanging on vines from the top of the screen: a woven nest hut with a porch in
     /// the top-left corner, a big leaf swing in the top-right. Their porch / leaf is where the Gremlets stand.
     public var topStructures: [(surface: Surface, kind: TopStructure)] {
-        guard !compact, topCornerPerches, let scr = screens.first else { return [] }
-        let o = World.cornerBranchOwner
-        return [(Surface(ownerID: o - 3, kind: .plant, y: scr.maxY - 132, minX: scr.minX + 22, maxX: scr.minX + 128), .nestHut),
-                (Surface(ownerID: o - 4, kind: .plant, y: scr.maxY - 126, minX: scr.maxX - 142, maxX: scr.maxX - 42), .leafSwing)]
+        guard topCornerPerches else { return [] }
+        return screens.indices.filter { !compact || $0 > 0 }.flatMap { i -> [(surface: Surface, kind: TopStructure)] in
+            let scr = screens[i]
+            return [(Surface(ownerID: World.cornerOwner(screen: i, 3), kind: .plant, y: scr.maxY - 132, minX: scr.minX + 22, maxX: scr.minX + 128), .nestHut),
+                    (Surface(ownerID: World.cornerOwner(screen: i, 4), kind: .plant, y: scr.maxY - 126, minX: scr.maxX - 142, maxX: scr.maxX - 42), .leafSwing)]
+        }
     }
 
     /// Everything to perch on up in the top corners (branches and the hanging places).
     var topCornerSpots: [Surface] { cornerBranches + topStructures.map(\.surface) }
 
+    /// With a second screen (an iPad over Sidecar, another monitor): when this screen has a crowd and the other one has
+    /// few, a Gremlet floats over to it, so both always have company.
+    func screenVisitChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
+        guard !onFullScreen(c), screens.count > 1, isFree(c), c.isGrounded, c.mossTask == nil, c.expedition == nil, clock >= nextScreenVisitAt,
+              let here = screens.firstIndex(where: { c.pos.x >= $0.minX && c.pos.x < $0.maxX }) else { return }
+        func count(_ i: Int) -> Int { creatures.filter { screens[i].minX <= $0.pos.x && $0.pos.x < screens[i].maxX }.count }
+        guard let other = screens.indices.filter({ $0 != here && !(compact && $0 == 0) }).min(by: { count($0) < count($1) }), count(here) - count(other) >= 2 else { return }
+        add("visitScreen", 1.2) {
+            self.nextScreenVisitAt = self.clock + self.rng.range(20, 50)
+            let scr = self.screens[other]
+            let x = (c.pos.x < scr.minX ? scr.minX + self.rng.range(60, 260) : scr.maxX - self.rng.range(60, 260))
+            self.startFloat(c, to: Vec2(x, scr.minY), ride: .dandelion)
+        }
+    }
+
     /// Out of full screen: up to a corner branch for a rest now and then (more often while Claude is quiet), and back
     /// down on a leaf after a while.
     func cornerChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard !compact, topCornerPerches, isFree(c), c.isGrounded, c.mossTask == nil, c.expedition == nil else { return }
+        guard !onFullScreen(c), topCornerPerches, isFree(c), c.isGrounded, c.mossTask == nil, c.expedition == nil else { return }
         if let o = c.groundOwner, World.isCornerSpot(o) {
             add("cornerRest", 2.0) { c.idleVariant = self.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: self.rng.range(4, 9)) }
             if c.energy < 0.6 { add("cornerNap", 1.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) } }
@@ -85,7 +111,8 @@ extension World {
             return
         }
         guard clock >= nextCornerTripAt else { return }
-        let free = topCornerSpots.filter { p in creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count < max(1, Int(p.width / 34)) }
+        let main = screens.first
+        let free = topCornerSpots.filter { p in !(compact && main.map { p.minX >= $0.minX && p.minX < $0.maxX } == true) }.filter { p in creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count < max(1, Int(p.width / 34)) }
         guard let p = free.min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) else { return }
         add("cornerPerch", claudeResting ? 1.0 : 0.3) {
             self.nextCornerTripAt = self.clock + self.rng.range(20, 60)

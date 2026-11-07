@@ -14,6 +14,13 @@ struct Brain {
         let e = c.energy
         func add(_ name: String, _ w: Double, _ f: @escaping () -> Void) { if w > 0 { choices.append(Choice(name: name, weight: w, start: f)) } }
 
+        // You're typing fast: they keep quiet (sitting, or a slow tiptoe) until you pause.
+        if world.hushed && !world.calm && c.job == nil && !World.isNotchOwner(c.groundOwner) {
+            add("hushSit", 2.5) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(4, 8)) }
+            add("tiptoe", 0.6) { c.facing = world.rng.chance(0.5) ? 1 : -1; c.set(.walk, duration: world.rng.range(1, 2)) }
+            pickAndStart(choices, world)
+            return
+        }
         // Focus mode: only quiet things. Mostly dozing, the odd stretch or slow amble.
         if world.calm {
             add("doze", 3.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) }
@@ -61,6 +68,7 @@ struct Brain {
         world.snowChoices(for: c, add: add)
         world.notchChoices(for: c, add: add)
         world.cornerChoices(for: c, add: add)
+        world.screenVisitChoices(for: c, add: add)
         world.zipChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)

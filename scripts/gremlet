@@ -27,6 +27,8 @@
 #   gremlet moss climb|pad|plant someone climbs a vine / weaves a platform into one / plants or waters moss now
 #   gremlet sprout [daisy|mushroom|berries|dandelion]  something ready to pick comes up in the moss now
 #   gremlet fireflies            a few fireflies come out over the moss (night or not), for a couple of minutes
+#   gremlet picnic|blanket       a lunchtime picnic now / a blanket brought over to you
+#   gremlet friendseed           a friend's flower comes up in the moss (as if a friend's Gremlet brought a seed)
 #   gremlet weather [sky|live]   the weather now; preview rain|drizzle|storm|snow|wind|clear for two minutes; live goes back
 #   gremlet weather city <name>  get the real weather there (Open-Meteo); gremlet weather snowman: someone rolls one now
 #   gremlet boost                two Gremlets team up: one boosts the other onto a window just out of reach
@@ -79,6 +81,7 @@ case "${1:-}" in
   react)   call "react?name=${2:-screenshot}"; echo ;;
   sprout)  call "sprout?kind=${2:-}"; echo ;;
   fireflies) call fireflies; echo ;;
+  picnic|blanket|friendseed) call "$1"; echo ;;
   moss)    case "${2:-}" in
              climb|pad|plant) call "moss?do=$2" ;;
              "") call moss ;;

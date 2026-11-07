@@ -111,6 +111,15 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   compacts. Seedling helpers hop along the window top while subagents work and come back with a leaf. The plan is a
   row of mossy stepping stones that light up step by step. After three minutes waiting on you it taps the glass
   (at most every four minutes). When the session ends it waves and carries a lantern home.
+- **A day in the garden.** Each task Claude finishes plants a tiny flag in the moss on its window top (they stay all
+  day). Two failed commands in a row and the Gremlet sits down with a rubber duck to talk it through, then cheers
+  when something works. A day of passing tests makes the moss lush; a bad run of failures and it gets windswept.
+  At lunchtime a few of them have a picnic in the moss; late at night one brings you a tiny blanket. When Claude
+  finishes, its Gremlet holds up a little sign with the first words of Claude's summary. A friend's visiting
+  Gremlets bring a seed that grows a flower in their own colour. While you type fast they go quiet and tiptoe, and
+  when you stop they stretch and play (`gremlet picnic`, `gremlet blanket`, `gremlet friendseed`).
+- **Your iPad, too.** Put the iPad beside the Mac as a Sidecar display and the Gremlets walk over and live there
+  as well, with their own nest hut, leaf swing and branches. Full screen on the Mac only tidies the Mac's screen.
 - **Anniversaries.** Every thirty days together (and at a year) a Gremlet wears a flower crown all day, and the
   scrapbook remembers it.
 - **Top-corner hangouts.** A woven nest hut (top left) and a big leaf swing (top right) hang on vines from the top

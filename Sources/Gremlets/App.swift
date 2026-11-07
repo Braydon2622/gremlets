@@ -120,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
         world.mossCare = UserDefaults.standard.object(forKey: "moss.care") as? Double ?? 1
         world.houseDaisies = UserDefaults.standard.integer(forKey: "house.daisies")
+        if let d = UserDefaults.standard.data(forKey: "winFlags.v1"), let f = try? JSONDecoder().decode([WinFlag].self, from: d) { world.loadWinFlags(f) }
         world.houseDaisiesDay = UserDefaults.standard.integer(forKey: "house.daisiesDay")
         // Houses built by older versions take the shape of today's pictures.
         world.refitHouses { h in Biome(rawValue: h.biome).map { BuildArt.fit($0) } }
@@ -243,6 +244,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(mossEvents)
         overlay.fx.handle(sproutEvents)
         Scrapbook.record(sproutEvents, moss: mossEvents, into: dayLog)
+        overlay.fx.handle(world.drainGardenEvents())
+        updateTyping()
         overlay.fx.handle(world.drainPlanEvents())
         sense.tick(frontWindow: frontWindowForSense())
         sense.clipTick()
@@ -1172,6 +1175,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
             return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes)),"care":\#(Int(world.mossCare * 100))}"#)
+        case "picnic":
+            guard world.startPicnic() else { return (409, #"{"ok":false,"error":"no one free for a picnic"}"#) }
+            schedule(rate: 60); return (200, #"{"ok":true}"#)
+        case "blanket":
+            guard world.bringBlanket(towardX: Double(NSEvent.mouseLocation.x)) else { return (409, #"{"ok":false,"error":"no one free"}"#) }
+            schedule(rate: 60); return (200, #"{"ok":true}"#)
+        case "friendseed":
+            guard world.friendSeed(tint: 0x8FD3FF) else { return (409, #"{"ok":false,"error":"no window top to grow on"}"#) }
+            schedule(rate: 60); return (200, #"{"ok":true}"#)
+        case "stretch":
+            world.stretchBreak(); schedule(rate: 60); return (200, #"{"ok":true}"#)
         case "fireflies":
             // A few fireflies come out over the moss now (night or not) for a couple of minutes.
             guard world.firefliesNow() else { return (409, #"{"ok":false,"error":"no moss or window top for them"}"#) }
@@ -1363,6 +1377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                       hideDuringCalls: hideDuringCalls, idleSeconds: idleSeconds, lowPower: lowPower)
     }
     private var inCall = false, idleSeconds = 0.0, lowPower = false, lastCallCheck = 0.0
+    private var lastTypingCheck = 0.0, typingSince: Double?, lastFriendSeedDay = ""
 
     /// Reads camera/mic/idle/power once a second and applies hide / show / away / welcome-back.
     private func updatePresence() {
@@ -1421,6 +1436,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !world.compact && !presence.isHidden {
             for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
             if Int(CACurrentMediaTime()) % 300 == 0 { bonds.save() }
+        }
+        // Lunchtime picnic (once a day, around noon) and a blanket late at night (once a night), while you're here.
+        if world.userActive && !world.compact && !presence.isHidden && Int(CACurrentMediaTime()) % 15 == 0 {
+            let hour = Calendar.current.component(.hour, from: Date()), day = BondStore.dayKey()
+            if hour == 12, UserDefaults.standard.string(forKey: "garden.lastPicnic") != day, world.startPicnic() {
+                UserDefaults.standard.set(day, forKey: "garden.lastPicnic")
+            }
+            if hour >= 0 && hour < 4, UserDefaults.standard.string(forKey: "garden.lastBlanket") != day,
+               world.bringBlanket(towardX: Double(NSEvent.mouseLocation.x)) {
+                UserDefaults.standard.set(day, forKey: "garden.lastBlanket")
+            }
         }
         // Anniversaries: a flower crown all day, and a line in the scrapbook.
         if Int(CACurrentMediaTime()) % 20 == 0 {
@@ -1582,6 +1608,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openChatMenu() { openChat(with: world.creatures.first?.id ?? 0) }
+
+    /// Typing fast for a while: the Gremlets hush and tiptoe. A pause after a long stretch: they stretch and play.
+    /// (Only when the last key was pressed, from the system's idle counter: no key logging, no permission.)
+    private func updateTyping() {
+        let now = CACurrentMediaTime()
+        guard now - lastTypingCheck >= 0.25 else { return }
+        lastTypingCheck = now
+        let sinceKey = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
+        if sinceKey < 1.2 {
+            if typingSince == nil { typingSince = now }
+        } else if sinceKey > 4, let start = typingSince {
+            let streak = now - sinceKey - start
+            typingSince = nil
+            if world.hushed {
+                world.hushed = false
+                if streak > 30 && !world.compact { world.stretchBreak() }
+            }
+        }
+        if let start = typingSince, now - start > 12, !world.hushed { world.hushed = true }
+    }
 
     /// Double-click a Gremlet: it turns and waves, and a little card says who it is, how long you've been together and
     /// where it likes to be.
@@ -1803,6 +1849,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UserDefaults.standard.set(world.mossMinutes, forKey: mossKey)
         UserDefaults.standard.set(world.mossCare, forKey: "moss.care")
         UserDefaults.standard.set(world.houseDaisies, forKey: "house.daisies")
+        if let d = try? JSONEncoder().encode(world.winFlags) { UserDefaults.standard.set(d, forKey: "winFlags.v1") }
         UserDefaults.standard.set(world.houseDaisiesDay, forKey: "house.daisiesDay")
     }
 
@@ -1993,7 +2040,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             world.postcard = (bridge.peerIsMac ? "a friend's Mac" : "your iPad", w.species)
         }
         // (or a visitor arriving from a friend's Mac: a guest, sent home with its own tag when it leaves).
-        if let o = w.owner, o != bridge.owner { guests[c.id] = o }
+        if let o = w.owner, o != bridge.owner {
+            guests[c.id] = o
+            // A friend's Gremlet brings a seed from home: a flower in their own colour (once per visit day).
+            let tint = o.utf8.reduce(UInt32(2_166_136_261)) { ($0 ^ UInt32($1)) &* 16_777_619 } & 0xFFFFFF | 0x404040
+            if lastFriendSeedDay != BondStore.dayKey() + o {
+                lastFriendSeedDay = BondStore.dayKey() + o
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in _ = self?.world.friendSeed(tint: tint, by: c.id) }
+            }
+        }
         if bridge.peerIsMac {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }

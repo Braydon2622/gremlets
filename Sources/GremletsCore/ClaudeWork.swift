@@ -57,7 +57,9 @@ extension World {
             claudeEvents.append(.placedBlock(worker: c.id, count: j.blocks))
             if c.isGrounded && !c.isDozingAtWork { c.set(.special, duration: min(0.7, c.animationLength(for: .special))) }
         case .look: claudeEvents.append(.look(c.id))
-        case .run: claudeEvents.append(.run(c.id))
+        case .run:
+            claudeEvents.append(.run(c.id))
+            duckAfterSuccess(c, j)
         case .web: claudeEvents.append(.web(c.id))
         case .plan: claudeEvents.append(.plan(c.id))
         case .spawn:
@@ -73,6 +75,8 @@ extension World {
         j.failStreak += 1
         j.lastToolTime = clock
         setWeather(c, j, j.failStreak >= 3 || tests ? .storm : .rain, for: j.failStreak >= 3 ? 40 : 22)
+        duckAfterFailure(c, j)
+        if tests { nudgeTestMood(-0.25) }
         if c.isGrounded && !c.isDozingAtWork { c.set(.dizzy, duration: 1.2) }
     }
 
@@ -81,6 +85,8 @@ extension World {
         guard let c = creature(id: workerID), let j = c.job else { return }
         j.failStreak = 0
         setWeather(c, j, .sunny, for: 14)
+        duckAfterSuccess(c, j)
+        nudgeTestMood(0.25)
         if let p = j.label { bonsaiGrow(project: p, .fruit) }
         if c.isGrounded { startDance(c, duration: 2.5, invite: false) }
     }

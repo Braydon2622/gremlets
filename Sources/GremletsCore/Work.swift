@@ -132,6 +132,8 @@ public final class Job {
     /// When Claude started waiting on you, and when its Gremlet last knocked on the glass about it.
     var needsYouSince: Double?
     var lastKnock = -1e9
+    /// The rubber duck is out (two failures in a row) until something works.
+    var duckOut = false
     /// Claude buddy: the project name, whether Claude is waiting on you, and when Claude last used a tool.
     public internal(set) var label: String?
     public internal(set) var needsYou = false

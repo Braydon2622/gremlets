@@ -7,15 +7,15 @@ enum SproutArt {
 
     private static var cache: [String: CGImage] = [:]
 
-    static func image(_ kind: MossSprout.Kind, stage: Int, night: Bool) -> CGImage {
-        let key = "\(kind.rawValue)\(stage)\(night)"
+    static func image(_ kind: MossSprout.Kind, stage: Int, night: Bool, tint: UInt32? = nil) -> CGImage {
+        let key = "\(kind.rawValue)\(stage)\(night)\(tint ?? 0)"
         if let i = cache[key] { return i }
         var cv = PixelCanvas(9, 11)
         if stage == 0 {
             // A shoot, whatever it'll be.
             cv.set(4, 0, stem); cv.set(4, 1, stem); cv.set(3, 2, leaf); cv.set(5, 2, leaf); cv.set(4, 2, stem)
         } else {
-            draw(kind, ripe: stage == 2, on: &cv)
+            draw(kind, ripe: stage == 2, tint: tint ?? 0xFF8FB1, on: &cv)
         }
         let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
         cv.outline(0.66)
@@ -29,8 +29,58 @@ enum SproutArt {
     /// Held overhead after picking (the ripe one, a little smaller).
     static func carried(_ kind: MossSprout.Kind) -> CGImage { image(kind, stage: 2, night: false) }
 
-    private static func draw(_ kind: MossSprout.Kind, ripe: Bool, on cv: inout PixelCanvas) {
+    /// A tiny win flag for the moss (5 × 7 px), in one of five colours.
+    static func winFlag(_ tint: Int) -> CGImage {
+        let key = "flag\(tint)"
+        if let i = cache[key] { return i }
+        var cv = PixelCanvas(5, 7)
+        let col: UInt32 = [0xE8574A, 0xF5B82E, 0x5FB8FF, 0xB98CFF, 0xFF8FB1][tint % 5]
+        cv.vspan(0, 0, 6, 0x6B4428)
+        cv.rect(1, 4, 3, 2, col); cv.set(4, 5, col); cv.set(1, 3, PixelCanvas.darken(col, 0.8))
+        cv.outline(0.6)
+        let img = cv.image
+        cache[key] = img
+        return img
+    }
+
+    /// The rubber duck (6 × 5 px).
+    static let duck: CGImage = {
+        var cv = PixelCanvas(6, 5)
+        let y: UInt32 = 0xFFD94A, d: UInt32 = 0xE8B830
+        cv.rect(0, 0, 5, 2, y); cv.hspan(1, 3, 2, y); cv.rect(3, 2, 2, 2, y); cv.set(4, 4, y); cv.set(3, 4, y)
+        cv.set(5, 3, 0xF29A2E); cv.set(4, 3, 0x2B2620); cv.hspan(0, 4, 0, d)
+        cv.outline(0.6)
+        return cv.image
+    }()
+
+    /// A checked picnic blanket with a basket (24 × 6 px), and a folded blanket (8 × 3 px).
+    static let picnic: CGImage = {
+        var cv = PixelCanvas(24, 6)
+        for x in 0..<24 { cv.set(x, 0, (x / 2) % 2 == 0 ? 0xE8574A : 0xF6EFDF); cv.set(x, 1, (x / 2) % 2 == 1 ? 0xE8574A : 0xF6EFDF) }
+        cv.rect(16, 2, 5, 2, 0xC9A15A); cv.hspan(16, 20, 3, 0xA88445); cv.hspan(17, 19, 5, 0x8A5A35); cv.set(16, 4, 0x8A5A35); cv.set(20, 4, 0x8A5A35)
+        cv.set(5, 2, 0xF5B82E); cv.set(6, 2, 0xC0503C); cv.set(9, 2, 0x6CC04A)
+        cv.outline(0.6)
+        return cv.image
+    }()
+    static let foldedBlanket: CGImage = {
+        var cv = PixelCanvas(8, 3)
+        for x in 0..<8 { cv.set(x, 0, 0x7A8BC8); cv.set(x, 1, x % 3 == 0 ? 0xF6EFDF : 0x9AA8E0); cv.set(x, 2, 0x7A8BC8) }
+        cv.outline(0.6)
+        return cv.image
+    }()
+
+    private static func draw(_ kind: MossSprout.Kind, ripe: Bool, tint: UInt32, on cv: inout PixelCanvas) {
         switch kind {
+        case .friendBloom:
+            // A tall star flower in the friend's colour, with a white heart.
+            for y in 0...6 { cv.set(4, y, stem) }
+            cv.set(3, 2, leaf); cv.set(2, 3, leaf); cv.set(5, 4, leaf); cv.set(6, 5, leaf)
+            if ripe {
+                for (x, y) in [(4, 10), (2, 9), (6, 9), (3, 7), (5, 7), (1, 8), (7, 8), (4, 9), (3, 8), (5, 8)] { cv.set(x, y, tint) }
+                cv.set(4, 8, 0xFFFFFF)
+            } else {
+                cv.rect(3, 7, 3, 2, tint); cv.set(4, 9, tint)
+            }
         case .daisy:
             for y in 0...5 { cv.set(4, y, stem) }
             cv.set(3, 2, leaf); cv.set(2, 3, leaf); cv.set(5, 3, leaf); cv.set(6, 4, leaf)

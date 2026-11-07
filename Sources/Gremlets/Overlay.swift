@@ -270,15 +270,20 @@ final class OverlayController {
         }
         for id in shadows.keys where !alive.contains(id) { shadows[id]?.removeFromSuperlayer(); shadows[id] = nil }
         if world.compact != compactShown { compactShown = world.compact; applyCompact() }
-        if world.compact {
-            // Full screen: only the Gremlets, the corner plant and the lift; everything else waits, hidden.
+        // Everything is drawn as usual; in full screen the full-screen screen's decorations are then kept hidden (only
+        // the Gremlets, the house, the corner branches and the lift show there), while another screen (an iPad over
+        // Sidecar) carries on as normal.
+        if world.compact && screens.count == 1 {
+            // Full screen with just the one screen: only what shows there (cheap).
             fx.renderCompact()
+            updateBubbles(alive: alive)
         } else {
             fx.render()
             bonsaiFX.render()
+            updateBubbles(alive: alive)
+            updateProps()
+            if compactShown, CACurrentMediaTime() - lastCompactSweep > 0.25 { lastCompactSweep = CACurrentMediaTime(); applyCompact() }
         }
-        updateBubbles(alive: alive)
-        if !world.compact { updateProps() }
         updateHover()
         updateIconPlay()
         for id in layers.keys where !alive.contains(id) {
@@ -293,13 +298,23 @@ final class OverlayController {
 
     /// Entering full screen hides every decoration on every screen (trees, moss, huts, props...);
     /// leaving brings them back exactly as they were.
+    private var lastCompactSweep = 0.0
+
     private func applyCompact() {
         if compactShown {
             let keep = Set((Array(layers.values) + Array(shadows.values) + bubbles.values.map(\.layer) + fx.compactKeep).map { ObjectIdentifier($0) })
-            for s in screens {
-                for l in s.root.sublayers ?? [] where !keep.contains(ObjectIdentifier(l)) && !l.isHidden {
-                    l.isHidden = true
-                    compactHidden.append(l)
+            // Only the full-screen screen (the main one) is tidied; anything that moved to another screen shows again.
+            let menuBarScreen = NSScreen.screens.first?.frame
+            let main = screens.firstIndex { s in s.frame == menuBarScreen } ?? 0
+            for (i, s) in screens.enumerated() {
+                for l in s.root.sublayers ?? [] {
+                    if i == main && !keep.contains(ObjectIdentifier(l)) && !l.isHidden {
+                        l.isHidden = true
+                        compactHidden.append(l)
+                    } else if i != main && l.isHidden, let k = compactHidden.firstIndex(where: { $0 === l }) {
+                        l.isHidden = false
+                        compactHidden.remove(at: k)
+                    }
                 }
             }
         } else {

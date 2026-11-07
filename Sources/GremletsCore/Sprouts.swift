@@ -7,7 +7,13 @@ import Foundation
 ///
 /// They're tiny and only ever sit on window tops, in the moss, so they never get in the way.
 public struct MossSprout: Equatable, Sendable {
-    public enum Kind: String, CaseIterable, Sendable { case daisy, mushroom, berries, dandelion }
+    public enum Kind: String, CaseIterable, Sendable {
+        case daisy, mushroom, berries, dandelion
+        /// From a friend's seed: a star flower in their colour (only ever planted by a visit).
+        case friendBloom
+        /// The kinds that come up on their own.
+        static let wild: [Kind] = [.daisy, .mushroom, .berries, .dandelion]
+    }
     public let id: Int
     public let kind: Kind
     public let windowID: Int
@@ -16,7 +22,10 @@ public struct MossSprout: Equatable, Sendable {
     /// 0...1; ripe at 1.
     public internal(set) var growth: Double
     /// When it ripened (it doesn't wait forever: flowers wilt, berries drop, dandelions blow away on their own).
-    var ripeAt: Double?
+    var ripeAt: Double? = nil
+    /// A friend's flower: its colour, and the day it was planted (it lasts that day).
+    public internal(set) var tint: UInt32? = nil
+    var day: Int? = nil
     public var ripe: Bool { growth >= 1 }
     /// 0 a shoot, 1 budding, 2 ready.
     public var stage: Int { growth >= 1 ? 2 : growth >= 0.35 ? 1 : 0 }
@@ -76,7 +85,8 @@ extension World {
             }
         }
         // Left too long: they look after themselves.
-        for (i, s) in sprouts.enumerated().reversed() {
+        sprouts.removeAll { $0.kind == .friendBloom && $0.day != nil && $0.day != today }
+        for (i, s) in sprouts.enumerated().reversed() where s.kind != .friendBloom {
             guard let r = s.ripeAt, clock - r > 480, !creatures.contains(where: { $0.mossTask?.sprout == s.id }) else { continue }
             sprouts.remove(at: i)
             let p = Vec2(sproutX(s), bed(s.windowID)?.y ?? 0)
@@ -134,7 +144,11 @@ extension World {
             let x = sproutX(sp)
             guard s.supports(x: x), abs(x - c.pos.x) < 700 else { continue }
             let near = abs(x - c.pos.x) < 250 ? 1.0 : 0.6
-            if sp.ripe {
+            if sp.ripe && sp.kind == .friendBloom {
+                if clock - (sproutWatered[sp.id] ?? -999) > 90 {
+                    add("admireFriendBloom", 0.8 * near) { self.startMossTask(c, .sprout(sp.id), walkTo: x - c.facing * 10) }
+                }
+            } else if sp.ripe {
                 let w: Double = sp.kind == .dandelion ? 3.2 : sp.kind == .berries ? 2.6 : 2.8
                 add("sprout-\(sp.kind.rawValue)", w * near) { self.startMossTask(c, .sprout(sp.id), walkTo: x - c.facing * 10) }
             } else if sp.growth > 0.08, clock - (sproutWatered[sp.id] ?? -999) > 40 {
@@ -163,6 +177,12 @@ extension World {
             return
         }
         c.mossTask = nil
+        if sp.ripe && sp.kind == .friendBloom {
+            // Not for picking: a sniff and a smile.
+            sproutWatered[sp.id] = clock
+            c.set(.react, duration: c.animationLength(for: .react))
+            return
+        }
         guard sp.ripe else {
             sprouts[i].growth = min(1, sp.growth + 0.2)
             if sprouts[i].growth >= 1 { sprouts[i].ripeAt = clock }
@@ -187,6 +207,8 @@ extension World {
             c.carrying = sp.kind.rawValue
             c.mossTask = MossTask(kind: .flowerBox, started: clock)
             startFloat(c, to: flowerBoxSpot, ride: .dandelion)
+        case .friendBloom:
+            break
         case .daisy, .mushroom:
             sproutEvents.append(.picked(sp.kind, p, by: c.id))
             // Off to give it to a friend on this window, if there's one about; otherwise, a happy little hop.
@@ -263,7 +285,7 @@ extension World {
         guard let t = tops.randomElement(using: &rng), let w = windows[t.ownerID] else { return false }
         let x = rng.range(t.minX + 30, t.maxX - 30)
         nextSproutID += 1
-        sprouts.append(MossSprout(id: nextSproutID, kind: kind ?? MossSprout.Kind.allCases.randomElement(using: &rng)!, windowID: t.ownerID,
+        sprouts.append(MossSprout(id: nextSproutID, kind: kind ?? MossSprout.Kind.wild.randomElement(using: &rng)!, windowID: t.ownerID,
                                   offset: x - w.minX, growth: ripe ? 1 : 0.1, ripeAt: ripe ? clock : nil))
         sproutEvents.append(.sprouted(Vec2(x, w.maxY)))
         nextMossTaskAt = min(nextMossTaskAt, clock)

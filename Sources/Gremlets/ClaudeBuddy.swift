@@ -55,6 +55,9 @@ final class ClaudeBuddy {
             sessionLog.task(session)
             let text = "\(project): Claude is done ✓"
             if var s = sessions[session], let c = worker(s.creatureID), let j = c.job, j.phase != .finished {
+                // Today's win: a flag in the moss; and the first words of Claude's summary on a little sign.
+                world.plantWinFlag(workerID: c.id)
+                if let sum = SpeechText.clean(q["summary"]) { world.claudeSummary(workerID: c.id, text: sum) }
                 world.finishJob(c.id)
                 log.add(j.craft)
                 s.finishedAt = Date(); s.lastEvent = Date(); sessions[session] = s

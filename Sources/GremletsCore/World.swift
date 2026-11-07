@@ -49,7 +49,7 @@ public final class World {
     public var gardenInMoss = false
     /// Mossy branches in the top corners to hang out on, out of full screen too.
     public var topCornerPerches = false { didSet { setSurfacesDirty() } }
-    var nextCornerTripAt = 0.0
+    var nextCornerTripAt = 0.0, nextScreenVisitAt = 0.0
     /// Tops of visible desktop icons (set by the platform layer when icon play is on). Owner ids at or below
     /// `iconOwnerBase`.
     public var iconSurfaces: [Surface] = []
@@ -141,6 +141,12 @@ public final class World {
     public var wallClock: Double = 0
     var now: Double { wallClock > 0 ? wallClock : clock }
     /// An app is full screen: everything keeps to the bottom corners, and the rest is put away (see Compact.swift).
+    /// On the screen that's in full screen (the main one): only those keep to the corners; Gremlets on another screen
+    /// (an iPad over Sidecar) carry on as usual.
+    public func onFullScreen(_ c: Creature) -> Bool {
+        guard compact, let s = screens.first else { return false }
+        return c.pos.x >= s.minX && c.pos.x < s.maxX
+    }
     public var compact = false { didSet { if compact && !oldValue { enterCompact() } else if !compact && oldValue { leaveCompact() } } }
     /// The cloud under the pointer while ⌃⌥ is held (see Lift.swift).
     public internal(set) var lift: CursorLift?
@@ -222,6 +228,16 @@ public final class World {
     public private(set) var surfaces: [Surface] = []
     public private(set) var creatures: [Creature] = []
     public var cursor: Vec2?
+    /// The garden's day (Garden2.swift).
+    public internal(set) var winFlags: [WinFlag] = []
+    public var winFlagsChanged = false
+    var gardenEvents: [GardenEvent] = []
+    public internal(set) var testMood = 0.0
+    public internal(set) var picnic: (owner: Int, x: Double, y: Double, until: Double)?
+    public internal(set) var blanket: (owner: Int, x: Double, y: Double, until: Double)?
+    var summarySigns: [Int: (text: String, until: Double)] = [:]
+    /// You're typing fast: they go quiet and tiptoe (set by the app).
+    public var hushed = false
     /// Wearing a flower crown today (an anniversary; set by the app).
     public var crowned: Set<Int> = []
     /// Full screen: when each Gremlet last skittered away from the pointer.
@@ -457,6 +473,7 @@ public final class World {
         updateSpectacle(dt)
         updateSessionWeather()
         updateClaudeCompanions()
+        updateGarden2(dt)
     }
 
     private func update(_ c: Creature, _ dt: Double) {
@@ -547,7 +564,7 @@ public final class World {
         c.groundOwner = support.ownerID
 
         c.timer -= dt
-        if let job = c.job, !compact, updateJob(c, job, dt, on: support) { return }
+        if let job = c.job, !onFullScreen(c), updateJob(c, job, dt, on: support) { return }
         if c.building != nil, c.job == nil, updateBuilding(c, dt, on: support) { return }
         if c.stair != nil, c.job == nil, updateStairBuilding(c, dt, on: support) { return }
         if c.rail != nil, c.job == nil, updateRailLaying(c, dt, on: support) { return }
@@ -606,10 +623,10 @@ public final class World {
             // A grove errand that ran out of time (or got interrupted) is over: never leave it hanging.
             if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
             if c.mossTask == nil { c.carrying = nil }
-            if c.driftDown && (c.job != nil || compact || !c.isGrounded) { c.driftDown = false }   // the moment's passed
+            if c.driftDown && (c.job != nil || onFullScreen(c) || !c.isGrounded) { c.driftDown = false }   // the moment's passed
             if c.mossTask == nil { c.mowing = false }
             // A run of bounces on a window top: boing, boing, boing.
-            if c.bounces > 0, !compact, c.isGrounded {
+            if c.bounces > 0, !onFullScreen(c), c.isGrounded {
                 c.bounces -= 1
                 launch(c, velocity: Vec2(c.facing * rng.range(0, 30), (2 * gravity * rng.range(46, 80) * c.species.jumpPower).squareRoot()))
                 return
@@ -620,7 +637,7 @@ public final class World {
                 return
             }
             if headHome(c) { return }
-            if compact { Brain.decideCompact(c, in: self) }
+            if onFullScreen(c) { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }
             else if c.snowmanTask != nil { snowmanDecide(c) }
@@ -632,7 +649,7 @@ public final class World {
     /// Moves a grounded creature horizontally, handling screen walls and ledges. Returns false if it turned.
     @discardableResult
     func move(_ c: Creature, _ dt: Double, speed: Double, on support: Surface, ledgeTurnChance: Double = 0.65) -> Bool {
-        let nx = c.pos.x + c.facing * speed * dt
+        let nx = c.pos.x + c.facing * speed * (hushed && c.job == nil ? 0.55 : 1) * dt   // tiptoeing while you type
         doorDecision(c)
         let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y + 1)
         // The screen's edges are walls (only ever outward: something arriving through the doorway walks on in).
@@ -670,7 +687,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || (compact && c.groveTask == nil) {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || (onFullScreen(c) && c.groveTask == nil) {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1
@@ -901,8 +918,13 @@ public final class World {
                 if abs(s.minX - hi) < 1 && s.maxX > hi { hi = s.maxX; changed = true }
             }
         }
+        // Full screen on the main screen: Gremlets on another screen (an iPad over Sidecar) don't wander onto it, and
+        // those on it don't wander off.
+        if compact, let main = screens.first {
+            if c.pos.x >= main.maxX { lo = max(lo, main.maxX) } else if c.pos.x < main.minX { hi = min(hi, main.minX) } else { lo = max(lo, main.minX); hi = min(hi, main.maxX) }
+        }
         // Full screen: a Gremlet in a bottom corner stays in it.
-        if compact, let scr = screen(containingX: c.pos.x, y: y), abs(y - scr.minY) < 4 {
+        if onFullScreen(c), let scr = screen(containingX: c.pos.x, y: y), abs(y - scr.minY) < 4 {
             if c.pos.x <= scr.minX + World.cornerZone + 1 { hi = min(hi, scr.minX + World.cornerZone) }
             else if c.pos.x >= scr.maxX - World.cornerZone - 1 { lo = max(lo, scr.maxX - World.cornerZone) }
         }

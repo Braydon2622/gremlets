@@ -23,7 +23,7 @@
 PORT="${GREMLETS_PORT:-47920}"
 input="$(cat)"
 query="$(printf '%s' "$input" | /usr/bin/python3 -c '
-import json, os, sys, urllib.parse
+import json, os, re, sys, urllib.parse
 try:
     d = json.load(sys.stdin)
 except Exception:
@@ -66,6 +66,43 @@ if event in ("tool", "toolfail"):
     if isinstance(todos, list):
         q["todos"] = str(len(todos))
         q["done"] = str(sum(1 for t in todos if isinstance(t, dict) and t.get("status") == "completed"))
+if event == "done":
+    # The first words of what Claude said at the end, for the little sign its Gremlet holds up (stays on this Mac:
+    # it only goes to the Gremlets app at 127.0.0.1).
+    try:
+        text = d.get("last_assistant_message") or ""
+        path = d.get("transcript_path") or ""
+        if not text and path and os.path.isfile(path):
+            with open(path, "rb") as f:
+                f.seek(0, 2); size = f.tell(); f.seek(max(0, size - 400000))
+                lines = f.read().decode("utf-8", "ignore").splitlines()
+            for line in reversed(lines):
+                try:
+                    e = json.loads(line)
+                except Exception:
+                    continue
+                if e.get("type") != "assistant":
+                    continue
+                parts = (e.get("message") or {}).get("content") or []
+                if isinstance(parts, str):
+                    text = parts
+                else:
+                    text = " ".join(p.get("text", "") for p in parts if isinstance(p, dict) and p.get("type") == "text")
+                if text.strip():
+                    break
+        text = re.sub(r"[`*_#>\[\]]", "", " ".join(text.split()))
+        # A sentence or two, enough to say something ("Done." alone says nothing).
+        first = ""
+        for sentence in re.split(r"(?<=[.!?])\s", text):
+            first = (first + " " + sentence).strip()
+            if len(first) >= 28:
+                break
+        if len(first) > 64:
+            first = first[:63].rsplit(" ", 1)[0] + "…"
+        if first:
+            q["summary"] = first[:64]
+    except Exception:
+        pass
 if event == "attention":
     q["kind"] = "permission" if "permission" in (d.get("message") or "").lower() else "waiting"
 print(urllib.parse.urlencode(q))

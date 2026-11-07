@@ -72,7 +72,11 @@ struct MossTask: Sendable {
         /// Floating home with a daisy for the window box on the hanging house.
         case flowerBox
         /// Chasing a firefly along a window top (Fireflies.swift).
-        case firefly(Int) }
+        case firefly(Int)
+        /// Lunch on a picnic blanket (Garden2.swift).
+        case picnic(seat: Double)
+        /// Late at night: taking a blanket to you.
+        case blanket(x: Double) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -353,7 +357,8 @@ extension World {
     func mossDecide(_ c: Creature) {
         defer { if c.mossTask == nil { c.carrying = nil } }
         guard var t = c.mossTask, let s = supportingSurface(for: c) else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
-        if clock - t.started > 60 { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+        let long: Bool = { if case .picnic = t.kind { return true }; return false }()
+        if clock - t.started > (long ? 200 : 60) { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
         switch t.kind {
         case .sprout(let id):
             sproutDecide(c, &t, id: id, on: s)
@@ -363,6 +368,10 @@ extension World {
             flowerBoxDecide(c, &t, on: s)
         case .firefly(let id):
             fireflyDecide(c, &t, id: id, on: s)
+        case .picnic(let seat):
+            picnicDecide(c, &t, seat: seat)
+        case .blanket(let x):
+            blanketDecide(c, &t, x: x, on: s)
         case .plant(let wid, let offset):
             guard let b = bed(wid), s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = b.minX + offset

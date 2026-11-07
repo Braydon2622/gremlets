@@ -15,7 +15,7 @@ extension World {
             for c in creatures where c.groundOwner == World.ferryOwner { c.groundOwner = nil; c.set(.airborne) }
             _ = fe; ferry = nil
         }
-        for c in creatures {
+        for c in creatures where onFullScreen(c) {
             if c.job?.isHobby == true { endJob(c.id) }
             if c.expedition != nil { giveUp(c) }
             if c.boost != nil || c.helping != nil { cancelBoost(c) }
@@ -119,7 +119,10 @@ extension World {
     }
 
     /// The places they hang out in full screen: the porch, hammock and swing, and the top-left branch.
-    var compactPerches: [Surface] { notchSurfaces }
+    var compactPerches: [Surface] {
+        guard compact, let m = screens.first else { return notchSurfaces }
+        return notchSurfaces.filter { $0.minX >= m.minX - 1 && $0.minX < m.maxX }   // the full-screen screen's own
+    }
 
     /// The bottom corner a Gremlet belongs to (the nearer one), as an x range on its screen's floor.
     func corner(for c: Creature) -> (lo: Double, hi: Double, floorY: Double)? {

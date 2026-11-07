@@ -2,6 +2,7 @@
 // Works with mouse and touch. URL options:
 //   ?g=flurrie,kindlet   start with these Gremlets
 //   ?showcase=kindlet    single-Gremlet view with a nameplate (used as an NFT's live preview)
+//   ?sprout=dandelion    a ripe sprout (daisy, mushroom, berries, dandelion, or any) comes up on a branch right away
 import { World, V } from './engine.js';
 import { loadIndex, loadSpecies, speciesBase } from './sprites.js';
 import { FX, Particles } from './effects.js';
@@ -11,6 +12,7 @@ import { Bridge } from './bridge.js';
 import { IslandArt, Biome, ledgeBiome, ledgeSeed } from './islands.js';
 import { Bonsai, layoutBonsai, renderBonsai, MAX_BRANCHES } from './bonsai.js';
 import { hex, PixelCanvas } from './pixelart.js';
+import { SproutArt } from './sproutart.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -94,7 +96,8 @@ function makePlatforms() {
       const w = Math.round(Math.min(Math.max(W * (W >= 600 ? 0.26 : 0.5), 130), 300) / PX) * PX;
       const x = side === 'left' ? 0 : Math.round((W - w) / PX) * PX;
       const dy = side === 'right' && W >= 600 ? PX * 12 : 0;
-      out.push({ id, x, y: y - PX * 4 + dy, w, h: PX * 4, seed: ledgeSeed(id), biome: ledgeBiome(id, MONTH), side });
+      // Mossy: sprouts come up in the moss along its top (engine.js).
+      out.push({ id, x, y: y - PX * 4 + dy, w, h: PX * 4, seed: ledgeSeed(id), biome: ledgeBiome(id, MONTH), side, mossy: true });
       id++;
     }
   }
@@ -449,8 +452,10 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   steer(dt);
+  updateMoss();
   world.step(dt);
   handleEvents(world.drainEvents());
+  sproutFx(world.drainSproutEvents());
   checkCrossings(now / 1000);
   updateTravellers(dt, now / 1000);
   updateFerry(dt, now / 1000);
@@ -495,6 +500,7 @@ function draw() {
     const s = toScreen(v.spot.boxX, v.spot.y);
     v.garden.draw(ctx, s.x, s.y, PX);
   }
+  drawSprouts();
   drawBonsai(performance.now() / 1000);   // behind the Gremlets, so the ones on its pads stand in front
   for (const c of world.creatures) {
     const a = art.get(c.id);
@@ -509,9 +515,105 @@ function draw() {
     if (c.facing < 0) ctx.scale(-1, 1);
     ctx.drawImage(a.image, r.x, r.y, r.w, r.h, -w / 2, -h, w, h);
     ctx.restore();
+    if (c.carrying) drawCarried(c);
   }
   drawMinions(performance.now() / 1000);
   particles.draw(ctx, toScreen, PX);
+}
+
+// ---------------------------------------------------------------- sprouts in the moss (same art and effects as the Mac)
+// The engine grows them on the branches' tops (see World.updateSprouts) and the Gremlets tend them. They're drawn
+// standing in the moss row, on the branch's own pixel grid.
+
+const sproutImages = new Map();   // `${kind}${stage}${night}` → 1:1 canvas
+function sproutImage(kind, stage, dim) {
+  const key = `${kind}${stage}${dim}`;
+  if (!sproutImages.has(key)) sproutImages.set(key, SproutArt.canvas(kind, stage, dim).toCanvas());
+  return sproutImages.get(key);
+}
+let seedImg = null;
+const seedImage = () => (seedImg ??= SproutArt.seedCanvas().toCanvas());
+
+function drawSprouts() {
+  for (const sp of world.sprouts) {
+    const w = world.windows.get(sp.windowID);
+    if (!w) continue;
+    const img = sproutImage(sp.kind, World.sproutStage(sp), night);
+    const left = Math.round((w.x + sp.offset) / PX - img.width / 2) * PX, bottom = H - (w.y + w.h);   // same line the branch art hangs from
+    ctx.drawImage(img, left, bottom - img.height * PX, img.width * PX, img.height * PX);
+  }
+}
+
+/** A watering can, or a picked daisy or mushroom, held up over the head (a little smaller than the sprout itself). */
+function drawCarried(c) {
+  const img = c.carrying === 'can' ? FX.wateringCan : SproutArt.KINDS.includes(c.carrying) ? sproutImage(c.carrying, 2, false) : null;
+  if (!img) return;
+  const k = c.carrying === 'can' ? PX : Math.max(2, PX - 1), w = img.width * k, h = img.height * k;
+  const bob = c.activity === 'walk' ? Math.abs(Math.sin(performance.now() / 1000 * 9 + c.id)) * 2 : 0;
+  const s = toScreen(c.pos.x + c.facing * 2, c.pos.y + c.species.headTop - 2 + bob);
+  ctx.save();
+  ctx.translate(Math.round(s.x), Math.round(s.y));
+  if (c.facing < 0) ctx.scale(-1, 1);
+  ctx.drawImage(img, -Math.round(w / 2), -h, w, h);
+  ctx.restore();
+}
+
+const oneOf = (a) => a[Math.floor(Math.random() * a.length)];
+const up = (p, dy) => V(p.x, p.y + dy);
+
+/** Short bubbles, leaf and sparkle bursts, hearts and drifting seeds (the Mac's Spectacles `handle(_: [SproutEvent])`). */
+function sproutFx(events) {
+  for (const e of events) {
+    switch (e.type) {
+      case 'sprouted': particles.burst(null, e.at, { imgs: [FX.leaf, FX.sparkle], count: 3, dx: [-10, 10], dy: [4, 18], duration: 0.6 }); break;
+      case 'watered': particles.burst(FX.rain, up(e.at, 26), { count: 6, dx: [-8, 8], dy: [-26, -8], duration: 0.6, stagger: 0.1, spin: 0 }); break;
+      case 'picked':
+        particles.burst(null, e.at, { imgs: [FX.leaf, FX.sparkle], count: 4, dx: [-14, 14], dy: [4, 24], duration: 0.7 });
+        if (Math.random() < 0.5) say(e.id, oneOf(e.kind === 'daisy' ? ['A daisy!', 'So pretty.', 'For you…'] : ['Ooh, a mushroom!', 'Look what I found!', 'A good one.']), 1.6);
+        break;
+      case 'gave': {
+        const f = byId(e.to);
+        if (f) particles.burst(FX.heart, head(f, 1), { count: 2, dx: [-10, 10], dy: [6, 24], duration: 1.0, stagger: 0.15 });
+        if (Math.random() < 0.5) say(e.id, oneOf(['For you!', 'Here!', 'I picked this.']), 1.5);
+        break;
+      }
+      case 'ate':
+        particles.burst(null, up(e.at, 20), { imgs: [FX.heart, FX.sparkle], count: 2, dx: [-8, 8], dy: [8, 22], duration: 0.8 });
+        if (Math.random() < 0.5) say(e.id, oneOf(['Yum!', 'Berries!', 'Mm, sweet.']), 1.4);
+        break;
+      case 'seedsBlown':
+        // The clock comes apart and the seeds float off on the breeze.
+        particles.burst(seedImage(), up(e.at, 24), { count: 10, dx: e.dir > 0 ? [60, 220] : [-220, -60], dy: [20, 120], duration: 2.6, stagger: 0.06, spin: 0.5 });
+        if (e.id != null && Math.random() < 0.5) say(e.id, oneOf(['Fwoo!', 'Make a wish!', 'Fly, little seeds!']), 1.6);
+        break;
+      case 'seedLanded':
+        particles.burst(seedImage(), up(e.at, 40), { dx: [-4, 4], dy: [-40, -30], duration: 1.0, spin: 0.3 });
+        particles.burst(null, e.at, { imgs: [FX.leaf, FX.sparkle], count: 4, dx: [-14, 14], dy: [2, 16], duration: 0.7, stagger: 0.8 });
+        break;
+      case 'wilted': particles.burst(FX.leaf2, e.at, { count: 3, dx: [-14, 14], dy: [-20, 6], duration: 0.8 }); break;
+    }
+  }
+}
+
+/** Sprouts grow in the branches' moss (none on bare branches, or in the showcase); faster during a Claude session. */
+function updateMoss() {
+  world.mossMinutes = showcase || !mossLevel() ? 0 : bridge?.peerMoss ?? 40;
+  world.claudeWorking = !!session;
+}
+
+/** Keeps sprouts out from under the bonsai's pot and out of a visitor's window box. */
+function sproutSpotOK(wid, x) {
+  if (bonsai && bonsai.isle === wid && Math.abs(x - bonsai.base.x) < bonsai.layout.potWidth * bonsai.S / 2 + 34) return false;
+  for (const [, v] of visitors) if (v.spot.key === 'p' + wid && x < v.spot.standX + 24) return false;
+  return true;
+}
+
+/** `?sprout=kind` and `gremlets.sprout(kind)`: a ripe one comes up now (any kind if it's not one of the four). */
+function sproutNow(kind = null, ripe = true) {
+  updateMoss();
+  const sp = world.sproutNow(kind, ripe ? 1 : 0.1);
+  if (sp) world.nextSproutAt = Math.max(world.nextSproutAt, world.clock + 20);
+  return sp;
 }
 
 // ---------------------------------------------------------------- tilt (phones): tip it and they slide
@@ -1817,6 +1919,18 @@ async function start() {
       }
     });
     if (params.has('boss')) setTimeout(() => spawnBoss(), 1200);
+    // Sprouts: the one you drive and the visitors gardening for the Mac stay out of it.
+    world.canTend = (c) => c.id !== driven && !visitors.has(c.id);
+    world.sproutSpotOK = sproutSpotOK;
+    world.nextSproutAt = world.clock + 40 + Math.random() * 50;
+    // A couple already coming up shortly after load, one nearly ready, so a visitor sees something within a minute.
+    setTimeout(() => {
+      updateMoss();
+      if (world.mossMinutes < 12) return;
+      world.sproutNow(null, 0.72 + Math.random() * 0.1);
+      if (Math.random() < 0.7) world.sproutNow(null, 0.25 + Math.random() * 0.2);
+    }, 3000);
+    if (params.has('sprout')) setTimeout(() => sproutNow(params.get('sprout')), 2000);
     try {
       const champ = localStorage.getItem('gremlets.crown');
       const c = champ && world.creatures.find((o) => o.species.id === champ);
@@ -1833,7 +1947,7 @@ async function start() {
       updateLinkUI();
     }
   }
-  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, watchSession, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; }, get bonsai() { return bonsai; }, get session() { return session; } };
+  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, watchSession, sprout: sproutNow, get sprouts() { return world.sprouts; }, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; }, get bonsai() { return bonsai; }, get session() { return session; } };
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 

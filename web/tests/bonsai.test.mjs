@@ -4,6 +4,7 @@
 import { Bonsai, layoutBonsai, renderBonsai, palette, SPECIES, FORMS, MAX_BRANCHES, deciduous } from '../js/bonsai.js';
 import { IslandArt, Biome, ledgeBiome, BIOMES } from '../js/islands.js';
 import { PixelCanvas, SplitMix64, ArtRNG, fnv1a } from '../js/pixelart.js';
+import { SproutArt, dimmed } from '../js/sproutart.js';
 
 const log = typeof print === 'function' ? print : console.log;
 let failures = 0, passed = 0;
@@ -171,6 +172,25 @@ test('PixelCanvas primitives behave like the Swift ones', () => {
   const o = new PixelCanvas(5, 5);
   o.rect(0, 0, 5, 5, 0xFFFFFF); o.outline(0.5);
   expect(o.get(2, 2) === 0xFFFFFF && o.get(0, 0) === PixelCanvas.darken(0xFFFFFF, 0.5) && PixelCanvas.darken(0xFFFFFF, 0.5) === 0x7F7F9F, 'outline darkens edges');
+});
+
+test('sprout art: the Mac pixels, base on row 0, white kept through the outline, dimmed at night', () => {
+  const shoot = SproutArt.canvas('daisy', 0, false);
+  expect(shoot.w === 9 && shoot.h === 11 && shoot.filled === 5 && shoot.get(4, 0) != null && shoot.get(4, 3) == null, 'a five-pixel shoot');
+  expect(shoot.get(4, 0) === PixelCanvas.darken(0x5E9E46, 0.66), 'outlined');
+  const daisy = SproutArt.canvas('daisy', 2, false);
+  expect(daisy.get(4, 9) === 0xFFFFFF && daisy.get(2, 7) === 0xFFFFFF && daisy.get(4, 8) === 0xF5B82E, 'petals stay white, the eye inside is untouched');
+  expect(daisy.px[(11 - 1 - 9) * 9 + 4] === 0xFFFFFF, 'y is up: the flower is near the top of the image');
+  const night = SproutArt.canvas('daisy', 2, true);
+  expect(night.get(4, 9) === 0xD8DCE8 && night.get(4, 8) === dimmed(0xF5B82E) && dimmed(0xFFFFFF) === 0xB7BCD8, 'night dims (white to moonlight)');
+  const shroom = SproutArt.canvas('mushroom', 2, false);
+  expect(shroom.get(2, 4) === 0xFFFFFF && shroom.get(4, 4) === 0xD9534F && shroom.get(0, 0) != null, 'ripe mushroom cap with spots');
+  const berries = [SproutArt.canvas('berries', 1, false), SproutArt.canvas('berries', 2, false)];
+  expect(berries[1].get(3, 3) === PixelCanvas.darken(0xD9534F, 0.66) && berries[0].get(3, 3) == null && berries[1].get(2, 3) !== berries[0].get(2, 3), 'berries redden when ripe');
+  const clock = SproutArt.canvas('dandelion', 2, false), bud = SproutArt.canvas('dandelion', 1, false);
+  expect(clock.get(4, 10) === 0xFFFFFF && clock.get(4, 8) === 0xC9C2B0 && bud.get(4, 9) != null && bud.get(4, 10) == null, 'seed clock vs yellow bud');
+  const seed = SproutArt.seedCanvas();
+  expect(seed.w === 3 && seed.h === 4 && seed.filled === 6 && seed.get(1, 0) === 0x9C8F78, 'seed');
 });
 
 log(`\n${passed} passed, ${failures} failed`);

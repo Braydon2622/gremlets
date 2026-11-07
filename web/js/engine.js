@@ -127,6 +127,8 @@ export class Creature {
       pendingLaunch: V(0, 0), targetX: null, petAmount: 0, edgeDecided: false, grabOffset: V(0, 0), idleVariant: 'idle',
       prevPos: pos, friend: null, social: 'none', flyTarget: null, peekX: null, lastGreet: {}, bumpCd: 0, startleCd: 0,
       tagImmunity: 0, beatTimer: 0, animSpeed: 1,
+      // A sprout errand (water it, or pick / eat / blow it, then maybe hand it to a friend) and what's held overhead.
+      task: null, carrying: null,
     });
   }
   get size() { return this.species.size; }
@@ -183,6 +185,11 @@ export class World {
       dizzyImpact: 1700, flySpeed: 210, bumpChance: 0.35,
       screens: [], windows: new Map(), surfaces: [], creatures: [], cursor: null, events: [],
       rng: new RNG(seed), nextId: 1, dragSamples: [], clock: 0, lastCursor: null, cursorSpeed: 0,
+      // Sprouts in the moss on mossy windows (the web's branches). The renderer sets the moss and the hooks.
+      sprouts: [], sproutEvents: [], nextSproutID: 0, nextSproutAt: 0, sproutWatered: {}, pendingSeeds: [], seedSpots: [],
+      mossMinutes: 0, mossCare: 0.5, mossThirsty: false, claudeWorking: false,
+      sproutSpotOK: null,   // (windowID, x) => false keeps sprouts off a spot (under the bonsai's pot, say)
+      canTend: null,        // (creature) => false keeps one out of sprout errands (the one you're driving, visitors)
     });
   }
 
@@ -275,6 +282,7 @@ export class World {
     for (const c of [...this.creatures].sort((a, b) => a.pos.y - b.pos.y)) this.update(c, dt);
     this.resolveBumps();
     this.checkStartle();
+    this.updateSprouts(dt);
   }
 
   update(c, dt) {
@@ -338,7 +346,8 @@ export class World {
     if (c.timer <= 0) {
       if (c.activity === 'run') this.endTag(c);
       this.endSocial(c);
-      this.decide(c);
+      if (c.task == null) c.carrying = null;
+      if (c.task) this.taskDecide(c); else this.decide(c);
     }
   }
 
@@ -357,6 +366,13 @@ export class World {
   }
 
   walk(c, dt, support) {
+    if (c.activity === 'walk' && c.task && c.targetX != null) {
+      // On an errand: straight to the spot, no dithering at ledges.
+      if (Math.abs(c.targetX - c.pos.x) < 5) { c.targetX = null; c.set('idle', 0.05); return; }
+      c.facing = c.targetX > c.pos.x ? 1 : -1;
+      if (!this.move(c, dt, c.species.walkSpeed * 1.15, support, 0)) { c.targetX = null; c.set('idle', 0.3); }
+      return;
+    }
     if (c.activity === 'chase') {
       if (this.cursor && Math.abs(this.cursor.y - c.pos.y) < 260) c.targetX = this.cursor.x;
       if (c.targetX != null) {
@@ -679,9 +695,232 @@ export class World {
         if (bases.length) add_(0.45 * (0.3 + e), () => this.startStack(c, rng.pick(bases)));
       }
     }
+    this.sproutChoices(c, add_);
     const total = choices.reduce((s, [w]) => s + w, 0);
     let roll = rng.range(0, total);
     for (const [w, f] of choices) { roll -= w; if (roll <= 0) { f(); return; } }
     choices[choices.length - 1]?.[1]();
+  }
+
+  // ---------------------------------------------------------------- sprouts (port of the Mac's Sprouts.swift)
+  // Little things come up in the moss on mossy windows: daisies, mushrooms, berry sprigs and dandelions. They sprout,
+  // grow over a few minutes, and the Gremlets look after them: water the young ones, then pick the daisies and
+  // mushrooms (and hand them to a friend), eat the berries, and blow the dandelion clocks. Ripe ones left too long wilt
+  // or blow away by themselves. A sprout is { id, kind, windowID, offset (from the window's left edge), growth 0...1,
+  // ripeAt }. Events go to `sproutEvents` (drained by the renderer), like the Mac's.
+
+  static sproutLimit = 7;
+  static sproutKinds = ['daisy', 'mushroom', 'berries', 'dandelion'];
+  static sproutStage(sp) { return sp.growth >= 1 ? 2 : sp.growth >= 0.35 ? 1 : 0; }
+
+  drainSproutEvents() { const e = this.sproutEvents; this.sproutEvents = []; return e; }
+  sproutX(sp) { return (this.windows.get(sp.windowID)?.x ?? 0) + sp.offset; }
+  /** A window sprouts can grow on: only mossy ones (the branches), never a bonsai pad or the house. */
+  sproutHost(id) { const w = this.windows.get(id); return w && w.mossy ? w : null; }
+  sproutTops(minWidth = 100) { return this.surfaces.filter((s) => s.kind === 'top' && this.sproutHost(s.owner) && s.maxX - s.minX >= minWidth); }
+  sproutSpotFine(wid, x) {
+    const w = this.sproutHost(wid);
+    return !!w && x > w.x + 26 && x < w.x + w.w - 26 && (!this.sproutSpotOK || this.sproutSpotOK(wid, x));
+  }
+  /** A clear spot on a visible stretch of that window's top, not crowding another sprout. */
+  sproutSpotFree(wid, x) {
+    return this.sproutSpotFine(wid, x)
+      && this.surfaces.some((s) => s.owner === wid && s.kind === 'top' && supports(s, x - 10) && supports(s, x + 10))
+      && !this.sprouts.some((o) => o.windowID === wid && Math.abs(this.sproutX(o) - x) < 40);
+  }
+  isFree(c) { return !c.isAsleep && c.task == null && World.carrierId(c.ground) == null && (!this.canTend || this.canTend(c)); }
+  tended(id) { return this.creatures.some((c) => c.task?.kind === 'sprout' && c.task.id === id); }
+
+  updateSprouts(dt) {
+    // Gone with its branch (mined, or the page resized under it).
+    this.sprouts = this.sprouts.filter((sp) => this.sproutSpotFine(sp.windowID, this.sproutX(sp)));
+    // Seeds drifting down onto another branch: the next sprouts tend to come up where they land.
+    for (let i = this.pendingSeeds.length - 1; i >= 0; i--) {
+      const seed = this.pendingSeeds[i];
+      if (this.clock < seed.at) continue;
+      this.pendingSeeds.splice(i, 1);
+      const w = this.sproutHost(seed.window);
+      if (!w) continue;
+      this.seedSpots = [...this.seedSpots.filter((p) => !(p.window === seed.window && Math.abs(p.offset - seed.offset) < 60)), { window: seed.window, offset: seed.offset }].slice(-5);
+      this.sproutEvents.push({ type: 'seedLanded', at: V(w.x + seed.offset, w.y + w.h) });
+    }
+    // Growing (not while the moss is parched).
+    if (!this.mossThirsty) {
+      const rate = dt / (this.claudeWorking ? 70 : 160) * (0.6 + this.mossCare * 0.6);
+      for (const sp of this.sprouts) {
+        if (sp.growth >= 1) continue;
+        sp.growth = Math.min(1, sp.growth + rate);
+        if (sp.growth >= 1) sp.ripeAt = this.clock;
+      }
+    }
+    // Left too long: they look after themselves.
+    for (let i = this.sprouts.length - 1; i >= 0; i--) {
+      const sp = this.sprouts[i];
+      if (sp.ripeAt == null || this.clock - sp.ripeAt <= 480 || this.tended(sp.id)) continue;
+      this.sprouts.splice(i, 1);
+      const w = this.windows.get(sp.windowID), p = V(this.sproutX(sp), w.y + w.h);
+      if (sp.kind === 'dandelion') this.blowSeeds(p, null); else this.sproutEvents.push({ type: 'wilted', at: p });
+    }
+    // Something new comes up in the moss now and then (more often while Claude works).
+    const limit = Math.min(World.sproutLimit, 2 + Math.floor(this.mossMinutes / 40));
+    if (this.clock < this.nextSproutAt || this.mossMinutes < 12 || this.mossThirsty || this.sprouts.length >= limit) return;
+    this.nextSproutAt = this.clock + (this.claudeWorking ? this.rng.range(15, 35) : this.rng.range(40, 90));
+    // Mostly where a dandelion seed came down; otherwise anywhere along a mossy branch.
+    const tops = this.sproutTops();
+    let spot = null;
+    for (let k = 0; k < 6 && !spot; k++) {
+      let wid, x;
+      const seed = this.seedSpots.length ? this.rng.pick(this.seedSpots) : null;
+      if (seed && this.rng.chance(0.7) && this.sproutHost(seed.window)) {
+        wid = seed.window; x = this.sproutHost(wid).x + seed.offset + this.rng.range(-30, 30);
+      } else if (tops.length) {
+        const t = this.rng.pick(tops);
+        wid = t.owner; x = this.rng.range(t.minX + 30, t.maxX - 30);
+      } else break;
+      if (this.sproutSpotFree(wid, x)) spot = { wid, x };
+    }
+    if (!spot) return;
+    const kinds = [['daisy', 1], ['mushroom', 0.8], ['berries', 0.8], ['dandelion', 1]];
+    let r = this.rng.range(0, kinds.reduce((a, k) => a + k[1], 0));
+    const kind = (kinds.find((k) => (r -= k[1]) <= 0) ?? kinds[0])[0];
+    this.addSprout(kind, spot.wid, spot.x, 0.02);
+  }
+
+  addSprout(kind, wid, x, growth) {
+    const w = this.windows.get(wid);
+    const sp = { id: ++this.nextSproutID, kind, windowID: wid, offset: x - w.x, growth, ripeAt: growth >= 1 ? this.clock : null };
+    this.sprouts.push(sp);
+    this.sproutEvents.push({ type: 'sprouted', at: V(x, w.y + w.h) });
+    return sp;
+  }
+
+  /** The clock comes apart: seeds off on the breeze, and a seed or two comes down on a branch a few seconds later. */
+  blowSeeds(p, by) {
+    const dir = this.rng.chance(0.5) ? 1 : -1;
+    this.sproutEvents.push({ type: 'seedsBlown', at: p, dir, id: by });
+    const tops = this.sproutTops();
+    for (let k = this.rng.chance(0.5) ? 2 : 1; k > 0 && tops.length; k--) {
+      const t = this.rng.pick(tops), w = this.windows.get(t.owner);
+      if (t.maxX - t.minX < 80) continue;
+      this.pendingSeeds.push({ at: this.clock + this.rng.range(3, 6), window: t.owner, offset: this.rng.range(t.minX + 40, t.maxX - 40) - w.x });
+    }
+  }
+
+  /** Not on any chore timer: something ready in the moss is always worth a look. Weights as on the Mac. */
+  sproutChoices(c, add_) {
+    if (!this.sprouts.length || !this.isFree(c) || !c.isGrounded) return;
+    const s = this.supportingSurface(c);
+    if (!s || s.kind !== 'top' || !this.sproutHost(s.owner)) return;
+    for (const sp of this.sprouts) {
+      if (sp.windowID !== s.owner || this.tended(sp.id)) continue;
+      const x = this.sproutX(sp);
+      if (!supports(s, x) || Math.abs(x - c.pos.x) >= 700) continue;
+      const near = Math.abs(x - c.pos.x) < 250 ? 1 : 0.6;
+      if (sp.growth >= 1) {
+        const w = sp.kind === 'dandelion' ? 3.2 : sp.kind === 'berries' ? 2.6 : 2.8;
+        add_(w * near, () => this.startSproutTask(c, sp.id, x - c.facing * 10));
+      } else if (sp.growth > 0.08 && this.clock - (this.sproutWatered[sp.id] ?? -999) > 40) {
+        add_(1.0 * near, () => { this.startSproutTask(c, sp.id, x - c.facing * 10); c.carrying = 'can'; });
+      }
+    }
+  }
+
+  startSproutTask(c, id, x) {
+    this.endSocial(c);
+    c.task = { kind: 'sprout', id, started: this.clock, acting: false };
+    c.carrying = null;
+    c.targetX = x; c.facing = x > c.pos.x ? 1 : -1;
+    c.set('walk', 30);
+  }
+
+  /** The next step of an errand, when the current activity ends. */
+  taskDecide(c) {
+    const t = c.task, s = this.supportingSurface(c);
+    if (!s || this.clock - t.started > 60) { c.task = null; c.carrying = null; c.set('idle', 0.3); return; }
+    if (t.kind === 'sprout') this.sproutDecide(c, t, s); else this.giftDecide(c, t, s);
+    if (c.task == null) c.carrying = null;
+  }
+
+  /** Walk over, then water it, or pick / eat / blow it. */
+  sproutDecide(c, t, s) {
+    const i = this.sprouts.findIndex((sp) => sp.id === t.id);
+    if (i < 0 || s.owner !== this.sprouts[i].windowID) { c.task = null; c.set('idle', 0.3); return; }
+    const sp = this.sprouts[i], x = this.sproutX(sp), p = V(x, s.y), ripe = sp.growth >= 1;
+    if (!t.acting) {
+      const stand = x + (c.pos.x < x ? -12 : 12);
+      if (Math.abs(c.pos.x - stand) > 6) { c.targetX = stand; c.set('walk', 20); return; }
+      t.acting = true;
+      c.facing = x > c.pos.x ? 1 : -1;
+      // Crouched over it (the web's 'crouch' activity is a jump wind-up, so this is the idle pose).
+      c.idleVariant = 'crouch';
+      c.set('idle', ripe ? (sp.kind === 'berries' ? 2.2 : 1.4) : 2.0);
+      if (!ripe) { c.carrying = 'can'; this.sproutEvents.push({ type: 'watered', at: p, id: c.id }); }
+      return;
+    }
+    c.task = null;
+    c.idleVariant = 'idle';
+    if (!ripe) {
+      sp.growth = Math.min(1, sp.growth + 0.2);
+      if (sp.growth >= 1) sp.ripeAt = this.clock;
+      this.sproutWatered[sp.id] = this.clock;
+      c.carrying = null;
+      c.idleVariant = 'look'; c.set('idle', 1.2);
+      return;
+    }
+    this.sprouts.splice(i, 1);
+    if (sp.kind === 'berries') {
+      c.energy = Math.min(1, c.energy + 0.25);
+      this.sproutEvents.push({ type: 'ate', at: p, id: c.id });
+      c.set('react', c.animationLength('react'));
+    } else if (sp.kind === 'dandelion') {
+      this.blowSeeds(p, c.id);
+      c.set('react', c.animationLength('react'));
+    } else {
+      this.sproutEvents.push({ type: 'picked', kind: sp.kind, at: p, id: c.id });
+      c.carrying = sp.kind;
+      // Off to give it to a friend on this branch, if there's one about; otherwise, a happy little hop.
+      const f = this.creatures.filter((o) => o !== c && o.isGrounded && o.ground === s.owner && !o.isAsleep && Math.abs(o.pos.x - c.pos.x) < 500 && supports(s, o.pos.x))
+        .sort((a, b) => Math.abs(a.pos.x - c.pos.x) - Math.abs(b.pos.x - c.pos.x))[0];
+      if (f) {
+        c.task = { kind: 'gift', to: f.id, what: sp.kind, started: this.clock };
+        c.targetX = f.pos.x + (c.pos.x < f.pos.x ? -22 : 22);
+        c.set('walk', 15);
+      } else {
+        c.task = { kind: 'gift', to: -1, what: sp.kind, started: this.clock };
+        c.set('react', c.animationLength('react'));
+      }
+    }
+  }
+
+  /** Carrying a daisy or mushroom over to a friend (or, with nobody about, just admiring it). */
+  giftDecide(c, t, s) {
+    c.task = null;
+    const f = t.to >= 0 ? this.byId(t.to) : null;
+    if (!f || f.ground !== s.owner || !supports(s, f.pos.x)) { c.idleVariant = 'look'; c.set('idle', 1.0); return; }
+    const stand = f.pos.x + (c.pos.x < f.pos.x ? -22 : 22);
+    if (Math.abs(c.pos.x - stand) > 10 && this.clock - t.started < 20) { c.task = t; c.targetX = stand; c.set('walk', 10); return; }
+    c.facing = f.pos.x > c.pos.x ? 1 : -1;
+    this.sproutEvents.push({ type: 'gave', kind: t.what, id: c.id, to: f.id });
+    c.set('wave', 1.2);
+    if (f.task == null && f.isGrounded && ['idle', 'walk', 'follow', 'wave', 'land'].includes(f.activity)) {
+      this.endSocial(f);
+      f.facing = -c.facing;
+      f.set('react', f.animationLength('react'));
+    }
+  }
+
+  /** Something comes up now (already grown, unless `growth` says otherwise): the dev hook and the first few on load.
+   *  Prefers a branch someone is standing on, so there's something to watch. Returns the sprout, or null. */
+  sproutNow(kind = null, growth = 1) {
+    const tops = this.sproutTops();
+    if (!tops.length) return null;
+    const busy = tops.filter((t) => this.creatures.some((c) => c.isGrounded && c.ground === t.owner));
+    for (let k = 0; k < 10; k++) {
+      const t = busy.length && this.rng.chance(0.75) ? this.rng.pick(busy) : this.rng.pick(tops);
+      const x = this.rng.range(t.minX + 30, t.maxX - 30);
+      if (!this.sproutSpotFree(t.owner, x)) continue;
+      return this.addSprout(World.sproutKinds.includes(kind) ? kind : this.rng.pick(World.sproutKinds), t.owner, x, Math.min(1, growth));
+    }
+    return null;
   }
 }

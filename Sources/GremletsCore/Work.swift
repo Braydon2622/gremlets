@@ -111,6 +111,9 @@ public final class Job {
     public internal(set) var propSide: Double = 1
     /// Floor spot (absolute) when there's no shelf.
     var spot: Vec2?
+    /// Gardening in the moss on a window's top edge: which window, and how far along it (the spot rides with it).
+    var spotWindow: (id: Int, dx: Double)?
+    var gardenX: Double?
     /// A per-job number the platform layer uses to vary the art (which picture gets painted...).
     public let seed: UInt64
     var started: Double
@@ -277,7 +280,8 @@ extension World {
         if c.climb != nil { c.climb = nil; if c.activity == .float { c.set(.airborne) } }
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j
-        if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x, for: c.id) }
+        // (Gardening in the moss: no shelf beside the window, the garden grows on the window's top edge.)
+        if let id = j.windowID { j.shelfSide = gardenInMoss ? nil : shelfSideFor(window: id, near: c.pos.x, for: c.id) }
         // Every shelf is a little different, and so is the way up.
         guard j.snail == nil else { return }
         let total = ShelfStyle.allCases.reduce(0) { $0 + $1.weight }
@@ -678,6 +682,7 @@ extension World {
 
     /// Returns true when the job handled this tick (otherwise the normal activity rules run).
     func updateJob(_ c: Creature, _ j: Job, _ dt: Double, on support: Surface) -> Bool {
+        if let sw = j.spotWindow, let w = windows[sw.id] { j.spot = Vec2(w.minX + sw.dx, w.maxY) }
         guard [.idle, .walk, .work].contains(c.activity) else { return false }
         switch j.phase {
         case .leaving:
@@ -693,7 +698,7 @@ extension World {
             return true
         case .working:
             if strayed(c, j) {
-                j.phase = .travel; j.started = clock; j.spot = nil
+                j.phase = .travel; j.started = clock; j.spot = nil; j.spotWindow = nil
                 return travel(c, j, dt, on: support)
             }
             let resting = j.isHobby && !userActive
@@ -782,13 +787,29 @@ extension World {
             return true
         }
 
+        // Gardening in the moss: up onto the window's top edge (the end away from the project's bonsai).
+        var onTop: Surface?
+        if gardenInMoss, let id = j.windowID, let w = windows[id],
+           let top = surfaces.filter({ $0.ownerID == id && $0.kind == .windowTop && $0.width >= 160 }).max(by: { $0.width < $1.width }),
+           let scr = screens.first(where: { w.midX >= $0.minX && w.midX < $0.maxX }) ?? screens.first {
+            let bonsaiLeft = w.minX - scr.minX < scr.maxX - w.maxX
+            let x = (bonsaiLeft ? top.maxX - 90 : top.minX + 90).clamped(top.minX + 40, top.maxX - 40)
+            if support.ownerID != id {
+                startFloat(c, to: Vec2(x, top.y), ride: j.rideUp == .bounce ? .dandelion : j.rideUp)
+                return true
+            }
+            onTop = top
+            j.gardenX = x
+        }
         // No shelf: work on the floor (under the Claude window if there is one).
-        if support.kind != .floor, let floor = floorBelow(c.pos.x) {
+        if onTop == nil, support.kind != .floor, let floor = floorBelow(c.pos.x) {
             startFloat(c, to: Vec2(c.pos.x, floor.y))
             return true
         }
         var want = c.pos.x.clamped(support.minX + 100, max(support.minX + 100, support.maxX - 100))
-        if let id = j.windowID, let w = windows[id] {
+        if onTop != nil, let gx = j.gardenX {
+            want = gx
+        } else if let id = j.windowID, let w = windows[id] {
             want = (w.maxX - 80).clamped(max(support.minX + 100, w.minX + 30), min(support.maxX - 100, max(w.minX + 31, w.maxX - 30)))
         }
         // Give other Gremlets' projects some elbow room.
@@ -818,6 +839,9 @@ extension World {
                 if min(s.maxX - c.pos.x, c.pos.x - s.minX) > 80 { j.propSide = rng.chance(0.5) ? 1 : -1 }
             }
             j.spot = Vec2(c.pos.x + j.propSide * c.size.x * 0.85, c.pos.y)
+            if let s = supportingSurface(for: c), s.kind == .windowTop, let w = windows[s.ownerID], let sp = j.spot {
+                j.spotWindow = (s.ownerID, sp.x - w.minX)
+            }
         }
         j.phase = .working
         j.poseTimer = 0

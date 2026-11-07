@@ -90,7 +90,13 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Things grow in the moss.** Daisies, mushrooms, berry sprigs and dandelions come up in the moss on window tops
   and grow over a few minutes. The Gremlets water the young ones, pick the daisies and mushrooms to give to a friend,
   eat the berries, and blow the dandelion clocks so the seeds drift off and start new moss on another window
-  (`gremlet sprout [kind]`).
+  (`gremlet sprout [kind]`). Moss also creeps along the bottom of the screen from both corners (the middle stays
+  clear), and things grow there too. Daisies they pick fill the window box on the hanging house through the day.
+  After dark, fireflies drift over the thick moss and the Gremlets chase them (`gremlet fireflies`).
+- **Gardens grow in the moss.** While Claude works, its Gremlet gardens right on the window's top edge, the plants
+  coming up out of a mound of moss (no planter, no shelf).
+- **Top-corner hangouts.** Mossy branches in the top-left and top-right corners where they rest when Claude is
+  quiet; they hop out of the pointer's way there and clicks always go through to your app.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It

@@ -68,7 +68,11 @@ struct MossTask: Sendable {
         /// Water a sprout in the moss, or pick / eat / blow it once it's ready (Sprouts.swift).
         case sprout(Int)
         /// Taking a picked daisy or mushroom to a friend (-1: nobody about, just admiring it).
-        case gift(to: Int, what: MossSprout.Kind) }
+        case gift(to: Int, what: MossSprout.Kind)
+        /// Floating home with a daisy for the window box on the hanging house.
+        case flowerBox
+        /// Chasing a firefly along a window top (Fireflies.swift).
+        case firefly(Int) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -150,8 +154,8 @@ extension World {
             }
             return false
         }
-        // Patches only live on windows that are still there.
-        mossPatches.removeAll { windows[$0.windowID] == nil }
+        // Patches only live on windows that are still there (or on the floor).
+        mossPatches.removeAll { bed($0.windowID) == nil }
         if mossPads.count != before || mossPadSurfaces.count != mossPads.count + mossBridges.count { rebuildMossSurfaces() }
     }
 
@@ -176,6 +180,7 @@ extension World {
         }
         if clock - lastVineBuild > 1 { lastVineBuild = clock; rebuildVines() }
         updateSprouts(dt)
+        updateFireflies(dt)
         // Patches grow on their own, faster when tended and while Claude works.
         let boost = 1 + mossMinutes / 100
         for i in mossPatches.indices {
@@ -241,6 +246,16 @@ extension World {
             let x = (c.pos.x < s.minX + s.width / 2 ? s.minX + 26 : s.maxX - 26).clamped(s.minX + 10, s.maxX - 10)
             add("trimMoss", 0.35 + (mossMinutes - 170) / 120) { self.startMossTask(c, .trim(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }
+        // Plant moss along the bottom of the screen, in the mossy corners (the middle stays clear).
+        if s.kind == .floor, mossMinutes >= 15, !mossThirsty, let b = bed(s.ownerID), mossPatches.filter({ $0.windowID == s.ownerID }).count < 6 {
+            let spans = floorMoss(-s.ownerID - 1)
+            let spots = spans.flatMap { sp in stride(from: sp.lo + 40, through: sp.hi + 60, by: 30).map { $0 } }.filter { x in
+                s.supports(x: x) && !mossPatches.contains { $0.windowID == s.ownerID && abs(patchX($0) - x) < 90 }
+            }
+            if let x = spots.min(by: { abs($0 - c.pos.x) < abs($1 - c.pos.x) }), abs(x - c.pos.x) < 500 {
+                add("plantMoss", 0.6) { self.startMossTask(c, .plant(window: s.ownerID, offset: x - b.minX), walkTo: x) }
+            }
+        }
         // Plant a new tuft on this window top.
         if s.kind == .windowTop, let w = windows[s.ownerID], mossPatches.filter({ $0.windowID == s.ownerID }).count < 4 {
             let spots = stride(from: s.minX + 40, through: s.maxX - 40, by: 30).filter { x in
@@ -279,7 +294,30 @@ extension World {
         return s.y >= v.bottom - 70 && s.y < v.top - 40
     }
 
-    func patchX(_ p: MossPatch) -> Double { (windows[p.windowID]?.minX ?? 0) + p.offset }
+    func patchX(_ p: MossPatch) -> Double { (bed(p.windowID)?.minX ?? 0) + p.offset }
+
+    /// Where moss can be planted and things can grow: a window's top edge (id ≥ 0) or a screen's floor along the
+    /// bottom, above the Dock (id -1, -2, …, the floor's surface id). Its left end and its height.
+    public func bed(_ id: Int) -> (minX: Double, y: Double)? {
+        if id >= 0 { return windows[id].map { ($0.minX, $0.maxY) } }
+        let i = -id - 1
+        guard i >= 0, i < screens.count else { return nil }
+        return (screens[i].minX, screens[i].minY)
+    }
+
+    /// The visible stretch of a bed at x (a window top that isn't covered there, or the floor).
+    public func bedSurface(_ id: Int, at x: Double) -> Surface? {
+        surfaces.first { $0.ownerID == id && ($0.kind == .windowTop || $0.kind == .floor) && $0.supports(x: x) }
+    }
+
+    /// Moss along the bottom of the screen: it creeps in from both corners as the moss grows (never across the
+    /// middle). The stretches, as x ranges.
+    public func floorMoss(_ i: Int) -> [(lo: Double, hi: Double)] {
+        guard i < screens.count, mossMinutes >= 15 else { return [] }
+        let scr = screens[i]
+        let reach = scr.w * ((mossMinutes - 15) / 260).clamped(0.06, 0.32)
+        return [(scr.minX, scr.minX + reach), (scr.maxX - reach, scr.maxX)]
+    }
 
     func startMossTask(_ c: Creature, _ kind: MossTask.Kind, walkTo x: Double) {
         endSocial(c)
@@ -321,9 +359,13 @@ extension World {
             sproutDecide(c, &t, id: id, on: s)
         case .gift(let to, let what):
             giftDecide(c, to: to, what: what, started: t.started, on: s)
+        case .flowerBox:
+            flowerBoxDecide(c, &t, on: s)
+        case .firefly(let id):
+            fireflyDecide(c, &t, id: id, on: s)
         case .plant(let wid, let offset):
-            guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
-            let x = w.minX + offset
+            guard let b = bed(wid), s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            let x = b.minX + offset
             if !t.acting {
                 if abs(c.pos.x - x) > 6 { c.targetX = x; c.set(.walk, duration: 20); return }
                 t.acting = true; c.mossTask = t; c.carrying = nil

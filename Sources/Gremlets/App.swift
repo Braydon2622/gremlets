@@ -97,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ note: Notification) {
-        world.dayFollowsClaude = true
+        world.gardenInMoss = true; world.topCornerPerches = true; world.dayFollowsClaude = true
         // The tidy desktop: no village or road on the floor, no vines up the screen's sides, one small corner plant.
         world.villageOn = false
         world.railsOn = false
@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
         world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
         world.mossCare = UserDefaults.standard.object(forKey: "moss.care") as? Double ?? 1
+        world.houseDaisies = UserDefaults.standard.integer(forKey: "house.daisies")
+        world.houseDaisiesDay = UserDefaults.standard.integer(forKey: "house.daisiesDay")
         // Houses built by older versions take the shape of today's pictures.
         world.refitHouses { h in Biome(rawValue: h.biome).map { BuildArt.fit($0) } }
         let storedSide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0
@@ -1167,6 +1169,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
             return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes)),"care":\#(Int(world.mossCare * 100))}"#)
+        case "fireflies":
+            // A few fireflies come out over the moss now (night or not) for a couple of minutes.
+            guard world.firefliesNow() else { return (409, #"{"ok":false,"error":"no moss or window top for them"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "sprout":
             // Something ready to pick comes up in the moss on a window top (daisy, mushroom, berries, dandelion).
             let kind = query["kind"].flatMap { MossSprout.Kind(rawValue: $0) }
@@ -1754,6 +1761,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func saveMoss() {
         UserDefaults.standard.set(world.mossMinutes, forKey: mossKey)
         UserDefaults.standard.set(world.mossCare, forKey: "moss.care")
+        UserDefaults.standard.set(world.houseDaisies, forKey: "house.daisies")
+        UserDefaults.standard.set(world.houseDaisiesDay, forKey: "house.daisiesDay")
     }
 
     // MARK: Watching the Mac

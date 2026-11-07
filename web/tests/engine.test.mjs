@@ -104,6 +104,59 @@ test('flight lands on a window', () => {
   expect(c.ground === 5 && c.pos.y === 450, `ground ${c.ground} y ${c.pos.y}`);
 });
 
+// Sprouts (the Mac's Sprouts.swift): only on mossy windows, they grow, ripen, and wilt or blow away if left.
+const branch = { id: 5, x: 100, y: 200, w: 800, h: 12, mossy: true };
+const bare = { id: 6, x: 100, y: 500, w: 800, h: 12 };
+
+test('sprouts come up on mossy windows only, grow, ripen and look after themselves', () => {
+  const w = new World(31); w.setEnvironment([screen], [branch, bare]);
+  w.mossMinutes = 40;
+  const seen = {}, stages = new Set();
+  let most = 0;
+  for (let i = 0; i < 20 * 900; i++) {
+    w.step(1 / 20);
+    for (const e of w.drainSproutEvents()) seen[e.type] = (seen[e.type] || 0) + 1;
+    for (const sp of w.sprouts) {
+      stages.add(World.sproutStage(sp));
+      const x = w.sproutX(sp);
+      if (sp.windowID !== 5 || x < branch.x + 26 || x > branch.x + branch.w - 26) throw new Error(`sprout off the branch at ${x}`);
+    }
+    most = Math.max(most, w.sprouts.length);
+  }
+  expect(seen.sprouted >= 3 && stages.size === 3, `sprouted ${seen.sprouted}, stages ${[...stages]}`);
+  expect(most <= 3, `limit is 2 + moss/40 = 3, saw ${most}`);
+  expect((seen.wilted || 0) + (seen.seedsBlown || 0) > 0, 'ripe ones never wilted or blew away');
+  const none = new World(32); none.setEnvironment([screen], [branch]);
+  none.mossMinutes = 5; steps(none, 20 * 120, 1 / 20);
+  expect(!none.sprouts.length, 'no moss, no sprouts');
+});
+
+test('Gremlets on the branch eat ripe berries and hand a picked daisy to a friend', () => {
+  const w = new World(33); w.setEnvironment([screen], [branch]);
+  w.mossMinutes = 40; w.nextSproutAt = 1e9;
+  const a = w.spawn(testSpecies(), V(400, 260)), b = w.spawn(testSpecies(), V(470, 260));
+  steps(w, 30);
+  expect(a.ground === 5 && b.ground === 5, 'both on the branch');
+  const seen = [];
+  const run = (secs) => { for (let i = 0; i < secs * 60; i++) { w.step(1 / 60); for (const e of w.drainSproutEvents()) seen.push(e.type); } };
+  w.sproutNow('berries', 1);
+  run(90);
+  expect(seen.includes('ate'), 'nobody ate the berries: ' + seen);
+  const back = (c) => { if (c.ground !== 5) { c.pos = V(c.pos.x < 200 || c.pos.x > 800 ? 500 : c.pos.x, 230); c.vel = V(0, 0); c.set('airborne'); } };
+  back(a); back(b); run(1);
+  seen.length = 0;
+  w.sproutNow('daisy', 1);
+  let carried = false;
+  for (let i = 0; i < 90 * 60 && !seen.includes('gave'); i++) {
+    w.step(1 / 60);
+    for (const e of w.drainSproutEvents()) seen.push(e.type);
+    if (a.carrying === 'daisy' || b.carrying === 'daisy') carried = true;
+  }
+  expect(seen.includes('picked') && carried, 'never picked and carried the daisy: ' + seen);
+  expect(seen.includes('gave'), 'never handed it over: ' + seen);
+  expect(!w.sprouts.length, 'sprout still there');
+});
+
 test('soak: 8 creatures, 10 simulated minutes', () => {
   const w = new World(99);
   const scr = { x: 0, y: 0, w: 1440, h: 860 };

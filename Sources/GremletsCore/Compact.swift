@@ -50,53 +50,72 @@ extension World {
         }
     }
 
-    /// Full screen: they're shy of the pointer. Bring it near one up in a corner and it skitters off (to another perch
-    /// on that side, the far end of its own, or down out of the way), so they never sit on a button you're reaching for.
+    /// How close the pointer gets before a Gremlet in full screen gets out of the way, and how far clear of it the
+    /// spot it goes to must be (so the button under it is free to click).
+    static let shyReach = 48.0, shyClear = 140.0
+
+    /// Full screen: they're shy of the pointer. Bring it near one up in a corner and it leaps off at once (no wind-up)
+    /// to a spot well clear of the pointer: another perch, or, with nowhere up top, the stump in the bottom corner on its
+    /// side. Gremlets on their way to somewhere near the pointer turn aside.
     func shyFromCursor() {
         guard let cur = cursor else { return }
-        let perches = compactPerches
-        for (id, _) in dropTarget where creature(id: id).map({ $0.activity != .airborne && $0.activity != .crouch }) ?? true { dropTarget[id] = nil }
-        for c in creatures where c.activity != .dragged && c.homeUntil == nil && dropTarget[c.id] == nil {
-            let center = Vec2(c.pos.x, c.pos.y + c.size.y / 2)
-            guard abs(cur.x - center.x) < 34 + c.size.x / 2, abs(cur.y - center.y) < 30 + c.size.y / 2 else { continue }
-            if let t = spookedAt[c.id], clock - t < 0.7 { continue }
-            if c.activity == .float, let t = c.floatTarget, abs(t.x - cur.x) < 90, abs(t.y - cur.y) < 90 {
-                // On its way to right where the pointer is: pick somewhere else.
-                spookedAt[c.id] = clock
-                if let p = perches.filter({ abs(($0.minX + $0.maxX) / 2 - cur.x) > 120 || abs($0.y - cur.y) > 90 })
-                    .min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) {
-                    c.floatTarget = Vec2((p.minX + p.maxX) / 2, p.y)
-                }
+        for (id, _) in dropTarget where creature(id: id).map({ $0.activity != .airborne }) ?? true { dropTarget[id] = nil }
+        // (Out of full screen, only up in the top corners and at the hanging house, where they'd sit over buttons.)
+        for c in creatures where c.activity != .dragged && c.homeUntil == nil && dropTarget[c.id] == nil
+            && (compact || World.isNotchOwner(c.groundOwner) || (c.activity == .float && c.floatTarget.map { t in compactPerches.contains { abs($0.y - t.y) < 4 } } ?? false)) {
+            if c.activity == .float, let t = c.floatTarget, (t + Vec2(0, c.size.y / 2) - cur).length < World.shyClear {
+                if let (p, x) = shySpot(for: c, from: cur) { c.floatTarget = Vec2(x, p.y) }
                 continue
             }
-            guard c.isGrounded, let here = perches.first(where: { $0.ownerID == c.groundOwner }) else { continue }
+            let b = c.bounds
+            let dx = max(b.minX - cur.x, 0, cur.x - b.maxX), dy = max(b.minY - cur.y, 0, cur.y - b.maxY)
+            guard (dx * dx + dy * dy).squareRoot() < World.shyReach, c.isGrounded else { continue }
+            if let t = spookedAt[c.id], clock - t < 0.25 { continue }
             spookedAt[c.id] = clock
             endSocial(c)
             c.targetX = nil
             emit(.alert(c.id))
-            // The spot on a perch farthest from the pointer.
-            func far(_ p: Surface) -> Double { abs(p.minX + 10 - cur.x) > abs(p.maxX - 10 - cur.x) ? p.minX + 10 : p.maxX - 10 }
-            func clear(_ p: Surface) -> Bool { abs(far(p) - cur.x) > 80 || abs(p.y - cur.y) > 70 }
-            if let p = perches.filter({ $0.ownerID != here.ownerID && clear($0) && abs(far($0) - c.pos.x) < 380 && abs($0.y - c.pos.y) < 170 })
-                .min(by: { abs(far($0) - c.pos.x) < abs(far($1) - c.pos.x) }) {
-                launch(c, velocity: ballistic(from: c.pos, toX: far(p), y: p.y, apexExtra: 22))
-            } else if abs(far(here) - cur.x) > 60 {
-                launch(c, velocity: ballistic(from: c.pos, toX: far(here), y: here.y, apexExtra: 14))
+            if let (p, x) = shySpot(for: c, from: cur) {
+                leap(c, toX: x, y: p.y, landingOn: p.ownerID)
             } else {
-                // Nowhere up top to go: the stump in the bottom corner on its side comes out, and it hops down to it.
+                // Nowhere up top is clear: the stumps come out and it drops straight down the side of the screen.
                 compactOverflowUntil = clock + 120
                 setSurfacesDirty()
                 if let stump = cornerStumps.min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) {
-                    // Off the perch and straight down the side of the screen onto the stump.
-                    launch(c, velocity: ballistic(from: c.pos, toX: (stump.minX + stump.maxX) / 2, y: stump.y, apexExtra: 12))
-                    dropTarget[c.id] = stump.ownerID
+                    leap(c, toX: (stump.minX + stump.maxX) / 2, y: stump.y, landingOn: stump.ownerID)
                 } else {
-                    let away: Double = c.pos.x < cur.x ? -1 : 1
-                    launch(c, velocity: Vec2(away * 160, 220))
+                    c.groundOwner = nil; c.vel = Vec2((c.pos.x < cur.x ? -1 : 1) * 200, 200); c.pos.y += 1; c.set(.airborne)
                 }
             }
-            c.facing = cur.x > c.pos.x ? -1 : 1
         }
+    }
+
+    /// The nearest spot on a perch with room, on the same side of the screen, well clear of the pointer.
+    func shySpot(for c: Creature, from cur: Vec2) -> (Surface, Double)? {
+        var best: (Surface, Double, Double)?
+        for p in compactPerches {
+            let others = creatures.filter { $0 !== c && ($0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false)) }
+            guard Double(others.count + 1) <= max(1, p.width / 34) + 1 else { continue }
+            for x in stride(from: p.minX + 12, through: max(p.minX + 12, p.maxX - 12), by: 10) {
+                // Same side of the screen (no leaping across the middle of it).
+                guard abs(x - c.pos.x) < 420, (Vec2(x, p.y + c.size.y / 2) - cur).length >= World.shyClear,
+                      !others.contains(where: { abs($0.pos.x - x) < 22 && abs($0.pos.y - p.y) < 6 }) else { continue }
+                let d = (Vec2(x, p.y) - c.pos).length
+                if best == nil || d < best!.2 { best = (p, x, d) }
+            }
+        }
+        return best.map { ($0.0, $0.1) }
+    }
+
+    /// Straight off (no crouch first), landing only on that perch: it passes through anything else on the way.
+    func leap(_ c: Creature, toX x: Double, y: Double, landingOn owner: Int) {
+        let v = ballistic(from: c.pos, toX: x, y: y, apexExtra: y > c.pos.y ? 14 : 8)
+        c.groundOwner = nil
+        c.vel = v
+        c.pos.y += 1
+        c.facing = v.x >= 0 ? 1 : -1
+        c.set(.airborne)
+        dropTarget[c.id] = owner
     }
 
     /// The places they hang out in full screen: the porch, hammock and swing, and the top-left branch.
@@ -132,8 +151,9 @@ extension Brain {
             }
             // ...and keeping away from wherever the pointer is.
             func shy(_ p: Surface) -> Double {
-                guard let cur = world.cursor, cur.x > p.minX - 60, cur.x < p.maxX + 60, abs(cur.y - p.y) < 90 else { return 0 }
-                return 5
+                guard let cur = world.cursor else { return 0 }
+                let near = Vec2(cur.x.clamped(p.minX, p.maxX), p.y + 20)
+                return (near - cur).length < World.shyClear ? 5 : 0
             }
             let p = perches.min { crowd($0) + shy($0) < crowd($1) + shy($1) }!
             let x = (p.minX + p.width * world.rng.range(0.2, 0.8))
@@ -143,6 +163,8 @@ extension Brain {
         add("idle", 2.0) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(4, 10)) }
         add("potter", 0.6) {
             c.targetX = world.rng.range(here.minX + 8, here.maxX - 8)
+            // Not over toward the pointer.
+            if let cur = world.cursor, (Vec2(c.targetX!, here.y + 20) - cur).length < World.shyClear { c.targetX = c.pos.x }
             c.facing = c.targetX! > c.pos.x ? 1 : -1
             c.set(.walk, duration: 5)
         }
@@ -154,7 +176,8 @@ extension Brain {
         for p in perches where p.ownerID != here.ownerID {
             let mid = (p.minX + p.maxX) / 2
             let there = world.creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count
-            if abs(mid - c.pos.x) < 170 && abs(p.y - c.pos.y) < 90 && Double(there + 1) <= max(1, p.width / 34) {
+            let pointerNear = world.cursor.map { (Vec2($0.x.clamped(p.minX, p.maxX), p.y + 20) - $0).length < World.shyClear } ?? false
+            if abs(mid - c.pos.x) < 170 && abs(p.y - c.pos.y) < 90 && Double(there + 1) <= max(1, p.width / 34) && !pointerNear {
                 add("hop", 0.5) { world.launch(c, velocity: world.ballistic(from: c.pos, toX: mid, y: p.y, apexExtra: 26)) }
             }
         }

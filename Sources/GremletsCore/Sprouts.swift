@@ -33,6 +33,11 @@ public enum SproutEvent: Equatable, Sendable {
     /// A seed came down and started a tuft of moss here.
     case seedLanded(Vec2)
     case wilted(Vec2)
+    /// A daisy went into the window box on the hanging house.
+    case boxed(Vec2, by: Int)
+    /// Caught a firefly (it glows in their hands a moment, then they let it go).
+    case caughtFirefly(Vec2, by: Int)
+    case missedFirefly(by: Int)
 }
 
 extension World {
@@ -40,25 +45,25 @@ extension World {
 
     public func drainSproutEvents() -> [SproutEvent] { defer { sproutEvents = [] }; return sproutEvents }
 
-    func sproutX(_ s: MossSprout) -> Double { (windows[s.windowID]?.minX ?? 0) + s.offset }
+    func sproutX(_ s: MossSprout) -> Double { (bed(s.windowID)?.minX ?? 0) + s.offset }
 
     /// The visible window top a sprout stands on (nil while it's covered by another window).
     func sproutTop(_ s: MossSprout) -> Surface? {
-        let x = sproutX(s)
-        return surfaces.first { $0.ownerID == s.windowID && $0.kind == .windowTop && $0.supports(x: x) }
+        bedSurface(s.windowID, at: sproutX(s))
     }
 
     func updateSprouts(_ dt: Double) {
-        sprouts.removeAll { windows[$0.windowID] == nil }
+        sprouts.removeAll { bed($0.windowID) == nil }
+        if wallClock > 0 { rollDaisyDay() }
         guard !compact else { return }
         // Seeds drifting down to start new moss.
         for (i, seed) in pendingSeeds.enumerated().reversed() where clock >= seed.at {
             pendingSeeds.remove(at: i)
-            guard let w = windows[seed.window], mossPatches.filter({ $0.windowID == seed.window }).count < 5,
+            guard let b = bed(seed.window), mossPatches.filter({ $0.windowID == seed.window }).count < 5,
                   !mossPatches.contains(where: { $0.windowID == seed.window && abs($0.offset - seed.offset) < 60 }) else { continue }
             nextPatchID += 1
             mossPatches.append(MossPatch(id: nextPatchID, windowID: seed.window, offset: seed.offset, size: 0.06, lastTended: clock))
-            sproutEvents.append(.seedLanded(Vec2(w.minX + seed.offset, w.maxY)))
+            sproutEvents.append(.seedLanded(Vec2(b.minX + seed.offset, b.y)))
         }
         // Growing (not while the moss is parched).
         if !mossThirsty {
@@ -72,34 +77,38 @@ extension World {
         for (i, s) in sprouts.enumerated().reversed() {
             guard let r = s.ripeAt, clock - r > 480, !creatures.contains(where: { $0.mossTask?.sprout == s.id }) else { continue }
             sprouts.remove(at: i)
-            let p = Vec2(sproutX(s), windows[s.windowID]?.maxY ?? 0)
+            let p = Vec2(sproutX(s), bed(s.windowID)?.y ?? 0)
             if s.kind == .dandelion { blowSeeds(from: s, at: p, by: nil) } else { sproutEvents.append(.wilted(p)) }
         }
         // Something new comes up in the moss now and then (more often while Claude works).
         guard clock >= nextSproutAt, mossMinutes >= 12, !mossThirsty, sprouts.count < min(World.sproutLimit, 2 + Int(mossMinutes / 40)) else { return }
         nextSproutAt = clock + (claudeWorking ? rng.range(15, 35) : rng.range(40, 90))
-        // Mostly out of the moss the Gremlets planted; otherwise anywhere along a mossy window top.
+        // Mostly out of the moss the Gremlets planted; otherwise anywhere along a mossy window top, or in the moss
+        // along the bottom of the screen.
         let tops = builtSurfaces.filter { $0.kind == .windowTop && $0.ownerID >= 0 && $0.width >= 100 && windows[$0.ownerID] != nil }
+        let floors = screens.indices.flatMap { i in floorMoss(i).map { (id: -(i + 1), lo: $0.lo, hi: $0.hi) } }.filter { $0.hi - $0.lo > 70 }
         var spot: (window: Int, offset: Double)?
         for _ in 0..<6 where spot == nil {
             var wid: Int, x: Double
-            if let p = mossPatches.randomElement(using: &rng), rng.chance(0.7), let w = windows[p.windowID] {
-                wid = p.windowID; x = w.minX + p.offset + rng.range(-p.width / 2, p.width / 2)
+            if let p = mossPatches.randomElement(using: &rng), rng.chance(0.6), let b = bed(p.windowID) {
+                wid = p.windowID; x = b.minX + p.offset + rng.range(-p.width / 2, p.width / 2)
+            } else if let f = floors.randomElement(using: &rng), rng.chance(0.3) {
+                wid = f.id; x = rng.range(f.lo + 30, f.hi - 30)
             } else if let t = tops.randomElement(using: &rng) {
                 wid = t.ownerID; x = rng.range(t.minX + 30, t.maxX - 30)
             } else { break }
-            guard let w = windows[wid], x > w.minX + 26, x < w.maxX - 26,
-                  surfaces.contains(where: { $0.ownerID == wid && $0.kind == .windowTop && $0.supports(x: x - 10) && $0.supports(x: x + 10) }),
+            guard let b = bed(wid), bedSurface(wid, at: x - 10) != nil, bedSurface(wid, at: x + 10) != nil,
+                  wid < 0 || (x > b.minX + 26 && x < (windows[wid]?.maxX ?? 0) - 26),
                   !sprouts.contains(where: { $0.windowID == wid && abs(sproutX($0) - x) < 40 }) else { continue }
-            spot = (wid, x - w.minX)
+            spot = (wid, x - b.minX)
         }
-        guard let s = spot, let w = windows[s.window] else { return }
+        guard let s = spot, let b = bed(s.window) else { return }
         let kinds: [(MossSprout.Kind, Double)] = [(.daisy, 1.0), (.mushroom, 0.8), (.berries, 0.8), (.dandelion, 1.0)]
         var r = rng.range(0, kinds.reduce(0) { $0 + $1.1 })
         let kind = kinds.first { r -= $0.1; return r <= 0 }?.0 ?? .daisy
         nextSproutID += 1
         sprouts.append(MossSprout(id: nextSproutID, kind: kind, windowID: s.window, offset: s.offset, growth: 0.02))
-        sproutEvents.append(.sprouted(Vec2(w.minX + s.offset, w.maxY)))
+        sproutEvents.append(.sprouted(Vec2(b.minX + s.offset, b.y)))
     }
 
     func blowSeeds(from s: MossSprout, at p: Vec2, by: Int?) {
@@ -118,7 +127,7 @@ extension World {
 
     /// Not on the moss-chore timer: something ready in the moss is always worth a look.
     func sproutChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard !sprouts.isEmpty, !compact, isFree(c), c.isGrounded, c.mossTask == nil, let s = supportingSurface(for: c), s.kind == .windowTop else { return }
+        guard !sprouts.isEmpty, !compact, isFree(c), c.isGrounded, c.mossTask == nil, let s = supportingSurface(for: c), s.kind == .windowTop || s.kind == .floor else { return }
         for sp in sprouts where sp.windowID == s.ownerID && !creatures.contains(where: { $0.mossTask?.sprout == sp.id }) {
             let x = sproutX(sp)
             guard s.supports(x: x), abs(x - c.pos.x) < 700 else { continue }
@@ -170,6 +179,12 @@ extension World {
         case .dandelion:
             blowSeeds(from: sp, at: p, by: c.id)
             c.set(.react, duration: c.animationLength(for: .react))
+        case .daisy where notchHomeShowing && houseDaisies < 6 && (houseDaisies < 2 || rng.chance(0.6)):
+            // Home with it for the window box, on a dandelion.
+            sproutEvents.append(.picked(sp.kind, p, by: c.id))
+            c.carrying = sp.kind.rawValue
+            c.mossTask = MossTask(kind: .flowerBox, started: clock)
+            startFloat(c, to: flowerBoxSpot, ride: .dandelion)
         case .daisy, .mushroom:
             sproutEvents.append(.picked(sp.kind, p, by: c.id))
             // Off to give it to a friend on this window, if there's one about; otherwise, a happy little hop.
@@ -208,6 +223,35 @@ extension World {
             f.facing = -c.facing
             f.set(.react, duration: f.animationLength(for: .react))
         }
+    }
+
+    /// Where a Gremlet stands on the porch to put a daisy in the window box (just in front of it).
+    var flowerBoxSpot: Vec2 {
+        guard let n = notchHome else { return .zero }
+        return Vec2(n.houseMinX + 14, n.porch.y)
+    }
+
+    func flowerBoxDecide(_ c: Creature, _ t: inout MossTask, on s: Surface) {
+        guard s.ownerID == World.notchPorchOwner, notchHomeShowing else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+        if !t.acting {
+            let x = flowerBoxSpot.x
+            if abs(c.pos.x - x) > 6 { c.targetX = x; c.set(.walk, duration: 10); return }
+            t.acting = true; c.mossTask = t
+            c.facing = 1
+            c.workPose = "crouch"; c.set(.work, duration: 1.6)
+            return
+        }
+        c.mossTask = nil
+        rollDaisyDay()
+        houseDaisies = min(6, houseDaisies + 1)
+        sproutEvents.append(.boxed(flowerBoxSpot + Vec2(0, 14), by: c.id))
+        c.set(.react, duration: c.animationLength(for: .react))
+    }
+
+    /// The window box starts each day fresh.
+    func rollDaisyDay() {
+        let day = Int((wallClock + Double(TimeZone.current.secondsFromGMT())) / 86_400)
+        if day != houseDaisiesDay { houseDaisiesDay = day; houseDaisies = 0 }
     }
 
     /// `gremlet sprout [kind]`: something comes up now, already grown (to try it out).

@@ -40,6 +40,8 @@ export const FX = {
   bubble: stamp(['.bb.', 'bW.b', 'b..b', '.bb.'], { b: 0x8fd3f0, W: 0xffffff }),
   ink: stamp(['.kk.', 'kKkk', 'kkkk', '.kk.'], { k: 0x2a1e3a, K: 0x5a4a7a }),
   sparkle: stamp(['..y..', '..y..', 'yyWyy', '..y..', '..y..'], { y: 0xffd86b, W: 0xffffff }),
+  // Held overhead while watering a sprout (the Mac's PropArt.wateringCan).
+  wateringCan: stamp(['......bb...', '.bbbbbbb...', 'bBBBBBBb...', 'bBBBBBBbbbb', 'bBBBBBBb..b', '.bbbbbb....'], { b: 0x3f8cc9, B: 0x6fb8f0 }),
 };
 
 const easeOut = (t) => 1 - (1 - t) * (1 - t);

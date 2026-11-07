@@ -136,7 +136,7 @@ enum ClimateArt {
 enum NotchArt {
     /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
     /// window glows (Claude is working, or it's night).
-    static func house(lit: Bool, month: Int = 6, mail: Bool = false, stage: Int = 0) -> CGImage {
+    static func house(lit: Bool, month: Int = 6, mail: Bool = false, stage: Int = 0, daisies: Int = 3) -> CGImage {
         // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each). A loft (stage 2) and a rooftop
         // garden (stage 3) add rows on top.
         let w = 23, h = 17 + (stage >= 2 ? 8 : 0) + (stage >= 3 ? 3 : 0)
@@ -154,7 +154,9 @@ enum NotchArt {
         // A stone chimney poking out of the roof, and a flower box under the window.
         cv.rect(11, 12, 2, 5, 0x8E877B); cv.hspan(11, 12, 16, 0x5E584F)
         cv.hspan(2, 7, 3, 0x6E4428)
-        for (x, col) in [(2, 0xFF8FB1), (4, 0xFFE45C), (6, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, 4, col); cv.set(x + 1, 4, 0x5E9E46) }
+        // It starts the day with leaves and fills up with the daisies the Gremlets pick from the moss and bring home.
+        for k in 0..<6 { cv.set(2 + k, 4, k < daisies ? (k % 2 == 0 ? 0xFFFFFF : 0xFFF2B0) : (k % 2 == 0 ? 0x5E9E46 : 0x6CC04A)) }
+        if daisies >= 6 { cv.set(2, 5, 0xFFFFFF); cv.set(7, 5, 0xFFF2B0) }
         // Round window and the door.
         let glass: UInt32 = lit ? 0xFFD36B : 0x3B4660, glow: UInt32 = lit ? 0xFFF0B8 : 0x56627E
         cv.blob(4.5, 6.5, 2.1, 2.1, base: glass, light: glow)
@@ -177,7 +179,6 @@ enum NotchArt {
             }
         } }
         if [12, 1, 2].contains(month) { for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 9, 0xBFE3F7) } }   // icicles
-        if [6, 7, 8].contains(month) { cv.set(7, 5, 0xFFC845); cv.set(7, 6, 0x9E5C34) }                           // a sunflower in the box
         // Growing with you: a balcony rail on the porch (1), a loft with a round window (2), a rooftop garden (3).
         if stage >= 1 { for x in 15..<w { if x % 2 == 0 { cv.vspan(x, 2, 4, 0x8A5A35) } }; cv.hspan(15, w - 1, 5, 0xC99460) }
         if stage >= 2 {
@@ -191,7 +192,9 @@ enum NotchArt {
             for (x, c) in [(4, 0xFF8FB1), (6, 0x6CC04A), (7, 0xFFE45C), (9, 0x6CC04A), (10, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, gy, c); cv.set(x, gy - 1, 0x5E9E46) }
             cv.vspan(8, gy - 1, gy + 1, 0x6B4428); cv.set(7, gy + 2, 0x6CC04A); cv.set(9, gy + 2, 0x8BD66A); cv.set(8, gy + 2, 0x8BD66A)   // a sapling
         }
+        let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
         cv.outline(0.6)
+        for i in white { cv.px[i] = 0xFFFFFF }
         return cv.image
     }
 

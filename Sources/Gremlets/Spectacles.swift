@@ -19,6 +19,7 @@ final class SpectacleRenderer {
     private var swingLayer: CAShapeLayer?
     private var cornerBranchLayers: [CALayer] = []
     private var cornerStumpLayers: [CALayer] = []
+    private var fireflyLayers: [Int: CALayer] = [:]
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -109,6 +110,7 @@ final class SpectacleRenderer {
         renderExpeditions()
         renderDoor()
         renderMoss()
+        renderFireflies()
         renderWeather()
         renderPods()
         renderNotch()
@@ -1058,12 +1060,12 @@ final class SpectacleRenderer {
         for e in events {
             switch e {
             case .planted(let id, let by):
-                if let p = world.mossPatches.first(where: { $0.id == id }), let w = world.windows[p.windowID], let (si, pt) = local(Vec2(w.minX + p.offset, w.maxY)) {
+                if let p = world.mossPatches.first(where: { $0.id == id }), let b = world.bed(p.windowID), let (si, pt) = local(Vec2(b.minX + p.offset, b.y)) {
                     overlay.burst([Effects.leaf, Effects.sparkle], si: si, at: pt, count: 6, dx: -24...24, dy: 0...24, duration: 0.8)
                 }
                 overlay.showBubble(["A little moss here…", "Grow, little tuft!", "Planting!"].randomElement()!, on: by, seconds: 1.8)
             case .tended(let id, let by):
-                if let p = world.mossPatches.first(where: { $0.id == id }), let w = world.windows[p.windowID], let (si, pt) = local(Vec2(w.minX + p.offset, w.maxY + 30)) {
+                if let p = world.mossPatches.first(where: { $0.id == id }), let b = world.bed(p.windowID), let (si, pt) = local(Vec2(b.minX + p.offset, b.y + 30)) {
                     overlay.burst([PropArt.wateringCan], si: si, at: CGPoint(x: pt.x + 10, y: pt.y + 10), count: 1, dx: 0...0, dy: 0...4, duration: 1.4)
                     overlay.burst([Effects.rain], si: si, at: pt, count: 8, dx: -14...14, dy: -30 ... -10, duration: 0.6, stagger: 0.1)
                 }
@@ -1148,6 +1150,14 @@ final class SpectacleRenderer {
                 }
             case .wilted(let p):
                 if let (si, pt) = local(p) { overlay.burst([Effects.leaf2], si: si, at: pt, count: 3, dx: -14...14, dy: -20...6, duration: 0.8) }
+            case .caughtFirefly(let p, let by):
+                if let (si, pt) = local(p) { overlay.burst([Effects.sparkle], si: si, at: pt, count: 4, dx: -12...12, dy: 4...26, duration: 0.9, stagger: 0.08) }
+                overlay.showBubble(["Got one!", "So glowy…", "Off you go, little light."].randomElement()!, on: by, seconds: 1.8)
+            case .missedFirefly(let by):
+                if Int.random(in: 0..<3) == 0 { overlay.showBubble(["Almost!", "Hee!", "Come back!"].randomElement()!, on: by, seconds: 1.2) }
+            case .boxed(let p, let by):
+                if let (si, pt) = local(p) { overlay.burst([Effects.sparkle, Effects.heart], si: si, at: pt, count: 3, dx: -10...10, dy: 4...20, duration: 0.8, stagger: 0.1) }
+                if Int.random(in: 0..<2) == 0 { overlay.showBubble(["For the window box!", "There. Pretty.", "Home sweet home."].randomElement()!, on: by, seconds: 1.6) }
             }
         }
     }
@@ -1414,8 +1424,8 @@ final class SpectacleRenderer {
         }
         // Tufts the Gremlets planted along window tops.
         for p in world.mossPatches {
-            guard let w = world.windows[p.windowID], let top = world.surfaces.first(where: { $0.ownerID == p.windowID && $0.kind == .windowTop && $0.supports(x: w.minX + p.offset) }) else { continue }
-            let x0 = (w.minX + p.offset - p.width / 2).clamped(top.minX, top.maxX - 10)
+            guard let b = world.bed(p.windowID), let top = world.bedSurface(p.windowID, at: b.minX + p.offset) else { continue }
+            let x0 = (b.minX + p.offset - p.width / 2).clamped(top.minX, top.maxX - 10)
             let px = max(6, Int(min(p.width, top.maxX - x0) / artScale / 3) * 3)
             guard let (si, pt) = local(Vec2(x0, top.y)) else { continue }
             let dq = Int(p.size * 4)
@@ -1424,22 +1434,29 @@ final class SpectacleRenderer {
         }
         // Little things growing in the moss: daisies, mushrooms, berries, dandelions.
         for sp in world.sprouts {
-            guard let w = world.windows[sp.windowID], let top = world.surfaces.first(where: { $0.ownerID == sp.windowID && $0.kind == .windowTop && $0.supports(x: w.minX + sp.offset) }),
-                  let (si, pt) = local(Vec2(w.minX + sp.offset, top.y)) else { continue }
+            guard let b = world.bed(sp.windowID), let top = world.bedSurface(sp.windowID, at: b.minX + sp.offset),
+                  let (si, pt) = local(Vec2(b.minX + sp.offset, top.y)) else { continue }
             place("s\(sp.id)", si, at: CGPoint(x: pt.x.rounded(), y: pt.y - 1 * artScale), anchor: CGPoint(x: 0.5, y: 0),
                   rotate: (windowSway[sp.windowID] ?? 0) * 0.5, imageKey: "\(sp.stage)-\(night)") { SproutArt.image(sp.kind, stage: sp.stage, night: night) }
         }
-        // Screens: moss along the floor and under the menu bar on a long day.
-        for (i, scr) in world.screens.enumerated() where m >= 150 {
-            let frac = ((m - 150) / 150).clamped(0.15, 1)
-            let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
-            if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
-                place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night, dry: world.mossThirsty) }
-                mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
+        // Screens: moss under the menu bar on a long day, and along the bottom of the screen (just above the Dock),
+        // creeping in from both corners as the moss grows.
+        for (i, scr) in world.screens.enumerated() {
+            if m >= 150 {
+                let frac = ((m - 150) / 150).clamped(0.15, 1)
+                let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
+                if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
+                    place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night, dry: world.mossThirsty) }
+                    mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
+                }
             }
-            if let (si, pt) = local(Vec2(scr.minX, scr.minY)) {
-                place("floor\(i)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                      imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 60), night: night, dry: world.mossThirsty) }
+            for (k, span) in world.floorMoss(i).enumerated() {
+                let fpx = max(8, Int((span.hi - span.lo) / artScale / 4) * 4)
+                let density = ((m - 15) / 200).clamped(0.35, 1)
+                if let (si, pt) = local(Vec2(k == 0 ? span.lo : span.hi - Double(fpx) * artScale, scr.minY)) {
+                    place("floor\(i)-\(k)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
+                          imageKey: "\(fpx)-\(Int(density * 4))-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: density, seed: UInt64(i * 2 + k + 60), night: night, dry: world.mossThirsty) }
+                }
             }
         }
         for (k, e) in mossLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); mossLayers[k] = nil }
@@ -1951,9 +1968,9 @@ extension SpectacleRenderer {
         }()
         for layer in [l.house, l.hammock, l.ropes] as [CALayer] { attach(layer, si) }
         let stage = world.houseStage
-        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))-\(world.month)-\(world.mailWaiting)-\(world.isNight)-\(stage)"
+        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))-\(world.month)-\(world.mailWaiting)-\(world.isNight)-\(stage)-\(world.houseDaisies)"
         if l.key != key {
-            let img = NotchArt.house(lit: lit, month: world.month, mail: world.mailWaiting, stage: stage)
+            let img = NotchArt.house(lit: lit, month: world.month, mail: world.mailWaiting, stage: stage, daisies: world.houseDaisies)
             l.house.contents = img
             l.house.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
             let hm = NotchArt.hammock(widthPx: Int((n.hammock.maxX - n.hammock.minX) / 3), lights: world.isNight)
@@ -2070,6 +2087,33 @@ extension SpectacleRenderer {
             l.setAffineTransform(CGAffineTransform(scaleX: fromRight ? -1 : 1, y: 1))
             l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
         }
+    }
+
+    /// Fireflies over the moss after dark: a warm dot with a soft glow, blinking on its own rhythm.
+    fileprivate func renderFireflies() {
+        var alive = Set<Int>()
+        let t = CACurrentMediaTime()
+        for f in world.fireflies {
+            guard let p = world.position(of: f), let (si, pt) = local(p) else { continue }
+            alive.insert(f.id)
+            let l = fireflyLayers[f.id] ?? {
+                let l = CALayer()
+                l.bounds = CGRect(x: 0, y: 0, width: 5, height: 5)
+                l.cornerRadius = 2.5
+                l.backgroundColor = NSColor(red: 0.93, green: 1.0, blue: 0.55, alpha: 1).cgColor
+                l.shadowColor = NSColor(red: 0.85, green: 1.0, blue: 0.4, alpha: 1).cgColor
+                l.shadowOpacity = 1; l.shadowRadius = 6; l.shadowOffset = .zero
+                l.zPosition = 1.35
+                l.actions = ["position": NSNull(), "opacity": NSNull()]
+                fireflyLayers[f.id] = l
+                return l
+            }()
+            attach(l, si)
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            let blink = max(0, sin(t * 1.7 + f.phase))
+            l.opacity = Float(0.15 + 0.85 * blink * blink)
+        }
+        for (id, l) in fireflyLayers where !alive.contains(id) { fade(l, to: 0, remove: true); fireflyLayers[id] = nil }
     }
 
     fileprivate func renderCornerBranch() {

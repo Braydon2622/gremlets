@@ -45,6 +45,11 @@ public final class World {
     public var userActive = true
     /// At most this many Gremlets on a hobby at once.
     public var maxHobbies = 1
+    /// Gardens grow in the moss on a window's top edge (or on the floor) instead of in a box on a shelf beside it.
+    public var gardenInMoss = false
+    /// Mossy branches in the top corners to hang out on, out of full screen too.
+    public var topCornerPerches = false { didSet { setSurfacesDirty() } }
+    var nextCornerTripAt = 0.0
     /// Tops of visible desktop icons (set by the platform layer when icon play is on). Owner ids at or below
     /// `iconOwnerBase`.
     public var iconSurfaces: [Surface] = []
@@ -105,6 +110,12 @@ public final class World {
     var nextSproutID = 0, nextSproutAt = 30.0
     var sproutWatered: [Int: Double] = [:]
     var pendingSeeds: [(at: Double, window: Int, offset: Double)] = []
+    /// After dark, over the moss (Fireflies.swift).
+    public internal(set) var fireflies: [Firefly] = []
+    var nextFireflyID = 0, nextFireflyAt = 0.0, fireflyPreviewUntil = -1.0
+    /// Daisies in the hanging house's window box today (0...6; a fresh start each day).
+    public var houseDaisies = 0
+    public var houseDaisiesDay = 0
     var nextMossTaskAt = 60.0
     var lastVineBuild = -10.0
     /// When Claude last used a tool in any session (drives the Gremlets' day: garden while Claude works, rest after).
@@ -430,7 +441,8 @@ public final class World {
         // Thirsty moss shrinks back, but never below a little base for the Gremlets to bring back to life.
         mossMinutes = mossThirsty ? max(min(mossMinutes, 15), mossMinutes - dt / 400) : min(World.mossMax, mossMinutes + growth * (0.4 + mossCare))
         updateFerry(dt)
-        if compact { updateCompactRoom(); shyFromCursor() }
+        if compact { updateCompactRoom() }
+        shyFromCursor()
         updateLift(dt)
         updateMerchant(dt)
         updateBonsai(dt)

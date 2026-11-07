@@ -120,7 +120,9 @@ import Testing
         let w = world(seed: 161)
         for _ in 0..<(20 * 60 * 6) { w.step(1.0 / 20) }   // six minutes, nobody about
         #expect(!w.sprouts.isEmpty, "something sprouted")
-        #expect(w.sprouts.allSatisfy { $0.windowID == 1 })
+        #expect(w.sprouts.allSatisfy { $0.windowID == 1 || $0.windowID == -1 }, "on the window top or the floor")
+        // Floor ones only in the mossy corners, never across the middle of the screen.
+        for sp in w.sprouts where sp.windowID < 0 { #expect(sp.offset < 400 || sp.offset > 1040, "\(sp.offset)") }
         #expect(w.sprouts.count <= World.sproutLimit)
         #expect(w.sprouts.contains { $0.growth > 0.3 }, "and grew (\(w.sprouts.map(\.growth)))")
     }
@@ -161,5 +163,94 @@ import Testing
             if w.sproutWatered[id] != nil { watered = true; break }
         }
         #expect(watered)
+    }
+}
+
+@Suite struct HouseAndNightTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func pickedDaisiesFillTheWindowBoxOnTheHouse() {
+        let w = World(seed: 171)
+        w.maxHobbies = 0
+        w.wallClock = 1_800_000_000
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 0, w: 700, h: 200))])
+        w.notchHome = NotchHome(minX: 1100, maxX: 1300, menuBottom: scr.maxY)
+        w.mossMinutes = 80
+        w.nextSproutAt = .infinity
+        _ = w.spawn(testSpecies(scale: 10), at: Vec2(500, 200))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.houseDaisies == 0)
+        #expect(w.sproutNow(.daisy))
+        for _ in 0..<(60 * 120) where w.houseDaisies == 0 { w.step(1.0 / 60) }
+        #expect(w.houseDaisies == 1, "one daisy in the box")
+        // A new day: the box starts over.
+        w.wallClock += 86_400
+        w.step(1.0 / 60)
+        #expect(w.houseDaisies == 0)
+    }
+
+    @Test func firefliesComeOutAtNightAndGetChased() {
+        let w = World(seed: 172)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 0, w: 900, h: 200))])
+        w.mossMinutes = 120
+        w.isNight = true
+        let cs = [400.0, 800].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 200)) }
+        var chased = false
+        for _ in 0..<(60 * 180) {
+            w.step(1.0 / 60)
+            if cs.contains(where: { $0.mossTask?.firefly != nil }) { chased = true }
+            // Low over the window top, never out over the screen.
+            for f in w.fireflies where !f.leaving {
+                let p = w.position(of: f)!
+                #expect(p.y >= 200 && p.y <= 200 + 112 && p.x >= 200 && p.x <= 1100)
+            }
+        }
+        #expect(!w.fireflies.isEmpty, "out at night")
+        #expect(chased, "someone chased one")
+        // Morning: they go.
+        w.isNight = false
+        for _ in 0..<(60 * 120) { w.step(1.0 / 60) }
+        #expect(w.fireflies.isEmpty)
+    }
+}
+
+@Suite struct GardenInMossTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func claudesGardenGrowsOnTheWindowTopNotOnAShelf() throws {
+        let w = World(seed: 181)
+        w.maxHobbies = 0
+        w.gardenInMoss = true
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 800, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 0))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        let id = try #require(w.startJob(windowID: 1, craft: .garden, prefer: c.id))
+        #expect(id == c.id)
+        for _ in 0..<(60 * 40) where c.job?.phase != .working { w.step(1.0 / 60) }
+        #expect(c.job?.phase == .working, "set up")
+        #expect(c.job?.shelfSide == nil && c.groundOwner == 1, "working in the moss on the window top")
+        let a = try #require(w.jobAnchor(c.job!, workerID: c.id))
+        #expect(abs(a.y - 500) < 1)
+        // The window moves: the garden goes with it.
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 150, w: 800, h: 400))])
+        for _ in 0..<10 { w.step(1.0 / 60) }
+        let b = try #require(w.jobAnchor(c.job!, workerID: c.id))
+        #expect(abs(b.y - 550) < 1 && abs(b.x - (a.x - 100)) < 1)
+    }
+
+    @Test func outOfFullScreenTheyRestOnTopCornerBranches() {
+        let w = World(seed: 182)
+        w.maxHobbies = 0
+        w.topCornerPerches = true
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let cs = (0..<4).map { w.spawn(testSpecies(scale: 10), at: Vec2(200 + Double($0) * 300, 0)) }
+        #expect(w.cornerBranches.count == 3)
+        var up = false
+        for _ in 0..<(60 * 600) {
+            w.step(1.0 / 60)
+            if cs.contains(where: { $0.isGrounded && World.isCornerSpot($0.groundOwner ?? 0) }) { up = true; break }
+        }
+        #expect(up, "someone went up to a corner branch")
     }
 }

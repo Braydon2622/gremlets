@@ -30,7 +30,9 @@ public struct NotchHome: Equatable, Sendable {
 extension World {
     static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003, cornerBranchOwner = -430_004
     static let cornerStumpOwner = -430_010
-    static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerStumpOwner - 1 }
+    public static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerStumpOwner - 1 }
+    /// The house itself: porch, hammock and swing.
+    static func isHouseOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= notchSwingOwner }
     static func isCornerSpot(_ o: Int) -> Bool { o <= cornerBranchOwner && o >= cornerStumpOwner - 1 }
 
     /// Full screen: mossy branches out from the screen's top corners, added a few at a time as more Gremlets need
@@ -46,8 +48,37 @@ extension World {
     }
 
     public var cornerBranches: [Surface] {
-        guard compact else { return [] }
-        return Array(compactBranchTiers().prefix(compactTiers))
+        if compact { return Array(compactBranchTiers().prefix(compactTiers)) }
+        guard topCornerPerches, let scr = screens.first else { return [] }
+        // Out of full screen: mossy branches in both top corners to hang out on (two on the left, one on the right),
+        // a little lower than in full screen so they sit below a browser's tabs and toolbar.
+        let o = World.cornerBranchOwner
+        return [Surface(ownerID: o, kind: .plant, y: scr.maxY - 120, minX: scr.minX, maxX: scr.minX + 130),
+                Surface(ownerID: o - 2, kind: .plant, y: scr.maxY - 130, minX: scr.maxX - 124, maxX: scr.maxX),
+                Surface(ownerID: o - 1, kind: .plant, y: scr.maxY - 205, minX: scr.minX, maxX: scr.minX + 100)]
+    }
+
+    /// Out of full screen: up to a corner branch for a rest now and then (more often while Claude is quiet), and back
+    /// down on a leaf after a while.
+    func cornerChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
+        guard !compact, topCornerPerches, isFree(c), c.isGrounded, c.mossTask == nil, c.expedition == nil else { return }
+        if let o = c.groundOwner, World.isCornerSpot(o) {
+            add("cornerRest", 2.0) { c.idleVariant = self.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: self.rng.range(4, 9)) }
+            if c.energy < 0.6 { add("cornerNap", 1.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) } }
+            add("cornerDown", claudeResting ? 0.35 : 0.9) {
+                guard let f = self.floorBelow(c.pos.x) else { return }
+                let x = (c.pos.x + (c.pos.x < (f.minX + f.maxX) / 2 ? 1 : -1) * self.rng.range(60, 200)).clamped(f.minX + 30, f.maxX - 30)
+                self.startFloat(c, to: Vec2(x, f.y), ride: .leaf)
+            }
+            return
+        }
+        guard clock >= nextCornerTripAt else { return }
+        let free = cornerBranches.filter { p in creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count < max(1, Int(p.width / 34)) }
+        guard let p = free.min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) else { return }
+        add("cornerPerch", claudeResting ? 1.0 : 0.3) {
+            self.nextCornerTripAt = self.clock + self.rng.range(20, 60)
+            self.startFloat(c, to: Vec2(self.rng.range(p.minX + 20, p.maxX - 20), p.y), ride: .dandelion)
+        }
     }
 
     /// Full screen, when the top corners are full (or someone had nowhere up there to skitter to): a mossy stump in
@@ -99,7 +130,7 @@ extension World {
     }
 
     var notchSurfaces: [Surface] {
-        guard let n = notchHome, notchHomeShowing else { return [] }
+        guard let n = notchHome, notchHomeShowing else { return cornerBranches + cornerStumps }
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
                 Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
                 Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
@@ -121,7 +152,7 @@ extension World {
     /// in the hammock or curl up inside.
     func notchChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
         guard notchHomeShowing, claudeResting || isNight || c.energy < 0.35, !compact, clock >= nextNotchTripAt, c.expedition == nil, c.job == nil, c.isGrounded,
-              !creatures.contains(where: { if case .notch? = $0.expedition?.goal { return true }; return World.isNotchOwner($0.groundOwner) && $0 !== c }) else { return }
+              !creatures.contains(where: { if case .notch? = $0.expedition?.goal { return true }; return World.isHouseOwner($0.groundOwner) && $0 !== c }) else { return }
         if World.isNotchOwner(c.groundOwner) { return }
         add("notchNap", isNight ? 4 : 1.4) { if !self.startExpedition(c, .notch) { self.nextNotchTripAt = self.clock + 120 } }
     }

@@ -478,6 +478,20 @@ final class OverlayController {
         return (si, CGPoint(x: c.pos.x - o.x, y: c.pos.y - o.y + dy))
     }
 
+    /// Nudges a layer down (and in from the sides) so all of it shows: below the menu bar, inside the screen.
+    private func keepBelowMenuBar(_ l: CALayer, _ si: Int) {
+        let scr = NSScreen.screens.first { $0.frame == screens[si].frame }
+        let top = (scr?.visibleFrame.maxY ?? screens[si].frame.maxY - 30) - screens[si].frame.minY - 4
+        let w = screens[si].frame.width
+        let b = l.bounds, a = l.anchorPoint
+        var p = l.position
+        let over = p.y + b.height * (1 - a.y) - top
+        if over > 0 { p.y -= over }
+        let left = p.x - b.width * a.x, right = p.x + b.width * (1 - a.x)
+        if left < 4 { p.x += 4 - left } else if right > w - 4 { p.x -= right - (w - 4) }
+        l.position = p
+    }
+
     private func particle(_ image: CGImage, _ si: Int, scale: Double = 3) -> CALayer {
         let l = CALayer()
         l.contents = image
@@ -676,21 +690,25 @@ final class OverlayController {
         let outer = side > 0 ? s.maxX : s.minX
         switch j.shelfStyle {
         case .branch, .treehouse:
-            // A whole tree from the floor up: the trunk stands just inside the shelf's outer end, one limb props the
-            // shelf up, the rest spread out away from the window.
-            guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: outer - side * 30) }).min(by: { $0.y < $1.y }) else { return }
+            // A whole tree from the floor up, one limb propping the shelf up. On the screen's side wall the trunk stands
+            // close to the edge and the crown spreads out over the edge (only a little of it reaches into the screen);
+            // on a window, just inside the shelf's outer end, spreading away from the window.
+            let onWall = j.wall != nil
+            let trunk = onWall ? (side > 0 ? s.minX : s.maxX) + side * 52 : outer - side * 30
+            let mirror = onWall ? side > 0 : side < 0
+            guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: trunk) }).min(by: { $0.y < $1.y }) else { return }
             let shelfPx = Int(((s.y - floor.y) / 3).rounded())
             let hpx = max(30, shelfPx + 14)
-            let key = "tree\(hpx)-\(shelfPx)-\(world.month)-\(side)"
+            let key = "tree\(hpx)-\(shelfPx)-\(world.month)-\(side)-\(onWall)"
             if st.extraKey != key || st.extra == nil {
                 st.extra?.removeFromSuperlayer()
-                let l = pixelLayer(si, anchor: CGPoint(x: side < 0 ? 1 - PropArt.treeAnchorX : PropArt.treeAnchorX, y: 0))
-                setImage(l, PropArt.tree(heightPx: hpx, shelfPx: shelfPx, seed: j.seed, month: world.month, mirror: side < 0))
+                let l = pixelLayer(si, anchor: CGPoint(x: mirror ? 1 - PropArt.treeAnchorX : PropArt.treeAnchorX, y: 0))
+                setImage(l, PropArt.tree(heightPx: hpx, shelfPx: shelfPx, seed: j.seed, month: world.month, mirror: mirror))
                 screens[si].root.insertSublayer(l, at: 0)
                 if st.extra == nil { popIn(l) }
                 st.extra = l; st.extraKey = key
             }
-            st.extra?.position = CGPoint(x: (outer - side * 30 - o.x).rounded(), y: (floor.y - o.y).rounded())
+            st.extra?.position = CGPoint(x: (trunk - o.x).rounded(), y: (floor.y - o.y).rounded())
             if j.shelfStyle == .treehouse {
                 if st.extra2 == nil {
                     let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
@@ -699,7 +717,7 @@ final class OverlayController {
                     popIn(l)
                     st.extra2 = l
                 }
-                st.extra2?.position = CGPoint(x: (outer - side * 26 - o.x).rounded(), y: (s.y - o.y).rounded())
+                st.extra2?.position = CGPoint(x: ((onWall ? trunk + side * 22 : outer - side * 26) - o.x).rounded(), y: (s.y - o.y).rounded())
             }
         case .swing:
             if st.extra == nil {
@@ -893,6 +911,7 @@ final class OverlayController {
             }
             if let wl = st.weatherLayer {
                 wl.position = CGPoint(x: f.midX, y: f.minY + max(f.height, 30) + (j.weather == .sunny ? 4 : 46))
+                keepBelowMenuBar(wl, si)
                 if j.weather != .sunny && now >= st.nextRain {
                     st.nextRain = now + (j.weather == .storm ? 0.12 : 0.25)
                     let wf = wl.frame
@@ -1248,6 +1267,7 @@ final class OverlayController {
         }
         let bow = particle(PropArt.rainbow, si, scale: 4)
         bow.position = CGPoint(x: f.midX, y: top + 10)
+        keepBelowMenuBar(bow, si)
         bow.opacity = 0
         let bf = CAKeyframeAnimation(keyPath: "opacity")
         bf.values = [0, 0.85, 0.85, 0]; bf.keyTimes = [0, 0.2, 0.75, 1]
@@ -1802,7 +1822,9 @@ final class OverlayController {
         if dragging || pressed != nil { return }
         // Full screen: clicks always go through to the app (they keep out of the pointer's way instead).
         if world.compact { setClickThrough(nil); return }
-        let hot = world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil
+        // Up in the top corners or at the hanging house they sit over toolbar buttons: clicks go through them there
+        // (and they hop out of the pointer's way).
+        let hot = (world.creature(at: p).map { !World.isNotchOwner($0.groundOwner) && $0.activity != .airborne } ?? false) || propOwner(at: p) != nil || platformOwner(at: p) != nil
             || fx.plant(at: p) != nil || fx.house(at: p) != nil || bonsaiFX.hit(at: p) != nil
         setClickThrough(hot ? screenIndex(for: p) : nil)
     }

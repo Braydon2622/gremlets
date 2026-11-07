@@ -206,12 +206,20 @@ enum PropArt {
                 if by >= 0 && bx + 1 < w { grid[by][bx] = 0x2B2620; grid[by][bx + 1] = 0x9ACD32; grid[by + 1][bx] = 0x9ACD32 }
             }
         }
-        // The planter: a light rim, planks, a darker base.
-        for x in 0..<w { if grid[plantRows][x] == nil { grid[plantRows][x] = light } }
-        grid[plantRows][0] = light; grid[plantRows][w - 1] = light
-        for x in 0..<w { grid[plantRows + 1][x] = light }
-        for r in 2...4 { for x in 0..<w { grid[plantRows + r][x] = (x % 13 == 0 || r == 3 && x % 7 == 3) ? dark : mid } }
-        for x in 1..<(w - 1) { grid[plantRows + 5][x] = dark }
+        // No planter: a soft mound of moss the plants grow out of (rounded ends, tufts along the top, darker below).
+        _ = (light, mid, dark)
+        let moss: UInt32 = 0x5E9E46, mossLight: UInt32 = 0x8BD66A, mossDark: UInt32 = 0x3E7A34, tuft: UInt32 = 0x6CC04A
+        for x in 0..<w where grid[plantRows][x] == nil && x >= 2 && x < w - 2 { grid[plantRows][x] = x % 3 == 0 ? mossLight : tuft }
+        for r in 1...5 {
+            let inset = r == 1 ? 1 : r >= 4 ? 0 : 0
+            for x in inset..<(w - inset) {
+                grid[plantRows + r][x] = r == 5 ? mossDark : (r == 1 ? (x % 4 == 1 ? mossLight : moss) : ((x * 7 + r * 3) % 11 == 0 ? mossDark : moss))
+            }
+        }
+        // A few tiny flowers in the moss.
+        for x in [3, 15, 27, 35] where x < w { grid[plantRows + 2][x] = [0xFFF2B0, 0xFF8FB1, 0xFFFFFF, 0xB98CFF][x % 4] as UInt32 }
+        // Rounded top corners.
+        grid[plantRows][0] = nil; grid[plantRows][1] = nil; grid[plantRows][w - 1] = nil; grid[plantRows][w - 2] = nil
         let img = image(grid)
         if boxCache.count > 400 { boxCache.removeAll() }
         boxCache[key] = img

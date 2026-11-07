@@ -266,6 +266,12 @@ extension World {
             grove.village.removeAll { $0.x < 0.36 }
             for var h in displaced { if let x = villageSpot(forWidth: h.w) { h.x = x; grove.village.append(h) } }
         }
+        // One home: keep only the newest session house.
+        if let keep = grove.village.lastIndex(where: { World.isSessionHouse($0.biome) }) {
+            let newest = grove.village[keep]
+            grove.village.removeAll { World.isSessionHouse($0.biome) }
+            grove.village.append(newest)
+        }
         for i in grove.fillPlots() { groveEvents.append(.planted(i)) }
         rebuildGroveSurfaces()
         setSurfacesDirty()

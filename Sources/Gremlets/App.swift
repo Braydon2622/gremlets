@@ -205,6 +205,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainTerrainEvents())
         overlay.fx.handle(world.drainExpeditionEvents())
         overlay.fx.handle(world.drainTeamEvents())
+        overlay.fx.handle(world.drainMossEvents())
         watchTheMac()
         let mossNow = CACurrentMediaTime()
         if mossNow - lastMossSave > 30 { lastMossSave = mossNow; saveMoss() }
@@ -1037,7 +1038,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             bridge.unlink(); updateDoor(); rebuildMenu()
             return (200, #"{"ok":true}"#)
         case "moss":
-            // Preview the overgrowth at a number of minutes of Claude work (0 clears it).
+            // Preview the overgrowth at a number of minutes of Claude work (0 clears it), or set someone to work on it.
+            if let what = query["do"] {
+                guard world.startMossActivity(what) else { return (409, #"{"ok":false,"error":"nobody free near moss for that (climb needs vines: 40+ minutes of moss)"}"#) }
+                schedule(rate: 60)
+                return (200, #"{"ok":true}"#)
+            }
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
             return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes))}"#)

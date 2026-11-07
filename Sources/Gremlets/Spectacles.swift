@@ -914,6 +914,33 @@ final class SpectacleRenderer {
         for (id, l) in flagLayers where !flagsAlive.contains(id) { fade(l, to: 0, remove: true); flagLayers[id] = nil }
     }
 
+    func handle(_ events: [MossEvent]) {
+        for e in events {
+            switch e {
+            case .planted(let id, let by):
+                if let p = world.mossPatches.first(where: { $0.id == id }), let w = world.windows[p.windowID], let (si, pt) = local(Vec2(w.minX + p.offset, w.maxY)) {
+                    overlay.burst([Effects.leaf, Effects.sparkle], si: si, at: pt, count: 6, dx: -24...24, dy: 0...24, duration: 0.8)
+                }
+                overlay.showBubble(["A little moss here…", "Grow, little tuft!", "Planting!"].randomElement()!, on: by, seconds: 1.8)
+            case .tended(let id, let by):
+                if let p = world.mossPatches.first(where: { $0.id == id }), let w = world.windows[p.windowID], let (si, pt) = local(Vec2(w.minX + p.offset, w.maxY + 30)) {
+                    overlay.burst([PropArt.wateringCan], si: si, at: CGPoint(x: pt.x + 10, y: pt.y + 10), count: 1, dx: 0...0, dy: 0...4, duration: 1.4)
+                    overlay.burst([Effects.rain], si: si, at: pt, count: 8, dx: -14...14, dy: -30 ... -10, duration: 0.6, stagger: 0.1)
+                }
+                _ = by
+            case .padBuilt(let id, let by):
+                if let p = world.mossPads.first(where: { $0.id == id }), let v = world.mossVines.first(where: { $0.key == p.vine }), let (si, pt) = local(Vec2(v.x, v.bottom + p.height)) {
+                    overlay.burst([Effects.leaf, Effects.leaf2, Effects.sparkle], si: si, at: pt, count: 10, dx: -40...40, dy: -10...30, duration: 1.0, stagger: 0.03)
+                }
+                overlay.showBubble(["Woven it!", "A platform!", "Comfy."].randomElement()!, on: by, seconds: 1.8)
+            case .padLost(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.dust], si: si, at: pt, count: 6, dx: -20...20, dy: -60 ... -10, duration: 0.8) }
+            case .climbing:
+                break
+            }
+        }
+    }
+
     func handle(_ events: [TeamEvent]) {
         func at(_ id: Int, _ up: Double = 1) -> (Int, CGPoint)? {
             guard let c = world.creatures.first(where: { $0.id == id }) else { return nil }
@@ -1120,50 +1147,51 @@ final class SpectacleRenderer {
                     place("w\(s.ownerID)-\(Int(s.minX))-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
                           imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night) }
                 }
-                // Strands hanging down the window's sides, from the corners that are really the window's corners.
-                if m >= 40, let w = world.windows[s.ownerID] {
-                    let len = min(w.h * 0.7, (m - 40) * 2.2 + 30)
-                    let lpx = max(6, Int(len / artScale / 4) * 4)
-                    for (end, x) in [("l", w.minX), ("r", w.maxX)] where abs((end == "l" ? s.minX : s.maxX) - x) < 2 {
-                        guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
-                        let seed = UInt64(abs(s.ownerID) &* 17 &+ (end == "l" ? 3 : 4))
-                        place("s\(s.ownerID)-\(end)", si, at: CGPoint(x: pt.x + (end == "l" ? -2 : 2), y: pt.y + 4), anchor: CGPoint(x: 0.5, y: 1),
-                              imageKey: "\(lpx)-\(m >= 90)") { MossArt.strand(lengthPx: lpx, seed: seed, bloom: m >= 90) }
-                        // A second, shorter strand a little way in once it's thick.
-                        if m >= 120 {
-                            let x2 = end == "l" ? x + 26 : x - 26
-                            if let (si2, pt2) = local(Vec2(x2, s.y)) {
-                                let l2 = max(6, lpx / 2)
-                                place("s\(s.ownerID)-\(end)2", si2, at: CGPoint(x: pt2.x, y: pt2.y + 2), anchor: CGPoint(x: 0.5, y: 1),
-                                      imageKey: "\(l2)") { MossArt.strand(lengthPx: l2, seed: seed &+ 9, bloom: false) }
-                            }
-                        }
-                    }
-                }
             }
         }
-        // Screens: vines up the side edges, then the floor and the menu bar's underside.
-        for (i, scr) in world.screens.enumerated() where m >= 40 {
-            let climb = min(scr.h * 0.9, (m - 40) * 4)
-            let cpx = max(8, Int(climb / artScale / 4) * 4)
-            for (end, x) in [("l", scr.minX + 2), ("r", scr.maxX - 2)] {
-                guard let (si, pt) = local(Vec2(x, scr.minY)) else { continue }
-                place("v\(i)-\(end)", si, at: pt, anchor: CGPoint(x: 0, y: 0.5), rotate: end == "l" ? Double.pi / 2 : Double.pi / 2,
-                      imageKey: "\(cpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: cpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (end == "l" ? 1 : 2)), night: night) }
+        // Vines (the engine's, so what you see is what they climb): window strands hang down, edge vines climb up.
+        for v in world.mossVines {
+            let lpx = max(6, Int(v.length / artScale / 4) * 4)
+            switch v.anchor {
+            case .windowSide:
+                guard let (si, pt) = local(Vec2(v.x, v.top)) else { continue }
+                let seed = UInt64(v.key.unicodeScalars.reduce(7) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF })
+                place("s\(v.key)", si, at: CGPoint(x: pt.x, y: pt.y + 4), anchor: CGPoint(x: 0.5, y: 1),
+                      imageKey: "\(lpx)-\(m >= 90)") { MossArt.strand(lengthPx: lpx, seed: seed, bloom: m >= 90) }
+            case .screenEdge(let i, let side):
+                guard let (si, pt) = local(Vec2(v.x - side * 6, v.bottom)) else { continue }
+                place("v\(v.key)", si, at: pt, anchor: CGPoint(x: 0, y: 0.5), rotate: Double.pi / 2,
+                      imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night) }
             }
-            if m >= 150 {
-                let frac = ((m - 150) / 150).clamped(0.15, 1)
-                let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
-                if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
-                    place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), flip: false, rotate: 0,
-                          imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night) }
-                    mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
-                }
-                if let (si, pt) = local(Vec2(scr.minX, scr.minY)) {
-                    let gpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
-                    place("floor\(i)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                          imageKey: "\(gpx)-\(night)") { MossArt.carpet(lengthPx: gpx, density: frac, seed: UInt64(i + 60), night: night) }
-                }
+        }
+        // Platforms woven into the edge vines.
+        for p in world.mossPads {
+            guard let v = world.mossVines.first(where: { $0.key == p.vine }), case .screenEdge(_, let side) = v.anchor else { continue }
+            let lo = side < 0 ? v.x - 8 : v.x + 8 - MossPad.width
+            guard let (si, pt) = local(Vec2(lo, v.bottom + p.height)) else { continue }
+            place("pad\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 6 * artScale), anchor: CGPoint(x: 0, y: 0), imageKey: "\(night)") { MossArt.pad(seed: UInt64(p.id), night: night) }
+        }
+        // Tufts the Gremlets planted along window tops.
+        for p in world.mossPatches {
+            guard let w = world.windows[p.windowID], let top = world.surfaces.first(where: { $0.ownerID == p.windowID && $0.kind == .windowTop && $0.supports(x: w.minX + p.offset) }) else { continue }
+            let x0 = (w.minX + p.offset - p.width / 2).clamped(top.minX, top.maxX - 10)
+            let px = max(6, Int(min(p.width, top.maxX - x0) / artScale / 3) * 3)
+            guard let (si, pt) = local(Vec2(x0, top.y)) else { continue }
+            let dq = Int(p.size * 4)
+            place("p\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
+                  imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night) }
+        }
+        // Screens: moss along the floor and under the menu bar on a long day.
+        for (i, scr) in world.screens.enumerated() where m >= 150 {
+            let frac = ((m - 150) / 150).clamped(0.15, 1)
+            let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
+            if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
+                place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night) }
+                mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
+            }
+            if let (si, pt) = local(Vec2(scr.minX, scr.minY)) {
+                place("floor\(i)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
+                      imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 60), night: night) }
             }
         }
         for (k, e) in mossLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); mossLayers[k] = nil }

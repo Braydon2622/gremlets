@@ -354,3 +354,25 @@ enum MossArt {
         return cv.image
     }
 }
+
+extension MossArt {
+    /// A platform woven into an edge vine: a mat of moss on a few twisted stems, a little hanging below.
+    static func pad(seed: UInt64, night: Bool) -> CGImage {
+        let w = Int(MossPad.width / 3), h = 9
+        var cv = PixelCanvas(w, h)
+        var r = ArtRNG(s: seed &* 7 &+ 3)
+        // Twisted stems underneath.
+        for x in 0..<w { cv.set(x, 4, (x / 3) % 2 == 0 ? 0x6B4428 : 0x8A5A35); if x % 4 == 1 { cv.set(x, 3, 0x6B4428) } }
+        // The mat.
+        var x = 0.0
+        while x < Double(w) { let rad = r.range(1.8, 2.8); cv.blob(x, 6, rad, 1.8, base: mid, light: light, shade: deep); x += rad * 1.2 }
+        cv.hspan(0, w - 1, 5, mid)
+        // Drips and a flower or mushroom.
+        for xx in stride(from: 1, to: w, by: 3) where r.next() < 0.6 { for k in 0..<Int(r.range(1, 3.9)) { cv.set(xx, 2 - k, k % 2 == 0 ? mid : light) } }
+        let fx = Int(r.range(3, Double(w - 3)))
+        if r.next() < 0.5 { cv.set(fx, 8, 0xFF8FB1); cv.set(fx - 1, 8, 0xFF8FB1); cv.set(fx + 1, 8, 0xFF8FB1) }
+        else { cv.set(fx, 7, 0xEBDDC3); cv.hspan(fx - 1, fx + 1, 8, night ? 0x5FE8FF : 0xC4467A) }
+        cv.outline(0.75)
+        return cv.image
+    }
+}

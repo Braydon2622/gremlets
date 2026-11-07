@@ -48,7 +48,7 @@ extension World {
     func isFree(_ c: Creature) -> Bool {
         c.job == nil && c.expedition == nil && c.play == nil && c.groveTask == nil && c.stair == nil && c.rail == nil
             && c.building == nil && c.boost == nil && c.helping == nil && c.homeUntil == nil && !c.isAsleep
-            && World.carrierID(c.groundOwner) == nil
+            && World.carrierID(c.groundOwner) == nil && c.mossTask == nil && c.climb == nil
     }
 
     /// A window top too high for a jump but not for a boost, with room for a friend at its foot.

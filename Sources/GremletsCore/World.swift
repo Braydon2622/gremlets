@@ -83,6 +83,14 @@ public final class World {
     /// and slowly recedes (a minute per six) while nothing is running. The platform layer saves it and draws it.
     public var mossMinutes = 0.0
     public static let mossMax = 300.0
+    public internal(set) var mossVines: [MossVine] = []
+    public internal(set) var mossPads: [MossPad] = []
+    public internal(set) var mossPatches: [MossPatch] = []
+    var mossPadSurfaces: [Surface] = []
+    var mossEvents: [MossEvent] = []
+    var nextPadID = 0, nextPatchID = 0
+    var nextMossTaskAt = 60.0
+    var lastVineBuild = -10.0
     /// Boosts and reactions to the Mac (see Teamwork.swift).
     var teamEvents: [TeamEvent] = []
     var nextBoostAt = 180.0
@@ -190,9 +198,10 @@ public final class World {
         validateZips()
         validateChests()
         validateFlags()
+        rebuildVines()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces + mossPadSurfaces }
 
     // MARK: Creatures
 
@@ -331,6 +340,7 @@ public final class World {
         updateExpeditions(dt)
         updateBoosts()
         updateSigns()
+        updateOvergrowth(dt)
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
         mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
         updateFerry(dt)
@@ -384,7 +394,7 @@ public final class World {
             updateFlight(c, dt)
             return
         case .float:
-            if c.zip != nil { updateZip(c, dt) } else { updateFloat(c, dt) }
+            if c.zip != nil { updateZip(c, dt) } else if c.climb != nil { updateClimb(c, dt) } else { updateFloat(c, dt) }
             return
         default:
             break
@@ -474,7 +484,7 @@ public final class World {
             if c.activity == .run { endTag(c) }
             endSocial(c)
             if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
-            else if c.boost != nil || c.helping != nil { boostDecide(c) } else { Brain.decide(c, in: self) }
+            else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) } else { Brain.decide(c, in: self) }
         }
     }
 
@@ -519,7 +529,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1

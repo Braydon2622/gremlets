@@ -226,6 +226,11 @@ extension World {
     public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil,
                          roof: (y: Double, halfW: Double)? = nil) -> Int? {
         guard groveFloor != nil, blocks > 0 else { return nil }
+        // One home: a new session's building takes the place of the last one (the mine and the merchant's things stay).
+        if World.isSessionHouse(biome) {
+            for o in creatures where o.homeHouse != nil { o.homeUntil = clock }
+            grove.village.removeAll { World.isSessionHouse($0.biome) }
+        }
         if grove.village.count >= Grove.maxHouses { grove.village.removeFirst() }
         guard let x = villageSpot(forWidth: size.x) else { return nil }
         grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day, builtAt: builtAt,
@@ -235,6 +240,9 @@ extension World {
         groveEvents.append(.houseAdded(grove.village.count - 1))
         return grove.village.count - 1
     }
+
+    /// A house built during a Claude session (not the mine or one of the merchant's things).
+    static func isSessionHouse(_ biome: String) -> Bool { biome != "mine" && !biome.hasPrefix("item:") }
 
     /// The platform layer's house pictures changed size or shape: refit every house in the village to its current
     /// picture (`fit` returns nil for houses that aren't buildings).

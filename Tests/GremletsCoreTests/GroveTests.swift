@@ -200,8 +200,9 @@ import Testing
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         w.loadGrove(Grove())
         for i in 0..<5 { #expect(w.addHouse(biome: "meadow", blocks: 10 + i, size: Vec2(90, 120), project: nil) != nil) }
-        #expect(w.grove.village.count == 5)
-        #expect(w.groveLedges.filter { $0.plot < 0 }.count == 5, "roofs to stand on")
+        #expect(w.grove.village.count == 1, "one home: each new one takes the last one's place")
+        #expect(w.grove.village.first?.blocks == 14)
+        #expect(w.groveLedges.filter { $0.plot < 0 }.count == 1, "a roof to stand on")
         let data = try #require(w.grove.encoded())
         let back = try #require(Grove.decode(data))
         #expect(back.village == w.grove.village)
@@ -869,5 +870,66 @@ import Testing
         #expect(w.creatures.contains { $0.sign == .battery })
         for _ in 0..<(60 * 16) { w.step(1.0 / 60) }
         #expect(w.creatures.allSatisfy { $0.sign == nil }, "the battery sign goes down after a while")
+    }
+}
+
+@Suite struct OvergrowthTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func gremletsPlantAndTendMossOnWindows() throws {
+        let w = World(seed: 51)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 700, h: 300))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(600, 402))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(c.groundOwner == 1)
+        #expect(w.startMossActivity("plant"))
+        var planted = false
+        for _ in 0..<(60 * 30) where !planted { w.step(1.0 / 60); planted = w.drainMossEvents().contains { if case .planted = $0 { return true }; return false } }
+        #expect(planted && w.mossPatches.count == 1)
+        let before = try #require(w.mossPatches.first).size
+        // It grows by itself, and someone waters it.
+        w.mossPatches[0].lastTended = -1000
+        #expect(w.startMossActivity("plant"))
+        var tended = false
+        for _ in 0..<(60 * 30) where !tended { w.step(1.0 / 60); tended = w.drainMossEvents().contains { if case .tended = $0 { return true }; return false } }
+        for _ in 0..<(60 * 4) { w.step(1.0 / 60) }
+        #expect(tended && w.mossPatches[0].size > before + 0.15)
+    }
+
+    @Test func gremletsClimbVinesAndBuildPlatformsOnThem() throws {
+        let w = World(seed: 52)
+        w.maxHobbies = 0
+        w.mossMinutes = 160
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 500, y: 0, w: 500, h: 300))])
+        #expect(w.mossVines.contains { $0.key == "e0l" && $0.length > 400 })
+        #expect(w.mossVines.contains { $0.key == "w1l" }, "a strand hangs from the window's corner")
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(120, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.startMossActivity("pad"))
+        var built = false, climbed = false
+        for _ in 0..<(60 * 40) where !built {
+            w.step(1.0 / 60)
+            if c.isClimbing { climbed = true }
+            built = w.drainMossEvents().contains { if case .padBuilt = $0 { return true }; return false }
+        }
+        #expect(climbed && built && w.mossPads.count == 1)
+        for _ in 0..<(60 * 2) { w.step(1.0 / 60) }
+        #expect(World.isMossPadOwner(c.groundOwner), "standing on its new platform")
+        #expect(abs(c.pos.y - 110) < 2)
+        // The moss recedes: the platform goes with it.
+        w.mossMinutes = 0
+        for _ in 0..<(60 * 2) { w.step(1.0 / 60) }
+        #expect(w.mossPads.isEmpty && w.mossVines.isEmpty)
+    }
+
+    @Test func theVillageKeepsOneHome() {
+        let w = World(seed: 53)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        w.addHouse(biome: "meadow", blocks: 30, size: Vec2(105, 135), project: "A")
+        w.addHouse(biome: "snow", blocks: 30, size: Vec2(105, 90), project: "B")
+        let homes = w.grove.village.filter { $0.biome != "mine" && !$0.biome.hasPrefix("item:") }
+        #expect(homes.count == 1 && homes.first?.project == "B")
     }
 }

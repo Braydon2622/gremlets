@@ -81,6 +81,10 @@ public final class Creature {
     public internal(set) var helping: Int?
     /// A little sign held over its head (battery low, no signal) and until when.
     public internal(set) var sign: HeldSign?
+    /// Something to do with the moss (plant, tend, climb, build a pad), and a climb in progress.
+    var mossTask: MossTask?
+    var climb: VineClimb?
+    public var isClimbing: Bool { climb != nil && activity == .float }
     var signUntil = 0.0
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?

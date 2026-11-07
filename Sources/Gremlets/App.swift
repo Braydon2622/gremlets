@@ -162,6 +162,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if now - lastWindowPoll >= pollInterval { refreshEnvironment() }
 
         world.cursor = Vec2(Double(NSEvent.mouseLocation.x), Double(NSEvent.mouseLocation.y))
+        // The cursor elevator: while ⌃⌥ (and nothing else) is held with no button down, a cloud rides under the pointer.
+        let mods = NSEvent.modifierFlags.intersection([.control, .option, .command, .shift])
+        let lifting = mods == [.control, .option] && NSEvent.pressedMouseButtons == 0 && !paused && !manuallyHidden
+        if lifting || world.lift != nil { world.setLift(lifting ? world.cursor : nil); schedule(rate: 60) }
         world.step(dt)
         let events = world.drainEvents()
         trackBond(events)
@@ -417,7 +421,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 item.submenu = detail
                 msub.addItem(item)
             }
-            let tip = NSMenuItem(title: "Pet them (rub the cursor over them) to grow your bond", action: nil, keyEquivalent: "")
+            let tip = NSMenuItem(title: "Pet them (rub the cursor over them) · hold ⌃⌥ to give one a ride on your pointer", action: nil, keyEquivalent: "")
             tip.isEnabled = false
             msub.addItem(.separator()); msub.addItem(tip)
             mine.submenu = msub

@@ -60,6 +60,17 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
   and boosts to Movies › Gremlets › Highlights (Screen Recording). Gremlets never move, resize or focus your windows
   on their own.
+- **Your codebase, as a castle.** While Claude works on a project, its code stands as a little castle on top of the
+  terminal window: a tower per top-level folder (taller with more files, bricks in the colours of its languages),
+  the root files as the keep, a flag in the main language. Every edit Claude makes lands a block on that folder's
+  tower, and the Gremlets climb the towers. Read from `git ls-files` on your Mac; nothing leaves it.
+- **A home under the notch.** On notched MacBooks a little house hangs below the menu bar beside the notch, its
+  window glowing while Claude works, with a hammock under the notch. When Claude goes quiet a Gremlet finds its way
+  up across your windows for a nap. It tucks itself away whenever a window is in that space.
+- **Give one a ride.** Hold ⌃⌥ and a cloud appears under your pointer: the nearest Gremlet hops on and rides
+  wherever you move it. Let go to drop it onto a window.
+- **Their day follows Claude.** While Claude works, the Gremlets plant and tend moss and water the plants; a couple
+  of minutes after it stops, they head home or settle on a platform and rest.
 - **A page for your village.** `gremlet village-page [folder]` writes a small read-only web page of your village as
   it is now (the postcard, the counts behind it, the Gremlets who live there, a share preview for X) to drop on any
   static host. Counts and Gremlet names only: no project names or anything from your sessions.

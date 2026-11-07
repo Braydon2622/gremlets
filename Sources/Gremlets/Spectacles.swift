@@ -12,6 +12,7 @@ final class SpectacleRenderer {
     private var plants: [Int: PlantLayer] = [:]
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
     private var castleLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var liftLayer: CALayer?
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -102,6 +103,7 @@ final class SpectacleRenderer {
         renderWeather()
         renderCastles()
         renderNotch()
+        renderLift()
         renderPlans()
         renderRoutes()
         renderRopes()
@@ -1864,6 +1866,27 @@ extension SpectacleRenderer {
         for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
         l.ropes.path = path
         notchLayers = l
+    }
+}
+
+// MARK: The cursor elevator (see Lift.swift)
+
+extension SpectacleRenderer {
+    fileprivate func renderLift() {
+        guard let l = world.lift, let (si, pt) = local(Vec2(l.deck.minX, l.deck.y)) else {
+            if let c = liftLayer { fade(c, to: 0, remove: true); liftLayer = nil }
+            return
+        }
+        let c = liftLayer ?? {
+            let c = pixelLayer(); c.anchorPoint = CGPoint(x: 0, y: 1); c.zPosition = 1.05
+            c.contents = SkyArt.liftCloud
+            c.bounds = CGRect(x: 0, y: 0, width: CursorLift.width, height: 15)
+            popIn(c)
+            return c
+        }()
+        attach(c, si)
+        c.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() + 3)
+        liftLayer = c
     }
 }
 

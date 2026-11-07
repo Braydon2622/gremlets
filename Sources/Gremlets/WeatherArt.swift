@@ -271,3 +271,15 @@ enum NotchArt {
         return cv.image
     }
 }
+
+extension SkyArt {
+    /// The little cloud that rides under the pointer (the cursor elevator).
+    static let liftCloud: CGImage = {
+        var cv = PixelCanvas(15, 5)
+        cv.blob(4, 2.6, 3.6, 2.2, base: 0xF4F7FF, light: 0xFFFFFF, shade: 0xC9D6EE)
+        cv.blob(9.5, 3, 4.2, 2.3, base: 0xF4F7FF, light: 0xFFFFFF, shade: 0xC9D6EE)
+        cv.blob(7, 1.6, 6.5, 1.6, base: 0xE8EEFA, shade: 0xC9D6EE)
+        cv.outline(0.8)
+        return cv.image
+    }()
+}

@@ -99,6 +99,8 @@ public final class World {
     public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
     /// Claude has been quiet for a couple of minutes: time to wind down.
     public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    /// The cloud under the pointer while ⌃⌥ is held (see Lift.swift).
+    public internal(set) var lift: CursorLift?
     /// The home under the notch (nil on screens without one); see Notch.swift.
     public var notchHome: NotchHome? { didSet { if notchHome != oldValue { setSurfacesDirty() } } }
     var nextNotchTripAt = 0.0
@@ -376,6 +378,7 @@ public final class World {
         if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
         mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
         updateFerry(dt)
+        updateLift(dt)
         updateMerchant(dt)
         updateBonsai(dt)
         updateGrove(dt)
@@ -756,6 +759,7 @@ public final class World {
         // A shelf only holds the Gremlet who put it up.
         var out = surfaces + shelfSurfaces.filter { $0.ownerID == World.shelfOwner(c.id) }
         if let deck = ferrySurface { out.append(deck) }
+        if let cloud = liftSurface { out.append(cloud) }
         if !rails.isEmpty { out += cartSurfaces }
         // Mid-game of tag, runners leapfrog over heads instead of landing on them.
         let tagging = c.social == .runner || c.social == .chaser

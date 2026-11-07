@@ -115,7 +115,7 @@ extension World {
     }
 
     func updateTag(_ c: Creature, _ dt: Double, on support: Surface) {
-        guard let f = creature(id: c.friendID), abs(f.pos.y - c.pos.y) < 80, f.activity == .run || f.activity == .airborne else {
+        guard let f = creature(id: c.friendID), abs(f.pos.y - c.pos.y) < 160, [.run, .airborne, .land].contains(f.activity) else {
             endTag(c); return
         }
         let dx = f.pos.x - c.pos.x
@@ -133,7 +133,7 @@ extension World {
             if abs(dx) < 220 { c.facing = dx > 0 ? -1 : 1 }   // run away from the chaser
             if !move(c, dt, speed: c.species.walkSpeed * 1.7 + 15, on: support, ledgeTurnChance: 0.4) {
                 // Cornered at a wall: dodge with a hop over the chaser.
-                if abs(dx) < 120 { c.groundOwner = nil; c.vel = Vec2(c.facing * 160, 520); c.set(.airborne) }
+                if abs(dx) < 120 { c.facing = -c.facing; c.groundOwner = nil; c.vel = Vec2(c.facing * 380, 680); c.set(.airborne, duration: 5) }   // leapfrog over the chaser
             }
         }
     }

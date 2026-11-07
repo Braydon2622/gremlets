@@ -17,6 +17,10 @@ public enum WorldEvent: Equatable, Sendable {
     case danceBeat(Int)
     case startled(Int)
     case tookOff(Int)
+    /// Flung into the air by a friend (a toss).
+    case tossed(Int, by: Int)
+    case highFive(Int, Int)
+    case caught(Int)
 }
 
 /// The simulation: creatures, the surfaces they live on, physics, social behavior and input.
@@ -44,6 +48,20 @@ public final class World {
     /// Tops of visible desktop icons (set by the platform layer when icon play is on). Owner ids at or below
     /// `iconOwnerBase`.
     public var iconSurfaces: [Surface] = []
+    /// The Grove (big task-powered plants along the main screen's floor) and what it offers to stand on.
+    public internal(set) var grove = Grove()
+    public internal(set) var groveLedges: [GroveLedge] = []
+    var groveSurfaces: [Surface] = []
+    var groveEvents: [GroveEvent] = []
+    /// Special events (bosses, meteor showers, festivals): the one running now and the ones queued up.
+    public internal(set) var spectacle: Spectacle?
+    var pendingEvents: [SpectacleKind] = []
+    var lastSpectacle: Spectacle?
+    /// Seeds in flight in games of catch.
+    public internal(set) var playBalls: [PlayBall] = []
+    var pendingThrows: [(at: Double, from: Int, to: Int)] = []
+    public var eventsAllowed = true
+    var builtSurfaces: [Surface] = []
     public static let iconOwnerBase = -200_000
     var _gardenSpots: [Double] = []
     /// Pending wishes: the next seed planted is epic or better.
@@ -101,8 +119,12 @@ public final class World {
         self.screens = screens
         self.windows = newWindows
         self.windowOrder = windowsFrontToBack.map(\.id)
-        surfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack) + iconSurfaces
+        builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
+        rebuildGroveSurfaces()
+        setSurfacesDirty()
     }
+
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces }
 
     // MARK: Creatures
 
@@ -238,6 +260,8 @@ public final class World {
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()
         checkStartle()
+        updatePlay(dt)
+        updateSpectacle(dt)
     }
 
     private func update(_ c: Creature, _ dt: Double) {
@@ -272,6 +296,14 @@ public final class World {
         // Standing on a friend's head: move with them.
         if let carrier = creature(id: World.carrierID(c.groundOwner)) {
             c.pos += carrier.pos - carrier.prevPos
+            // Never get carried past a screen edge (the carrier's own walls are a little wider than ours).
+            let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y + 1)
+            if c.pos.x < lo || c.pos.x > hi {
+                c.pos.x = c.pos.x.clamped(lo, hi)
+                c.groundOwner = nil
+                c.vel = Vec2((c.pos.x < carrier.pos.x ? -1 : 1) * 80, 260)
+                c.set(.airborne, duration: 5)
+            }
         }
 
         // Grounded: make sure something still supports us (windows move, close, or get covered).
@@ -334,6 +366,11 @@ public final class World {
             break
         }
         if c.timer <= 0 && c.activity != .crouch {
+            // A runner landing from a dodge hop keeps the game of tag going.
+            if c.activity == .land, c.social == .runner || c.social == .chaser,
+               let f = creature(id: c.friendID), f.friendID == c.id, f.activity == .run {
+                c.set(.run, duration: max(2, f.timer)); return
+            }
             if c.activity == .run { endTag(c) }
             endSocial(c)
             if c.job != nil { c.set(.idle, duration: 0.2) } else { Brain.decide(c, in: self) }
@@ -373,6 +410,16 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
+        if c.activity == .walk, let tx = c.targetX, c.groveTask != nil || c.play != nil {
+            if abs(tx - c.pos.x) < 8 {
+                c.targetX = nil
+                if c.groveTask != nil { arriveAtGrove(c) } else { c.set(.idle, duration: 4) }
+                return
+            }
+            c.facing = tx > c.pos.x ? 1 : -1
+            if !move(c, dt, speed: c.species.walkSpeed * 1.2, on: support, ledgeTurnChance: 1) { c.groveTask = nil; c.targetX = nil; c.set(.idle, duration: 1) }
+            return
+        }
         let speed = c.species.walkSpeed * (c.activity == .chase ? 1.6 : 1)
         if !move(c, dt, speed: speed, on: support, ledgeTurnChance: c.activity == .chase ? 1 : 0.65), c.activity == .chase {
             c.set(.idle, duration: 1)
@@ -409,6 +456,7 @@ public final class World {
                 .max { $0.y < $1.y }
             if let s = landing {
                 let impact = -c.vel.y
+                if groveBounce(c, on: s, impact: impact) { return }
                 next.y = s.y
                 c.pos = next
                 c.vel = .zero
@@ -538,7 +586,9 @@ public final class World {
     func allSurfaces(excluding c: Creature) -> [Surface] {
         // A shelf only holds the Gremlet who put it up.
         var out = surfaces + shelfSurfaces.filter { $0.ownerID == World.shelfOwner(c.id) }
-        for o in creatures where o !== c && o.groundOwner != c.carrierOwnerID
+        // Mid-game of tag, runners leapfrog over heads instead of landing on them.
+        let tagging = c.social == .runner || c.social == .chaser
+        for o in creatures where !tagging && o !== c && o.groundOwner != c.carrierOwnerID
             && World.carrierID(o.groundOwner) == nil && ![.airborne, .fly, .dragged].contains(o.activity) {
             let half = o.size.x * 0.17
             out.append(Surface(ownerID: o.carrierOwnerID, kind: .creature, y: o.pos.y + o.species.headTop,

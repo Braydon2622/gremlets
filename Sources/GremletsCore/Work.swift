@@ -528,7 +528,7 @@ extension World {
 
     /// Whether a creature is standing on a desktop icon, and which.
     public func iconUnder(_ c: Creature) -> Int? {
-        guard let o = c.groundOwner, o <= World.iconOwnerBase, o > World.shelfOwnerBase, c.isGrounded else { return nil }
+        guard let o = c.groundOwner, o <= World.iconOwnerBase, o > World.shelfOwnerBase, !World.isGroveOwner(o), c.isGrounded else { return nil }
         return World.iconOwnerBase - o
     }
 

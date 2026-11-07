@@ -50,17 +50,24 @@ func grounded(_ w: World, _ xs: [Double]) -> [Creature] {
         #expect(cs[0].activity == .wave && cs[1].activity == .wave)
     }
 
+    /// Tag swaps roles when the chaser catches up. Checked over several seeds, since a single game can end at a
+    /// screen wall before anyone is caught (that's fine; they just pick something else to do).
     @Test func tagSwapsRoles() {
-        let w = World(seed: 23)
-        w.setEnvironment(screens: [screen], windowsFrontToBack: [])
-        let cs = grounded(w, [300, 420])
-        w.startTag(cs[0], cs[1])
-        var tags = 0
-        for _ in 0..<(60 * 10) {
-            w.step(1.0 / 60)
-            tags += w.drainEvents().filter { if case .tagged = $0 { return true }; return false }.count
+        var gamesWithATag = 0
+        for seed in UInt64(20)...29 {
+            let w = World(seed: seed)
+            w.maxHobbies = 0   // this test is about tag, not gardening
+            w.setEnvironment(screens: [screen], windowsFrontToBack: [])
+            let cs = grounded(w, [300, 420])
+            w.startTag(cs[0], cs[1])
+            var tags = 0
+            for _ in 0..<(60 * 10) {
+                w.step(1.0 / 60)
+                tags += w.drainEvents().filter { if case .tagged = $0 { return true }; return false }.count
+            }
+            if tags >= 1 { gamesWithATag += 1 }
         }
-        #expect(tags >= 1)
+        #expect(gamesWithATag >= 6)
     }
 
     @Test func flightLandsOnAWindow() {

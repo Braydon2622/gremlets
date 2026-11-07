@@ -50,6 +50,14 @@ public final class Creature {
 
     var pendingLaunch: Vec2 = .zero
     var targetX: Double?
+    /// Heading to a grove plant to do something there.
+    var groveTask: GroveVisit?
+    /// Holding a sunberry (eaten later, or thrown at a boss).
+    public internal(set) var heldBerry = false
+    /// Sitting by the lanternbloom after dark.
+    var campfire = false
+    /// Two-Gremlet play (toss, catch, high five) in progress.
+    var play: PlayState?
     var petAmount: Double = 0
     var edgeDecisionMade = false
     var grabOffset: Vec2 = .zero

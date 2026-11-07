@@ -36,6 +36,12 @@ struct Brain {
             return
         }
 
+        c.campfire = false
+        // In the middle of a game with a friend: wait for our turn.
+        if c.play != nil { c.set(.idle, duration: 0.4); return }
+        world.groveChoices(for: c, add: add)
+        world.playChoices(for: c, add: add)
+
         // --- Solo
         add("idle", 1.0) {
             c.idleVariant = world.rng.chance(0.35) ? "look" : "idle"
@@ -129,7 +135,7 @@ struct Brain {
                         && !world.creatures.contains { $0.groundOwner == f.carrierOwnerID } && abs(f.pos.x - c.pos.x) < 260
                 }
                 if !bases.isEmpty {
-                    add("stack", 0.45 * (0.3 + e)) { world.startStack(c, bases[Int.random(in: 0..<bases.count, using: &world.rng)]) }
+                    add("stack", 0.18 * (0.3 + e)) { world.startStack(c, bases[Int.random(in: 0..<bases.count, using: &world.rng)]) }
                 }
             }
             _ = pick

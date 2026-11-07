@@ -264,6 +264,7 @@ extension World {
         if c.expedition != nil { giveUp(c) }
         if c.boost != nil || c.helping != nil { cancelBoost(c) }
         c.mossTask = nil
+        c.snowmanTask = nil
         if c.climb != nil { c.climb = nil; if c.activity == .float { c.set(.airborne) } }
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j

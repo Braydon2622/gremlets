@@ -19,7 +19,7 @@ import Testing
         return (p.terminationStatus, String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
     }
 
-    @Test(arguments: ["gremlet-claude-hook", "gremlet-statusline", "install-claude-extras", "bundle.sh"])
+    @Test(arguments: ["gremlet", "gremlet-claude-hook", "gremlet-statusline", "install-claude-extras", "bundle.sh"])
     func shellScriptParses(_ name: String) throws {
         let path = Self.repo.appendingPathComponent("scripts/\(name)").path
         guard FileManager.default.fileExists(atPath: path) else { return }

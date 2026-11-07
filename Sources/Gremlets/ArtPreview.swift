@@ -91,6 +91,23 @@ enum ArtPreview {
             }
         }
         write(ctx4.makeImage()!, dir.appendingPathComponent("overgrowth.png"))
+        // Weather: snow caps at four depths, the snow-Gremlet's stages, the rain leaf and a splash (all at 4x).
+        let ctxW = CGContext(data: nil, width: 900, height: 420, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxW.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxW.fill(CGRect(x: 0, y: 0, width: 900, height: 420))
+        ctxW.interpolationQuality = .none
+        for (i, d) in [0.15, 0.4, 0.7, 1.0].enumerated() {
+            let img = ClimateArt.cap(lengthPx: 100, depth: d, seed: UInt64(i + 1))
+            ctxW.setFillColor(CGColor(red: 0.55, green: 0.58, blue: 0.66, alpha: 1)); ctxW.fill(CGRect(x: 20, y: 400 - (i + 1) * 60 + 12, width: 400, height: 4))
+            ctxW.draw(img, in: CGRect(x: 20, y: 400 - (i + 1) * 60, width: img.width * 4, height: img.height * 4))
+        }
+        for st in 0...3 {
+            let img = ClimateArt.snowman(stage: st, seed: 5)
+            ctxW.draw(img, in: CGRect(x: 460 + st * 110, y: 270, width: img.width * 5, height: img.height * 5))
+        }
+        ctxW.draw(ClimateArt.leafUmbrella, in: CGRect(x: 460, y: 100, width: 25 * 7, height: 15 * 7))
+        ctxW.draw(ClimateArt.splash, in: CGRect(x: 660, y: 140, width: 7 * 10, height: 4 * 10))
+        write(ctxW.makeImage()!, dir.appendingPathComponent("weather.png"))
         // The shelf trees: four seeds at two heights, summer and autumn, the last one mirrored, each with its shelf.
         let tW = PropArt.treeWidthPx * 3 + 30, tH = 120 * 3 + 20
         let ctxT = CGContext(data: nil, width: tW * 5, height: tH, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!

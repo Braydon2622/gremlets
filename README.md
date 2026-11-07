@@ -60,6 +60,11 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
   and boosts to Movies › Gremlets › Highlights (Screen Recording). Gremlets never move, resize or focus your windows
   on their own.
+- **Weather where you are (opt-in, menu → Weather).** Type your city once (no location permission; Open-Meteo, no
+  account). Rain splashes on window tops and drips off their corners, snow piles up along them and on the floor,
+  wind sends the kites up. It only shows where it lands, never across your work. In the rain the Gremlets hold a
+  leaf over their heads and keep the kites in; when the snow is deep they roll a snow-Gremlet together, which melts
+  when the snow goes. `gremlet weather rain|storm|snow|wind` previews it for two minutes.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, vines climb the screen's edges, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It

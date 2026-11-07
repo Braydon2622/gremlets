@@ -29,6 +29,13 @@ final class SpectacleRenderer {
     private var planLayers: [Int: (layer: CALayer, key: String)] = [:]
     private var packLayers: [Int: (layer: CALayer, level: Int)] = [:]
     private var lastMoss: CFTimeInterval = 0
+    private var snowLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var snowmanLayers: [Int: (layer: CALayer, key: String)] = [:]
+    private var leafLayers: [Int: CALayer] = [:]
+    private var lastWeatherTick: CFTimeInterval = 0
+    private var lastSnowCaps: CFTimeInterval = 0
+    private var splashBudget = 0.0, flakeBudget = 0.0
+    private var nextDrip: CFTimeInterval = 0
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
@@ -89,6 +96,7 @@ final class SpectacleRenderer {
         renderExpeditions()
         renderDoor()
         renderMoss()
+        renderWeather()
         renderPlans()
         renderRoutes()
         renderRopes()
@@ -356,7 +364,7 @@ final class SpectacleRenderer {
     private func renderWind() {
         let now = CACurrentMediaTime()
         guard now >= nextGust, let floor = world.groveFloor, let (si, _) = local(Vec2(floor.minX + 10, floor.minY + 10)) else { return }
-        nextGust = now + Double.random(in: 180...420)
+        nextGust = now + (world.weather?.windy == true ? Double.random(in: 50...110) : Double.random(in: 180...420))
         let dir: Double = Bool.random() ? 1 : -1
         world.gust(direction: dir)
         let size = screens[si].frame.size
@@ -1530,4 +1538,230 @@ final class SpectacleRenderer {
         if let l = plants[i]?.layer { boing(l, amount: 0.12) }
     }
 
+}
+
+// MARK: Weather (see Weather.swift): only where it lands, never across the middle of the screen.
+
+extension SpectacleRenderer {
+    private var weatherSurfaces: [Surface] {
+        world.surfaces.filter { ($0.kind == .windowTop || $0.kind == .floor) && $0.width >= 40 }
+    }
+
+    /// A random point on a window top or the floor, weighted by width.
+    private func randomLanding(_ ss: [Surface]) -> (Surface, Double)? {
+        let total = ss.reduce(0) { $0 + $1.width }
+        guard total > 0 else { return nil }
+        var pick = Double.random(in: 0..<total)
+        for s in ss { if pick < s.width { return (s, s.minX + pick) }; pick -= s.width }
+        return nil
+    }
+
+    fileprivate func renderWeather() {
+        let now = CACurrentMediaTime()
+        let dt = min(0.25, max(0, now - lastWeatherTick))
+        lastWeatherTick = now
+        let w = world.weather
+        let ss = weatherSurfaces
+
+        // Rain: a short streak drops onto a window top or the floor and splashes; drips run off window corners.
+        if let w, w.sky.isWet {
+            splashBudget += dt * w.sky.splashRate
+            while splashBudget >= 1 {
+                splashBudget -= 1
+                guard let (s, x) = randomLanding(ss) else { break }
+                raindrop(at: Vec2(x, s.y), slant: min(18, w.windKmh * 0.5) * (Bool.random() ? 1 : -1))
+            }
+            if now >= nextDrip {
+                nextDrip = now + Double.random(in: 0.5...1.6) * (w.sky == .drizzle ? 2 : w.sky == .storm ? 0.6 : 1)
+                let corners = ss.filter { $0.kind == .windowTop }.flatMap { s -> [Vec2] in
+                    guard let r = world.windows[s.ownerID] else { return [] }
+                    return [abs(s.minX - r.minX) < 2 ? Vec2(s.minX + 2, s.y) : nil, abs(s.maxX - r.maxX) < 2 ? Vec2(s.maxX - 2, s.y) : nil].compactMap { $0 }
+                }
+                if let p = corners.randomElement() { drip(from: p) }
+            }
+        } else { splashBudget = 0 }
+
+        // Snow: flakes settle onto edges (falling only the last bit of the way) and snow lies along them.
+        if w?.sky == .snow {
+            flakeBudget += dt * 5
+            while flakeBudget >= 1 {
+                flakeBudget -= 1
+                guard let (s, x) = randomLanding(ss) else { break }
+                flake(onto: Vec2(x, s.y), drift: (w?.windKmh ?? 0) * 0.8)
+            }
+        } else { flakeBudget = 0 }
+        renderSnowCaps(ss, now: now)
+        renderSnowmen()
+        renderLeaves(now: now)
+    }
+
+    private func raindrop(at p: Vec2, slant: Double) {
+        guard let (si, pt) = local(p) else { return }
+        let streak = CALayer()
+        streak.backgroundColor = NSColor(red: 0.74, green: 0.85, blue: 0.96, alpha: 0.75).cgColor
+        streak.bounds = CGRect(x: 0, y: 0, width: 1.5, height: 9)
+        streak.zPosition = 1.4
+        streak.actions = ["position": NSNull(), "opacity": NSNull()]
+        attach(streak, si)
+        let fall = CABasicAnimation(keyPath: "position")
+        fall.fromValue = NSValue(point: CGPoint(x: pt.x - slant, y: pt.y + 46))
+        fall.toValue = NSValue(point: CGPoint(x: pt.x, y: pt.y + 4))
+        fall.duration = 0.2
+        fall.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        fall.fillMode = .both; fall.isRemovedOnCompletion = false
+        let tilt = CATransform3DMakeRotation(CGFloat(atan2(slant, 42)), 0, 0, 1)
+        streak.transform = tilt
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            streak.removeFromSuperlayer()
+            guard let self else { return }
+            let sp = self.pixelLayer()
+            sp.contents = ClimateArt.splash
+            sp.bounds = CGRect(x: 0, y: 0, width: 21, height: 12)
+            sp.anchorPoint = CGPoint(x: 0.5, y: 0)
+            sp.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 1)
+            sp.zPosition = 1.4
+            self.attach(sp, si)
+            let grow = CABasicAnimation(keyPath: "transform.scale"); grow.fromValue = 0.4; grow.toValue = 1.1
+            let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0.85; fade.toValue = 0
+            let g = CAAnimationGroup(); g.animations = [grow, fade]; g.duration = 0.32
+            g.fillMode = .both; g.isRemovedOnCompletion = false
+            CATransaction.begin(); CATransaction.setCompletionBlock { sp.removeFromSuperlayer() }
+            sp.add(g, forKey: "splash")
+            CATransaction.commit()
+        }
+        streak.add(fall, forKey: "fall")
+        CATransaction.commit()
+    }
+
+    private func drip(from p: Vec2) {
+        guard let (si, pt) = local(p) else { return }
+        let d = CALayer()
+        d.backgroundColor = NSColor(red: 0.70, green: 0.84, blue: 0.97, alpha: 0.9).cgColor
+        d.bounds = CGRect(x: 0, y: 0, width: 3, height: 4)
+        d.cornerRadius = 1.5
+        d.zPosition = 1.4
+        attach(d, si)
+        let swell = CABasicAnimation(keyPath: "transform.scale.y"); swell.fromValue = 0.3; swell.toValue = 1.3; swell.duration = 0.5
+        let fall = CABasicAnimation(keyPath: "position")
+        fall.fromValue = NSValue(point: CGPoint(x: pt.x, y: pt.y - 2)); fall.toValue = NSValue(point: CGPoint(x: pt.x, y: pt.y - 80))
+        fall.beginTime = 0.5; fall.duration = 0.45; fall.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 1; fade.toValue = 0; fade.beginTime = 0.75; fade.duration = 0.2
+        let g = CAAnimationGroup(); g.animations = [swell, fall, fade]; g.duration = 0.95
+        g.fillMode = .both; g.isRemovedOnCompletion = false
+        d.position = CGPoint(x: pt.x, y: pt.y - 2)
+        CATransaction.begin(); CATransaction.setCompletionBlock { d.removeFromSuperlayer() }
+        d.add(g, forKey: "drip")
+        CATransaction.commit()
+    }
+
+    private func flake(onto p: Vec2, drift: Double) {
+        guard let (si, pt) = local(p) else { return }
+        let f = CALayer()
+        f.backgroundColor = NSColor.white.cgColor
+        let size: CGFloat = Bool.random() ? 3 : 2
+        f.bounds = CGRect(x: 0, y: 0, width: size, height: size)
+        f.zPosition = 1.4
+        f.opacity = 0
+        attach(f, si)
+        let fall = CAKeyframeAnimation(keyPath: "position")
+        let x0 = Double(pt.x) - drift, y0 = Double(pt.y)
+        fall.values = (0...6).map { k -> NSValue in
+            let t = Double(k) / 6
+            let x = x0 + drift * t + sin(t * 7 + x0) * 5
+            return NSValue(point: CGPoint(x: x, y: y0 + 70 * (1 - t) + 3))
+        }
+        let fade = CAKeyframeAnimation(keyPath: "opacity"); fade.values = [0, 0.95, 0.95, 0]; fade.keyTimes = [0, 0.2, 0.85, 1]
+        let g = CAAnimationGroup(); g.animations = [fall, fade]; g.duration = Double.random(in: 2.8...4.2)
+        g.fillMode = .both; g.isRemovedOnCompletion = false
+        CATransaction.begin(); CATransaction.setCompletionBlock { f.removeFromSuperlayer() }
+        f.add(g, forKey: "flake")
+        CATransaction.commit()
+    }
+
+    /// Snow lying along window tops and the floor, by `World.snowDepth`.
+    private func renderSnowCaps(_ ss: [Surface], now: CFTimeInterval) {
+        guard now - lastSnowCaps > 0.15 else { return }
+        lastSnowCaps = now
+        let depth = world.snowDepth
+        var alive = Set<String>()
+        if depth > 0.03 {
+            for s in ss {
+                // The floor drift stays low so it never piles up over the bottoms of windows.
+                let d = s.kind == .floor ? depth * 0.5 : depth
+                let dq = Int((d * 6).rounded())
+                guard let (si, pt) = local(Vec2(s.minX, s.y)) else { continue }
+                let key = "\(s.kind == .floor ? "f" : "w")\(s.ownerID)-\(Int(s.minX))"
+                let px = max(6, Int(s.width / artScale / 4) * 4)
+                alive.insert(key)
+                var e = snowLayers[key] ?? {
+                    let l = pixelLayer(); l.zPosition = 1.35; l.anchorPoint = .zero
+                    let grow = CABasicAnimation(keyPath: "opacity"); grow.fromValue = 0; grow.toValue = 1; grow.duration = 1.5
+                    l.add(grow, forKey: "grow")
+                    return (l, "")
+                }()
+                attach(e.layer, si)
+                let imageKey = "\(px)-\(dq)"
+                if e.key != imageKey {
+                    let img = ClimateArt.cap(lengthPx: px, depth: d, seed: UInt64(abs(s.ownerID) &* 131 &+ Int(abs(s.minX))))
+                    e.layer.contents = img
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                    e.key = imageKey
+                }
+                e.layer.position = CGPoint(x: pt.x.rounded(), y: (pt.y - 3 * artScale).rounded())
+                snowLayers[key] = e
+            }
+        }
+        for (k, e) in snowLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); snowLayers[k] = nil }
+    }
+
+    private func renderSnowmen() {
+        var alive = Set<Int>()
+        for m in world.snowmen {
+            guard let (si, pt) = local(Vec2(m.x, m.floorY)) else { continue }
+            alive.insert(m.id)
+            var e = snowmanLayers[m.id] ?? {
+                let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.36
+                popIn(l)
+                return (l, "")
+            }()
+            attach(e.layer, si)
+            let key = "\(m.stage)"
+            if e.key != key {
+                let img = ClimateArt.snowman(stage: m.stage, seed: UInt64(m.id))
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                if !e.key.isEmpty { popIn(e.layer) }
+                e.key = key
+            }
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 2)
+            // Melting: it slumps and fades.
+            e.layer.setAffineTransform(CGAffineTransform(scaleX: 1 + m.melt * 0.25, y: max(0.15, 1 - m.melt * 0.8)))
+            e.layer.opacity = Float(1 - m.melt * 0.6)
+            snowmanLayers[m.id] = e
+        }
+        for (id, e) in snowmanLayers where !alive.contains(id) { fade(e.layer, to: 0, remove: true); snowmanLayers[id] = nil }
+    }
+
+    /// In the rain, a leaf held over the head (flipped to the way it's walking, bobbing with its steps).
+    private func renderLeaves(now: CFTimeInterval) {
+        var holders = Set<Int>()
+        for c in world.creatures where world.holdsLeaf(c) {
+            guard let (si, pt) = local(c.pos + Vec2(c.facing * 3, c.species.headTop - 3)) else { continue }
+            holders.insert(c.id)
+            let l = leafLayers[c.id] ?? {
+                let l = pixelLayer(); l.contents = ClimateArt.leafUmbrella
+                l.bounds = CGRect(x: 0, y: 0, width: 25 * 3, height: 15 * 3)
+                l.anchorPoint = CGPoint(x: 10.5 / 25, y: 0); l.zPosition = 1.1
+                popIn(l)
+                return l
+            }()
+            attach(l, si)
+            let bob = c.activity == .walk || c.activity == .run ? abs(sin(now * 9 + Double(c.id))) * 2 : 0
+            l.setAffineTransform(CGAffineTransform(scaleX: c.facing < 0 ? -1 : 1, y: 1))
+            l.position = CGPoint(x: pt.x.rounded(), y: (pt.y + bob).rounded())
+            leafLayers[c.id] = l
+        }
+        for (id, l) in leafLayers where !holders.contains(id) { fade(l, to: 0, remove: true); leafLayers[id] = nil }
+    }
 }

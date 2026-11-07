@@ -20,6 +20,8 @@
 #   gremlet chest | expedition   hide a treasure chest somewhere high (someone goes to fetch it) / someone sets out for the highest point
 #   gremlet moss [minutes]       how overgrown things are (preview: 0 to 300 minutes of Claude work; 0 clears it)
 #   gremlet moss climb|pad|plant someone climbs a vine / weaves a platform into one / plants or waters moss now
+#   gremlet weather [sky|live]   the weather now; preview rain|drizzle|storm|snow|wind|clear for two minutes; live goes back
+#   gremlet weather city <name>  get the real weather there (Open-Meteo); gremlet weather snowman: someone rolls one now
 #   gremlet boost                two Gremlets team up: one boosts the other onto a window just out of reach
 #   gremlet react screenshot|battery|plugged|offline|online   preview how they react to your Mac
 #   gremlet link [right|left] [habitat-url]   link an iPad/phone screen on that edge (opens a QR); gremlet unlink; gremlet cross sends one over
@@ -71,6 +73,12 @@ case "${1:-}" in
              climb|pad|plant) call "moss?do=$2" ;;
              "") call moss ;;
              *) call "moss?minutes=$2" ;;
+           esac; echo ;;
+  weather) case "${2:-}" in
+             "") call weather ;;
+             snowman) call "weather?do=snowman" ;;
+             city) shift 2; curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "city=$*" "${URL}/weather" ;;
+             *) call "weather?sky=$2" ;;
            esac; echo ;;
   link)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "side=${2:-right}" --data-urlencode "habitat=${3:-}" "${URL}/link"; echo; open "http://127.0.0.1:${PORT}/link" ;;
   wrapped) if [ "${2:-}" = "--sample" ]; then curl -s -m 20 -X POST -H 'X-Gremlets: 1' "${URL}/wrapped?sample=1"; else curl -s -m 20 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "month=${2:-}" "${URL}/wrapped"; fi; echo ;;

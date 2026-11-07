@@ -91,6 +91,15 @@ public final class World {
     var nextPadID = 0, nextPatchID = 0
     var nextMossTaskAt = 60.0
     var lastVineBuild = -10.0
+    /// The weather where you are (see Weather.swift).
+    var liveWeather: LocalWeather?
+    var weatherPreview: LocalWeather?
+    var weatherPreviewUntil = -1.0
+    /// 0...1: how much snow lies on window tops and the floor.
+    public var snowDepth = 0.0
+    public internal(set) var snowmen: [Snowman] = []
+    var nextSnowmanID = 0
+    var nextSnowmanAt = 0.0
     /// Boosts and reactions to the Mac (see Teamwork.swift).
     var teamEvents: [TeamEvent] = []
     var planEvents: [ClaudePlanEvent] = []
@@ -342,6 +351,7 @@ public final class World {
         updateBoosts()
         updateSigns()
         updateOvergrowth(dt)
+        updateWeather(dt)
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
         mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
         updateFerry(dt)
@@ -485,7 +495,8 @@ public final class World {
             if c.activity == .run { endTag(c) }
             endSocial(c)
             if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
-            else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) } else { Brain.decide(c, in: self) }
+            else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }
+            else if c.snowmanTask != nil { snowmanDecide(c) } else { Brain.decide(c, in: self) }
         }
     }
 
@@ -530,7 +541,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1

@@ -83,6 +83,8 @@ public final class Creature {
     public internal(set) var sign: HeldSign?
     /// Something to do with the moss (plant, tend, climb, build a pad), and a climb in progress.
     var mossTask: MossTask?
+    /// The snow-Gremlet it's helping to build (see Weather.swift).
+    var snowmanTask: Int?
     var climb: VineClimb?
     public var isClimbing: Bool { climb != nil && activity == .float }
     var signUntil = 0.0

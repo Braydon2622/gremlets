@@ -20,10 +20,10 @@ extension World {
     public func kiteHand(_ c: Creature) -> Vec2 { c.pos + Vec2(c.facing * c.size.x * 0.45, c.size.y * 0.62) }
 
     func kiteChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard kite == nil, !isNight, maxHobbies > 0, clock >= nextKiteAt, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
+        guard kite == nil, !isNight, !(weather?.sky.isWet ?? false), maxHobbies > 0, clock >= nextKiteAt, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
               let g = c.groundOwner, (-100 ... -1).contains(g), c.energy > 0.3,
               let scr = screen(containingX: c.pos.x, y: c.pos.y), scr.maxY - c.pos.y > 320 else { return }
-        add("kite", 0.5) { _ = self.startKite(for: c.id) }
+        add("kite", weather?.windy == true ? 1.6 : 0.5) { _ = self.startKite(for: c.id) }
     }
 
     @discardableResult

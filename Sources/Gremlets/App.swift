@@ -56,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let phone = PhoneLink()
     private let bridge = ScreenBridge()
     private let sense = ScreenSense()
+    private lazy var weatherService = WeatherService(world: world)
     /// Watching the Mac: battery, the network, the screenshot tool.
     private let netMonitor = NWPathMonitor()
     private var online: Bool?
@@ -533,6 +534,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         mac.submenu = macMenu
         menu.addItem(mac)
+        // Weather where you are (off until you name a city).
+        let wx = NSMenuItem(title: weatherService.summary.map { "Weather · " + $0 } ?? "Weather Where You Are", action: nil, keyEquivalent: "")
+        wx.toolTip = "Rain splashes on your window tops, snow piles up along them, wind sends the kites up. Only shows where it lands, never across your work."
+        let wxMenu = NSMenu()
+        let setCity = NSMenuItem(title: weatherService.place == nil ? "Set Your City…" : "Change City…", action: #selector(askWeatherCity), keyEquivalent: "")
+        setCity.target = self
+        wxMenu.addItem(setCity)
+        if weatherService.place != nil {
+            let off = NSMenuItem(title: "Turn Weather Off", action: #selector(weatherOff), keyEquivalent: "")
+            off.target = self
+            wxMenu.addItem(off)
+        }
+        let note = NSMenuItem(title: "From Open-Meteo: only the city leaves your Mac", action: nil, keyEquivalent: "")
+        note.isEnabled = false
+        wxMenu.addItem(note)
+        wx.submenu = wxMenu
+        menu.addItem(wx)
         // Another screen (iPad, phone, a friend's laptop): a doorway at one edge of this screen.
         if !bridge.linked {
             let link = NSMenuItem(title: "Link Another Screen (iPad, Phone)…", action: nil, keyEquivalent: "")
@@ -883,6 +901,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bridge.onWalk = { [weak self] w in self?.arriveThroughBridge(w) }
         bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
         bridge.start()
+        weatherService.onChange = { [weak self] in self?.schedule(rate: 60); self?.rebuildMenu() }
+        weatherService.restart()
         netMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -1079,6 +1099,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
             return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes))}"#)
+        case "weather":
+            // Preview a sky for two minutes (rain, drizzle, storm, snow, wind, clear), start a snow-Gremlet, or set the city.
+            if let city = query["city"].map(Self.decoded), !city.isEmpty {
+                weatherService.setCity(city) { [weak self] _ in self?.rebuildMenu() }
+                return (202, #"{"ok":true,"looking_up":true}"#)
+            }
+            if query["do"] == "snowman" {
+                guard world.startSnowmanNow() else { return (409, #"{"ok":false,"error":"nobody free on the floor right now"}"#) }
+                schedule(rate: 60)
+                return (200, #"{"ok":true}"#)
+            }
+            if let s = query["sky"] {
+                if s == "live" { world.setWeather(nil, previewSeconds: 0) }
+                else if s == "wind" { world.setWeather(LocalWeather(sky: .clear, windKmh: 35, place: "preview"), previewSeconds: 120) }
+                else if let sky = Sky(rawValue: s) { world.setWeather(LocalWeather(sky: sky, windKmh: sky == .storm ? 30 : 8, tempC: sky == .snow ? -2 : 10, place: "preview"), previewSeconds: 120) }
+                else { return (400, #"{"ok":false,"error":"sky is one of clear, cloudy, fog, drizzle, rain, storm, snow, wind, live"}"#) }
+                schedule(rate: 60)
+            }
+            let w = world.weather
+            return (200, #"{"ok":true,"sky":"\#(w?.sky.rawValue ?? "off")","wind_kmh":\#(Int(w?.windKmh ?? 0)),"snow":\#(Int(world.snowDepth * 100)),"snowmen":\#(world.snowmen.count),"place":"\#(weatherService.place?.name ?? "")"}"#)
         case "boost":
             guard world.startBoostWithAnyone() else { return (409, #"{"ok":false,"error":"no pair free near a window just out of jumping reach"}"#) }
             schedule(rate: 60)
@@ -1523,6 +1563,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         return nil
     }
+
+    @objc private func askWeatherCity() {
+        let alert = NSAlert()
+        alert.messageText = "Weather where you are"
+        alert.informativeText = "Type your city. The Gremlets get the weather there from Open-Meteo every 20 minutes (no account, no location permission)."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.placeholderString = "e.g. Portland"
+        field.stringValue = weatherService.place?.name ?? ""
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Use This City"); alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        weatherService.setCity(field.stringValue) { [weak self] found in
+            if found == nil {
+                let a = NSAlert(); a.messageText = "Couldn't find that city"; a.informativeText = "Try just the city's name, like \"Austin\"."; a.runModal()
+            }
+            self?.rebuildMenu()
+        }
+    }
+
+    @objc private func weatherOff() { weatherService.place = nil; rebuildMenu() }
 
     @objc private func toggleSense(_ sender: NSMenuItem) {
         switch sender.representedObject as? String {

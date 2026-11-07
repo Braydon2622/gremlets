@@ -238,6 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if case .boostStarted = e { sense.startClip("Boost", seconds: 12) }
         }
         overlay.fx.handle(world.drainMossEvents())
+        overlay.fx.handle(world.drainSproutEvents())
         overlay.fx.handle(world.drainPlanEvents())
         sense.tick(frontWindow: frontWindowForSense())
         sense.clipTick()
@@ -1166,6 +1167,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
             return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes)),"care":\#(Int(world.mossCare * 100))}"#)
+        case "sprout":
+            // Something ready to pick comes up in the moss on a window top (daisy, mushroom, berries, dandelion).
+            let kind = query["kind"].flatMap { MossSprout.Kind(rawValue: $0) }
+            guard world.sproutNow(kind) else { return (409, #"{"ok":false,"error":"no window top to grow on"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "weather":
             // Preview a sky for two minutes (rain, drizzle, storm, snow, wind, clear), start a snow-Gremlet, or set the city.
             if let city = query["city"].map(Self.decoded), !city.isEmpty {

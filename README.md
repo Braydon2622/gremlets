@@ -22,8 +22,11 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   corner, and every 20 to 40 minutes another takes its place: a trampoline mushroom to bounce on, a lantern flower to
   warm up by, a beanstalk to climb, a snapping plant to dare, a wishing willow to sit in. Each grows a level at a time
   as Claude tasks finish (`gremlet plant` swaps it now).
-- **Full screen stays out of your way.** When an app goes full screen, the Gremlets tidy into the two bottom corners
-  and everything else is put away until you leave full screen (`gremlet fullscreen` previews it).
+- **Full screen stays out of your way.** When an app goes full screen, everything else is put away and the Gremlets
+  move up to the hanging house in the top-right corner and mossy branches in the top corners. More branches come out
+  only when there are more Gremlets to fit, and mossy stumps appear in the bottom corners once the top is full.
+  They're shy of the pointer: move it near one and it hops somewhere else, and clicks always go through to your app
+  (`gremlet fullscreen` previews it).
 - **They reshape the desktop, Terraria style.** A window out of jumping reach gets a staircase of wooden blocks laid
   up to its edge, one block at a time: it turns round, pulls the block behind it up into its arms (you see each one
   arc up onto the stack it carries), turns back and sets it down ahead, so the staircase travels up with it; at the
@@ -84,6 +87,10 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   browns unless the Gremlets water it, so they do: they carry the watering can over, plant tufts they bring along,
   trim the thick carpets, and when a strand hangs past half-way down a window one climbs down and snips it while a
   friend holds it steady. They also slide down strands like a fire pole.
+- **Things grow in the moss.** Daisies, mushrooms, berry sprigs and dandelions come up in the moss on window tops
+  and grow over a few minutes. The Gremlets water the young ones, pick the daisies and mushrooms to give to a friend,
+  eat the berries, and blow the dandelion clocks so the seeds drift off and start new moss on another window
+  (`gremlet sprout [kind]`).
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It

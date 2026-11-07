@@ -104,3 +104,62 @@ import Testing
         #expect(c.groundOwner == 2, "crossed the bridge (at \(c.pos))")
     }
 }
+
+@Suite struct SproutTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    func world(seed: UInt64) -> World {
+        let w = World(seed: seed)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 0, w: 900, h: 160))])
+        w.mossMinutes = 80
+        return w
+    }
+
+    @Test func thingsComeUpInTheMossAndGrow() {
+        let w = world(seed: 161)
+        for _ in 0..<(20 * 60 * 6) { w.step(1.0 / 20) }   // six minutes, nobody about
+        #expect(!w.sprouts.isEmpty, "something sprouted")
+        #expect(w.sprouts.allSatisfy { $0.windowID == 1 })
+        #expect(w.sprouts.count <= World.sproutLimit)
+        #expect(w.sprouts.contains { $0.growth > 0.3 }, "and grew (\(w.sprouts.map(\.growth)))")
+    }
+
+    @Test func gremletsPickEatAndBlowWhatsReady() {
+        for kind in MossSprout.Kind.allCases {
+            let w = world(seed: 162)
+            w.nextSproutAt = .infinity
+            let a = w.spawn(testSpecies(scale: 10), at: Vec2(500, 160))
+            _ = w.spawn(testSpecies(scale: 10), at: Vec2(800, 160))
+            for _ in 0..<60 { w.step(1.0 / 60) }
+            let patches = w.mossPatches.count
+            #expect(w.sproutNow(kind))
+            var gone = false
+            for _ in 0..<(60 * 90) {
+                w.step(1.0 / 60)
+                if w.sprouts.isEmpty { gone = true; break }
+            }
+            #expect(gone, "the \(kind) got seen to")
+            if kind == .dandelion {
+                for _ in 0..<(60 * 8) { w.step(1.0 / 60) }
+                #expect(w.mossPatches.count > patches, "its seeds started new moss")
+            }
+            _ = a
+        }
+    }
+
+    @Test func youngSproutsGetWatered() {
+        let w = world(seed: 163)
+        w.nextSproutAt = .infinity
+        _ = w.spawn(testSpecies(scale: 10), at: Vec2(500, 160))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.sproutNow(.daisy, ripe: false))
+        let id = w.sprouts[0].id
+        var watered = false
+        for _ in 0..<(60 * 120) {
+            w.step(1.0 / 60)
+            if w.sproutWatered[id] != nil { watered = true; break }
+        }
+        #expect(watered)
+    }
+}

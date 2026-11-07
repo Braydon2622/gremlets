@@ -135,6 +135,48 @@ import Testing
             let n = cs.filter { $0.groundOwner == p.ownerID }.count
             #expect(Double(n) <= max(1, p.width / 34) + 1, "\(n) on a \(Int(p.width)) pt perch")
         }
+        #expect(w.cornerBranches.count > 1, "a crowd gets more branches")
+    }
+
+    @Test func fullScreenSpotsGrowOnlyWithTheCrowd() {
+        let w = World(seed: 153)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let two = (0..<2).map { w.spawn(testSpecies(scale: 10), at: Vec2(300 + Double($0) * 300, 0)) }
+        w.notchHome = NotchHome(minX: scr.maxX - 206, maxX: scr.maxX - 12, menuBottom: scr.maxY)
+        w.compact = true
+        for _ in 0..<(60 * 20) { w.step(1.0 / 60) }
+        #expect(w.cornerBranches.count == 1 && w.cornerStumps.isEmpty, "two Gremlets: just the house and one branch")
+        // A crowd arrives: more branches come out, and once those are full, the stumps in the bottom corners too.
+        for i in 0..<18 { _ = w.spawn(testSpecies(scale: 10), at: Vec2(200 + Double(i) * 100, 0)) }
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.cornerBranches.count == 5 && w.cornerStumps.count == 2, "\(w.cornerBranches.count) branches")
+        _ = two
+    }
+
+    @Test func withNowhereLeftUpTopAShyGremletHopsDownToAStump() {
+        let w = World(seed: 154)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(300, 0))
+        w.notchHome = NotchHome(minX: scr.maxX - 206, maxX: scr.maxX - 12, menuBottom: scr.maxY)
+        w.compact = true
+        for _ in 0..<(60 * 60) where !(c.isGrounded && c.groundOwner == World.cornerBranchOwner) {
+            w.step(1.0 / 60)
+            // Steer it to the top-left branch (the only perch on that side while it's alone).
+            if c.isGrounded && c.groundOwner != World.cornerBranchOwner && c.activity != .float && World.isNotchOwner(c.groundOwner) {
+                w.startFloat(c, to: Vec2(scr.minX + 70, scr.maxY - 96))
+            }
+        }
+        guard c.groundOwner == World.cornerBranchOwner else { Issue.record("never reached the branch"); return }
+        // The pointer sits over the whole branch: nowhere up there is clear, so down it goes.
+        w.cursor = Vec2(scr.minX + 70, scr.maxY - 80)
+        var landed = false
+        for _ in 0..<(60 * 6) {
+            w.step(1.0 / 60)
+            if c.isGrounded && c.groundOwner == World.cornerStumpOwner { landed = true; break }
+        }
+        #expect(landed, "on the bottom-left stump (\(c.pos), \(c.groundOwner ?? 0))")
     }
 
     @Test func aGremletTravelsToABareWindowAndPlantsMossThere() throws {

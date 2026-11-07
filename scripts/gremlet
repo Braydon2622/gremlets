@@ -25,6 +25,7 @@
 #   gremlet chest | expedition   hide a treasure chest somewhere high (someone goes to fetch it) / someone sets out for the highest point
 #   gremlet moss [minutes]       how overgrown things are (preview: 0 to 300 minutes of Claude work; 0 clears it)
 #   gremlet moss climb|pad|plant someone climbs a vine / weaves a platform into one / plants or waters moss now
+#   gremlet sprout [daisy|mushroom|berries|dandelion]  something ready to pick comes up in the moss now
 #   gremlet weather [sky|live]   the weather now; preview rain|drizzle|storm|snow|wind|clear for two minutes; live goes back
 #   gremlet weather city <name>  get the real weather there (Open-Meteo); gremlet weather snowman: someone rolls one now
 #   gremlet boost                two Gremlets team up: one boosts the other onto a window just out of reach
@@ -75,6 +76,7 @@ case "${1:-}" in
   kite)    call kite; echo ;;
   stairs|cart|chest|expedition|unlink|cross|boost|notch|plant) call "$1"; echo ;;
   react)   call "react?name=${2:-screenshot}"; echo ;;
+  sprout)  call "sprout?kind=${2:-}"; echo ;;
   moss)    case "${2:-}" in
              climb|pad|plant) call "moss?do=$2" ;;
              "") call moss ;;

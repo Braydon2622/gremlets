@@ -34,6 +34,9 @@ extension World {
                 c.set(.idle, duration: rng.range(0.3, 3))
             }
         }
+        compactTiers = 1
+        compactOverflowUntil = 0
+        updateCompactRoom()
         setSurfacesDirty()
     }
 
@@ -52,7 +55,8 @@ extension World {
     func shyFromCursor() {
         guard let cur = cursor else { return }
         let perches = compactPerches
-        for c in creatures where c.activity != .dragged && c.homeUntil == nil {
+        for (id, _) in dropTarget where creature(id: id).map({ $0.activity != .airborne && $0.activity != .crouch }) ?? true { dropTarget[id] = nil }
+        for c in creatures where c.activity != .dragged && c.homeUntil == nil && dropTarget[c.id] == nil {
             let center = Vec2(c.pos.x, c.pos.y + c.size.y / 2)
             guard abs(cur.x - center.x) < 34 + c.size.x / 2, abs(cur.y - center.y) < 30 + c.size.y / 2 else { continue }
             if let t = spookedAt[c.id], clock - t < 0.7 { continue }
@@ -79,9 +83,17 @@ extension World {
             } else if abs(far(here) - cur.x) > 60 {
                 launch(c, velocity: ballistic(from: c.pos, toX: far(here), y: here.y, apexExtra: 14))
             } else {
-                // Nowhere near to go: hop down out of the way (it floats back up to a quieter perch later).
-                let away: Double = c.pos.x < cur.x ? -1 : 1
-                launch(c, velocity: Vec2(away * 160, 220))
+                // Nowhere up top to go: the stump in the bottom corner on its side comes out, and it hops down to it.
+                compactOverflowUntil = clock + 120
+                setSurfacesDirty()
+                if let stump = cornerStumps.min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) {
+                    // Off the perch and straight down the side of the screen onto the stump.
+                    launch(c, velocity: ballistic(from: c.pos, toX: (stump.minX + stump.maxX) / 2, y: stump.y, apexExtra: 12))
+                    dropTarget[c.id] = stump.ownerID
+                } else {
+                    let away: Double = c.pos.x < cur.x ? -1 : 1
+                    launch(c, velocity: Vec2(away * 160, 220))
+                }
             }
             c.facing = cur.x > c.pos.x ? -1 : 1
         }
@@ -141,7 +153,8 @@ extension Brain {
         // Hop over to a nearby perch (the swing, the hammock, the porch).
         for p in perches where p.ownerID != here.ownerID {
             let mid = (p.minX + p.maxX) / 2
-            if abs(mid - c.pos.x) < 170 && abs(p.y - c.pos.y) < 90 {
+            let there = world.creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count
+            if abs(mid - c.pos.x) < 170 && abs(p.y - c.pos.y) < 90 && Double(there + 1) <= max(1, p.width / 34) {
                 add("hop", 0.5) { world.launch(c, velocity: world.ballistic(from: c.pos, toX: mid, y: p.y, apexExtra: 26)) }
             }
         }

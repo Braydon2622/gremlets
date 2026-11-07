@@ -29,16 +29,63 @@ public struct NotchHome: Equatable, Sendable {
 
 extension World {
     static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003, cornerBranchOwner = -430_004
-    static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerBranchOwner - 3 }
+    static let cornerStumpOwner = -430_010
+    static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerStumpOwner - 1 }
+    static func isCornerSpot(_ o: Int) -> Bool { o <= cornerBranchOwner && o >= cornerStumpOwner - 1 }
 
-    /// Full screen: mossy branches out from the screen's top corners, more places to hang out (room for a crowd):
-    /// two from the top-left, one from the right edge under the house.
-    public var cornerBranches: [Surface] {
-        guard compact, let scr = screens.first else { return [] }
-        return [Surface(ownerID: World.cornerBranchOwner, kind: .plant, y: scr.maxY - 96, minX: scr.minX, maxX: scr.minX + 140),
-                Surface(ownerID: World.cornerBranchOwner - 1, kind: .plant, y: scr.maxY - 176, minX: scr.minX, maxX: scr.minX + 110),
-                Surface(ownerID: World.cornerBranchOwner - 2, kind: .plant, y: scr.maxY - 196, minX: scr.maxX - 120, maxX: scr.maxX)]
+    /// Full screen: mossy branches out from the screen's top corners, added a few at a time as more Gremlets need
+    /// room (two Gremlets only get one; a crowd gets five), fewest first.
+    func compactBranchTiers() -> [Surface] {
+        guard let scr = screens.first else { return [] }
+        let o = World.cornerBranchOwner
+        return [Surface(ownerID: o, kind: .plant, y: scr.maxY - 96, minX: scr.minX, maxX: scr.minX + 140),
+                Surface(ownerID: o - 2, kind: .plant, y: scr.maxY - 196, minX: scr.maxX - 120, maxX: scr.maxX),
+                Surface(ownerID: o - 1, kind: .plant, y: scr.maxY - 176, minX: scr.minX, maxX: scr.minX + 110),
+                Surface(ownerID: o - 3, kind: .plant, y: scr.maxY - 256, minX: scr.minX, maxX: scr.minX + 96),
+                Surface(ownerID: o - 4, kind: .plant, y: scr.maxY - 276, minX: scr.maxX - 100, maxX: scr.maxX)]
     }
+
+    public var cornerBranches: [Surface] {
+        guard compact else { return [] }
+        return Array(compactBranchTiers().prefix(compactTiers))
+    }
+
+    /// Full screen, when the top corners are full (or someone had nowhere up there to skitter to): a mossy stump in
+    /// each bottom corner.
+    public var cornerStumps: [Surface] {
+        guard compact, compactTiers > 5 || clock < compactOverflowUntil, let scr = screens.first else { return [] }
+        let y = scr.minY + World.stumpTop
+        return [Surface(ownerID: World.cornerStumpOwner, kind: .plant, y: y, minX: scr.minX + 14, maxX: scr.minX + 74),
+                Surface(ownerID: World.cornerStumpOwner - 1, kind: .plant, y: y, minX: scr.maxX - 74, maxX: scr.maxX - 14)]
+    }
+    public static let stumpTop = 36.0
+
+    /// How many Gremlets the full-screen spots can hold (about one per 34 points of perch).
+    func compactRoom(_ ss: [Surface]) -> Int { ss.reduce(0) { $0 + max(1, Int($1.width / 34)) } }
+
+    /// Grows (or, once nobody's using them, shrinks) the full-screen spots to fit everyone out and about, with one
+    /// spare place so there's always somewhere to skitter to.
+    func updateCompactRoom() {
+        guard compact, notchHomeShowing else { return }
+        let n = creatures.filter { $0.homeUntil == nil }.count
+        let tiers = compactBranchTiers()
+        let house = notchSurfaces.filter { !World.isCornerSpot($0.ownerID) }
+        var want = 1
+        while want <= tiers.count, compactRoom(house + tiers.prefix(want)) < n + 1 { want += 1 }
+        let old = compactTiers
+        if want > compactTiers {
+            compactTiers = want
+        } else if want < compactTiers {
+            // Only put a spot away once it's empty and nobody's on the way to it.
+            let last = compactTiers > tiers.count ? cornerStumps : [tiers[compactTiers - 1]]
+            let used = creatures.contains { c in
+                last.contains { s in c.groundOwner == s.ownerID || (c.floatTarget.map { abs($0.y - s.y) < 4 && s.supports(x: $0.x) } ?? false) }
+            }
+            if !used && clock >= compactOverflowUntil { compactTiers -= 1 }
+        }
+        if compactTiers != old { setSurfacesDirty() }
+    }
+
     public var cornerBranch: Surface? { cornerBranches.first }
 
     /// The home only shows (and can be reached) while no window is in the space under the notch: it never sits over
@@ -56,7 +103,7 @@ extension World {
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
                 Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
                 Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
-            + cornerBranches
+            + cornerBranches + cornerStumps
     }
 
     /// Who's napping in the hammock.

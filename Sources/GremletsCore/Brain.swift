@@ -56,6 +56,7 @@ struct Brain {
         world.expeditionChoices(for: c, add: add)
         world.boostChoices(for: c, add: add)
         world.mossChoices(for: c, add: add)
+        world.sproutChoices(for: c, add: add)
         world.snowChoices(for: c, add: add)
         world.notchChoices(for: c, add: add)
         world.zipChoices(for: c, add: add)

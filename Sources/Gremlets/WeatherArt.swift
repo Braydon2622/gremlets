@@ -250,6 +250,32 @@ enum PodArt {
 
     /// The branch, growing out from the window's corner to the right: bark, moss on top, a couple of leaves, a
     /// tapering tip.
+    /// Full screen: a mossy tree stump for a bottom corner (26 × 14 px; its mossy top, the perch, is 12 px up).
+    /// Faces right (mushroom on the right side); mirror it for the right corner.
+    static let stump: CGImage = {
+        var cv = PixelCanvas(26, 14)
+        let bark = 0x6B4428 as UInt32, barkLight = 0x8A5A35 as UInt32, ring = 0xC79A62 as UInt32
+        // Roots spreading into the ground.
+        cv.rect(2, 0, 22, 1, bark); cv.rect(1, 0, 2, 1, barkLight); cv.rect(23, 0, 2, 1, barkLight)
+        cv.rect(3, 1, 20, 1, bark)
+        // Trunk with bark stripes.
+        for x in 4...21 {
+            for y in 2...9 { cv.set(x, y, x % 4 == 1 ? barkLight : (x == 4 || x == 21 ? 0x553620 : bark)) }
+        }
+        // The cut top showing a ring, under a cap of moss that drips down the sides.
+        cv.rect(5, 10, 16, 1, ring); cv.rect(8, 10, 10, 1, 0xE0B47E)
+        for x in 4...21 { cv.set(x, 11, x % 3 == 0 ? 0x8BD66A : 0x5E9E46) }
+        for x in [5, 10, 15, 20] { cv.set(x, 10, 0x5E9E46); cv.set(x, 9, 0x4C8A3A) }
+        cv.set(6, 12, 0x8BD66A); cv.set(13, 12, 0x6CC04A); cv.set(18, 12, 0x8BD66A)
+        // A little red mushroom on the side, and a fern on the other.
+        cv.rect(22, 2, 1, 2, 0xF2E6D0); cv.rect(21, 4, 4, 1, 0xD9534F); cv.rect(22, 5, 2, 1, 0xD9534F); cv.set(22, 4, 0xFFFFFF)
+        for (x, y) in [(2, 2), (2, 3), (1, 4), (3, 4), (1, 5), (0, 6), (2, 6), (3, 5)] { cv.set(x, y, y > 4 ? 0x8BD66A : 0x5E9E46) }
+        let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
+        cv.outline(0.66)
+        for i in white { cv.px[i] = 0xFFFFFF }
+        return cv.image
+    }()
+
     static let branch: CGImage = {
         var cv = PixelCanvas(24, 6)
         for x in 0..<24 {

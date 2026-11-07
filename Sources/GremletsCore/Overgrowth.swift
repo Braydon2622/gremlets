@@ -64,7 +64,11 @@ public enum MossEvent: Equatable, Sendable {
 }
 
 struct MossTask: Sendable {
-    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double), prune(vine: String), slide(vine: String), hold(vine: String), mow(window: Int, to: Double), tendTree(pad: Int) }
+    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double), prune(vine: String), slide(vine: String), hold(vine: String), mow(window: Int, to: Double), tendTree(pad: Int)
+        /// Water a sprout in the moss, or pick / eat / blow it once it's ready (Sprouts.swift).
+        case sprout(Int)
+        /// Taking a picked daisy or mushroom to a friend (-1: nobody about, just admiring it).
+        case gift(to: Int, what: MossSprout.Kind) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -103,15 +107,15 @@ extension World {
                 }
             }
         }
-        // Moss trickling down the sides of windows: from 20 minutes, each corner grows a strand (and a shorter one
+        // Moss trickling down the sides of windows: from 12 minutes, each corner grows a strand (and a shorter one
         // beside it) that keeps lengthening until a Gremlet prunes it back.
-        if m >= 20 {
+        if m >= 12 {
             for s in builtSurfaces where s.kind == .windowTop && s.ownerID >= 0 {
                 guard let w = windows[s.ownerID] else { continue }
                 for (side, x) in [(-1.0, w.minX), (1.0, w.maxX)] where abs((side < 0 ? s.minX : s.maxX) - x) < 2 {
                     let key = "w\(s.ownerID)\(side < 0 ? "l" : "r")"
                     // Each strand keeps its own length: it starts at the moss's level and grows until pruned.
-                    if strandGrowth[key] == nil { strandGrowth[key] = (m - 20) * 0.9 }
+                    if strandGrowth[key] == nil { strandGrowth[key] = (m - 12) * 0.9 }
                     let len = min(w.h * 0.85, 34 + strandGrowth[key]!)
                     out.append(MossVine(key: key, anchor: .windowSide(window: s.ownerID, side: side), x: x + side * 2, bottom: s.y - len, top: s.y))
                     let short = len * 0.55
@@ -166,16 +170,17 @@ extension World {
     }
 
     func updateOvergrowth(_ dt: Double) {
-        // Strands lengthen while the moss is cared for (about a window's height in an hour or two).
-        if !mossThirsty && mossMinutes >= 20 {
-            for v in mossVines where !v.key.hasSuffix("2") { if case .windowSide = v.anchor { strandGrowth[v.key, default: 0] += dt * (0.08 + 0.14 * mossCare) } }
+        // Strands lengthen while the moss is cared for (you can watch them creep down: half a window in 15 to 30 minutes).
+        if !mossThirsty && mossMinutes >= 12 {
+            for v in mossVines where !v.key.hasSuffix("2") { if case .windowSide = v.anchor { strandGrowth[v.key, default: 0] += dt * (0.18 + 0.3 * mossCare) } }
         }
         if clock - lastVineBuild > 1 { lastVineBuild = clock; rebuildVines() }
+        updateSprouts(dt)
         // Patches grow on their own, faster when tended and while Claude works.
         let boost = 1 + mossMinutes / 100
         for i in mossPatches.indices {
             let tended = clock - mossPatches[i].lastTended < 120 ? 2.5 : 1
-            mossPatches[i].size = min(1, mossPatches[i].size + dt * 0.0012 * boost * tended)
+            mossPatches[i].size = min(1, mossPatches[i].size + dt * 0.003 * boost * tended)
         }
     }
 
@@ -312,6 +317,10 @@ extension World {
         guard var t = c.mossTask, let s = supportingSurface(for: c) else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
         if clock - t.started > 60 { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
         switch t.kind {
+        case .sprout(let id):
+            sproutDecide(c, &t, id: id, on: s)
+        case .gift(let to, let what):
+            giftDecide(c, to: to, what: what, started: t.started, on: s)
         case .plant(let wid, let offset):
             guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = w.minX + offset

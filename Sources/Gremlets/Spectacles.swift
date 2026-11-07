@@ -18,6 +18,7 @@ final class SpectacleRenderer {
     private var nextChimneyPuff: CFTimeInterval = 0
     private var swingLayer: CAShapeLayer?
     private var cornerBranchLayers: [CALayer] = []
+    private var cornerStumpLayers: [CALayer] = []
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -112,6 +113,7 @@ final class SpectacleRenderer {
         renderPods()
         renderNotch()
         renderCornerBranch()
+        renderCornerStumps()
         renderLift()
         renderCarried()
         renderPlans()
@@ -1110,6 +1112,46 @@ final class SpectacleRenderer {
         }
     }
 
+    func handle(_ events: [SproutEvent]) {
+        for e in events {
+            switch e {
+            case .sprouted(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.sparkle], si: si, at: pt, count: 3, dx: -10...10, dy: 4...18, duration: 0.6) }
+            case .watered(let p, _):
+                if let (si, pt) = local(p + Vec2(0, 26)) {
+                    overlay.burst([Effects.rain], si: si, at: pt, count: 6, dx: -8...8, dy: -26 ... -8, duration: 0.6, stagger: 0.1)
+                }
+            case .picked(let kind, let p, let by):
+                if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.sparkle], si: si, at: pt, count: 4, dx: -14...14, dy: 4...24, duration: 0.7) }
+                if Int.random(in: 0..<2) == 0 {
+                    overlay.showBubble((kind == .daisy ? ["A daisy!", "So pretty.", "For you…"] : ["Ooh, a mushroom!", "Look what I found!", "A good one."]).randomElement()!, on: by, seconds: 1.6)
+                }
+            case .gave(_, let from, let to):
+                if let c = world.creatures.first(where: { $0.id == to }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.heart], si: si, at: pt, count: 2, dx: -10...10, dy: 6...24, duration: 1.0, stagger: 0.15)
+                }
+                if Int.random(in: 0..<2) == 0 { overlay.showBubble(["For you!", "Here!", "I picked this."].randomElement()!, on: from, seconds: 1.5) }
+            case .ate(let p, let by):
+                if let (si, pt) = local(p + Vec2(0, 20)) { overlay.burst([Effects.heart, Effects.sparkle], si: si, at: pt, count: 2, dx: -8...8, dy: 8...22, duration: 0.8) }
+                if Int.random(in: 0..<2) == 0 { overlay.showBubble(["Yum!", "Berries!", "Mm, sweet."].randomElement()!, on: by, seconds: 1.4) }
+            case .seedsBlown(let p, let dir, let by):
+                // The clock comes apart and the seeds float off on the breeze.
+                if let (si, pt) = local(p + Vec2(0, 24)) {
+                    let dx = dir > 0 ? 60.0...220.0 : -220.0 ... -60.0
+                    overlay.burst([SproutArt.seed], si: si, at: pt, count: 10, dx: dx, dy: 20...120, duration: 2.6, stagger: 0.06)
+                }
+                if let by, Int.random(in: 0..<2) == 0 { overlay.showBubble(["Fwoo!", "Make a wish!", "Fly, little seeds!"].randomElement()!, on: by, seconds: 1.6) }
+            case .seedLanded(let p):
+                if let (si, pt) = local(p) {
+                    overlay.burst([SproutArt.seed], si: si, at: CGPoint(x: pt.x, y: pt.y + 40), count: 1, dx: -4...4, dy: -40 ... -30, duration: 1.0)
+                    overlay.burst([Effects.leaf, Effects.sparkle], si: si, at: pt, count: 4, dx: -14...14, dy: 2...16, duration: 0.7, stagger: 0.8)
+                }
+            case .wilted(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.leaf2], si: si, at: pt, count: 3, dx: -14...14, dy: -20...6, duration: 0.8) }
+            }
+        }
+    }
+
     func handle(_ events: [TeamEvent]) {
         func at(_ id: Int, _ up: Double = 1) -> (Int, CGPoint)? {
             guard let c = world.creatures.first(where: { $0.id == id }) else { return nil }
@@ -1379,6 +1421,13 @@ final class SpectacleRenderer {
             let dq = Int(p.size * 4)
             place("p\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
                   imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty) }
+        }
+        // Little things growing in the moss: daisies, mushrooms, berries, dandelions.
+        for sp in world.sprouts {
+            guard let w = world.windows[sp.windowID], let top = world.surfaces.first(where: { $0.ownerID == sp.windowID && $0.kind == .windowTop && $0.supports(x: w.minX + sp.offset) }),
+                  let (si, pt) = local(Vec2(w.minX + sp.offset, top.y)) else { continue }
+            place("s\(sp.id)", si, at: CGPoint(x: pt.x.rounded(), y: pt.y - 1 * artScale), anchor: CGPoint(x: 0.5, y: 0),
+                  rotate: (windowSway[sp.windowID] ?? 0) * 0.5, imageKey: "\(sp.stage)-\(night)") { SproutArt.image(sp.kind, stage: sp.stage, night: night) }
         }
         // Screens: moss along the floor and under the menu bar on a long day.
         for (i, scr) in world.screens.enumerated() where m >= 150 {
@@ -1979,7 +2028,7 @@ extension SpectacleRenderer {
         var out: [CALayer] = []
         if let l = notchLayers { out += [l.house, l.hammock, l.ropes] }
         if let s = swingLayer { out.append(s) }
-        out += cornerBranchLayers
+        out += cornerBranchLayers + cornerStumpLayers
         if let l = liftLayer { out.append(l) }
         out += carryLayers.values.map(\.layer)
         return out
@@ -1989,8 +2038,38 @@ extension SpectacleRenderer {
     func renderCompact() {
         renderNotch()
         renderCornerBranch()
+        renderCornerStumps()
         renderLift()
         renderCarried()
+    }
+
+    /// The mossy stumps in the bottom corners (only out when the top corners are full).
+    fileprivate func renderCornerStumps() {
+        let stumps = world.cornerStumps
+        while cornerStumpLayers.count > stumps.count {
+            let l = cornerStumpLayers.removeLast()
+            CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+            let a = CABasicAnimation(keyPath: "transform.scale.y"); a.toValue = 0.01; a.duration = 0.35
+            a.fillMode = .forwards; a.isRemovedOnCompletion = false; l.add(a, forKey: "out")
+            CATransaction.commit()
+        }
+        for (i, s) in stumps.enumerated() {
+            let fromRight = s.minX > (screens.first?.frame.midX ?? 0)
+            let floorY = s.y - World.stumpTop
+            guard let (si, pt) = local(Vec2((s.minX + s.maxX) / 2, floorY)) else { continue }
+            if i >= cornerStumpLayers.count {
+                let l = pixelLayer(); l.contents = PodArt.stump
+                l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.2
+                l.bounds = CGRect(x: 0, y: 0, width: 26 * 3, height: 14 * 3)
+                popIn(l)
+                cornerStumpLayers.append(l)
+            }
+            let l = cornerStumpLayers[i]
+            attach(l, si)
+            // Mushroom side toward the middle of the screen.
+            l.setAffineTransform(CGAffineTransform(scaleX: fromRight ? -1 : 1, y: 1))
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+        }
     }
 
     fileprivate func renderCornerBranch() {
@@ -2074,9 +2153,11 @@ extension SpectacleRenderer {
             var e = carryLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1; popIn(l); return (l, "") }()
             attach(e.layer, si)
             if e.what != what {
-                let img = what == "can" ? PropArt.wateringCan : BonsaiArt.carriedPot
+                let picked = MossSprout.Kind(rawValue: what)
+                let img = what == "can" ? PropArt.wateringCan : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
+                let k = picked == nil ? 3 : 2
                 e.layer.contents = img
-                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * k, height: img.height * k)
                 e.what = what
             }
             let bob = c.activity == .walk ? abs(sin(CACurrentMediaTime() * 9 + Double(c.id))) * 2 : 0

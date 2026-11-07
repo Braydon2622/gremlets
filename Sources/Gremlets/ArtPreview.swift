@@ -29,6 +29,28 @@ enum ArtPreview {
             ctx.draw(critter, in: CGRect(x: cx + 40 * scale, y: top, width: critter.width * scale, height: critter.height * scale))
         }
         write(ctx.makeImage()!, dir.appendingPathComponent("islands.png"))
+        // The full-screen corner stump.
+        let st = PodArt.stump
+        let ctxS = CGContext(data: nil, width: st.width * 8 + 40, height: st.height * 8 + 40, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxS.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxS.fill(CGRect(x: 0, y: 0, width: ctxS.width, height: ctxS.height))
+        ctxS.interpolationQuality = .none
+        ctxS.draw(st, in: CGRect(x: 20, y: 20, width: st.width * 8, height: st.height * 8))
+        write(ctxS.makeImage()!, dir.appendingPathComponent("stump.png"))
+        // Sprouts: each kind at each stage, day then night.
+        let ctxP = CGContext(data: nil, width: 4 * 3 * 9 * 6 + 40, height: 2 * 11 * 6 + 40, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxP.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxP.fill(CGRect(x: 0, y: 0, width: ctxP.width, height: ctxP.height))
+        ctxP.interpolationQuality = .none
+        for (k, kind) in MossSprout.Kind.allCases.enumerated() {
+            for stage in 0..<3 {
+                for (r, night) in [false, true].enumerated() {
+                    ctxP.draw(SproutArt.image(kind, stage: stage, night: night), in: CGRect(x: 20 + (k * 3 + stage) * 54, y: 20 + (1 - r) * 66, width: 54, height: 66))
+                }
+            }
+        }
+        write(ctxP.makeImage()!, dir.appendingPathComponent("sprouts.png"))
+        
         // Bonsai: every species, from a seedling to a venerable tree, plus autumn and winter at full growth.
         let stages: [(edits: Int, sessions: Int, blooms: Int, fruit: Int)] = [(0, 1, 0, 0), (8, 2, 1, 0), (40, 4, 4, 1), (150, 7, 9, 3), (500, 12, 16, 7)]
         let bW = 390, bH = 270

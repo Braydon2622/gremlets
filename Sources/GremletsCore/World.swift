@@ -99,6 +99,12 @@ public final class World {
     var mossPadSurfaces: [Surface] = []
     var mossEvents: [MossEvent] = []
     var nextPadID = 0, nextPatchID = 0
+    /// Little things growing in the moss (Sprouts.swift).
+    public internal(set) var sprouts: [MossSprout] = []
+    var sproutEvents: [SproutEvent] = []
+    var nextSproutID = 0, nextSproutAt = 30.0
+    var sproutWatered: [Int: Double] = [:]
+    var pendingSeeds: [(at: Double, window: Int, offset: Double)] = []
     var nextMossTaskAt = 60.0
     var lastVineBuild = -10.0
     /// When Claude last used a tool in any session (drives the Gremlets' day: garden while Claude works, rest after).
@@ -207,6 +213,12 @@ public final class World {
     public var cursor: Vec2?
     /// Full screen: when each Gremlet last skittered away from the pointer.
     var spookedAt: [Int: Double] = [:]
+    /// Gremlets dropping to one spot, falling through anything on the way (see shyFromCursor).
+    var dropTarget: [Int: Int] = [:]
+    /// Full screen: how many corner branches are out (more Gremlets, more branches; past five, the bottom stumps too),
+    /// and until when the stumps stay out after someone had nowhere up top to go.
+    public internal(set) var compactTiers = 1
+    var compactOverflowUntil = 0.0
     /// Simulation time (seconds), the clock jobs and events are stamped with.
     public var time: Double { clock }
     public var rng: SplitMix64
@@ -414,11 +426,11 @@ public final class World {
         // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
         // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
         mossCare = max(0, mossCare - dt / 2400)
-        let growth = working ? dt * workClockScale / 45 : dt / 180
+        let growth = working ? dt * workClockScale / 28 : dt / 120
         // Thirsty moss shrinks back, but never below a little base for the Gremlets to bring back to life.
         mossMinutes = mossThirsty ? max(min(mossMinutes, 15), mossMinutes - dt / 400) : min(World.mossMax, mossMinutes + growth * (0.4 + mossCare))
         updateFerry(dt)
-        if compact { shyFromCursor() }
+        if compact { updateCompactRoom(); shyFromCursor() }
         updateLift(dt)
         updateMerchant(dt)
         updateBonsai(dt)
@@ -697,11 +709,14 @@ public final class World {
 
         // Land on the highest one-way platform crossed while falling (including friends' heads).
         if c.vel.y <= 0 {
+            // Dropping to a particular spot (a shy hop down to a corner stump): straight through anything on the way.
+            let only = dropTarget[c.id]
             let landing = allSurfaces(excluding: c)
-                .filter { prev.y >= $0.y - 0.5 && next.y <= $0.y && $0.supports(x: next.x) }
+                .filter { prev.y >= $0.y - 0.5 && next.y <= $0.y && $0.supports(x: next.x) && (only == nil || $0.ownerID == only || $0.kind == .floor) }
                 .max { $0.y < $1.y }
             if let s = landing {
-                let impact = -c.vel.y
+                var impact = -c.vel.y
+                if only != nil { dropTarget[c.id] = nil; impact = min(impact, dizzyImpact) }
                 c.gliding = false
                 if groveBounce(c, on: s, impact: impact) { return }
                 next.y = s.y

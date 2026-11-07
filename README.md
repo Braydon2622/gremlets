@@ -15,15 +15,22 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   sit in the foliage and nap there after dark. Click a tree for its story. While a session runs the growing tree is
   also the menu bar icon, and a lantern hangs from it whenever Claude is waiting for your OK.
 - **The terminal comes alive while Claude works.** Ivy creeps along its top edge, mossy ledges grow out of its side
-  every few edits (platforms the Gremlets use), each edit places a block of a little building beside it, subagents
-  arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow. When the session ends the
-  building moves down to a village along the bottom of the screen, where Gremlets claim houses and sleep in them.
+  every few edits (platforms the Gremlets use), each edit lays a block of a little house beside it (a timber cottage,
+  an igloo, an adobe, a mossy temple, a mushroom house, a crystal spire or a lighthouse on a cloud, depending on the
+  island), subagents arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow. When the
+  session ends the house moves down to a village along the bottom of the screen, the Gremlets finish it, claim it and
+  sleep in it; smoke curls from the chimney, moss and ivy creep over it with the weeks.
   When Claude compacts its context, the tree lets a few leaves go.
 - **A garden that grows from tasks.** Six useful plants in a corner of the screen grow a level at a time as Claude
   tasks finish: a berry bush, a trampoline mushroom, a lantern flower the Gremlets gather around at night, a beanstalk
   ladder up the wall, a snapping plant that catches fireflies, a wishing willow. A mine opens once the garden is
   established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
   a hot spring, a windmill and a flower arch.
+- **They reshape the desktop, Terraria style.** A window out of jumping reach gets a staircase of wooden blocks laid
+  up to its edge, one block at a time, climbed as it goes; everyone steps up and down it afterwards until the window
+  moves. A wide window gets a stretch of rail along its top and a minecart that rolls end to end, sparks flying,
+  Gremlets taking turns. Gaps between windows get plank bridges, and a grappling hook reaches the rest.
+  (`gremlet stairs`, `gremlet cart`.)
 - **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
   ferry, wind that sweeps leaves along the floor, a kite on a free afternoon, shy night spirits.
 - **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
@@ -42,7 +49,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 119 engine tests (physics, gardens, platforms, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 121 engine tests (physics, gardens, platforms, stairs and minecarts, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.
@@ -134,8 +141,10 @@ source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) w
 side of a nearby window, or on the wall (the screen's edge) when no window has room, and gets up there on a balloon, in a
 soap bubble, holding a giant dandelion puff, or bounced up by a mushroom that pops out of the ground; it comes back down
 under an umbrella or a big leaf. Every platform is different: a wooden plank, a mossy stone ledge, a living leaf that sways,
-a cloud that bobs, a bracket fungus, the branch of a tree that grows up beside the window, a swing held up by
-balloons, a treehouse porch with a little cabin, a flying carpet that ripples and drifts, the basket of a hot-air
+a cloud that bobs, a bracket fungus, a limb of a whole tree that grows up beside the window (a leaning trunk with
+roots and a knot hole, limbs spreading out away from the window, leaf clusters that turn with the season, trailing
+vines, a rope swing, a bird's nest; every tree a little different), a swing held up by
+balloons, a treehouse porch with a little cabin up in that tree, a flying carpet that ripples and drifts, the basket of a hot-air
 balloon that drifts beside the window with its burner flickering, or (for floor gardens) the mossy shell of a giant
 garden snail that crawls slowly along the bottom of the screen, eyestalks wiggling. Moving platforms carry their
 gardener along. Click a platform and it reacts: the cloud rains on the plants, the leaf rustles, the balloon's burner

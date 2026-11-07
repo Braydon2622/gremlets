@@ -643,19 +643,32 @@ final class OverlayController {
         let side = j.shelfSide ?? 1
         let outer = side > 0 ? s.maxX : s.minX
         switch j.shelfStyle {
-        case .branch:
+        case .branch, .treehouse:
+            // A whole tree from the floor up: the trunk stands just inside the shelf's outer end, one limb props the
+            // shelf up, the rest spread out away from the window.
             guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: outer - side * 30) }).min(by: { $0.y < $1.y }) else { return }
-            let hpx = max(20, Int(((s.y - floor.y) / 3).rounded()) + 16)
-            let key = "tree\(hpx)"
+            let shelfPx = Int(((s.y - floor.y) / 3).rounded())
+            let hpx = max(30, shelfPx + 14)
+            let key = "tree\(hpx)-\(shelfPx)-\(world.month)-\(side)"
             if st.extraKey != key || st.extra == nil {
                 st.extra?.removeFromSuperlayer()
-                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
-                setImage(l, PropArt.tree(heightPx: hpx))
+                let l = pixelLayer(si, anchor: CGPoint(x: side < 0 ? 1 - PropArt.treeAnchorX : PropArt.treeAnchorX, y: 0))
+                setImage(l, PropArt.tree(heightPx: hpx, shelfPx: shelfPx, seed: j.seed, month: world.month, mirror: side < 0))
                 screens[si].root.insertSublayer(l, at: 0)
                 if st.extra == nil { popIn(l) }
                 st.extra = l; st.extraKey = key
             }
             st.extra?.position = CGPoint(x: (outer - side * 30 - o.x).rounded(), y: (floor.y - o.y).rounded())
+            if j.shelfStyle == .treehouse {
+                if st.extra2 == nil {
+                    let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                    setImage(l, PropArt.cabin)
+                    screens[si].root.insertSublayer(l, above: st.extra)
+                    popIn(l)
+                    st.extra2 = l
+                }
+                st.extra2?.position = CGPoint(x: (outer - side * 26 - o.x).rounded(), y: (s.y - o.y).rounded())
+            }
         case .swing:
             if st.extra == nil {
                 let c = CALayer()
@@ -679,26 +692,6 @@ final class OverlayController {
             let t = CACurrentMediaTime()
             st.extra?.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(t * 1.2) * 0.02)))
             st.extra?.position = CGPoint(x: (s.minX + s.width / 2 - o.x).rounded(), y: (s.y - o.y).rounded())
-        case .treehouse:
-            guard let floor = world.surfaces.filter({ $0.kind == .floor && $0.supports(x: outer - side * 30) }).min(by: { $0.y < $1.y }) else { return }
-            let hpx = max(20, Int(((s.y - floor.y) / 3).rounded()) + 4)
-            if st.extraKey != "th\(hpx)" || st.extra == nil {
-                st.extra?.removeFromSuperlayer()
-                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
-                setImage(l, PropArt.tree(heightPx: hpx))
-                screens[si].root.insertSublayer(l, at: 0)
-                if st.extra == nil { popIn(l) }
-                st.extra = l; st.extraKey = "th\(hpx)"
-            }
-            st.extra?.position = CGPoint(x: (outer - side * 30 - o.x).rounded(), y: (floor.y - o.y).rounded())
-            if st.extra2 == nil {
-                let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
-                setImage(l, PropArt.cabin)
-                screens[si].root.insertSublayer(l, above: st.extra)
-                popIn(l)
-                st.extra2 = l
-            }
-            st.extra2?.position = CGPoint(x: (outer - side * 26 - o.x).rounded(), y: (s.y - o.y).rounded())
         case .basket:
             // The envelope floats above the basket; the burner flickers now and then.
             let t = CACurrentMediaTime()
@@ -826,7 +819,8 @@ final class OverlayController {
             let working = j.phase == .working && world.time - j.lastToolTime < 25 && !j.needsYou
             if working && now >= st.nextChimney {
                 st.nextChimney = now + 1.3
-                burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * 0.55, y: f.maxY), count: 1, dx: 3...12, dy: 24...40, duration: 2)
+                let ch = BuildArt.chimney(b)
+                burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * ch.x, y: min(f.maxY, l.frame.minY + l.frame.height * ch.y)), count: 1, dx: 3...12, dy: 24...40, duration: 2)
             }
             if j.needsYou {
                 let flag = st.flag ?? {
@@ -1487,11 +1481,10 @@ final class OverlayController {
             if let b = st.build {
                 // The finished building moves down to the village and stays.
                 if let biome = st.lastBiome, st.lastBlocks >= 4 {
-                    let (cols, rows) = BuildArt.size(biome)
                     let day = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none)
-                    world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks,
-                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project, day: day,
-                                   builtAt: Date().timeIntervalSince1970)
+                    let fit = BuildArt.fit(biome)
+                    world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks, size: fit.size, project: st.project, day: day,
+                                   builtAt: Date().timeIntervalSince1970, roof: fit.roof)
                     st.lastBlocks = 0
                 }
                 fadeOut(b, 0.8); st.build = nil; st.buildKey = ""

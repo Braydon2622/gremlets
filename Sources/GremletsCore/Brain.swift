@@ -55,8 +55,16 @@ struct Brain {
         world.kiteChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)
+        world.cartChoices(for: c, add: add)
+        if World.isCartOwner(c.groundOwner) { pickAndStart(choices, world); return }
         if world.spectacle == nil, c.job == nil {
             if world.bridgeCandidate(for: c) != nil { add("bridge", 0.7) { world.startBridge(c) } }
+            if let plan = world.stairCandidate(for: c) {
+                // Stairs are the way up when a jump won't make it; now and then they build them anyway.
+                let tooHigh = plan.to.y - plan.from.y > world.maxJumpHeight * c.species.jumpPower * 0.8
+                add("stairs", tooHigh ? 0.9 : 0.25) { world.startStairs(c, plan) }
+            }
+            if let s = world.railCandidate(for: c) { add("rail", 0.5) { world.startRail(c, on: s) } }
             if let a = world.grappleTarget(for: c) { add("grapple", 0.3 * (0.3 + e)) { world.startGrapple(c, to: a) } }
             if let d = world.glideTarget(for: c) { add("glide", 0.45) { world.startGlide(c, direction: d) } }
         }

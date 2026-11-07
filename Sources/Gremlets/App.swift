@@ -95,6 +95,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
+        // Houses built by older versions take the shape of today's pictures.
+        world.refitHouses { h in Biome(rawValue: h.biome).map { BuildArt.fit($0) } }
         let storedSide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0
         world.nurserySide = storedSide == 0 ? 1 : storedSide
         world.loadBonsai(UserDefaults.standard.data(forKey: bonsaiKey).flatMap(BonsaiBook.decode) ?? BonsaiBook())
@@ -190,6 +192,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         overlay.fx.handle(world.drainBuildEvents())
+        overlay.fx.handle(world.drainTerrainEvents())
         let trades = world.drainMerchantEvents()
         overlay.fx.handle(trades)
         if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
@@ -938,6 +941,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startKiteWithAnyone() else {
                 return (409, #"{"ok":false,"error":"nobody free to fly one right now"}"#)
             }
+            return (200, #"{"ok":true}"#)
+        case "stairs":
+            guard world.startStairsWithAnyone() else {
+                return (409, #"{"ok":false,"error":"nowhere to build up to: a Gremlet standing on a floor or window needs another window's top 90 to 480 points above it, with room beside it"}"#)
+            }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "cart":
+            guard world.startRailWithAnyone() else {
+                return (409, #"{"ok":false,"error":"no window wide enough for a rail (420 points or more along the top, with nobody free)"}"#)
+            }
+            schedule(rate: 60)
             return (200, #"{"ok":true}"#)
         case "wrapped":
             let m: WrappedPoster.Month

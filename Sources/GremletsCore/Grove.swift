@@ -206,10 +206,12 @@ public final class Grove: Codable {
                 break
             }
         }
-        // Village roofs (plot = -1 - house index).
+        // Village roofs (plot = -1 - house index): the ridge, the dome, the terrace, wherever the picture has a spot.
         for (n, h) in village.enumerated() where h.biome != "item:spring" && h.biome != "item:lamps" {
+            if let ry = h.roofY, ry <= 0 { continue }   // a house with nowhere to stand (a spire)
             let x = floor.minX + h.x * floor.w
-            out.append(GroveLedge(plot: -1 - n, y: floor.minY + h.h - 4, minX: x - h.w * 0.3, maxX: x + h.w * 0.3, bouncy: false))
+            let hw = h.roofHalfW ?? h.w * 0.3
+            out.append(GroveLedge(plot: -1 - n, y: floor.minY + (h.roofY ?? (h.h - 4)), minX: x - hw, maxX: x + hw, bouncy: false))
         }
         return out
     }

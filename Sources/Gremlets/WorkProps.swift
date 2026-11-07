@@ -384,22 +384,143 @@ enum PropArt {
         return image(g)
     }
 
-    /// The tree a branch shelf grows on: trunk from the floor up to the branch, with leafy canopy around it.
-    static func tree(heightPx: Int) -> CGImage {
-        let w = 26, h = max(20, heightPx)
-        var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
-        let bark: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22, leaf: UInt32 = 0x6CC04A, leafDark: UInt32 = 0x3E8E3A
-        // Canopy at the top (behind the Gremlet).
-        for y in 0..<min(h, 22) { for x in 0..<w {
-            for (cx, cy, r) in [(7.0, 10.0, 7.0), (18.0, 9.0, 7.5), (12.5, 5.0, 6.5), (12.5, 13.0, 6.0)] {
-                let dx = Double(x) - cx, dy = Double(y) - cy
-                if dx * dx + dy * dy <= r * r { g[y][x] = dx > r * 0.3 || dy > r * 0.4 ? leafDark : leaf }
+    /// The tree a branch shelf or treehouse grows on. Not a pole: a leaning, tapering trunk with flared roots and a
+    /// knot hole, limbs reaching out at different heights (mostly away from the window, where there's room), twigs,
+    /// leaf clusters at every tip, vines trailing off some of them, and a crown around the top. One thick limb reaches
+    /// back under the shelf at `shelfPx` to prop it up. Every tree is a little different (`seed`), and the leaves turn
+    /// with the season. The trunk stands a third of the way in from the left edge of the image (`treeAnchorX`);
+    /// `mirror` draws it for a shelf on the window's left side.
+    static let treeWidthPx = 96
+    static let treeAnchorX = 1.0 / 3.0
+    static func tree(heightPx: Int, shelfPx: Int, seed: UInt64, month: Int, mirror: Bool = false) -> CGImage {
+        let W = treeWidthPx, H = max(30, heightPx), x0 = 32.0
+        var cv = PixelCanvas(W, H)
+        var r = ArtRNG(s: seed &* 31 &+ 17)
+        let bark: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22, light: UInt32 = 0xA9743F
+        let autumn = [9, 10, 11].contains(month), winter = [12, 1, 2].contains(month), spring = [3, 4, 5].contains(month)
+        let lf: UInt32 = autumn ? 0xE08A2C : 0x6CC04A
+        let lfL: UInt32 = autumn ? 0xF2B45C : 0xA6E36E
+        let lfD: UInt32 = autumn ? 0xA8521E : 0x3E8E3A
+        let vine: UInt32 = autumn ? 0xB8762A : 0x4FA03A
+        let lean: Double = r.range(-3, 8)
+        let wobble: Double = r.range(2.4, 4.2)
+        let phase: Double = r.range(0, 3)
+        let hh = Double(H)
+        func trunkX(_ y: Double) -> Double { let t = y / hh; return x0 + lean * t + sin(t * 4.2 + phase) * wobble * (0.25 + t) }
+        func trunkW(_ y: Double) -> Double { 12 - 7 * (y / hh) }
+        // Limbs: (height, direction, length, rise). Mostly toward the open side; one props up the shelf.
+        var limbs: [(y: Double, dir: Double, len: Double, rise: Double, prop: Bool)] = []
+        let n = max(4, min(7, 3 + H / 24))
+        for i in 0..<n {
+            let spread: Double = 0.64 * Double(i) / Double(max(1, n - 1))
+            let y: Double = hh * (0.26 + spread) + r.range(-4, 4)
+            guard abs(y - Double(shelfPx)) > 7 else { continue }
+            let dir: Double = (i % 3 == 1) ? -1 : (r.next() < 0.8 ? 1 : -1)
+            // Taller trees spread wider (within the picture: more room on the open side than over the window).
+            let reach: Double = min(1.7, 0.75 + hh / 130)
+            let len: Double = min(dir < 0 ? 28 : 60, r.range(17, 36) * reach * (dir < 0 ? 0.7 : 1))
+            let rise: Double = r.range(4, 16)
+            limbs.append((y: y, dir: dir, len: len, rise: rise, prop: false))
+        }
+        limbs.append((y: Double(shelfPx) - 4, dir: -1, len: 30, rise: 3, prop: true))
+        func leafCluster(_ x: Double, _ y: Double, _ big: Double) {
+            guard !winter else { if r.next() < 0.3 { cv.blob(x, y, 2.5, 1.6, base: 0xB8B6AE, light: 0xE8F4FF) }; return }
+            cv.blob(x, y, big, big * 0.64, base: lf, light: lfL, shade: lfD)
+            cv.blob(x - big * 0.55, y + big * 0.3, big * 0.62, big * 0.45, base: lf, light: lfL, shade: lfD)
+            cv.blob(x + big * 0.5, y - big * 0.22, big * 0.58, big * 0.42, base: lf, light: lfL, shade: lfD)
+            cv.blob(x + big * 0.1, y + big * 0.5, big * 0.5, big * 0.36, base: lf, light: lfL, shade: lfD)
+            if spring { for _ in 0..<4 { cv.set(Int(x + r.range(-big, big)), Int(y + r.range(-2, 4)), 0xFFB6D9) } }
+            if autumn && r.next() < 0.6 { cv.set(Int(x + r.range(-big, big)), Int(y - big * 0.5), 0xC2562C) }
+        }
+        func hangingVine(_ x: Double, _ y: Double, _ len: Int) {
+            var vx = x
+            for k in 0..<len {
+                if k % 3 == 2 { vx += r.next() < 0.5 ? -1 : 1 }
+                let yy = y - Double(k)
+                cv.set(Int(vx.rounded()), Int(yy.rounded()), k % 2 == 0 ? vine : lf)
+                if k % 4 == 1 { cv.set(Int(vx.rounded()) + (k % 8 == 1 ? 1 : -1), Int(yy.rounded()), lfL) }
             }
-        }}
-        for y in 14..<h { for x in 10...14 { g[y][x] = (x == 10 || (x + y) % 5 == 0) ? dark : bark } }
-        for x in 6...18 { g[h - 1][x] = dark }
-        for x in 8...16 { g[h - 2][x] = bark }
-        return image(g)
+        }
+        // The crown, behind everything: a wide mass of clusters around the top of the trunk.
+        let top = hh - 2, tx = trunkX(top)
+        let crown: Double = min(1.5, 0.8 + hh / 160)
+        for (dx, dy, rad) in [(-11.0, -5.0, 9.0), (9.0, -3.0, 9.0), (0.0, 0.0, 8.0), (-4.0, -11.0, 7.0), (17.0, -9.0, 7.5), (-16.0, -11.0, 6.0), (6.0, -14.0, 6.5), (22.0, -15.0, 5.5), (28.0, -8.0, 6.0)] {
+            leafCluster(tx + dx * crown, top + dy * min(1.2, crown), rad * min(1.25, crown))
+        }
+        // Trunk with bark, roots, a knot hole, and a vine winding up it.
+        for y in 0..<H {
+            let cx = trunkX(Double(y)), w = trunkW(Double(y))
+            let xa = Int((cx - w / 2).rounded()), xb = Int((cx + w / 2).rounded()) - 1
+            guard xb >= xa else { continue }
+            for x in xa...xb {
+                var c = bark
+                if x == xa || x == xa + 1 && w > 7 || (x * 3 + y) % 13 == 0 || (x + y * 2) % 17 == 0 { c = dark }
+                if x == xb && w > 4 { c = light }
+                if x == xb - 1 && w > 8 && y % 5 != 0 { c = light }
+                cv.set(x, y, c)
+            }
+        }
+        for (side, len, lift) in [(-1.0, 12.0, 5.0), (1.0, 11.0, 5.0), (-1.0, 6.0, 2.5), (1.0, 5.0, 3.0), (0.3, 3.0, 1.0)] {
+            cv.line(trunkX(lift) + side * 3, lift, trunkX(0) + side * len, 0, side < 0 ? dark : bark, width: 2)
+        }
+        let ky = hh * r.range(0.36, 0.52)
+        cv.blob(trunkX(ky) + 0.5, ky, 1.7, 2.6, base: dark); cv.set(Int(trunkX(ky)), Int(ky), 0x3A2412); cv.set(Int(trunkX(ky)) + 1, Int(ky) + 1, 0x3A2412)
+        for y in stride(from: 2, to: H - 4, by: 1) {
+            let a = Double(y) / 4.5 + phase
+            guard cos(a) > -0.2 else { continue }
+            let vx = trunkX(Double(y)) + sin(a) * trunkW(Double(y)) * 0.45
+            cv.set(Int(vx.rounded()), y, y % 2 == 0 ? vine : lf)
+            if y % 5 == 0 { cv.set(Int(vx.rounded()) + (sin(a) > 0 ? 1 : -1), y, lfL) }
+        }
+        // Limbs: thick at the trunk, tapering, each with twigs, leaf clusters along it and a vine or two.
+        var swingDone = false
+        for l in limbs {
+            let sx = trunkX(l.y) + l.dir * trunkW(l.y) * 0.3
+            let steps = Int(l.len)
+            var tipX = sx, tipY = l.y
+            for i in 0...steps {
+                let t = Double(i) / Double(steps)
+                let x = sx + l.dir * l.len * t, y = l.y + l.rise * (0.35 * t + 0.65 * t * t) * (l.prop ? 0.4 : 1)
+                let w = max(1, Int((4.6 * (1 - t) + (l.prop ? 2.2 : 1.0)).rounded()))
+                cv.rect(Int(x.rounded()), Int(y.rounded()) - w / 2, 1, w, i % 6 == 2 ? dark : (i % 9 == 4 ? light : bark))
+                if w >= 3 { cv.set(Int(x.rounded()), Int(y.rounded()) - w / 2, dark) }
+                tipX = x; tipY = y
+            }
+            if l.prop {
+                leafCluster(sx + l.dir * l.len * 0.5, l.y - 4, r.range(4, 5))
+                continue
+            }
+            // Twigs off the limb, up and down.
+            let mx = sx + l.dir * l.len * 0.5, my = l.y + l.rise * 0.28
+            cv.line(mx, my, mx + l.dir * 6, my + 8, bark, width: 1)
+            let dx2 = sx + l.dir * l.len * 0.72, dy2 = l.y + l.rise * 0.55
+            cv.line(dx2, dy2, dx2 + l.dir * 4, dy2 - 6, dark, width: 1)
+            leafCluster(mx + l.dir * 6, my + 9.5, r.range(5, 6.5))
+            leafCluster(sx + l.dir * l.len * 0.8, tipY - 1, r.range(5.5, 7))
+            leafCluster(tipX + l.dir * 2, tipY + 2.5, r.range(7, 9.5))
+            if r.next() < 0.7 { hangingVine(tipX + l.dir * 4, tipY - 2, Int(r.range(8, 18))) }
+            if r.next() < 0.5 { hangingVine(dx2 + l.dir * 4, dy2 - 7, Int(r.range(5, 10))) }
+            // A rope swing under the first long limb on the open side.
+            if !swingDone && l.dir > 0 && l.len > 24 && l.y > 34 {
+                swingDone = true
+                let ax = sx + l.dir * l.len * 0.62, ay = l.y + l.rise * 0.4
+                cv.vspan(Int(ax.rounded()) - 2, Int(ay.rounded()) - 13, Int(ay.rounded()) - 1, 0xC9A66B)
+                cv.vspan(Int(ax.rounded()) + 2, Int(ay.rounded()) - 13, Int(ay.rounded()) - 1, 0xC9A66B)
+                cv.hspan(Int(ax.rounded()) - 3, Int(ax.rounded()) + 3, Int(ay.rounded()) - 14, light)
+                cv.hspan(Int(ax.rounded()) - 3, Int(ax.rounded()) + 3, Int(ay.rounded()) - 15, dark)
+            }
+        }
+        // A bird's nest in the crotch of a limb, moss and a toadstool at the foot.
+        if let nest = limbs.first(where: { !$0.prop && $0.y < hh * 0.7 }) {
+            let nx = trunkX(nest.y) + nest.dir * (trunkW(nest.y) * 0.5 + 3), ny = nest.y + 2.5
+            cv.blob(nx, ny, 2.6, 1.3, base: 0xA9743F, shade: 0x6B4428)
+            cv.set(Int(nx.rounded()), Int(ny.rounded()) + 1, 0xF4EFE6); cv.set(Int(nx.rounded()) + 1, Int(ny.rounded()) + 1, 0xDCE6F2)
+        }
+        cv.blob(trunkX(0) - 8, 1.6, 3.6, 1.5, base: 0x5E9E46, light: 0x8BD66A)
+        cv.blob(trunkX(0) + 8, 1.2, 3.0, 1.3, base: 0x5E9E46, light: 0x8BD66A)
+        cv.vspan(Int(trunkX(0)) + 11, 0, 1, 0xEBDDC3); cv.blob(trunkX(0) + 11.5, 2.6, 1.9, 1.1, base: 0xC23B3B, light: 0xE06060); cv.set(Int(trunkX(0)) + 11, 3, 0xFFF4E8)
+        cv.outline(0.62)
+        return mirror ? BridgeArt.flipped(cv).image : cv.image
     }
 
     /// The balloons a swing hangs from.

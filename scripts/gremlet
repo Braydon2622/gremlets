@@ -16,6 +16,7 @@
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
 #   gremlet kite                 a free Gremlet flies a kite for a while
+#   gremlet stairs | cart        build a block staircase up to a window / lay a minecart rail along a wide one
 #   gremlet season winter|spring|summer|autumn|auto   preview a season for ten minutes (trees, village, islands)
 #   gremlet night on|off|auto    preview night (lanterns, fireflies, spirits) for ten minutes
 #   gremlet timelapse [project]  stitch the daily village postcards into a video, or one tree's days into a GIF
@@ -58,6 +59,7 @@ case "${1:-}" in
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
   kite)    call kite; echo ;;
+  stairs|cart) call "$1"; echo ;;
   wrapped) if [ "${2:-}" = "--sample" ]; then curl -s -m 20 -X POST -H 'X-Gremlets: 1' "${URL}/wrapped?sample=1"; else curl -s -m 20 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "month=${2:-}" "${URL}/wrapped"; fi; echo ;;
   snapshot) call snapshot; echo; echo 'Caption idea: "My desktop village so far. Every building is a Claude Code session, every plant grew from a finished task."' ;;
   season)  call "season?name=${2:-auto}"; echo ;;

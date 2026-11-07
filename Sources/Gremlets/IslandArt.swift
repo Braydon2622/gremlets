@@ -215,56 +215,70 @@ enum IslandArt {
     }
 }
 
-/// What a Gremlet builds while Claude works: one block per file Claude edits, from the ground up, to a blueprint
-/// that suits its island (a cottage in the meadow, an igloo in the snow, a pyramid in the desert, a mossy temple in
-/// the jungle, a mushroom house, a crystal spire, a lighthouse in the sky). A long session finishes the building;
-/// then lights come on and smoke curls from the chimney.
+/// What a Gremlet builds while Claude works: one block of the picture per file Claude edits, from the ground up.
+/// The picture is the biome's home (see `HouseArt`: a timber cottage, an igloo, an adobe, a mossy temple, a
+/// mushroom house, a crystal spire, a lighthouse on a cloud), drawn at art-pixel resolution and revealed one 5×5
+/// block at a time, bottom row first. A long session finishes the building; then lights come on and smoke curls
+/// from the chimney.
 enum BuildArt {
     static let block = 5   // art pixels per block (15 points)
 
-    /// Rows from the top down; "." is empty. Placement order is bottom row first, left to right.
-    static func blueprint(_ b: Biome) -> [String] {
-        switch b {
-        case .meadow, .autumn, .cherry:
-            return ["...c..", "..rrr.", ".rrrrr", "rrrrrr", "wwgwgw", "wwdwww", "wwdwww", "ssssss"]
-        case .snow:
-            return ["..iii..", ".iiiii.", "iiiiiii", "iigiiii", "iiddiii", "iiddiii"]
-        case .desert:
-            return ["...a...", "..aaa..", "..aga..", ".aaaaa.", "aaadaaa", "aaadaaa"]
-        case .jungle:
-            return ["..*.*..", ".mmmmm.", ".mgmgm.", "mmmmmmm", "mmmdmmm", "mmmdmmm", "sssssss"]
-        case .glowshroom:
-            return [".kkkkk.", "kkkkkkk", "kkkkkkk", "..tgt..", "..tdt..", "..tdt.."]
-        case .crystal:
-            return ["...x..", "..xxx.", "..xgx.", "..ttt.", "..tgt.", "..ttt.", ".tdtt.", "ssssss"]
-        case .sky:
-            return ["..L..", ".rrr.", ".wgw.", ".www.", ".wgw.", ".www.", ".wdw.", "ooooo"]
-        }
+    private static var spriteCache: [String: PixelCanvas] = [:]
+    private static var cellCache: [Biome: [(Int, Int, Character)]] = [:]
+
+    /// The finished picture (cached).
+    static func sprite(_ b: Biome, lit: Bool) -> PixelCanvas {
+        let key = "\(b.rawValue)-\(lit)"
+        if let c = spriteCache[key] { return c }
+        let cv = HouseArt.sprite(b, lit: lit)
+        spriteCache[key] = cv
+        return cv
     }
 
-    /// The cells in placement order (bottom-up, left to right), as (column, row-from-bottom, kind).
+    /// The blocks in placement order (bottom-up, left to right), as (column, row-from-bottom, kind): every 5×5 cell
+    /// of the picture that has something in it.
     static func cells(_ b: Biome) -> [(Int, Int, Character)] {
-        let rows = blueprint(b)
+        if let c = cellCache[b] { return c }
+        let cv = sprite(b, lit: false)
+        let (cols, rows) = size(b)
         var out: [(Int, Int, Character)] = []
-        for (ri, row) in rows.reversed().enumerated() {
-            for (ci, ch) in row.enumerated() where ch != "." { out.append((ci, ri, ch)) }
-        }
+        for r in 0..<rows { for c in 0..<cols {
+            var any = false
+            for y in (r * block)..<((r + 1) * block) where !any { for x in (c * block)..<((c + 1) * block) where cv.solid(x, y) { any = true; break } }
+            if any { out.append((c, r, "#")) }
+        }}
+        cellCache[b] = out
         return out
     }
 
-    static func size(_ b: Biome) -> (cols: Int, rows: Int) { let r = blueprint(b); return (r.map(\.count).max() ?? 0, r.count) }
+    static func size(_ b: Biome) -> (cols: Int, rows: Int) {
+        let cv = sprite(b, lit: false)
+        return ((cv.w + block - 1) / block, (cv.h + block - 1) / block)
+    }
+
+    /// Where the chimney smoke comes out, as fractions of the picture's width and height.
+    static func chimney(_ b: Biome) -> (x: Double, y: Double) { HouseArt.chimney(b) }
+
+    /// The picture's size in points and where a Gremlet can stand on it (height in points, half width), for the
+    /// village. A roof with nowhere to stand (a spire) gives `y: 0`.
+    static func fit(_ b: Biome) -> (size: Vec2, roof: (y: Double, halfW: Double)?) {
+        let cv = sprite(b, lit: false)
+        let roof = HouseArt.roof(b)
+        return (Vec2(Double(cv.w) * 3, Double(cv.h) * 3), (y: roof.y * 3, halfW: roof.halfW * 3))
+    }
 
     static func image(_ b: Biome, blocks: Int, night: Bool, overgrowth: Int = 0, seed: UInt64 = 1, month: Int? = nil) -> CGImage? {
         let cs = cells(b)
         let n = min(blocks, cs.count)
         guard n > 0 else { return nil }
-        let (cols, rows) = size(b)
-        var cv = PixelCanvas(cols * block, rows * block)
         let done = blocks >= cs.count
-        for (i, cell) in cs.prefix(n).enumerated() {
-            draw(&cv, cell.2, x: cell.0 * block, y: cell.1 * block, b: b, lit: done && night, i: i)
+        var cv = sprite(b, lit: done && night)
+        if !done {
+            // Blocks not yet placed: cleared, leaving the construction so far (with a dusting of plaster on its top edge).
+            for cell in cs.dropFirst(n) {
+                for y in (cell.1 * block)..<((cell.1 + 1) * block) { for x in (cell.0 * block)..<((cell.0 + 1) * block) { cv.px[(cv.h - 1 - y) * cv.w + x] = nil } }
+            }
         }
-        cv.outline(0.7)
         if overgrowth > 0 { overgrow(&cv, stage: overgrowth, seed: seed) }
         if let m = month { dressForSeason(&cv, month: m, seed: seed) }
         return cv.image
@@ -363,35 +377,6 @@ enum BuildArt {
         return ((placed.map(\.1).max() ?? -1) + 1) * block
     }
 
-    private static func draw(_ cv: inout PixelCanvas, _ k: Character, x: Int, y: Int, b: Biome, lit: Bool, i: Int) {
-        let s = block
-        func fill(_ c: UInt32, _ hi: UInt32, _ lo: UInt32) {
-            cv.rect(x, y, s, s, c)
-            cv.rect(x, y + s - 1, s, 1, hi)      // lit top edge
-            cv.rect(x + s - 1, y, 1, s, lo)      // shaded side
-        }
-        switch k {
-        case "w": fill(0xC98B4A, 0xE0A866, 0x8A5A35); cv.rect(x, y + 2, s, 1, 0xA9743F)               // planks
-        case "s": fill(0x8E8B83, 0xB8B6AE, 0x5E5B55); cv.set(x + 1, y + 1, 0x6E6B65)                   // stone
-        case "r":
-            let roof: (UInt32, UInt32, UInt32) = b == .cherry ? (0xE07AA8, 0xF7B6D2, 0xA84E7A) : b == .autumn ? (0xC2562C, 0xE07A44, 0x8A3A1E)
-                : b == .sky ? (0x4A6FD0, 0x7FA0F0, 0x2E4A9A) : (0xC23B3B, 0xE06060, 0x8A2626)
-            fill(roof.0, roof.1, roof.2); cv.rect(x, y + 1, s, 1, roof.2)
-        case "g": fill(lit ? 0xFFE08A : 0x9FD8F0, lit ? 0xFFF3C4 : 0xD6F2FF, 0x5E5B55); cv.rect(x + 2, y, 1, s, 0x5E5B55)   // window
-        case "d": fill(0x6B4428, 0x8A5A35, 0x4A2E1A); if (i % 2) == 0 { cv.set(x + 3, y + 2, 0xF2C94C) }    // door + knob
-        case "c": fill(0x8E8B83, 0xB8B6AE, 0x5E5B55)                                                      // chimney
-        case "i": fill(0xDDF2FF, 0xFFFFFF, 0xA9CFEA); cv.set(x + 1, y + 3, 0xFFFFFF)                       // ice brick
-        case "a": fill(0xE8C98A, 0xF7E2B0, 0xC29A5A); cv.rect(x, y + 2, s, 1, 0xD6B070)                    // sandstone
-        case "m": fill(0x7D8A6A, 0x9FB088, 0x55604A); cv.set(x + 1, y + 3, 0x5FB84A); cv.set(x + 3, y + 1, 0x4FA03A)   // mossy stone
-        case "*": cv.rect(x + 2, y, 1, 3, 0x6B4428); cv.blob(Double(x) + 2.5, Double(y) + 3.5, 1.4, 1.4, base: 0xFFB43A, light: 0xFFF3A0)  // torch
-        case "k": fill(lit ? 0x5FE8FF : 0x3FA8E0, 0xBFFFFF, 0x2A6FA8); if (x / s + y / s) % 2 == 0 { cv.set(x + 2, y + 2, 0xEAFBFF) }   // mushroom cap
-        case "t": fill(0xD8D2E6, 0xF2EEFA, 0xA8A2B8)                                                      // stem / tower
-        case "x": fill(0xB57AF2, 0xF3D9FF, 0x7E4AB8); cv.set(x + 2, y + 2, 0xFFFFFF)                       // crystal
-        case "o": fill(0xF5FAFF, 0xFFFFFF, 0xC6D6EA)                                                      // cloud
-        case "L": cv.blob(Double(x) + 2.5, Double(y) + 2.5, 2.4, 2.4, base: lit ? 0xFFF3A0 : 0xFFD45E, light: 0xFFFFFF)   // the lamp
-        default: break
-        }
-    }
 }
 
 /// Plank bridges and the grappling hook.
@@ -687,5 +672,67 @@ enum OwnerArt {
         let palette: [UInt32] = [0xE8574A, 0x3F7FE0, 0x5DBB46, 0xF2C94C, 0xB57AF2, 0xF07AA6, 0x3FC0B0, 0xE8862C]
         let h = speciesID.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
         return palette[h % palette.count]
+    }
+}
+
+/// Staircases, rails and the minecart (see Terrain.swift).
+enum TerrainArt {
+    /// A staircase of wooden blocks climbing `dir`, `built` of `steps` placed, with a rope handrail on the outside.
+    static func stairs(steps: Int, built: Int, dir: Double) -> CGImage {
+        // Each tread is a little wider than the run, so the blocks overlap into one solid zigzag.
+        let n = max(1, steps), b = BuildArt.block, bw = b + 2
+        var cv = PixelCanvas(n * b + 2, n * b + 7)
+        var posts: [(Int, Int)] = []
+        for k in 0..<min(built, n) {
+            let x = dir > 0 ? k * b : (n - 1 - k) * b, y = k * b
+            cv.rect(x, y, bw, b, 0xC98B4A)
+            cv.rect(x, y + b - 1, bw, 1, 0xE0A866)
+            cv.rect(x + bw - 1, y, 1, b, 0x8A5A35)
+            cv.rect(x, y, bw, 1, 0x8A5A35)
+            cv.rect(x, y + 2, bw, 1, 0xA9743F)
+            cv.set(x + 1, y + 1, 0x5E3B22); cv.set(x + bw - 2, y + 3, 0x5E3B22)
+            if k % 2 == 0 {
+                let px = dir > 0 ? x : x + bw - 1
+                cv.vspan(px, y + b, y + b + 5, 0x5E3B22)
+                posts.append((px, y + b + 5))
+            }
+        }
+        for i in 1..<max(1, posts.count) {
+            cv.line(Double(posts[i - 1].0), Double(posts[i - 1].1), Double(posts[i].0), Double(posts[i].1), 0xD9C08A)
+        }
+        return cv.image
+    }
+
+    /// Track along a window's top edge: two steel rails on wooden ties. Three pixels tall.
+    static func rail(widthPx: Int) -> CGImage {
+        let w = max(4, widthPx)
+        var cv = PixelCanvas(w, 3)
+        for x in 0..<w {
+            cv.set(x, 2, x % 9 == 4 ? 0xC6CFD8 : 0x9AA3AE)
+            cv.set(x, 1, 0x6E7680)
+            if x % 4 < 2 { cv.set(x, 0, 0x6B4428) }
+        }
+        return cv.image
+    }
+
+    /// The minecart: a riveted iron tub with a wooden rim on two wheels (two frames for the wheels turning).
+    static func cart(frame: Int) -> CGImage {
+        var cv = PixelCanvas(12, 9)
+        let iron: UInt32 = 0x6E7680, light: UInt32 = 0x9AA3AE, dark: UInt32 = 0x4A5058
+        cv.hspan(2, 9, 3, dark)
+        cv.rect(1, 4, 10, 2, iron)
+        cv.rect(0, 6, 12, 2, iron)
+        cv.hspan(0, 11, 8, 0xC98B4A)
+        cv.set(0, 6, light); cv.set(0, 7, light); cv.set(1, 4, light); cv.set(1, 5, light)
+        cv.set(11, 6, dark); cv.set(11, 7, dark); cv.set(10, 4, dark); cv.set(10, 5, dark)
+        for (x, y) in [(2, 7), (9, 7), (3, 5), (8, 5)] { cv.set(x, y, 0xC6CFD8) }
+        cv.hspan(3, 8, 2, dark)
+        for cx in [2, 9] {
+            cv.blob(Double(cx) + 0.5, 1.5, 1.7, 1.7, base: 0x2B2620)
+            let hub = frame == 0 ? (cx, 1) : (cx + 1, 2)
+            cv.set(hub.0, hub.1, light)
+        }
+        cv.outline(0.7)
+        return cv.image
     }
 }

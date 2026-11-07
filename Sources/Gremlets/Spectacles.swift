@@ -14,6 +14,9 @@ final class SpectacleRenderer {
     private var squashUntil: [Int: CFTimeInterval] = [:]
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
     private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
+    private var stairLayers: [Int: (layer: CALayer, built: Int)] = [:]
+    private var railLayers: [Int: (rail: CALayer, cart: CALayer, px: Int, frame: Int)] = [:]
+    private var nextCartSpark: [Int: CFTimeInterval] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
@@ -70,6 +73,7 @@ final class SpectacleRenderer {
         renderMerchant()
         renderVillage()
         renderBridges()
+        renderStairs(); renderRails()
         renderRopes()
         renderSpectacle()
         renderBalls()
@@ -420,7 +424,9 @@ final class SpectacleRenderer {
             if h.biome.hasPrefix("item:"), let item = VillageItem(rawValue: String(h.biome.dropFirst(5))) { renderItem(n, item, si: si, at: pt); continue }
             guard let b = Biome(rawValue: h.biome) else { continue }
             let stage = BuildArt.overgrowthStage(hours: h.builtAt.map { (Date().timeIntervalSince1970 - $0) / 3600 } ?? 0)
-            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)-\(world.month)"
+            // The Gremlets finish what Claude's session started: a house in the village is always complete.
+            let blocks = max(h.blocks, BuildArt.cells(b).count)
+            let key = "\(h.biome)-\(blocks)-\(night)-\(si)-\(stage)-\(world.month)"
             var entry = houses[n] ?? {
                 let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4
                 // A strip of its biome's ground under it, so each house sits in its own little patch of world.
@@ -429,7 +435,7 @@ final class SpectacleRenderer {
                 return (l, g, "")
             }()
             attach(entry.layer, si); attach(entry.ground, si)
-            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night, overgrowth: stage, seed: UInt64(n * 31 + 7), month: world.month) {
+            if entry.key != key, let img = BuildArt.image(b, blocks: blocks, night: night, overgrowth: stage, seed: UInt64(n * 31 + 7), month: world.month) {
                 entry.layer.contents = img
                 entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
                 let gw = Int(h.w / 3) + 8
@@ -455,8 +461,8 @@ final class SpectacleRenderer {
             let now = CACurrentMediaTime()
             if world.creatures.contains(where: { $0.homeHouse == n }), now >= (nextHouseSmoke[n] ?? 0) {
                 nextHouseSmoke[n] = now + 1.4
-                let f = entry.layer.frame
-                overlay.burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * 0.55, y: f.maxY), count: 1, dx: 4...14, dy: 26...44, duration: 2.2)
+                let f = entry.layer.frame, ch = BuildArt.chimney(b)
+                overlay.burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * ch.x, y: f.minY + f.height * ch.y), count: 1, dx: 4...14, dy: 26...44, duration: 2.2)
                 if Int(now) % 3 == 0 { overlay.burst([Effects.zzz], si: si, at: CGPoint(x: f.midX, y: f.maxY - 10), count: 1, dx: -10...10, dy: 20...34, duration: 1.8) }
             }
         }
@@ -648,6 +654,105 @@ final class SpectacleRenderer {
             bridgeLayers[b.id] = e
         }
         for (id, e) in bridgeLayers where !alive.contains(id) { e.layer.removeFromSuperlayer(); bridgeLayers[id] = nil }
+    }
+
+    /// Wooden staircases up to windows, block by block.
+    private func renderStairs() {
+        var alive = Set<Int>()
+        for s in world.stairs where s.built > 0 {
+            alive.insert(s.id)
+            guard let (si, pt) = local(Vec2(s.minX, s.base.y)) else { continue }
+            var e = stairLayers[s.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = -0.3; return (l, -1) }()
+            attach(e.layer, si)
+            if e.built != s.built {
+                let img = TerrainArt.stairs(steps: s.steps, built: s.built, dir: s.dir)
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                e.built = s.built
+            }
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            stairLayers[s.id] = e
+        }
+        for (id, e) in stairLayers where !alive.contains(id) { e.layer.removeFromSuperlayer(); stairLayers[id] = nil }
+    }
+
+    /// Rails along wide windows, and the carts rolling on them (sparks when they're going fast).
+    private func renderRails() {
+        var alive = Set<Int>()
+        let now = CACurrentMediaTime()
+        for r in world.rails where r.laid > 0 {
+            alive.insert(r.id)
+            let (lo, hi) = r.laidSpan
+            guard let (si, pt) = local(Vec2(lo, r.y)) else { continue }
+            var e = railLayers[r.id] ?? {
+                let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = -0.25
+                let c = pixelLayer(); c.anchorPoint = CGPoint(x: 0.5, y: 0); c.zPosition = 0.6
+                return (l, c, -1, -1)
+            }()
+            attach(e.rail, si)
+            let px = max(2, Int(((hi - lo) / 3).rounded()))
+            if e.px != px {
+                e.rail.contents = TerrainArt.rail(widthPx: px)
+                e.rail.bounds = CGRect(x: 0, y: 0, width: px * 3, height: 9)
+                e.px = px
+            }
+            e.rail.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 3)
+            if r.isComplete, let (csi, cpt) = local(Vec2(r.cart.x, r.y)) {
+                let fresh = e.frame < 0
+                attach(e.cart, csi)
+                let frame = abs(r.cart.vel) > 5 ? Int(now * 10) % 2 : 0
+                if e.frame != frame {
+                    let img = TerrainArt.cart(frame: frame)
+                    e.cart.contents = img
+                    e.cart.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    e.frame = frame
+                }
+                e.cart.position = CGPoint(x: cpt.x.rounded(), y: cpt.y.rounded() + 2)
+                if fresh { popIn(e.cart) }
+                if abs(r.cart.vel) > 150, now >= (nextCartSpark[r.id] ?? 0) {
+                    nextCartSpark[r.id] = now + 0.25
+                    let back = r.cart.vel > 0 ? -14.0 : 14.0
+                    overlay.burst([Effects.sparkle, Effects.smallStar], si: csi, at: CGPoint(x: cpt.x + back, y: cpt.y + 4), count: 1, dx: (back - 6)...(back + 6), dy: 4...18, duration: 0.3)
+                }
+            } else {
+                e.cart.removeFromSuperlayer()
+            }
+            railLayers[r.id] = e
+        }
+        for (id, e) in railLayers where !alive.contains(id) { e.rail.removeFromSuperlayer(); e.cart.removeFromSuperlayer(); railLayers[id] = nil }
+    }
+
+    func handle(_ events: [TerrainEvent]) {
+        for e in events {
+            switch e {
+            case .stairBlock(let p, _):
+                if let (si, pt) = local(p) { overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: -4...12, duration: 0.4) }
+            case .stairsDone(let id):
+                if let s = world.stairs.first(where: { $0.id == id }), let (si, pt) = local(Vec2((s.minX + s.maxX) / 2, s.topY)) {
+                    overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 8, dx: -60...60, dy: 0...40, duration: 0.9, stagger: 0.03)
+                }
+            case .stairsCrumbled(let blocks):
+                for p in blocks {
+                    if let (si, pt) = local(p) { overlay.burst([WeatherArt.block, Effects.dust], si: si, at: pt, count: 1, dx: -12...12, dy: -170 ... -60, duration: 0.9) }
+                }
+            case .railDone(let id):
+                if let r = world.rails.first(where: { $0.id == id }) {
+                    for x in stride(from: r.minX, through: r.maxX, by: 60) {
+                        if let (si, pt) = local(Vec2(x, r.y)) { overlay.burst([Effects.sparkle], si: si, at: pt, count: 1, dx: -10...10, dy: 6...24, duration: 0.7, delay: (x - r.minX) / 600) }
+                    }
+                }
+            case .railCrumbled(let lo, let hi, let y):
+                for x in stride(from: lo, through: hi, by: 45) {
+                    if let (si, pt) = local(Vec2(x, y)) { overlay.burst([Effects.dust, BridgeArt.plank], si: si, at: pt, count: 1, dx: -8...8, dy: -120 ... -40, duration: 0.8) }
+                }
+            case .cartBounce(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.sparkle, Effects.smallStar, Effects.dust], si: si, at: pt, count: 6, dx: -24...24, dy: 6...40, duration: 0.5, stagger: 0.02) }
+            case .boarded(_, let by):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: 10...24, duration: 0.6)
+                }
+            }
+        }
     }
 
     private func renderRopes() {

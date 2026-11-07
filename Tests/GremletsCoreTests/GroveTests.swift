@@ -596,3 +596,94 @@ import Testing
         #expect(w.startKite(for: b.id))
     }
 }
+
+@Suite struct TerrainTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func gremletBuildsStairsUpToAWindowAndWalksOnUp() throws {
+        let w = World(seed: 9)
+        w.maxHobbies = 0
+        w.maxJumpHeight = 50   // no jumping up there: the stairs are the only way
+        var win = WindowInfo(id: 1, frame: Rect(x: 700, y: 0, w: 500, h: 150))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(420, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(c.groundOwner == -1)
+        w.nextStairAt = 0
+        let plan = try #require(w.stairCandidate(for: c))
+        #expect(plan.dir == 1 && plan.steps == 10 && abs(plan.base.x - 550) < 0.01)
+        w.startStairs(c, plan)
+        var done = false, blocks = 0
+        for _ in 0..<(60 * 60) where !done {
+            w.step(1.0 / 60)
+            for e in w.drainTerrainEvents() {
+                if case .stairBlock = e { blocks += 1 }
+                if case .stairsDone = e { done = true }
+            }
+        }
+        #expect(done && blocks == 10)
+        let stair = try #require(w.stairs.first)
+        #expect(stair.isComplete && abs(stair.topY - 150) < 0.01)
+        #expect(w.surfaces.filter { World.isStairOwner($0.ownerID) }.count == 10)
+        // It walks on up the steps and onto the window.
+        var onWindow = false
+        for _ in 0..<(60 * 8) where !onWindow { w.step(1.0 / 60); onWindow = c.groundOwner == 1 }
+        #expect(onWindow, "climbed its own stairs onto the window")
+        // Anyone walking along the floor into the stairs climbs them in stride.
+        let d = w.spawn(testSpecies(scale: 10), at: Vec2(500, 2))
+        for _ in 0..<30 { w.step(1.0 / 60) }
+        d.facing = 1
+        d.set(.walk, duration: 20)
+        var peak = d.pos.y
+        for _ in 0..<(60 * 4) { w.step(1.0 / 60); peak = max(peak, d.pos.y); if d.activity != .walk && d.isGrounded { d.facing = 1; d.set(.walk, duration: 20) } }
+        #expect(peak > 100, "stepped up the staircase while walking")
+        // Move the window away: the stairs crumble.
+        win.frame.x = 1000
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        #expect(w.stairs.isEmpty)
+        #expect(w.drainTerrainEvents().contains { if case .stairsCrumbled = $0 { return true }; return false })
+        #expect(!w.surfaces.contains { World.isStairOwner($0.ownerID) })
+    }
+
+    @Test func gremletLaysARailAndRidesTheCart() throws {
+        let w = World(seed: 12)
+        w.maxHobbies = 0
+        let win = WindowInfo(id: 1, frame: Rect(x: 200, y: 300, w: 700, h: 200))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(500, 502))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(c.groundOwner == 1)
+        w.nextRailAt = 0
+        let s = try #require(w.railCandidate(for: c))
+        w.startRail(c, on: s)
+        #expect(w.rails.count == 1)
+        var laid = false
+        for _ in 0..<(60 * 90) where !laid {
+            w.step(1.0 / 60)
+            laid = w.drainTerrainEvents().contains { if case .railDone = $0 { return true }; return false }
+        }
+        #expect(laid)
+        let rail = try #require(w.rails.first)
+        #expect(rail.isComplete && rail.minX > 200 && rail.maxX < 900)
+        // It hops in and rides: the cart moves a long way and bounces at the ends.
+        var rode = false, bounces = 0, travelled = 0.0
+        var lastX = rail.cart.x
+        for _ in 0..<(60 * 40) {
+            w.step(1.0 / 60)
+            for e in w.drainTerrainEvents() { if case .cartBounce = e { bounces += 1 } }
+            if let r = w.rails.first { travelled += abs(r.cart.x - lastX); lastX = r.cart.x }
+            if c.groundOwner == World.cartOwner(rail.id) { rode = true }
+            if rode && bounces >= 2 { break }
+        }
+        #expect(rode, "was riding the cart")
+        #expect(bounces >= 2 && travelled > 600)
+        // Eventually it parks and the rider hops out onto the window.
+        var off = false
+        for _ in 0..<(60 * 60) where !off { w.step(1.0 / 60); _ = w.drainTerrainEvents(); off = c.groundOwner == 1 && (w.rails.first?.cart.passes ?? 1) == 0 }
+        #expect(off)
+        // Close the window: the rail comes down.
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        #expect(w.rails.isEmpty)
+        #expect(w.drainTerrainEvents().contains { if case .railCrumbled = $0 { return true }; return false })
+    }
+}

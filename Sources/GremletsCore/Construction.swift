@@ -42,6 +42,10 @@ public struct House: Codable, Equatable, Sendable {
     public var builtAt: Double?
     /// The Gremlet (species id) who has made this house its home.
     public var owner: String?
+    /// Where a Gremlet can stand on it: height above the floor (points) and half the width of that spot. Missing on
+    /// older houses, which use the old rule (near the top, most of the width).
+    public var roofY: Double?
+    public var roofHalfW: Double?
 }
 
 public enum BuildEvent: Equatable, Sendable {
@@ -219,15 +223,32 @@ extension World {
     }
 
     @discardableResult
-    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil) -> Int? {
+    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil,
+                         roof: (y: Double, halfW: Double)? = nil) -> Int? {
         guard groveFloor != nil, blocks > 0 else { return nil }
         if grove.village.count >= Grove.maxHouses { grove.village.removeFirst() }
         guard let x = villageSpot(forWidth: size.x) else { return nil }
-        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day, builtAt: builtAt))
+        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day, builtAt: builtAt,
+                                   roofY: roof?.y, roofHalfW: roof?.halfW))
         for o in creatures where o.homeHouse != nil { o.homeUntil = clock }   // house numbers may shift: everyone wakes
         rebuildGroveSurfaces(); setSurfacesDirty()
         groveEvents.append(.houseAdded(grove.village.count - 1))
         return grove.village.count - 1
+    }
+
+    /// The platform layer's house pictures changed size or shape: refit every house in the village to its current
+    /// picture (`fit` returns nil for houses that aren't buildings).
+    public func refitHouses(_ fit: (House) -> (size: Vec2, roof: (y: Double, halfW: Double)?)?) {
+        var changed = false
+        for i in grove.village.indices {
+            guard let f = fit(grove.village[i]) else { continue }
+            let h = grove.village[i]
+            if h.w == f.size.x && h.h == f.size.y && h.roofY == f.roof?.y && h.roofHalfW == f.roof?.halfW { continue }
+            grove.village[i].w = f.size.x; grove.village[i].h = f.size.y
+            grove.village[i].roofY = f.roof?.y; grove.village[i].roofHalfW = f.roof?.halfW
+            changed = true
+        }
+        if changed { rebuildGroveSurfaces(); setSurfacesDirty() }
     }
 
     // MARK: Leaf glider

@@ -178,15 +178,27 @@ Everything the Gremlets build lives in the engine as plain data and becomes surf
 - **Grove** (`Grove.swift`): six plants in a corner garden, levelled by Claude tasks (`feedGrove`). Their geometry
   (`ledges(floor:)`) turns into one-way `Surface`s (the bouncecap is a trampoline, the skyvine a ladder of leaves).
 - **Village** (`Construction.swift`): finished Claude buildings, the mine and the merchant's items are `House` records
-  along the floor; roofs are surfaces. Bridges Gremlets build between windows crumble when a window moves.
+  along the floor; each house carries where a Gremlet can stand on it (`roofY`, `roofHalfW`: the ridge, the dome, the
+  terrace), and that spot is a surface. Bridges Gremlets build between windows crumble when a window moves.
+- **Stairs and rails** (`Terrain.swift`): a `Stair` is a diagonal of 15-point blocks from a floor or window top up to
+  a window's edge; every block laid so far is a one-way surface. Walking takes stairs in stride: `stepAcross` lets a
+  walker step onto a stair block right ahead, down to one just below, or straight onto any neighbouring platform at
+  the same height (the old rule was "the ground ran out: maybe turn back"). A `Rail` belongs to a window (`validateRails`
+  moves it with the window, drops it when the window goes or gets narrow); its `Cart` is a moving surface added to
+  `allSurfaces` like the ferry deck, and `updateRails` carries riders and bounces the cart at the ends. Both have
+  lifetimes, so the desktop doesn't fill up with lumber.
 - **Bonsai** (`Bonsai.swift`): one `Bonsai` record per project, grown by `ClaudeBuddy` events. `BonsaiGeometry.layout`
   is a pure function of the record (seeded by an FNV-1a hash of the project name), so the same work always grows the
   same tree and the app, the postcard, the journal and the web port all draw it identically. `rebuildAttached()`
   places live trees on their terminal window's visible top edge (or in the nursery) and turns foliage pads and the
   terminal's mossy ledges into surfaces; `attachedOwnerWindow` lets riders on those surfaces move with the window
   exactly like riders on a window top.
-- **Rendering** (`BonsaiArt`, `IslandArt`, `BuildArt`, `GroveArt`): procedural pixel art drawn on a tiny
-  `PixelCanvas` and shown at 3× with nearest-neighbour scaling, regenerated only when its cache key changes.
+- **Rendering** (`BonsaiArt`, `IslandArt`, `BuildArt`, `HouseArt`, `GroveArt`, `TerrainArt`, `PropArt.tree`):
+  procedural pixel art drawn on a tiny `PixelCanvas` and shown at 3× with nearest-neighbour scaling, regenerated only
+  when its cache key changes. Houses are hand-built pictures per biome (`HouseArt`); `BuildArt` reveals a picture one
+  5×5 block at a time in placement order (bottom row first), so "a block per edit" still holds while the finished
+  house reads as a house. The shelf tree is seeded per job: trunk curve, limb layout, vines and the swing all come from
+  the job's seed, and the leaves follow the month.
 - **Events** (`ClaudeBuddy` → `World.claudeTool`, `bonsaiGrow`, `feedGrove` …): the Claude Code hook sends only event
   names, the project folder's name and a tool name. Nothing about files, prompts or output ever reaches the app.
 - **Session log and cards** (`SessionRecap.swift`, `TreeCard.swift`, `Forest.swift`, `Wrapped.swift`, `Snapshot.swift`,

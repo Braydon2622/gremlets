@@ -62,6 +62,14 @@ public final class World {
     public internal(set) var bridges: [Bridge] = []
     var nextBridgeID = 0
     var buildEvents: [BuildEvent] = []
+    /// Staircases and minecart rails Gremlets have built (see Terrain.swift).
+    public internal(set) var stairs: [Stair] = []
+    var nextStairID = 0
+    var nextStairAt = 120.0
+    public internal(set) var rails: [Rail] = []
+    var nextRailID = 0
+    var nextRailAt = 300.0
+    var terrainEvents: [TerrainEvent] = []
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
     public internal(set) var ferry: Ferry?
     var nextFerryAt: Double?
@@ -150,12 +158,14 @@ public final class World {
         self.windowOrder = windowsFrontToBack.map(\.id)
         builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
         validateBridges()
+        validateStairs()
+        validateRails()
         rebuildGroveSurfaces()
         rebuildAttached()
         setSurfacesDirty()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + attachedSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces }
 
     // MARK: Creatures
 
@@ -287,6 +297,8 @@ public final class World {
         }
         for c in creatures { c.prevPos = c.pos }
         carryRiders()
+        updateRails(dt)
+        validateStairs()
         updateFerry(dt)
         updateMerchant(dt)
         updateBonsai(dt)
@@ -373,6 +385,8 @@ public final class World {
         c.timer -= dt
         if let job = c.job, updateJob(c, job, dt, on: support) { return }
         if c.building != nil, c.job == nil, updateBuilding(c, dt, on: support) { return }
+        if c.stair != nil, c.job == nil, updateStairBuilding(c, dt, on: support) { return }
+        if c.rail != nil, c.job == nil, updateRailLaying(c, dt, on: support) { return }
         if c.visitingID != nil, updateVisit(c, dt, on: support) { return }
         if c.tendX != nil, updateTending(c, dt, on: support) { return }
         switch c.activity {
@@ -437,6 +451,12 @@ public final class World {
         if nx < lo || nx > hi {
             c.facing *= -1
             return false
+        }
+        // Stairs are taken in stride (a block up or down), and so is a neighbouring platform at the same height.
+        if let s = stepAcross(c, from: support, toX: nx) {
+            c.pos.x = nx; c.pos.y = s.y; c.groundOwner = s.ownerID
+            c.edgeDecisionMade = false
+            return true
         }
         if !support.supports(x: nx) && !c.edgeDecisionMade {
             c.edgeDecisionMade = true
@@ -647,6 +667,7 @@ public final class World {
         // A shelf only holds the Gremlet who put it up.
         var out = surfaces + shelfSurfaces.filter { $0.ownerID == World.shelfOwner(c.id) }
         if let deck = ferrySurface { out.append(deck) }
+        if !rails.isEmpty { out += cartSurfaces }
         // Mid-game of tag, runners leapfrog over heads instead of landing on them.
         let tagging = c.social == .runner || c.social == .chaser
         for o in creatures where !tagging && o !== c && o.groundOwner != c.carrierOwnerID

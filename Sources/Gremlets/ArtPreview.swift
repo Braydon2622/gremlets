@@ -91,6 +91,21 @@ enum ArtPreview {
             }
         }
         write(ctx4.makeImage()!, dir.appendingPathComponent("overgrowth.png"))
+        // The shelf trees: four seeds at two heights, summer and autumn, the last one mirrored, each with its shelf.
+        let tW = PropArt.treeWidthPx * 3 + 30, tH = 120 * 3 + 20
+        let ctxT = CGContext(data: nil, width: tW * 5, height: tH, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxT.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxT.fill(CGRect(x: 0, y: 0, width: tW * 5, height: tH)); ctxT.interpolationQuality = .none
+        for (k, (seed, shelfPx, month, mirror)) in [(UInt64(3), 70, 6, false), (11, 100, 6, false), (29, 55, 10, false), (47, 90, 4, false), (5, 80, 6, true)].enumerated() {
+            let img = PropArt.tree(heightPx: shelfPx + 14, shelfPx: shelfPx, seed: seed, month: month, mirror: mirror)
+            let x = k * tW + 10
+            ctxT.draw(img, in: CGRect(x: x, y: 10, width: img.width * 3, height: img.height * 3))
+            let shelf = PropArt.shelf(k == 1 || k == 4 ? .treehouse : .branch, widthPx: 59)
+            let trunkX = Double(x) + Double(img.width * 3) * (mirror ? 1 - PropArt.treeAnchorX : PropArt.treeAnchorX)
+            let sx = mirror ? trunkX - 30 : trunkX + 30 - Double(shelf.width * 3)
+            ctxT.draw(shelf, in: CGRect(x: sx, y: Double(10 + shelfPx * 3 - shelf.height * 3), width: Double(shelf.width * 3), height: Double(shelf.height * 3)))
+            if k == 1 || k == 4 { ctxT.draw(PropArt.cabin, in: CGRect(x: trunkX + (mirror ? 4 : -4) - Double(PropArt.cabin.width * 3) / 2, y: Double(10 + shelfPx * 3), width: Double(PropArt.cabin.width * 3), height: Double(PropArt.cabin.height * 3))) }
+        }
+        write(ctxT.makeImage()!, dir.appendingPathComponent("trees.png"))
         let sp = [StoryArt.spirit(frame: 0), StoryArt.gliderLeaf, StoryArt.pot, AdventureArt.mine(night: false), AdventureArt.ferry(frame: 0), AdventureArt.lantern, AdventureArt.gem(.amethyst), AdventureArt.gem(.starstone), VillageArt.merchant(frame: 0)] + VillageItem.allCases.map { VillageArt.item($0, night: true, frame: 0) }
         let ctx5 = CGContext(data: nil, width: 1700, height: 170, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         ctx5.setFillColor(CGColor(red: 0.1, green: 0.12, blue: 0.2, alpha: 1)); ctx5.fill(CGRect(x: 0, y: 0, width: 1700, height: 170)); ctx5.interpolationQuality = .none

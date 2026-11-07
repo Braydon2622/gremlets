@@ -61,6 +61,9 @@ public final class Creature {
     /// Building a bridge (its id) and when the next block goes down.
     var building: Int?
     var buildTimer = 0.0
+    /// Building a staircase, or laying a rail (their ids).
+    var stair: Int?
+    var rail: Int?
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?
     var grappleTime = 0.0

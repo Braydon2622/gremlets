@@ -551,3 +551,21 @@ import Testing
         #expect(w.bonsaiBook["Big"]?.milestones == ["edits-50"])
     }
 }
+
+@Suite struct RepoHistoryTests {
+    @Test func anOldRepoGrowsAnOldTree() throws {
+        let w = World(seed: 81)
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [])
+        w.loadBonsai(BonsaiBook())
+        w.bonsaiStart(project: "Young", session: "a", windowID: nil)
+        let twoYearsAgo = Date().timeIntervalSince1970 - 730 * 86400
+        w.bonsaiStart(project: "Old", session: "a", windowID: nil, repoCommits: 400, repoSince: twoYearsAgo)
+        let young = try #require(w.bonsaiBook["Young"]), old = try #require(w.bonsaiBook["Old"])
+        #expect(old.stature > young.stature)
+        #expect(old.ageDays(now: Date().timeIntervalSince1970) > 700 && young.ageDays(now: Date().timeIntervalSince1970) < 1)
+        #expect(BonsaiGeometry.layout(old).thickness > BonsaiGeometry.layout(young).thickness)
+        // A bad or future date is ignored; a higher commit count later wins.
+        w.bonsaiStart(project: "Old", session: "b", windowID: nil, repoCommits: 10, repoSince: Date().timeIntervalSince1970 + 999)
+        #expect(w.bonsaiBook["Old"]?.repoCommits == 400 && w.bonsaiBook["Old"]?.repoSince == twoYearsAgo)
+    }
+}

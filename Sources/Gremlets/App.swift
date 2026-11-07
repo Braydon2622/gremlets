@@ -994,6 +994,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
         if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
+        // Once: what's new in this version, from whoever's out.
+        if !UserDefaults.standard.bool(forKey: "tour.grownWorld"), Int(CACurrentMediaTime() - launchTime) > 25, world.userActive, !presence.isHidden, let id = world.say() {
+            UserDefaults.standard.set(true, forKey: "tour.grownWorld")
+            overlay.showBubble("New: your Claude projects grow bonsai on their terminals now. Start a Claude Code session and watch, or try 'gremlet demo'. The Garden Journal is in the menu.", on: id, seconds: 16)
+            world.receive(.wave)
+        }
         // One postcard a day, for the time-lapse (a couple of minutes after launch, once things have settled).
         if !dailyPostcardTried && CACurrentMediaTime() - lastTick > -1 && Int(CACurrentMediaTime() - launchTime) > 120 && !presence.isHidden {
             dailyPostcardTried = true

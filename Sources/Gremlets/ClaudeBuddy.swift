@@ -38,7 +38,8 @@ final class ClaudeBuddy {
             sessions[session] = Session(creatureID: id, project: project, lastEvent: Date(), finishedAt: nil)
             world.labelJob(workerID: id, project)
             // The project's bonsai takes root on this window (a new session grows a new branch).
-            world.bonsaiStart(project: project, session: session, windowID: windowID)
+            world.bonsaiStart(project: project, session: session, windowID: windowID,
+                              repoCommits: q["commits"].flatMap { Int($0) }, repoSince: q["since"].flatMap { Double($0) })
         case "done":
             // Every finished Claude task grows the grove, and puts a flower on the project's bonsai.
             world.feedGrove()

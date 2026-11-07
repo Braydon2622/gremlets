@@ -119,10 +119,30 @@ final class BonsaiRenderer {
         l.add(g, forKey: "fly"); CATransaction.commit()
     }
 
+    private var carried: [Int: CALayer] = [:]
+
+    /// The Gremlet whose session a live tree belongs to, while it's still on its way to the window.
+    private func carrier(for p: BonsaiPlacement) -> Creature? {
+        guard p.slot < 0 else { return nil }
+        return world.creatures.first { $0.job?.label == p.project && $0.job?.kind == .claude && $0.job?.phase == .travel }
+    }
+
     private func renderTrees() {
         let now = Date().timeIntervalSince1970
         var alive = Set<String>()
+        var carrying = Set<Int>()
         for p in world.bonsaiPlacements {
+            // On its way: the Gremlet carries the pot (a little pot above its head); the tree pops in when it arrives.
+            if let c = carrier(for: p), let (si, pt) = local(c.pos + Vec2(c.facing * 4, c.size.y + 2)) {
+                carrying.insert(c.id)
+                let l = carried[c.id] ?? { let l = pixelLayer(); l.contents = BonsaiArt.carriedPot; l.anchorPoint = CGPoint(x: 0.5, y: 0); l.bounds = CGRect(x: 0, y: 0, width: 21, height: 24); l.zPosition = 3; popIn(l); return l }()
+                attach(l, si)
+                l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+                l.setAffineTransform(CGAffineTransform(scaleX: c.facing < 0 ? -1 : 1, y: 1))
+                carried[c.id] = l
+                moveBurst.insert(p.project)
+                continue
+            }
             guard let tree = world.bonsaiBook[p.project], let (si, pt) = local(p.base) else { continue }
             alive.insert(p.project)
             let age = tree.ageDays(now: now)
@@ -185,6 +205,7 @@ final class BonsaiRenderer {
             fadeOut(t.layer); fadeOut(t.tag)
             trees[project] = nil
         }
+        for (id, l) in carried where !carrying.contains(id) { fadeOut(l); carried[id] = nil }
     }
 
     private func renderBrackets() {
@@ -339,8 +360,9 @@ final class BonsaiRenderer {
                      "\(t.sessions) session\(t.sessions == 1 ? "" : "s")", "\(t.edits) edit\(t.edits == 1 ? "" : "s")"]
         if t.blooms > 0 { parts.append("\(t.blooms) task\(t.blooms == 1 ? "" : "s") finished") }
         if t.fruit > 0 { parts.append("tests passed \(t.fruit)×") }
+        if t.repoCommits > 0 { parts.append("\(t.repoCommits) commits in the repo") }
         if t.minutes >= 1 { parts.append(t.minutes < 60 ? "\(Int(t.minutes)) min" : String(format: "%.1f h", t.minutes / 60)) }
-        parts.append("planted \(f.string(from: Date(timeIntervalSince1970: t.firstSeen)))")
+        parts.append("planted \(f.string(from: Date(timeIntervalSince1970: t.plantedAt)))")
         let top = p.base + Vec2(0, p.layout.bounds.maxY * p.scale + 18)
         if let (si, pt) = local(top) { overlay.fx.floatText(parts.joined(separator: " · "), si: si, at: pt, color: .systemGreen, size: 13, rise: 36, duration: 4.2) }
         if let l = trees[p.project]?.layer { boing(l) }

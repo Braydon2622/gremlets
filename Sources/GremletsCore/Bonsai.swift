@@ -65,7 +65,7 @@ public struct Bonsai: Codable, Equatable, Sendable {
 
     public static let maxBranches = 12
 
-    enum CodingKeys: String, CodingKey { case project, seed, species, form, pot, branches, sessions, minutes, firstSeen, lastSeen, currentSession, currentBranch, milestones }
+    enum CodingKeys: String, CodingKey { case project, seed, species, form, pot, branches, sessions, minutes, firstSeen, lastSeen, currentSession, currentBranch, milestones, repoCommits, repoSince }
     public init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         project = try c.decode(String.self, forKey: .project)
@@ -81,6 +81,8 @@ public struct Bonsai: Codable, Equatable, Sendable {
         currentSession = try c.decodeIfPresent(String.self, forKey: .currentSession)
         currentBranch = try c.decodeIfPresent(Int.self, forKey: .currentBranch)
         milestones = try c.decodeIfPresent([String].self, forKey: .milestones) ?? []
+        repoCommits = try c.decodeIfPresent(Int.self, forKey: .repoCommits) ?? 0
+        repoSince = try c.decodeIfPresent(Double.self, forKey: .repoSince)
     }
 
     public init(project: String, now: Double) {
@@ -102,12 +104,20 @@ public struct Bonsai: Codable, Equatable, Sendable {
 
     /// Milestones reached so far (ribbons on the pot): "edits-100", "sessions-10", ...
     public var milestones: [String] = []
+    /// The project's git history, if it has one: commits so far and when it began (seconds since 1970). An old repo
+    /// grows an old-looking tree from the first session: thicker trunk, lichen, moss on the pot.
+    public var repoCommits = 0
+    public var repoSince: Double?
     public var edits: Int { branches.reduce(0) { $0 + $1.edits } }
     public var blooms: Int { branches.reduce(0) { $0 + $1.blooms } }
     public var fruit: Int { branches.reduce(0) { $0 + $1.fruit } }
     /// 0 (a seedling) ... 1 (a venerable tree, around 400 edits and a dozen sessions).
-    public var stature: Double { min(1, 0.75 * log2(1 + Double(edits)) / 8.6 + 0.25 * Double(min(sessions, 12)) / 12) }
-    public func ageDays(now: Double) -> Double { max(0, now - firstSeen) / 86400 }
+    public var stature: Double {
+        min(1, 0.65 * log2(1 + Double(edits)) / 8.6 + 0.2 * Double(min(sessions, 12)) / 12 + 0.15 * min(1, log2(1 + Double(repoCommits)) / 10))
+    }
+    /// Age counts from the repo's first commit when that's known.
+    public var plantedAt: Double { min(firstSeen, repoSince ?? firstSeen) }
+    public func ageDays(now: Double) -> Double { max(0, now - plantedAt) / 86400 }
 
     /// A Claude session starts (or sends another prompt). A new session sprouts a branch; the same one carries on.
     /// Returns true when a branch sprouted.
@@ -353,13 +363,15 @@ extension World {
     }
 
     /// A Claude session started (or sent another prompt) in `project`, on `windowID`.
-    public func bonsaiStart(project: String, session: String, windowID: Int?, floorX: Double? = nil) {
+    public func bonsaiStart(project: String, session: String, windowID: Int?, floorX: Double? = nil, repoCommits: Int? = nil, repoSince: Double? = nil) {
         let now = Date().timeIntervalSince1970
         if bonsaiBook.index(of: project) == nil {
             bonsaiBook.trees.append(Bonsai(project: project, now: now))
             bonsaiEvents.append(.planted(project))
         }
         guard let i = bonsaiBook.index(of: project) else { return }
+        if let c = repoCommits, c > bonsaiBook.trees[i].repoCommits { bonsaiBook.trees[i].repoCommits = c }
+        if let since = repoSince, since > 0, since < now { bonsaiBook.trees[i].repoSince = since }
         if bonsaiBook.trees[i].startSession(session, now: now), let b = bonsaiBook.trees[i].currentBranch {
             bonsaiEvents.append(.sprouted(project, branch: b))
         }

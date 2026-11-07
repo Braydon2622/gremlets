@@ -49,7 +49,7 @@ enum TreeCard {
         func line(_ s: String, _ y: Double, size: CGFloat, weight: NSFont.Weight, alpha: CGFloat = 1) {
             NSAttributedString(string: s, attributes: [.font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: ink.withAlphaComponent(alpha)]).draw(at: CGPoint(x: x, y: y))
         }
-        let planted = DateFormatter.localizedString(from: Date(timeIntervalSince1970: tree.firstSeen), dateStyle: .long, timeStyle: .none)
+        let planted = DateFormatter.localizedString(from: Date(timeIntervalSince1970: tree.plantedAt), dateStyle: .long, timeStyle: .none)
         line(tree.project, Double(H) - 120, size: 40, weight: .heavy)
         line("\(tree.species.name) bonsai · \(tree.form.name)", Double(H) - 156, size: 20, weight: .semibold, alpha: 0.85)
         line("planted \(planted)", Double(H) - 184, size: 17, weight: .medium, alpha: 0.7)
@@ -61,6 +61,7 @@ enum TreeCard {
             ("\(tree.blooms)", "task\(tree.blooms == 1 ? "" : "s") finished · a flower each"),
             ("\(tree.fruit)", "test run\(tree.fruit == 1 ? "" : "s") passed · golden fruit"),
         ] + (hours >= 0.1 ? [(String(format: "%.1f h", hours), "of Claude working beside it")] : [])
+          + (tree.repoCommits > 0 ? [("\(tree.repoCommits)", "commits in the repo so far")] : [])
         for (big, small) in rows {
             NSAttributedString(string: big, attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 30, weight: .bold), .foregroundColor: ink]).draw(at: CGPoint(x: x, y: y))
             NSAttributedString(string: small, attributes: [.font: NSFont.systemFont(ofSize: 17, weight: .medium), .foregroundColor: ink.withAlphaComponent(0.75)]).draw(at: CGPoint(x: x + 110, y: y + 8))

@@ -38,6 +38,20 @@ q = {
     "project": os.path.basename((d.get("cwd") or "").rstrip("/")) or "Claude",
     "pid": sys.argv[1],
 }
+if event == "start":
+    # The project's git history, as two numbers (commit count, first commit time), so an old repo grows an old tree.
+    import subprocess
+    try:
+        cwd = d.get("cwd") or "."
+        if os.path.isdir(os.path.join(cwd, ".git")):
+            n = subprocess.run(["git", "-C", cwd, "rev-list", "--count", "HEAD"], capture_output=True, text=True, timeout=1).stdout.strip()
+            first = subprocess.run(["git", "-C", cwd, "log", "--reverse", "--format=%ct", "--max-count=1", "HEAD"], capture_output=True, text=True, timeout=1).stdout.strip()
+            if first == "":
+                first = subprocess.run(["git", "-C", cwd, "rev-list", "--max-parents=0", "--format=%ct", "HEAD"], capture_output=True, text=True, timeout=1).stdout.strip().split()[-1]
+            if n.isdigit(): q["commits"] = n
+            if first.isdigit(): q["since"] = first
+    except Exception:
+        pass
 if event in ("tool", "toolfail"):
     q["tool"] = str(d.get("tool_name", ""))[:60]
     # Only a yes/no "was this a test run?", never the command itself (it drives the weather).

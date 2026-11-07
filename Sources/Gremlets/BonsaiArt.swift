@@ -191,6 +191,18 @@ enum BonsaiArt {
         if winter { for x in x0..<(x0 + w) where x % 3 != 0 { cv.set(x, y0 + hgt, 0xFFFFFF) } }
     }
 
+    /// A little pot with a sprig, carried overhead to the window.
+    static let carriedPot: CGImage = Effects.pixels([
+        "...g...",
+        "..ggg..",
+        "...k...",
+        "bbbbbbb",
+        ".bbbbb.",
+        ".bbbbb.",
+        "..bbb..",
+        "..bbb..",
+    ], ["g": 0x6CC04A, "k": 0x4A3424, "b": 0x3F6FA8])
+
     // MARK: Around a Claude window
 
     /// Ivy creeping along the top edge of a terminal Claude is working in: a stem with heart leaves, the odd tiny

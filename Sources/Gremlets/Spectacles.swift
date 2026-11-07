@@ -618,7 +618,7 @@ final class SpectacleRenderer {
                 if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = local(c.pos + Vec2(0, c.size.y + 6)) {
                     overlay.burst([AdventureArt.pebble], si: si, at: pt, count: 1, dx: 0...0, dy: 20...26, duration: 1.2)
                 }
-            case .digging, .ferryArrived, .ferryLeft:
+            case .digging, .ferryArrived, .ferryLeft, .ferryCrossed:
                 break
             }
         }

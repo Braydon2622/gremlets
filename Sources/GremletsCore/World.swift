@@ -496,7 +496,9 @@ public final class World {
             endSocial(c)
             if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }
-            else if c.snowmanTask != nil { snowmanDecide(c) } else { Brain.decide(c, in: self) }
+            else if c.snowmanTask != nil { snowmanDecide(c) }
+            else if ridingThroughDoor(c) { c.idleVariant = "look"; c.facing = door ?? c.facing; c.set(.idle, duration: rng.range(2, 4)) }
+            else { Brain.decide(c, in: self) }
         }
     }
 
@@ -801,6 +803,7 @@ public final class World {
             // Heading out, not just arrived from there (arrivals start a little outside the edge, walking in).
             let outward = c.isGrounded || c.activity == .crouch ? c.facing * d > 0 : c.vel.x * d > 0
             return out > c.size.x * 0.35 && outward && c.activity != .dragged && clock - c.arrivedAt > 1.5
+                && c.groundOwner != World.ferryOwner
         }
     }
 

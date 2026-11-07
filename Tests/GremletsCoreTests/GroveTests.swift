@@ -818,6 +818,56 @@ import Testing
     }
 }
 
+@Suite struct FerryDoorTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func theFerryCarriesPassengersOutThroughTheDoorway() throws {
+        let w = World(seed: 33)
+        w.maxHobbies = 0
+        w.door = 1
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 200, w: 400, h: 350)),
+                                                               WindowInfo(id: 2, frame: Rect(x: 850, y: 250, w: 400, h: 300))])
+        w.loadGrove(Grove())
+        for i in 0..<4 { w.spawn(testSpecies(scale: 10), at: Vec2(300 + Double(i) * 60, 600)) }
+        #expect(w.sendFerryThroughDoor())
+        var crossed: [String]? = nil, steps = 0, boarded = 0
+        while w.ferry != nil && steps < 60 * 120 {
+            steps += 1
+            w.step(1.0 / 60)
+            _ = w.drainEvents()
+            boarded = max(boarded, w.creatures.filter { $0.groundOwner == World.ferryOwner }.count)
+            #expect(w.creaturesPastDoor().allSatisfy { $0.groundOwner != World.ferryOwner }, "riders go with the ferry, not on foot")
+            for e in w.drainAdventureEvents() { if case .ferryCrossed(let r, let y) = e { crossed = r; #expect(y >= 0 && y <= 1) } }
+        }
+        let riders = try #require(crossed, "it sailed out through the doorway")
+        #expect(riders.count <= boarded)
+        #expect(!riders.isEmpty, "someone rode it over")
+        #expect(w.creatures.count == 4 - riders.count, "the passengers left with it")
+    }
+
+    @Test func theFerryArrivesFromTheOtherScreenAndDropsItsPassengersOff() {
+        let w = World(seed: 34)
+        w.maxHobbies = 0
+        w.door = -1
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 200, w: 400, h: 350))])
+        w.loadGrove(Grove())
+        let riders = w.ferryArrivesThroughDoor(riders: [testSpecies(scale: 10), testSpecies(scale: 10)], yFrac: 0.6)
+        #expect(riders.count == 2 && w.ferry != nil)
+        #expect(riders.allSatisfy { $0.pos.x < 0 })
+        var steps = 0
+        while w.ferry != nil && steps < 60 * 120 {
+            steps += 1
+            w.step(1.0 / 60)
+            _ = w.drainEvents()
+            for c in w.creatures { #expect(c.pos.x.isFinite && c.pos.y >= -1) }
+        }
+        #expect(w.ferry == nil)
+        // Visitors who just came over hop off: the ferry doesn't take them straight back.
+        #expect(w.creatures.count == 2)
+        #expect(w.creatures.allSatisfy { $0.pos.x > -10 && $0.pos.x < 1450 && $0.groundOwner != World.ferryOwner }, "\(w.creatures.map(\.pos))")
+    }
+}
+
 @Suite struct TeamworkTests {
     let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
 

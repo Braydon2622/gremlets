@@ -13,6 +13,7 @@
 #   gremlet status               what's out and whether a focus timer is running
 #   gremlet meteors | festival | lanterns   start a little grove moment now
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
+#   gremlet ferry cross          the ferry makes one stop and sails through the doorway to the linked screen
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
 #   gremlet kite                 a free Gremlet flies a kite for a while
@@ -65,7 +66,8 @@ case "${1:-}" in
   send)    curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "name=${2:-}" "${URL}/phone/send"; echo ;;
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
-  ferry|merchant) call "$1" >/dev/null ;;
+  ferry)   if [ "${2:-}" = "cross" ]; then call "ferry?cross=1"; echo; else call ferry >/dev/null; fi ;;
+  merchant) call merchant >/dev/null ;;
   kite)    call kite; echo ;;
   stairs|cart|chest|expedition|unlink|cross|boost) call "$1"; echo ;;
   react)   call "react?name=${2:-screenshot}"; echo ;;

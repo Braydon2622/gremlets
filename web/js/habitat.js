@@ -10,7 +10,7 @@ import { Garden } from './garden.js';
 import { Bridge } from './bridge.js';
 import { IslandArt, Biome, ledgeBiome, ledgeSeed } from './islands.js';
 import { Bonsai, layoutBonsai, renderBonsai, MAX_BRANCHES } from './bonsai.js';
-import { hex } from './pixelart.js';
+import { hex, PixelCanvas } from './pixelart.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -354,6 +354,7 @@ function frame(now) {
   handleEvents(world.drainEvents());
   checkCrossings(now / 1000);
   updateTravellers(dt, now / 1000);
+  updateFerry(dt, now / 1000);
   updateBoss(dt);
   updateDebris(dt);
   updateSession(now / 1000);
@@ -372,6 +373,7 @@ function frame(now) {
   drawPortals(now / 1000);
   drawDoor(now / 1000);
   drawTravellers(now / 1000);
+  drawFerry(now / 1000);
   drawAdventure(now / 1000);
   drawDriveMarker(now / 1000);
   placeBubbles(now / 1000);
@@ -723,6 +725,129 @@ function drawTravellers(t) {
     ctx.drawImage(cloudArt.image, r.x, r.y, r.w, r.h, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
+}
+
+// ---------------------------------------------------------------- the sky ferry (sails over from the Mac and back)
+//
+// The Mac's sky ferry leaves through the doorway with its passengers. Here it sails in at the height it left, stops
+// a while so they hop off, lets a couple of Gremlets from this screen climb aboard, and sails back to the Mac.
+// Same boat as IslandArt.ferry on the Mac (a straight port of the pixel drawing).
+
+let ferry = null;      // { x, y, dir, phase: 'in'|'docked'|'out', targetX, until, pass: [{ species, art }], boarding: Map(id -> deadline), t0 }
+const ferryFrames = [];
+function ferryImage(frame) {
+  if (ferryFrames[frame]) return ferryFrames[frame];
+  const cv = new PixelCanvas(44, 34);
+  cv.blob(22, 26, 15, 7, 0xE8D7B0, 0xFFF4DA, 0xC2A878);
+  cv.rect(14, 25, 4, 3, 0xD9855A); cv.rect(27, 27, 3, 3, 0x7FB0D9);
+  cv.line(10, 19, 9, 10, 0x8A6A4A); cv.line(34, 19, 35, 10, 0x8A6A4A); cv.line(22, 19, 22, 10, 0x8A6A4A);
+  for (let y = 0; y < 9; y++) { const inset = Math.max(0, 4 - y); cv.rect(4 + inset, y, 36 - inset * 2, 1, y > 6 ? 0xB97E42 : (y % 3 === 0 ? 0x8A5A35 : 0xA9743F)); }
+  cv.rect(4, 8, 36, 1, 0xD9A066);
+  cv.rect(6, 9, 1, 2, 0x8A5A35); cv.rect(37, 9, 1, 2, 0x8A5A35); cv.rect(6, 10, 32, 1, 0xC9A36A);
+  cv.set(14, 4, 0xBFE6FF); cv.set(22, 4, 0xBFE6FF); cv.set(30, 4, 0xBFE6FF);
+  cv.rect(1, 4, 3, 1, 0x6E6A78);
+  if (frame % 2 === 0) cv.rect(0, 1, 1, 7, 0xC8C8D0); else { cv.rect(0, 4, 1, 1, 0xC8C8D0); cv.rect(0, 2, 1, 1, 0x9A9AA6); cv.rect(0, 6, 1, 1, 0x9A9AA6); }
+  cv.outline(0.6);
+  ferryFrames[frame] = cv.toCanvas();
+  return ferryFrames[frame];
+}
+const ferryDeck = () => ferry.y + 9 * PX;     // the deck is 9 art pixels above the hull's bottom
+const ferryHalf = () => 22 * PX;
+
+async function ferryArrives(note) {
+  const riders = (Array.isArray(note.riders) ? note.riders : []).filter((s) => typeof s === 'string' && index.some((i) => i.id === s)).slice(0, 3);
+  if (ferry) { for (const s of riders) arriveThroughDoor({ species: s, y: 0 }); return; }
+  if (!door) applyDoor();
+  const dir = inward();
+  const y = Math.max(GROUND + 70, Math.min(H - TOP - 200, GROUND + clamp01(+note.y || 0.5) * usableH()));
+  const pass = [];
+  for (const s of riders) pass.push({ species: s, art: await loadSpecies(s, PX).catch(() => null) });
+  ferry = {
+    x: bridge.side === 'right' ? W + ferryHalf() : -ferryHalf(), y, dir, phase: 'in',
+    targetX: W * (dir > 0 ? 0.36 : 0.64), until: 0, pass: pass.filter((p) => p.art), boarding: new Map(), t0: performance.now() / 1000,
+  };
+}
+
+function updateFerry(dt, t) {
+  if (!ferry) return;
+  const f = ferry;
+  if (f.phase === 'in') {
+    const d = f.targetX - f.x;
+    f.x += Math.sign(d) * Math.min(Math.abs(d), 150 * dt);
+    if (Math.abs(d) < 2) {
+      f.phase = 'docked'; f.until = t + 11;
+      // Passengers hop off onto this screen.
+      const off = f.pass.splice(0);
+      off.forEach((p, i) => setTimeout(async () => {
+        if (!ferry) return;
+        const c = await addGremlet(p.species, V(ferry.x + (i - 1) * 26, ferryDeck()));
+        c.facing = ferry.dir; c.arrived = performance.now() / 1000; c.cameByFerry = c.arrived; c.doorChoice = false;
+        c.vel = V(ferry.dir * (60 + Math.random() * 90), 300); c.set('airborne');
+        if (i === 0) setTimeout(() => say(c.id, ['Made it! ⛵️', 'Hello, other screen!', 'What a ride!'][Math.floor(Math.random() * 3)], 2.4), 700);
+      }, 400 + i * 450));
+    }
+  } else if (f.phase === 'docked') {
+    // A few seconds in, up to two Gremlets from here jump aboard (never one that only just arrived).
+    if (t > f.until - 7 && f.boarding.size + f.pass.length < 2 && Math.random() < dt * 0.8) {
+      const c = world.creatures.filter((o) => o.isGrounded && !o.isAsleep && o.id !== driven && !visitors.has(o.id) && !f.boarding.has(o.id)
+        && t - (o.cameByFerry ?? -999) > 90 && Math.abs(o.pos.x - f.x) < 420 && ferryDeck() - o.pos.y < 320 && ferryDeck() > o.pos.y)
+        .sort((a, b) => Math.abs(a.pos.x - f.x) - Math.abs(b.pos.x - f.x))[0];
+      if (c && door) { f.boarding.set(c.id, t + 4); world.launch(c, world.ballistic(c.pos, f.x + (Math.random() - 0.5) * 30, ferryDeck(), 40)); }
+    }
+    if (t > f.until) {
+      f.phase = 'out';
+      // The other screen closed meanwhile: anyone aboard hops back off here.
+      if (!door) for (const p of f.pass.splice(0)) addGremlet(p.species, V(f.x, ferryDeck())).then((c) => { c.vel = V(-f.dir * 100, 280); c.set('airborne'); });
+    }
+  } else {
+    f.x -= f.dir * 165 * dt;
+    if (f.dir > 0 ? f.x < -ferryHalf() : f.x > W + ferryHalf()) {
+      const through = f.dir > 0 ? 'left' : 'right';
+      if (door === through) bridge.cross({ type: 'visitor', kind: 'ferry', y: clamp01((f.y - GROUND) / usableH()), riders: f.pass.map((p) => p.species) });
+      ferry = null;
+      saveRoster(); updateCount();
+      return;
+    }
+  }
+  // Jumpers caught by the deck as they come down onto it.
+  for (const [id, deadline] of f.boarding) {
+    const c = byId(id);
+    if (!c || t > deadline || c.isGrounded && t > deadline - 3.4) { f.boarding.delete(id); continue; }
+    if (c.activity === 'airborne' && c.vel.y <= 0 && Math.abs(c.pos.x - f.x) < ferryHalf() * 0.8 && Math.abs(c.pos.y - ferryDeck()) < 16) {
+      f.boarding.delete(id);
+      f.pass.push({ species: c.species.id, art: art.get(c.id) });
+      removeGremlet(c.id);
+    }
+  }
+}
+
+function drawFerry(t) {
+  if (!ferry) return;
+  const f = ferry, bob = Math.sin(t * 1.6) * 3;
+  const img = ferryImage(Math.floor(t * 8) % 2);
+  const s = toScreen(f.x, f.y + bob);
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.save();
+  ctx.translate(Math.round(s.x), Math.round(s.y));
+  // The art faces right with its propeller at the stern; it points the way it's going.
+  const heading = f.phase === 'out' ? -f.dir : f.dir;
+  if (heading < 0) ctx.scale(-1, 1);
+  ctx.drawImage(img, -ferryHalf(), -34 * PX, 44 * PX, 34 * PX);
+  ctx.restore();
+  // Passengers stand on the deck, in front of the balloon and its ropes.
+  f.pass.forEach((p, i) => {
+    const r = p.art.rects[p.art.species.frame('idle', t - f.t0 + i)];
+    if (!r) return;
+    const w = r.w * PX, h = r.h * PX, ps = toScreen(f.x + (i - (f.pass.length - 1) / 2) * 30, ferryDeck() + bob);
+    ctx.save();
+    ctx.translate(Math.round(ps.x), Math.round(ps.y));
+    if (f.phase === 'out' ? f.dir > 0 : f.dir < 0) ctx.scale(-1, 1);
+    ctx.drawImage(p.art.image, r.x, r.y, r.w, r.h, -w / 2, -h, w, h);
+    ctx.restore();
+  });
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- drive one yourself (keyboard, or the on-screen pad)
@@ -1548,7 +1673,8 @@ async function start() {
     if (bridge) {
       bridge.onWalk = arriveThroughDoor;
       bridge.onVisitor = (n) => {
-        if (n.kind === 'boss') spawnBoss({ species: n.species, hp: Math.max(1, Math.min(24, +n.hp || 24)), side: bridge.side, y: GROUND + clamp01(n.y) * usableH() });
+        if (n.kind === 'ferry') ferryArrives(n);
+        else if (n.kind === 'boss') spawnBoss({ species: n.species, hp: Math.max(1, Math.min(24, +n.hp || 24)), side: bridge.side, y: GROUND + clamp01(n.y) * usableH() });
         else summonCloud(bridge.side, GROUND + clamp01(n.y) * usableH());
       };
       bridge.onKeys = (n) => {

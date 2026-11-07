@@ -81,7 +81,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   habitat; the Gremlets menu shows a QR code) and put it against one edge of your Mac. A Gremlet that wanders to that
   edge walks straight off the Mac and in from the opposite edge of the other screen, keeping its stride and speed
   (mid-air if it jumped), and wanders back the same way. A soft doorway glows at the edge while the other screen is
-  open. `gremlet link right`, `gremlet cross`.
+  open. `gremlet link right`, `gremlet cross`. While the screens are linked, the sky ferry sails out through the
+  doorway with whoever is aboard, drops them off on the other screen, takes a couple of Gremlets from there on board
+  and sails back to the Mac (`gremlet ferry cross`).
 - **Phone:** or send a Gremlet through a portal to your phone and back.
 
 - **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon) ·

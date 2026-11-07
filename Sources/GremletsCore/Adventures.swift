@@ -21,6 +21,9 @@ public enum AdventureEvent: Equatable, Sendable {
     case pebble(by: Int)
     case ferryArrived
     case ferryLeft
+    /// The ferry sailed out through the doorway to the linked screen with these passengers (species ids), from
+    /// `yFrac` of the way up the screen. The platform layer sends it on and has already-removed riders listed here.
+    case ferryCrossed(riders: [String], yFrac: Double)
 }
 
 /// The sky ferry: a little flying boat with a deck Gremlets can stand on.
@@ -33,6 +36,10 @@ public struct Ferry: Sendable {
     var dockedUntil = 0.0
     var stops = 0
     var prev: Vec2
+    /// Leaving through the doorway to the linked screen (passengers stay aboard).
+    public internal(set) var viaDoor = false
+    /// Called with `gremlet ferry cross`: one short stop, then straight out through the doorway.
+    var express = false
     public static let deckWidth = 120.0
     /// Deck height above `pos` (pos is the bottom of the hull).
     public static let deckHeight = 26.0
@@ -86,6 +93,44 @@ extension World {
         return true
     }
 
+    /// `gremlet ferry cross`: a ferry (the one here, or a new one) makes one short stop and sails through the doorway.
+    @discardableResult
+    public func sendFerryThroughDoor() -> Bool {
+        guard door != nil else { return false }
+        if ferry == nil { guard callFerry() else { return false } }
+        guard var fe = ferry, fe.phase != .leaving else { return false }
+        fe.express = true
+        if fe.phase == .docked { fe.dockedUntil = min(fe.dockedUntil, clock + 5); fe.stops = 2 }
+        ferry = fe
+        return true
+    }
+
+    /// The ferry comes in through the doorway from the linked screen, with passengers from there standing on deck.
+    /// They hop off at its first stop (or ride on, if they like it up there).
+    @discardableResult
+    public func ferryArrivesThroughDoor(riders: [SpeciesInfo], yFrac: Double) -> [Creature] {
+        guard ferry == nil, let d = door, let main = screens.first else { return [] }
+        let dock = ferryDock(excluding: nil) ?? Vec2(d > 0 ? main.maxX - 260 : main.minX + 260, main.minY + main.h * 0.45)
+        let start = Vec2(d > 0 ? main.maxX + Ferry.deckWidth : main.minX - Ferry.deckWidth,
+                         (main.minY + yFrac.clamped(0, 1) * max(1, main.h - 80)).clamped(main.minY + 120, main.maxY - 120))
+        ferry = Ferry(pos: start, facing: -d, target: dock, prev: start)
+        adventureEvents.append(.ferryArrived)
+        var out: [Creature] = []
+        for (i, sp) in riders.prefix(3).enumerated() {
+            let c = spawn(sp, at: Vec2(start.x + Double(i - 1) * 30, start.y + Ferry.deckHeight))
+            c.groundOwner = World.ferryOwner
+            c.vel = .zero
+            c.facing = -d
+            c.arrivedAt = clock
+            c.cameByFerry = clock
+            c.doorDecided = true; c.doorChoice = false
+            c.set(.idle, duration: 3)
+            out.append(c)
+        }
+        setSurfacesDirty()
+        return out
+    }
+
     /// A spot to dock: right beside the end of a window top, deck level with it.
     func ferryDock(excluding x: Double?) -> Vec2? {
         guard let f = groveFloor else { return nil }
@@ -122,8 +167,8 @@ extension World {
             if d.length < 3 {
                 fe.pos = fe.target
                 fe.phase = .docked
-                fe.dockedUntil = clock + rng.range(9, 14)
-                fe.stops += 1
+                fe.dockedUntil = clock + (fe.express ? 7 : rng.range(9, 14))
+                fe.stops += fe.express ? 2 : 1
             } else {
                 fe.pos += d * (min(d.length, 140 * dt) / d.length)
                 if abs(d.x) > 4 { fe.facing = d.x > 0 ? 1 : -1 }
@@ -133,6 +178,24 @@ extension World {
             if clock > fe.dockedUntil {
                 if fe.stops < 2, let next = ferryDock(excluding: fe.pos.x) {
                     fe.target = next; fe.phase = .crossing
+                } else if let d = door, let main = screens.first {
+                    // A screen is linked: it sails out through the doorway, passengers and all.
+                    fe.phase = .leaving
+                    fe.viaDoor = true
+                    fe.facing = d
+                    fe.target = Vec2(d > 0 ? main.maxX + Ferry.deckWidth : main.minX - Ferry.deckWidth, (fe.pos.y + 60).clamped(main.minY + 120, main.maxY - 120))
+                    for c in creatures where c.groundOwner == World.ferryOwner {
+                        if c.cameByFerry.map({ clock - $0 < 90 }) == true {
+                            // Anyone who only just came over on it stays here: they hop off.
+                            c.groundOwner = nil
+                            c.vel = Vec2(-d * 120, 300)
+                            c.set(.airborne, duration: 5)
+                        } else {
+                            // The rest settle in at the rail and watch the edge of the screen come closer.
+                            c.facing = d; c.idleVariant = "look"
+                            c.set(.idle, duration: 30)
+                        }
+                    }
                 } else {
                     fe.phase = .leaving
                     fe.target = Vec2(fe.facing > 0 ? f.maxX + 220 : f.minX - 220, fe.pos.y + 160)
@@ -146,7 +209,15 @@ extension World {
             }
         case .leaving:
             let d = fe.target - fe.pos
-            if d.length < 4 { ferry = nil; adventureEvents.append(.ferryLeft); return }
+            if d.length < 4 {
+                if fe.viaDoor, let main = screens.first {
+                    let riders = creatures.filter { $0.groundOwner == World.ferryOwner }
+                    let names = riders.map(\.species.id)
+                    for c in riders { remove(c.id) }
+                    adventureEvents.append(.ferryCrossed(riders: names, yFrac: ((fe.pos.y - main.minY) / max(1, main.h - 80)).clamped(0, 1)))
+                }
+                ferry = nil; adventureEvents.append(.ferryLeft); return
+            }
             fe.pos += d * (min(d.length, 170 * dt) / d.length)
         }
         ferry = fe
@@ -155,12 +226,20 @@ extension World {
         for c in creatures where c.groundOwner == World.ferryOwner { c.pos += delta }
     }
 
+    /// A passenger on a ferry bound for the doorway (its last stop, or already sailing out) stays aboard for the
+    /// trip, unless it only just came over on it.
+    func ridingThroughDoor(_ c: Creature) -> Bool {
+        guard c.groundOwner == World.ferryOwner, let fe = ferry, door != nil, c.cameByFerry.map({ clock - $0 < 90 }) != true else { return false }
+        return (fe.phase == .leaving && fe.viaDoor) || (fe.phase == .docked && fe.stops >= 2)
+    }
+
     /// Hop aboard when it's docked close by, or hop off at the next window.
     func ferryChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
         guard let fe = ferry, fe.phase == .docked, let deck = ferrySurface else { return }
         if c.groundOwner == World.ferryOwner {
+            let justArrived = c.cameByFerry.map { clock - $0 < 90 } ?? false
             if let s = surfaces.filter({ abs($0.y - deck.y) < 30 && ($0.maxX < deck.minX + 10 || $0.minX > deck.maxX - 10) && min(abs($0.maxX - deck.minX), abs($0.minX - deck.maxX)) < 120 }).first {
-                add("disembark", 1.5) { self.launch(c, velocity: self.ballistic(from: c.pos, toX: s.minX + s.width / 2, y: s.y, apexExtra: 40)) }
+                add("disembark", justArrived ? 8 : 1.5) { self.launch(c, velocity: self.ballistic(from: c.pos, toX: s.minX + s.width / 2, y: s.y, apexExtra: 40)) }
             }
             add("ride", 1.2) { c.idleVariant = "look"; c.set(.idle, duration: self.rng.range(2, 4)) }
         } else if c.isGrounded && abs(c.pos.y - deck.y) < 60 && abs(c.pos.x - fe.pos.x) < 480 {

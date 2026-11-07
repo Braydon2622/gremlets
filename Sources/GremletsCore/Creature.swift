@@ -85,6 +85,8 @@ public final class Creature {
     var mossTask: MossTask?
     /// The snow-Gremlet it's helping to build (see Weather.swift).
     var snowmanTask: Int?
+    /// When it came over from the linked screen on the sky ferry (it gets off here rather than riding straight back).
+    var cameByFerry: Double?
     var climb: VineClimb?
     public var isClimbing: Bool { climb != nil && activity == .float }
     var signUntil = 0.0

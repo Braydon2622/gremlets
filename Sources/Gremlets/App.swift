@@ -232,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
         let adventures = world.drainAdventureEvents()
         overlay.fx.handle(adventures)
+        for case .ferryCrossed(let riders, let y) in adventures { ferryCrossedOut(riders: riders, yFrac: y) }
         if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) {
             saveGrove(); rebuildMenu()
             if soundsAllowed { sounds.play(.gem) }
@@ -899,6 +900,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         phone.onArrive = { [weak self] arrival in self?.arriveFromPhone(arrival) }
         phone.onStatus = { [weak self] in self?.rebuildMenu() }
         bridge.onWalk = { [weak self] w in self?.arriveThroughBridge(w) }
+        bridge.onFerry = { [weak self] riders, y in self?.ferryArrivesThroughBridge(riders: riders, yFrac: y) }
         bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
         bridge.start()
         weatherService.onChange = { [weak self] in self?.schedule(rate: 60); self?.rebuildMenu() }
@@ -1183,6 +1185,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
         case "ferry":
+            if query["cross"] != nil {
+                guard world.sendFerryThroughDoor() else { return (409, #"{"ok":false,"error":"no screen linked and open (gremlet link), or the ferry is already leaving"}"#) }
+                schedule(rate: 60)
+                return (200, #"{"ok":true}"#)
+            }
             guard world.callFerry() else { return (409, #"{"ok":false,"error":"the ferry is already out, or there's no high window to dock at"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
@@ -1691,6 +1698,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bridge.away = bridge.away + [c.species.id]
         saveRoster()
         overlay.render()
+        rebuildMenu()
+    }
+
+    /// The sky ferry sailed out through the doorway: it carries on, with its passengers, on the other screen.
+    private func ferryCrossedOut(riders: [String], yFrac: Double) {
+        bridge.cross(["type": "visitor", "kind": "ferry", "y": yFrac, "riders": riders])
+        if let main = WindowTracker.screens().first {
+            let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
+            overlay.sparkle(at: Vec2(edgeX, main.minY + yFrac * max(1, main.h - 80)))
+        }
+        guard !riders.isEmpty else { return }
+        bridge.away = bridge.away + riders
+        saveRoster()
+        rebuildMenu()
+    }
+
+    /// The ferry comes in from the other screen, with passengers from there aboard.
+    private func ferryArrivesThroughBridge(riders: [String], yFrac: Double) {
+        let infos = riders.prefix(3).compactMap { species[$0]?.info }
+        bridge.away = bridge.away.filter { !riders.contains($0) }
+        if world.door == nil { updateDoor() }
+        let arrived = world.ferryArrivesThroughDoor(riders: infos, yFrac: yFrac)
+        if arrived.count < infos.count {
+            // The ferry's already out here: the passengers walk in through the doorway instead.
+            for sp in infos.dropFirst(arrived.count) { world.arriveThroughDoor(sp, yFrac: 0, vx: 70, vy: 0, airborne: false) }
+        }
+        saveRoster()
+        schedule(rate: 60)
+        if let c = arrived.first {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }
+                self.overlay.showBubble(["All ashore? Not yet!", "Hello, Mac! ⛵️", "What a view!"].randomElement()!, on: c.id, seconds: 2.4)
+            }
+        }
         rebuildMenu()
     }
 

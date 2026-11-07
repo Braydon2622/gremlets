@@ -27,9 +27,11 @@ public struct PlayBall: Sendable {
 extension World {
 
     func playChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard c.job == nil, c.play == nil else { return }
+        // Nobody plays catch from the sky ferry's deck (it sails off under you).
+        guard c.job == nil, c.play == nil, c.groundOwner != World.ferryOwner else { return }
         let friends = nearbyFriends(of: c, range: 520).filter {
             $0.play == nil && $0.job == nil && [.idle, .walk, .follow].contains($0.activity) && $0.groveTask == nil
+                && $0.groundOwner != World.ferryOwner
         }
         guard !friends.isEmpty else { return }
         let e = c.energy

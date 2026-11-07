@@ -9,6 +9,7 @@ import GremletsCore
 /// Only Gremlet names, which edge they left through and how fast they were going are sent.
 ///
 ///   { v: 1, type: "walk", from: <device>, to: "left"|"right", species, y, vx, vy, air }
+///   { v: 1, type: "visitor", from, to, kind: "ferry", y, riders: [species] }   // the sky ferry sails across
 ///   { v: 1, type: "hello", from, side, reply? }     // a screen is open (the other one shows "linked")
 final class ScreenBridge {
     struct Walk { let species: String; let y: Double; let vx: Double; let vy: Double; let air: Bool }
@@ -20,6 +21,8 @@ final class ScreenBridge {
     private(set) var connected = false
     private(set) var peerSeen: Date?
     var onWalk: (Walk) -> Void = { _ in }
+    /// The sky ferry sailing in from the other screen, with passengers (species ids) and how high up it was.
+    var onFerry: ([String], Double) -> Void = { _, _ in }
     var onStatus: () -> Void = {}
     private var task: Task<Void, Never>?
     private var beat: Timer?
@@ -129,6 +132,11 @@ final class ScreenBridge {
                 guard note["to"] as? String == self.side, let species = note["species"] as? String, species.count < 40 else { return }
                 func num(_ k: String) -> Double { (note[k] as? NSNumber)?.doubleValue ?? 0 }
                 self.onWalk(Walk(species: species, y: num("y"), vx: num("vx"), vy: num("vy"), air: (note["air"] as? Bool) ?? false))
+                self.onStatus()
+            case "visitor":
+                guard note["to"] as? String == self.side, note["kind"] as? String == "ferry" else { return }
+                let riders = ((note["riders"] as? [Any]) ?? []).compactMap { $0 as? String }.filter { $0.count < 40 }.prefix(3)
+                self.onFerry(Array(riders), (note["y"] as? NSNumber)?.doubleValue ?? 0.5)
                 self.onStatus()
             default:
                 self.onStatus()

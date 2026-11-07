@@ -152,3 +152,57 @@ extension World {
     }
 }
 
+public enum ClaudePlanEvent: Equatable, Sendable {
+    case planSet(worker: Int, total: Int)
+    case stepDone(worker: Int, step: Int)
+    case planComplete(worker: Int)
+    case contextFilling(worker: Int, pct: Int)
+}
+
+extension World {
+    /// Claude wrote or updated its to-do list: `done` of `total` steps finished.
+    public func claudePlan(workerID: Int, total: Int, done: Int) {
+        guard let c = creature(id: workerID), let j = c.job, j.kind == .claude else { return }
+        let total = max(0, min(30, total)), done = max(0, min(total, done))
+        if total != j.planTotal { j.planTotal = total; planEvents.append(.planSet(worker: c.id, total: total)) }
+        if done > j.planDone {
+            for k in j.planDone..<done { planEvents.append(.stepDone(worker: c.id, step: k)) }
+            if c.isGrounded && c.activity != .work { c.set(.special, duration: min(0.4, c.animationLength(for: .special))) }
+        }
+        let wasComplete = j.planTotal > 0 && j.planDone >= j.planTotal
+        j.planDone = done
+        if total > 0 && done >= total && !wasComplete { planEvents.append(.planComplete(worker: c.id)) }
+    }
+
+    /// The status line reported how full the context window is.
+    public func claudeContext(workerID: Int, pct: Int) {
+        guard let c = creature(id: workerID), let j = c.job, j.kind == .claude else { return }
+        let before = j.contextPct ?? 0
+        j.contextPct = max(0, min(100, pct))
+        if before < 85 && pct >= 85 {
+            planEvents.append(.contextFilling(worker: c.id, pct: pct))
+            if c.isGrounded { c.set(.yawn, duration: c.animationLength(for: .yawn)) }
+        }
+    }
+
+    public func drainPlanEvents() -> [ClaudePlanEvent] {
+        defer { planEvents.removeAll() }
+        return planEvents
+    }
+}
+
+extension World {
+    /// Claude asked the Gremlets to celebrate: the worker dances and friends nearby join in.
+    public func celebrate(around id: Int?) {
+        let c = creature(id: id) ?? creatures.first
+        guard let c else { return }
+        if c.isGrounded { startDance(c, duration: 3.2, invite: true) }
+        for o in creatures where o !== c && o.isGrounded && isFree(o) && abs(o.pos.x - c.pos.x) < 500 && abs(o.pos.y - c.pos.y) < 200 {
+            startDance(o, duration: 3.0, invite: false)
+        }
+    }
+
+    /// Claude wants the user's eyes: the worker waves and its tree gets the waiting lantern until the next tool use.
+    public func requestReview(workerID: Int) { jobNeedsAttention(workerID) }
+}
+

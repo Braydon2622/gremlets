@@ -933,3 +933,36 @@ import Testing
         #expect(homes.count == 1 && homes.first?.project == "B")
     }
 }
+
+@Suite struct ClaudeCompanionTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func textLinesInAWindowBecomeLedgesUnlessCovered() {
+        let back = WindowInfo(id: 1, frame: Rect(x: 100, y: 100, w: 800, h: 600), spans: [WindowSpan(fromTop: 120, minX: 40, maxX: 400)])
+        let s = SurfaceBuilder.build(screens: [scr], windowsFrontToBack: [back])
+        #expect(s.contains { $0.ownerID == 1 && $0.kind == .windowLedge && abs($0.y - 580) < 0.01 && abs($0.minX - 140) < 0.01 && abs($0.maxX - 500) < 0.01 })
+        let front = WindowInfo(id: 2, frame: Rect(x: 50, y: 500, w: 300, h: 200))
+        let s2 = SurfaceBuilder.build(screens: [scr], windowsFrontToBack: [front, back])
+        let ledge = s2.first { $0.ownerID == 1 && $0.kind == .windowLedge }
+        #expect(ledge != nil && ledge!.minX >= 350, "the covered part is cut away")
+    }
+
+    @Test func planStepsAndContextShowOnTheWorker() throws {
+        let w = World(seed: 61)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 600, h: 400))])
+        _ = w.spawn(testSpecies(scale: 10), at: Vec2(600, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        let id = try #require(w.startJob(windowID: 1, craft: .garden))
+        w.claudePlan(workerID: id, total: 5, done: 0)
+        w.claudePlan(workerID: id, total: 5, done: 2)
+        w.claudePlan(workerID: id, total: 5, done: 5)
+        let ev = w.drainPlanEvents()
+        #expect(ev.filter { if case .stepDone = $0 { return true }; return false }.count == 5)
+        #expect(ev.contains(.planComplete(worker: id)))
+        w.claudeContext(workerID: id, pct: 60)
+        w.claudeContext(workerID: id, pct: 88)
+        #expect(w.drainPlanEvents() == [.contextFilling(worker: id, pct: 88)])
+        #expect(w.creatures.first { $0.id == id }?.job?.contextPct == 88)
+    }
+}

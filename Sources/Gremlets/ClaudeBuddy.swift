@@ -82,9 +82,12 @@ final class ClaudeBuddy {
                 let tool = ClaudeTool.from(q["tool"] ?? "")
                 world.claudeTool(workerID: c.id, tool)
                 if q["kind"] == "test" { world.claudeTestsPassed(workerID: c.id) }
+                if let t = q["todos"].flatMap(Int.init), let d = q["done"].flatMap(Int.init) { world.claudePlan(workerID: c.id, total: t, done: d) }
                 sessionLog.tool(session, edit: tool == .build, failed: false, test: q["kind"] == "test")
                 s.lastEvent = Date(); sessions[session] = s
             }
+        case "context":
+            if let s = sessions[session], let p = q["pct"].flatMap(Int.init) { world.claudeContext(workerID: s.creatureID, pct: p) }
         case "toolfail":
             if let s = sessions[session] { world.claudeToolFailed(workerID: s.creatureID, tests: q["kind"] == "test") }
             sessionLog.tool(session, edit: false, failed: true, test: q["kind"] == "test")

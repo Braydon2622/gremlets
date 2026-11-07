@@ -123,6 +123,11 @@ public final class Job {
     public internal(set) var lastToolTime = -100.0
     /// Weather over this session's island, following how Claude's work is going (until `weatherUntil`).
     public internal(set) var weather: SessionWeather = .clear
+    /// Claude's plan for this session: how many steps it has, and how many are done (a plank each, see the plan bridge).
+    public internal(set) var planTotal = 0
+    public internal(set) var planDone = 0
+    /// How full Claude's context window is (0...100), from the status line; nil until it reports.
+    public internal(set) var contextPct: Int?
     public internal(set) var weatherUntil = 0.0
     var failStreak = 0
 

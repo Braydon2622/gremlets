@@ -61,6 +61,11 @@ if event in ("tool", "toolfail"):
     import re
     if re.search(r"\b(test|tests|pytest|jest|vitest|mocha|rspec|go test|cargo test|swift test|xcodebuild test|npm t)\b", cmd):
         q["kind"] = "test"
+    # Claude's to-do list, as two numbers (steps, steps done): it builds the plan bridge. Never the steps' text.
+    todos = (d.get("tool_input") or {}).get("todos") if q["tool"] == "TodoWrite" else None
+    if isinstance(todos, list):
+        q["todos"] = str(len(todos))
+        q["done"] = str(sum(1 for t in todos if isinstance(t, dict) and t.get("status") == "completed"))
 if event == "attention":
     q["kind"] = "permission" if "permission" in (d.get("message") or "").lower() else "waiting"
 print(urllib.parse.urlencode(q))

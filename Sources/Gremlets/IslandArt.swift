@@ -849,3 +849,49 @@ enum SignArt {
         return cv.image
     }()
 }
+
+/// Claude's plan as a plank bridge, and the pack a worker carries as Claude's context fills up.
+enum PlanArt {
+    /// `total` planks in a row, the first `done` solid wood, the rest dashed outlines still to lay.
+    static func bridge(total: Int, done: Int) -> CGImage {
+        let n = max(1, total), pw = 5, gap = 1
+        var cv = PixelCanvas(n * (pw + gap), 4)
+        for k in 0..<n {
+            let x = k * (pw + gap)
+            if k < done {
+                cv.rect(x, 0, pw, 3, 0xC98B4A); cv.hspan(x, x + pw - 1, 2, 0xE0A866); cv.hspan(x, x + pw - 1, 0, 0x8A5A35)
+                cv.set(x + 1, 1, 0x4A4A4A); cv.set(x + pw - 2, 1, 0x4A4A4A)
+            } else {
+                for xx in x..<(x + pw) where (xx - x) % 2 == 0 { cv.set(xx, 2, 0xF1E4C8); cv.set(xx, 0, 0xF1E4C8) }
+                cv.set(x, 1, 0xF1E4C8); cv.set(x + pw - 1, 1, 0xF1E4C8)
+            }
+        }
+        return cv.image
+    }
+
+    /// A rucksack, bigger and rounder as Claude's context fills (`level` 0...4), its strap colour warming near full.
+    static func pack(level: Int) -> CGImage {
+        let l = max(0, min(4, level))
+        let w = 5 + l, h = 5 + l + l / 2
+        var cv = PixelCanvas(w + 2, h + 2)
+        let body: UInt32 = [0x6E8B5A, 0x7A8B4A, 0x9A7A3A, 0xC2562C, 0xD8455A][l]
+        cv.roundedRect(1, 0, w, h, radius: 2, body)
+        cv.hspan(1, w, h - 2, PixelCanvas.darken(body, 0.8))
+        cv.rect(2, 1, w - 2, 2, PixelCanvas.darken(body, 0.85))      // the pocket
+        cv.set(w / 2 + 1, 2, 0xF2C94C)                                 // its buckle
+        if l >= 3 { cv.set(w, h, 0xF1E4C8); cv.set(w + 1, h - 1, 0xF1E4C8) }   // something sticking out of the top
+        cv.outline(0.7)
+        return cv.image
+    }
+}
+
+/// The pack images, made once.
+enum PackLevelCache {
+    private static var cache: [Int: CGImage] = [:]
+    static func image(_ level: Int) -> CGImage {
+        if let c = cache[level] { return c }
+        let img = PlanArt.pack(level: level)
+        cache[level] = img
+        return img
+    }
+}

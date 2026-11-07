@@ -80,6 +80,8 @@ final class OverlayController {
     let seedBook = SeedBook()
     /// Called when the seed book or today's harvest changes (the menu shows them).
     var onGardenChange: () -> Void = {}
+    /// A Claude session's Gremlet was clicked: the app brings that session's window to the front.
+    var onWorkerClicked: (Creature) -> Void = { _ in }
     private var nextButterfly: [Int: Double] = [:]
     private struct PropState {
         var screen: Int
@@ -1810,6 +1812,7 @@ final class OverlayController {
             NSCursor.pop()
         } else {
             world.poke(c)
+            if c.job?.kind == .claude { onWorkerClicked(c) }
         }
         pressed = nil
         dragging = false

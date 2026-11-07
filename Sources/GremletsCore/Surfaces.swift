@@ -21,7 +21,15 @@ public struct WindowInfo: Equatable, Sendable {
     public var frame: Rect
     /// Ledges inside the window, as distances below its top edge (e.g. the bottom of a browser's tab and address bar).
     public var ledges: [Double]
-    public init(id: Int, frame: Rect, ledges: [Double] = []) { self.id = id; self.frame = frame; self.ledges = ledges }
+    /// Shorter ledges found in the window's content (the tops of text lines, labels, search fields), if enabled.
+    public var spans: [WindowSpan]
+    public init(id: Int, frame: Rect, ledges: [Double] = [], spans: [WindowSpan] = []) { self.id = id; self.frame = frame; self.ledges = ledges; self.spans = spans }
+}
+
+/// A short ledge inside a window: `fromTop` points below its top edge, from `minX` to `maxX` points from its left edge.
+public struct WindowSpan: Equatable, Sendable {
+    public var fromTop: Double, minX: Double, maxX: Double
+    public init(fromTop: Double, minX: Double, maxX: Double) { self.fromTop = fromTop; self.minX = minX; self.maxX = maxX }
 }
 
 public enum SurfaceBuilder {
@@ -63,6 +71,17 @@ public enum SurfaceBuilder {
                     inner = Span.subtract(inner, Span(front.frame.minX, front.frame.maxX))
                 }
                 for sp in inner where sp.width >= minSegment * 3 {
+                    out.append(Surface(ownerID: win.id, kind: .windowLedge, y: ly, minX: sp.lo, maxX: sp.hi))
+                }
+            }
+            // Spans in the content (text lines, search fields), where nothing in front covers them.
+            for s in win.spans where s.fromTop + 40 < win.frame.h {
+                let ly = y - s.fromTop
+                var inner = [Span(max(win.frame.minX + s.minX, screen.minX), min(win.frame.minX + s.maxX, screen.maxX))]
+                for front in windowsFrontToBack[..<i] where front.frame.minY < ly + 60 && front.frame.maxY > ly - 2 {
+                    inner = Span.subtract(inner, Span(front.frame.minX, front.frame.maxX))
+                }
+                for sp in inner where sp.width >= 50 {
                     out.append(Surface(ownerID: win.id, kind: .windowLedge, y: ly, minX: sp.lo, maxX: sp.hi))
                 }
             }

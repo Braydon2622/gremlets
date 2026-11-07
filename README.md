@@ -51,10 +51,21 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
   (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
   on your desktop, in a card and in the web habitat.
+- **Claude talks to the Gremlets.** With the MCP server (`scripts/install-claude-extras`), Claude Code can make
+  the Gremlet on its project say something, celebrate when something lands, lay out its plan as a row of planks on
+  the terminal (solid as steps finish; the to-do list does the same through the hook), and ask you to come and look.
+  The status line tells the Gremlets how full Claude's context is: the worker's pack swells and it yawns before a
+  compaction. Click a Claude session's Gremlet to jump to that terminal window.
+- **Opt-in, with your permission (menu → Your Mac):** Gremlets stand on lines of text and search fields inside the
+  front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
+  and boosts to Movies › Gremlets › Highlights (Screen Recording), and make windows wobble when they land hard
+  (Accessibility).
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, vines climb the screen's edges, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It
-  recedes slowly when Claude is idle. A Claude tab dragged out into its own window takes its tree and ivy with it
+  recedes slowly when Claude is idle. The Gremlets plant and water tufts of it along window tops, climb the vines
+  (up a window's strand onto its top, up the screen's edge), and weave mossy platforms into the edge vines.
+  The village keeps one home: each finished session's house replaces the last. A Claude tab dragged out into its own window takes its tree and ivy with it
   (macOS asks once to let Gremlets read which Terminal window holds the tab). (`gremlet moss [minutes]` to preview.)
 - **They help each other, and notice your Mac.** A window just too high to jump? A friend walks to its foot, braces,
   and heaves the climber up off its head ("Hup!"). Press ⌘⇧4 and everyone strikes a pose before you take the shot.
@@ -73,7 +84,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 127 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 132 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.

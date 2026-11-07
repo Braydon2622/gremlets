@@ -26,6 +26,8 @@ final class SpectacleRenderer {
     private var stackLayers: [Int: (layer: CALayer, n: Int)] = [:]
     private var signLayers: [Int: (layer: CALayer, sign: HeldSign)] = [:]
     private var mossLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var planLayers: [Int: (layer: CALayer, key: String)] = [:]
+    private var packLayers: [Int: (layer: CALayer, level: Int)] = [:]
     private var lastMoss: CFTimeInterval = 0
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
@@ -87,6 +89,7 @@ final class SpectacleRenderer {
         renderExpeditions()
         renderDoor()
         renderMoss()
+        renderPlans()
         renderRoutes()
         renderRopes()
         renderSpectacle()
@@ -912,6 +915,80 @@ final class SpectacleRenderer {
             flagLayers[f.id] = l
         }
         for (id, l) in flagLayers where !flagsAlive.contains(id) { fade(l, to: 0, remove: true); flagLayers[id] = nil }
+    }
+
+    /// Where plank `k` of a worker's plan bridge sits (global), or nil.
+    private func plankPoint(_ c: Creature, _ k: Int) -> Vec2? {
+        guard let j = c.job, j.planTotal > 0, let wid = j.windowID, let w = world.windows[wid] else { return nil }
+        let tree = world.bonsaiPlacements.first { $0.windowID == wid }
+        let fromRight = tree.map { $0.base.x < w.minX + w.w / 2 } ?? true
+        let step = 6 * artScale
+        let x = fromRight ? w.maxX - 14 - Double(j.planTotal - k) * step + step / 2 : w.minX + 14 + Double(k) * step + step / 2
+        return Vec2(x, w.maxY)
+    }
+
+    /// Claude's plan as a row of planks on its terminal's top edge, and the pack its Gremlet carries as context fills.
+    private func renderPlans() {
+        var alive = Set<Int>(), packs = Set<Int>()
+        for c in world.creatures {
+            guard let j = c.job, j.kind == .claude else { continue }
+            if j.planTotal > 0, let wid = j.windowID, let w = world.windows[wid], let p0 = plankPoint(c, 0) {
+                let x0 = p0.x - 3 * artScale
+                if let (si, pt) = local(Vec2(x0, w.maxY)) {
+                    alive.insert(c.id)
+                    var e = planLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = 1.45; popIn(l); return (l, "") }()
+                    attach(e.layer, si)
+                    let key = "\(j.planTotal)-\(j.planDone)"
+                    if e.key != key {
+                        let img = PlanArt.bridge(total: j.planTotal, done: j.planDone)
+                        e.layer.contents = img
+                        e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                        e.key = key
+                    }
+                    e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 2)
+                    planLayers[c.id] = e
+                }
+            }
+            if let pct = j.contextPct, let (si, pt) = local(c.pos + Vec2(-c.facing * c.size.x * 0.28, c.species.headTop * 0.42)) {
+                packs.insert(c.id)
+                let level = min(4, pct / 22)
+                var e = packLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0.5); l.zPosition = 1.05; return (l, -1) }()
+                attach(e.layer, si)
+                if e.level != level {
+                    let img = PackLevelCache.image(level)
+                    e.layer.contents = img
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                    if e.level >= 0 { boing(e.layer, amount: 0.15) }
+                    e.level = level
+                }
+                e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+                packLayers[c.id] = e
+            }
+        }
+        for (id, e) in planLayers where !alive.contains(id) { fade(e.layer, to: 0, remove: true); planLayers[id] = nil }
+        for (id, e) in packLayers where !packs.contains(id) { e.layer.removeFromSuperlayer(); packLayers[id] = nil }
+    }
+
+    func handle(_ events: [ClaudePlanEvent]) {
+        for e in events {
+            switch e {
+            case .planSet(let w, let total):
+                if total > 0 { overlay.showBubble("The plan: \(total) step\(total == 1 ? "" : "s")", on: w, seconds: 2.5) }
+            case .stepDone(let w, let k):
+                guard let c = world.creatures.first(where: { $0.id == w }), let p = plankPoint(c, k), let (si, pt) = local(p) else { continue }
+                overlay.burst([Effects.dust, Effects.sparkle], si: si, at: pt, count: 4, dx: -10...10, dy: 0...18, duration: 0.6)
+            case .planComplete(let w):
+                guard let c = world.creatures.first(where: { $0.id == w }), let j = c.job else { continue }
+                for k in 0..<j.planTotal {
+                    if let p = plankPoint(c, k), let (si, pt) = local(p) {
+                        overlay.burst([Effects.star], si: si, at: pt, count: 1, dx: -4...4, dy: 6...30, duration: 0.9, delay: Double(k) * 0.05)
+                    }
+                }
+                overlay.showBubble("Every step done! ✓", on: w, seconds: 3)
+            case .contextFilling(let w, let pct):
+                overlay.showBubble("My pack's \(pct)% full… Claude may compact soon", on: w, seconds: 5)
+            }
+        }
     }
 
     func handle(_ events: [MossEvent]) {

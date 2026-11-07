@@ -1,0 +1,26 @@
+#!/bin/bash
+# Connects Claude Code to the Gremlets beyond the hooks. Run it yourself: it changes Claude Code's own setup,
+# which a Claude session is not allowed to do for you.
+#
+#   1. The Gremlets MCP server: Claude can make a Gremlet speak, celebrate, show its plan as a plank bridge and ask
+#      you to come look (scripts/gremlets-mcp.py).
+#   2. The status line: shows the project, the model and how full Claude's context is, and tells the Gremlets so the
+#      worker's pack fills up (scripts/gremlet-statusline). Skipped if you already have a status line.
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+mkdir -p "$HOME/.local/bin"
+ln -sf "$HERE/gremlet-statusline" "$HOME/.local/bin/gremlet-statusline"
+claude mcp add -s user gremlets -- /usr/bin/python3 "$HERE/gremlets-mcp.py" && echo "✓ MCP server added (restart Claude Code to load it)"
+/usr/bin/python3 - <<'PY'
+import json, os
+p = os.path.expanduser("~/.claude/settings.json")
+d = json.load(open(p)) if os.path.exists(p) else {}
+if d.get("statusLine"):
+    print("• You already have a status line; left it alone. To use the Gremlets one, set statusLine.command to ~/.local/bin/gremlet-statusline")
+else:
+    d["statusLine"] = {"type": "command", "command": "~/.local/bin/gremlet-statusline"}
+    if "PreCompact" not in d.get("hooks", {}) and "SessionEnd" in d.get("hooks", {}):
+        d["hooks"]["PreCompact"] = d["hooks"]["SessionEnd"]   # the tree sheds leaves when Claude compacts
+    json.dump(d, open(p, "w"), indent=2)
+    print("✓ Status line set (and the PreCompact hook, if it was missing)")
+PY

@@ -93,6 +93,7 @@ public final class World {
     var lastVineBuild = -10.0
     /// Boosts and reactions to the Mac (see Teamwork.swift).
     var teamEvents: [TeamEvent] = []
+    var planEvents: [ClaudePlanEvent] = []
     var nextBoostAt = 180.0
     var lastPose = -100.0
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.

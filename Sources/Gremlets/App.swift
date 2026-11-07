@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
     private let bridge = ScreenBridge()
+    private let sense = ScreenSense()
     /// Watching the Mac: battery, the network, the screenshot tool.
     private let netMonitor = NWPathMonitor()
     private var online: Bool?
@@ -102,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         overlay = OverlayController(world: world, species: species)
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
+        overlay.onWorkerClicked = { [weak self] c in self?.focusSession(of: c) }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
         world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
@@ -161,6 +163,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.step(dt)
         let events = world.drainEvents()
         trackBond(events)
+        // A hard landing on a window makes it wobble (if you've let Gremlets nudge windows).
+        for case .landed(let id, let impact) in events where impact > 750 {
+            if let c = world.creatures.first(where: { $0.id == id }), let wid = c.groundOwner, wid >= 0 { sense.nudge(windowID: wid, by: min(8, impact / 160)) }
+        }
         overlay.handle(events)
         let groveEvents = world.drainGroveEvents()
         overlay.fx.handle(groveEvents)
@@ -203,9 +209,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         overlay.fx.handle(world.drainBuildEvents())
         overlay.fx.handle(world.drainTerrainEvents())
-        overlay.fx.handle(world.drainExpeditionEvents())
-        overlay.fx.handle(world.drainTeamEvents())
+        let runs = world.drainExpeditionEvents()
+        overlay.fx.handle(runs)
+        for e in runs {
+            if case .started(_, let goal, _) = e { sense.startClip(goal == .summit ? "Summit" : "Treasure run", seconds: 26) }
+        }
+        let team = world.drainTeamEvents()
+        overlay.fx.handle(team)
+        for e in team {
+            if case .boostStarted = e { sense.startClip("Boost", seconds: 12) }
+            if case .heave(_, let helper) = e, let h = world.creatures.first(where: { $0.id == helper }), let wid = world.windows.first(where: { abs($0.value.minX - h.pos.x) < 40 || abs($0.value.maxX - h.pos.x) < 40 })?.key {
+                sense.nudge(windowID: wid, by: 4)
+            }
+        }
         overlay.fx.handle(world.drainMossEvents())
+        overlay.fx.handle(world.drainPlanEvents())
+        sense.tick(frontWindow: frontWindowForSense())
+        sense.clipTick()
         watchTheMac()
         let mossNow = CACurrentMediaTime()
         if mossNow - lastMossSave > 30 { lastMossSave = mossNow; saveMoss() }
@@ -237,7 +257,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshEnvironment() {
         lastWindowPoll = CACurrentMediaTime()
-        let wins = WindowTracker.snapshot()
+        var wins = WindowTracker.snapshot()
+        if sense.standOnText {
+            for i in wins.indices { wins[i].spans = sense.spans(for: wins[i].id, size: CGSize(width: wins[i].frame.w, height: wins[i].frame.h)) }
+        }
         var sig: [Int: Rect] = [:]
         for w in wins { sig[w.id] = w.frame }
         if sig != lastWindowSignature {
@@ -504,6 +527,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             ph.submenu = phMenu
             menu.addItem(ph)
         }
+        // Your Mac: the opt-in features that need a permission.
+        let mac = NSMenuItem(title: "Your Mac", action: nil, keyEquivalent: "")
+        let macMenu = NSMenu()
+        for (title, key, on, granted) in [
+            ("Stand on Text and Buttons (Screen Recording)", "text", sense.standOnText, ScreenSense.hasScreenAccess),
+            ("Save Highlight Clips (Screen Recording)", "clips", sense.highlightClips, ScreenSense.hasScreenAccess),
+            ("Let Gremlets Nudge Windows (Accessibility)", "nudge", sense.nudgeWindows, ScreenSense.hasAccessibility),
+        ] {
+            let it = NSMenuItem(title: title + (on && !granted ? " · needs permission" : ""), action: #selector(toggleSense(_:)), keyEquivalent: "")
+            it.target = self; it.representedObject = key; it.state = on ? .on : .off
+            macMenu.addItem(it)
+        }
+        mac.submenu = macMenu
+        menu.addItem(mac)
         // Another screen (iPad, phone, a friend's laptop): a doorway at one edge of this screen.
         if !bridge.linked {
             let link = NSMenuItem(title: "Link Another Screen (iPad, Phone)…", action: nil, keyEquivalent: "")
@@ -880,6 +917,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if name == "wallet/proof" {
             guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
             return wallet?.handleProof(query) ?? (404, #"{"ok":false,"error":"wallet linking isn't set up in this build"}"#)
+        }
+        if name == "mcp" {
+            return handleMCP(query)
         }
         if name == "status" {
             let ids = world.creatures.map { "\"\($0.species.id)\"" }.joined(separator: ",")
@@ -1433,6 +1473,97 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         phone.pair()
         if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/pair") { NSWorkspace.shared.open(url) }
         rebuildMenu()
+    }
+
+    // MARK: Claude talking to the Gremlets (scripts/gremlets-mcp.py)
+
+    private func handleMCP(_ q: [String: String]) -> (Int, String) {
+        func esc(_ s: String) -> String { String(String(data: (try? JSONSerialization.data(withJSONObject: [s])) ?? Data(), encoding: .utf8)?.dropFirst().dropLast() ?? "\"\"") }
+        let project = Self.decoded(q["project"] ?? "")
+        let worker = world.creatures.first { $0.job?.kind == .claude && $0.job?.label == project }
+            ?? world.creatures.first { $0.job?.kind == .claude } ?? world.creatures.first
+        let text = String(Self.decoded(q["text"] ?? q["message"] ?? q["reason"] ?? q["current"] ?? "").prefix(80))
+        schedule(rate: 60)
+        switch q["action"] ?? "" {
+        case "say":
+            guard let w = worker, !text.isEmpty else { return (400, #"{"ok":false,"error":"nothing to say, or no Gremlets out"}"#) }
+            overlay.showBubble(text, on: w.id, seconds: 6)
+            return (200, #"{"ok":true,"gremlet":"\#(w.species.name)"}"#)
+        case "celebrate":
+            world.celebrate(around: worker?.id)
+            if let w = worker {
+                overlay.sparkle(at: w.pos + Vec2(0, w.size.y))
+                overlay.showBubble(text.isEmpty ? "🎉" : "🎉 " + text, on: w.id, seconds: 4)
+            }
+            return (200, #"{"ok":true}"#)
+        case "plan":
+            guard let w = worker, w.job?.kind == .claude, let total = q["total"].flatMap(Int.init), let done = q["done"].flatMap(Int.init) else {
+                return (409, #"{"ok":false,"error":"no Claude session Gremlet for this project right now (the plan shows on its terminal)"}"#)
+            }
+            world.claudePlan(workerID: w.id, total: total, done: done)
+            if !text.isEmpty { overlay.showBubble("Next: " + text, on: w.id, seconds: 4) }
+            return (200, #"{"ok":true}"#)
+        case "request_review":
+            guard let w = worker else { return (409, #"{"ok":false,"error":"no Gremlets out"}"#) }
+            world.requestReview(workerID: w.id)
+            overlay.showBubble(text.isEmpty ? "Come take a look?" : text, on: w.id, seconds: 10)
+            return (200, #"{"ok":true}"#)
+        case "status":
+            let list = world.creatures.map { c -> String in
+                let doing: String = c.job?.kind == .claude ? "helping Claude on \(c.job?.label ?? "a project")"
+                    : c.expedition != nil ? "on an expedition" : c.isClimbing ? "climbing a vine" : c.isAsleep ? "asleep" : "\(c.activity)"
+                return #"{"name":\#(esc(c.species.name)),"doing":\#(esc(doing))}"#
+            }.joined(separator: ",")
+            return (200, #"{"ok":true,"gremlets":[\#(list)],"moss_minutes":\#(Int(world.mossMinutes))}"#)
+        default:
+            return (400, #"{"ok":false,"error":"unknown action"}"#)
+        }
+    }
+
+    /// The front-most normal window of the front-most app (the one "stand on text" scans).
+    private func frontWindowForSense() -> (id: Int, frame: CGRect)? {
+        guard sense.standOnText, let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier, pid != ProcessInfo.processInfo.processIdentifier,
+              let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return nil }
+        for w in list where (w[kCGWindowLayer as String] as? Int) == 0 && (w[kCGWindowOwnerPID as String] as? Int32) == pid {
+            guard let id = w[kCGWindowNumber as String] as? Int, let b = w[kCGWindowBounds as String] as? [String: Double],
+                  let width = b["Width"], let height = b["Height"], width > 200, height > 150 else { continue }
+            return (id, CGRect(x: b["X"] ?? 0, y: b["Y"] ?? 0, width: width, height: height))
+        }
+        return nil
+    }
+
+    @objc private func toggleSense(_ sender: NSMenuItem) {
+        switch sender.representedObject as? String {
+        case "text":
+            sense.standOnText.toggle()
+            if sense.standOnText && !ScreenSense.hasScreenAccess { ScreenSense.requestScreenAccess() }
+        case "clips":
+            sense.highlightClips.toggle()
+            if sense.highlightClips && !ScreenSense.hasScreenAccess { ScreenSense.requestScreenAccess() }
+        case "nudge":
+            sense.nudgeWindows.toggle()
+            if sense.nudgeWindows && !ScreenSense.hasAccessibility { ScreenSense.requestAccessibility() }
+        default: break
+        }
+        refreshEnvironment()
+        rebuildMenu()
+    }
+
+    /// Clicking a Claude session's Gremlet brings its window to the front (Terminal: that exact window).
+    private func focusSession(of c: Creature) {
+        guard let wid = c.job?.windowID,
+              let info = (CGWindowListCopyWindowInfo([.optionIncludingWindow], CGWindowID(wid)) as? [[String: Any]])?.first,
+              let pid = info[kCGWindowOwnerPID as String] as? Int32, let app = NSRunningApplication(processIdentifier: pid) else { return }
+        overlay.showBubble("This way! →", on: c.id, seconds: 1.5)
+        if app.localizedName == "Terminal" {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            p.arguments = ["-e", "tell application \"Terminal\"", "-e", "set index of window id \(wid) to 1", "-e", "activate", "-e", "end tell"]
+            p.standardError = FileHandle.nullDevice
+            try? p.run()
+        } else {
+            app.activate()
+        }
     }
 
     // MARK: Overgrowth

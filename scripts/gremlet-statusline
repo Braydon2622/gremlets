@@ -1,0 +1,56 @@
+#!/bin/bash
+# Claude Code status line that also tells the Gremlets how full Claude's context window is: the Gremlet working on
+# the session carries a pack that fills up, and yawns when Claude is close to compacting.
+#
+# Install: copy to ~/.local/bin/gremlet-statusline (scripts/install-claude-extras does it), then in ~/.claude/settings.json:
+#   "statusLine": { "type": "command", "command": "~/.local/bin/gremlet-statusline" }
+#
+# Only the session id, the project folder's name and a percentage are sent, to 127.0.0.1.
+PORT="${GREMLETS_PORT:-47920}"
+input="$(cat)"
+printf '%s' "$input" | /usr/bin/python3 -c '
+import json, os, sys, urllib.parse, urllib.request
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("Gremlets"); sys.exit(0)
+model = ((d.get("model") or {}).get("display_name")) or ""
+cwd = (d.get("workspace") or {}).get("current_dir") or d.get("cwd") or ""
+project = os.path.basename(cwd.rstrip("/")) or "Claude"
+pct = None
+cw = d.get("context_window") or {}
+if isinstance(cw, dict):
+    for k in ("used_percentage", "used_percent", "percent_used"):
+        if isinstance(cw.get(k), (int, float)): pct = float(cw[k]); break
+if pct is None:
+    # Read the last usage figures from the transcript: what went into the most recent request is the context in use.
+    path = d.get("transcript_path") or ""
+    size = 1_000_000 if "1m" in (((d.get("model") or {}).get("id")) or "").lower() else 200_000
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2); n = f.tell(); f.seek(max(0, n - 400_000))
+            tail = f.read().decode("utf-8", "replace").splitlines()
+        for line in reversed(tail):
+            try: m = json.loads(line)
+            except Exception: continue
+            u = ((m.get("message") or {}).get("usage")) if isinstance(m, dict) else None
+            if isinstance(u, dict) and u.get("input_tokens") is not None:
+                used = u.get("input_tokens", 0) + u.get("cache_read_input_tokens", 0) + u.get("cache_creation_input_tokens", 0)
+                if used > size: size = 1_000_000   # a long-context session
+                pct = 100.0 * used / size
+                break
+    except Exception:
+        pass
+if pct is not None:
+    pct = max(0, min(100, int(round(pct))))
+    q = urllib.parse.urlencode({"event": "context", "session": d.get("session_id", "default"), "project": project, "pct": pct})
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:'"$PORT"'/claude?{q}", method="POST", headers={"X-Gremlets": "1"}), timeout=0.5)
+    except Exception:
+        pass
+bar = ""
+if pct is not None:
+    filled = pct // 10
+    bar = " · pack " + "▮" * filled + "▯" * (10 - filled) + f" {pct}%"
+print(f"🌱 {project}" + (f" · {model}" if model else "") + bar)
+'

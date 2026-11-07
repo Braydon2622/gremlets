@@ -41,7 +41,7 @@ public enum GroveKind: String, CaseIterable, Codable, Sendable {
     }
 
     /// Bigger plants need more sparks per level.
-    var cost: Double {
+    public var cost: Double {
         switch self {
         case .sunberry, .bouncecap: return 1
         case .lanternbloom, .snapjaw: return 1.2

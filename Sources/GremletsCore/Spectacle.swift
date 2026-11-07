@@ -97,9 +97,10 @@ public final class Spectacle {
     var events: [SpectacleEvent] = []
 
     public static let segmentCount = 16
-    public static let segmentSpacing = 34.0
-    public static let headRadius = 46.0
-    public static func radius(_ i: Int) -> Double { i == 0 ? headRadius : max(16, 38 - Double(i) * 1.4) }
+    public static let segmentSpacing = 44.0
+    public static let headRadius = 56.0
+    /// Body puffs taper from big thunderheads behind the head to wisps at the tail.
+    public static func radius(_ i: Int) -> Double { i == 0 ? headRadius : max(13, 33 - Double(i) * 1.3) }
 
     init(kind: SpectacleKind) {
         self.kind = kind

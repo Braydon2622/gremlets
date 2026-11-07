@@ -30,6 +30,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         set { UserDefaults.standard.set(newValue, forKey: "reminders") }
     }
     private var lastReminder = Date()
+    /// Big events (boss fights, meteor showers, festivals) on or off.
+    private var epicEvents: Bool {
+        get { UserDefaults.standard.object(forKey: "events.epic") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "events.epic") }
+    }
+    private let groveKey = "grove.v1"
     private var nextReminderIsWater = true
 
     // Ownership: NFT holders keep their Gremlets; everyone else can try any Gremlet in a demo.
@@ -70,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay = OverlayController(world: world, species: species)
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
+        world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
         setUpAccess()
         restoreRoster()
         setUpCompanion()
@@ -122,12 +129,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let events = world.drainEvents()
         trackBond(events)
         overlay.handle(events)
+        let groveEvents = world.drainGroveEvents()
+        overlay.fx.handle(groveEvents)
+        if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; return false }) { saveGrove() }
+        overlay.fx.handle(world.drainSpectacleEvents())
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         if overlay.hasBubbles { wanted = max(wanted, 30) }
+        if world.spectacle != nil || !world.playBalls.isEmpty { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
@@ -348,6 +360,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             m.isEnabled = false
             menu.addItem(m)
         }
+        menu.addItem(groveMenuItem())
         // The seed book: which plants you've grown so far.
         let book = overlay.seedBook
         // Phone: pair, send a Gremlet over, see who's visiting.
@@ -770,6 +783,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let item = NSMenuItem(); item.representedObject = c.id
             sendToPhone(item)
             return (200, #"{"ok":true}"#)
+        case "event":
+            let k = SpectacleKind(rawValue: query["kind"] ?? "boss") ?? .boss
+            guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "grove/feed":
+            let n = min(50, max(1, Int(query["tasks"] ?? "") ?? 1))
+            for _ in 0..<n { world.feedGrove() }
+            saveGrove()
+            return (200, #"{"ok":true,"tasks":\#(world.grove.tasks)}"#)
         case "wish":   // shh: a little easter egg, not in the help text
             wishOnAStar()
             return (200, #"{"ok":true,"wish":"granted"}"#)
@@ -864,8 +887,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rebuildMenu()
     }
 
+    private func saveGrove() {
+        if let d = world.grove.encoded() { UserDefaults.standard.set(d, forKey: groveKey) }
+    }
+
     private func housekeeping(elapsed: Double) {
         updatePresence()
+        world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
+        if Int(CACurrentMediaTime()) % 60 == 0 {
+            world.checkWishwillow(day: Int(Date().timeIntervalSinceReferenceDate / 86400))
+            saveGrove()
+        }
+        // Clear nights bring the odd meteor shower (about one every couple of hours of evening work).
+        if world.isNight && world.userActive && world.spectacle == nil && Double.random(in: 0..<1) < elapsed / (100 * 60) {
+            world.requestEvent(.meteors)
+        }
         focus.update()
         buddy.tick()
         dailyMoments()
@@ -1090,6 +1126,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         return ChatPage.html(portraitsJSON: "{" + portraits.joined(separator: ",") + "}")
     }
+
+    /// The Grove: each plant's level and what it does, how many Claude tasks until the next plot, and the events.
+    private func groveMenuItem() -> NSMenuItem {
+        let g = world.grove
+        let item = NSMenuItem(title: "Grove · \(g.tasks) Claude task\(g.tasks == 1 ? "" : "s")", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        func info(_ t: String, tip: String? = nil) { let i = NSMenuItem(title: t, action: nil, keyEquivalent: ""); i.isEnabled = false; i.toolTip = tip; sub.addItem(i) }
+        info("Every Claude task you finish grows every plant here.")
+        sub.addItem(.separator())
+        for p in g.plants {
+            let bar = String(repeating: "■", count: Int((p.levelProgress * 6).rounded())) + String(repeating: "□", count: 6 - Int((p.levelProgress * 6).rounded()))
+            info("\(p.kind.name)  Lv \(p.level)  \(p.level < 5 ? bar : "MAX")", tip: p.kind.power.prefix(1).uppercased() + p.kind.power.dropFirst())
+        }
+        if let next = g.nextUnlock {
+            let k = GroveKind.allCases[min(g.plants.count, GroveKind.allCases.count - 1)]
+            info("Next plot (\(k.name)) in \(next - g.tasks) more task\(next - g.tasks == 1 ? "" : "s")")
+        }
+        sub.addItem(.separator())
+        func action(_ t: String, _ sel: Selector, tag: Int = 0, tip: String? = nil) {
+            let i = NSMenuItem(title: t, action: sel, keyEquivalent: ""); i.target = self; i.tag = tag; i.toolTip = tip; sub.addItem(i)
+        }
+        action("Summon the Stormwyrm", #selector(summonEvent(_:)), tag: 0, tip: "A boss fight! Gremlets throw sunberries, bounce off the bouncecap and the snapjaw bites. Click it to help.")
+        action("Start a Meteor Shower", #selector(summonEvent(_:)), tag: 1, tip: "Shooting stars drop star shards. Every shard the Gremlets catch grows the grove.")
+        action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
+        let epic = NSMenuItem(title: "Surprise Events", action: #selector(toggleEpic), keyEquivalent: "")
+        epic.target = self
+        epic.state = epicEvents ? .on : .off
+        epic.toolTip = "Bosses show up every so often as Claude tasks pile up, meteor showers on some nights, festivals when a plant maxes out. Never during focus sessions or calls."
+        sub.addItem(epic)
+        item.submenu = sub
+        return item
+    }
+
+    @objc private func summonEvent(_ sender: NSMenuItem) {
+        let k: SpectacleKind = [.boss, .meteors, .festival][max(0, min(2, sender.tag))]
+        world.startEvent(k)
+        schedule(rate: 60)
+    }
+
+    @objc private func toggleEpic() { epicEvents.toggle(); rebuildMenu() }
 
     @objc private func clearGarden() {
         overlay.clearKeepsakes()

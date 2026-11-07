@@ -50,6 +50,12 @@ final class OverlayController {
     let world: World
     let species: [String: LoadedSpecies]
     private var screens: [Screen] = []
+    /// The grove and the special events (boss, meteors, festivals) are drawn by their own renderer.
+    private(set) var fx: SpectacleRenderer!
+    struct ScreenRef { let frame: CGRect; let root: CALayer; let scale: CGFloat }
+    var screenRefs: [ScreenRef] { screens.map { ScreenRef(frame: $0.frame, root: $0.root, scale: $0.panel.backingScaleFactor) } }
+    func screenIndexFor(_ p: Vec2) -> Int { screenIndex(for: p) }
+    private var shadows: [Int: CALayer] = [:]
     private var layers: [Int: CALayer] = [:]
     private var shownFrame: [Int: Int] = [:]
     private var layerScreen: [Int: Int] = [:]
@@ -144,6 +150,7 @@ final class OverlayController {
     init(world: World, species: [String: LoadedSpecies]) {
         self.world = world
         self.species = species
+        fx = SpectacleRenderer(overlay: self, world: world)
         rebuildScreens()
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.mouseMoved() }
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved], handler: handler) { monitors.append(g) }
@@ -166,6 +173,9 @@ final class OverlayController {
         }
         layerScreen.removeAll()
         for (_, l) in layers { l.removeFromSuperlayer() }
+        for (_, l) in shadows { l.removeFromSuperlayer() }
+        shadows.removeAll()
+        fx?.rebuild()
         refreshKeepsakes()
     }
 
@@ -222,7 +232,17 @@ final class OverlayController {
             let pos = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (c.pos.y - origin.y).rounded())
             if layer.position != pos { layer.position = pos }
             let flip: CGFloat = c.facing < 0 ? -1 : 1
-            if layer.affineTransform().a != flip { layer.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1)) }
+            // Squash and stretch: stretch when launching or falling fast, squash on landing; spin when tossed.
+            var sy: CGFloat = 1
+            if c.activity == .airborne { sy = 1 + CGFloat(min(0.16, abs(c.vel.y) / 7000)) }
+            else if c.activity == .land { sy = 0.84 }
+            else if c.activity == .crouch { sy = 0.9 }
+            var t = CGAffineTransform(scaleX: flip / sqrt(sy), y: sy)
+            if let since = fx.spinning[c.id] {
+                t = t.rotated(by: CGFloat((CACurrentMediaTime() - since) * 11) * flip)
+            }
+            if layer.affineTransform() != t { layer.setAffineTransform(t) }
+            updateShadow(c, si: si, origin: origin)
             let f = c.currentFrame
             if shownFrame[c.id] != f, f < sp.frames.count {
                 layer.contents = sp.frames[f]
@@ -236,6 +256,8 @@ final class OverlayController {
                 }
             }
         }
+        for id in shadows.keys where !alive.contains(id) { shadows[id]?.removeFromSuperlayer(); shadows[id] = nil }
+        fx.render()
         updateBubbles(alive: alive)
         updateProps()
         updateHover()
@@ -245,6 +267,33 @@ final class OverlayController {
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
         }
         CATransaction.commit()
+    }
+
+    /// A soft shadow on whatever is below a Gremlet: grounds it on the desktop, and shows where it'll land.
+    private func updateShadow(_ c: Creature, si: Int, origin: CGPoint) {
+        let groundY: Double?
+        if c.isGrounded { groundY = c.pos.y }
+        else { groundY = world.surfaces.filter { $0.supports(x: c.pos.x) && $0.y <= c.pos.y + 1 }.map(\.y).max() }
+        guard let gy = groundY, c.activity != .float, c.activity != .dragged || c.pos.y - gy < 400 else {
+            shadows[c.id]?.isHidden = true; return
+        }
+        let l = shadows[c.id] ?? {
+            let l = CALayer()
+            l.backgroundColor = NSColor(white: 0, alpha: 1).cgColor
+            l.zPosition = -1
+            l.actions = ["position": NSNull(), "bounds": NSNull(), "opacity": NSNull(), "hidden": NSNull(), "cornerRadius": NSNull()]
+            shadows[c.id] = l
+            return l
+        }()
+        if l.superlayer !== screens[si].root { l.removeFromSuperlayer(); screens[si].root.addSublayer(l) }
+        let h = max(0, c.pos.y - gy)
+        let k = max(0.35, 1 - h / 500)
+        let w = c.size.x * 0.46 * k
+        l.bounds = CGRect(x: 0, y: 0, width: w, height: 6 * k)
+        l.cornerRadius = 3 * k
+        l.position = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (gy - origin.y + 1).rounded())
+        l.opacity = Float(0.2 * k)
+        l.isHidden = false
     }
 
     private func makeLayer(for c: Creature) -> CALayer {
@@ -259,6 +308,7 @@ final class OverlayController {
 
     func handle(_ events: [WorldEvent]) {
         for e in events {
+            fx.handleWorld(e)
             switch e {
             case .poked(let id):
                 if let c = creature(id) { spawnEffect(Effects.heart, above: c, drift: 0) }
@@ -383,7 +433,7 @@ final class OverlayController {
         burst([Effects.heart, Effects.smallHeart, Effects.sparkle], si: si, at: p, count: 9, dx: -45...45, dy: 20...60, duration: 1.6, stagger: 0.06)
     }
 
-    private func localPoint(_ c: Creature, dy: Double = 0) -> (Int, CGPoint)? {
+    func localPoint(_ c: Creature, dy: Double = 0) -> (Int, CGPoint)? {
         guard let si = layerScreen[c.id] else { return nil }
         let o = screens[si].frame.origin
         return (si, CGPoint(x: c.pos.x - o.x, y: c.pos.y - o.y + dy))
@@ -1418,7 +1468,9 @@ final class OverlayController {
         if paused { return }
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
-        setClickThrough(world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil ? screenIndex(for: p) : nil)
+        let hot = world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil
+            || world.bossContains(p) || fx.plant(at: p) != nil
+        setClickThrough(hot ? screenIndex(for: p) : nil)
     }
 
     private func setClickThrough(_ activeScreen: Int?) {
@@ -1439,6 +1491,10 @@ final class OverlayController {
 
     func mouseDown(at p: CGPoint, time: Double) {
         guard !paused else { return }
+        if world.creature(at: vec(p)) == nil, world.hitBoss(at: vec(p)) { return }
+        if world.creature(at: vec(p)) == nil, propOwner(at: vec(p)) == nil, platformOwner(at: vec(p)) == nil, let i = fx.plant(at: vec(p)) {
+            fx.describePlant(i); return
+        }
         if world.creature(at: vec(p)) == nil, let owner = propOwner(at: vec(p)) { pressedProp = owner; return }
         if world.creature(at: vec(p)) == nil, let owner = platformOwner(at: vec(p)) { pressedPlatform = owner; return }
         guard let c = world.creature(at: vec(p)) else { return }

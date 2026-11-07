@@ -569,3 +569,30 @@ import Testing
         #expect(w.bonsaiBook["Old"]?.repoCommits == 400 && w.bonsaiBook["Old"]?.repoSince == twoYearsAgo)
     }
 }
+
+@Suite struct KiteTests {
+    @Test func kiteFliesOnItsStringAndComesDown() {
+        let w = World(seed: 5)
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.maxHobbies = 0
+        let a = w.spawn(testSpecies(scale: 12), at: Vec2(500, 40))
+        let b = w.spawn(testSpecies(scale: 12), at: Vec2(1300, 40))
+        for _ in 0..<30 { w.step(1.0 / 30) }
+        #expect(w.startKite(for: a.id))
+        var highest = 0.0
+        for _ in 0..<(30 * 10) {
+            w.step(1.0 / 30)
+            guard let k = w.kite else { break }
+            let hand = w.kiteHand(a)
+            #expect((k.pos - hand).length <= k.length + 14)
+            #expect(k.pos.y >= hand.y + 11.9)
+            highest = max(highest, k.pos.y - hand.y)
+        }
+        #expect(w.kite != nil)
+        #expect(highest > 60)
+        for _ in 0..<(30 * 50) where w.kite != nil { w.step(1.0 / 30) }
+        #expect(w.kite == nil)
+        #expect(w.startKite(for: b.id))
+    }
+}

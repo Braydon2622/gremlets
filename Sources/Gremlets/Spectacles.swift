@@ -62,7 +62,7 @@ final class SpectacleRenderer {
 
     func render() {
         renderGrove()
-        renderGliders()
+        renderGliders(); renderKite()
         renderSpirits()
         renderWind()
         renderCampfire()
@@ -249,6 +249,37 @@ final class SpectacleRenderer {
     // MARK: Storybook touches
 
     /// A big leaf held overhead while gliding.
+    private var kiteLayer: CALayer?
+    private var kiteString: CAShapeLayer?
+
+    /// The kite on its string, pointing away from the hand that holds it.
+    private func renderKite() {
+        guard let k = world.kite, let flyer = world.creatures.first(where: { $0.id == k.flyer }),
+              let (si, kp) = local(k.pos), let (si2, hp) = local(world.kiteHand(flyer)), si == si2 else {
+            if let l = kiteLayer { fade(l, to: 0, remove: true); kiteLayer = nil }
+            kiteString?.removeFromSuperlayer(); kiteString = nil
+            return
+        }
+        let l = kiteLayer ?? {
+            let l = pixelLayer(); l.contents = StoryArt.kite(seed: k.seed)
+            l.bounds = CGRect(x: 0, y: 0, width: 33, height: 66); l.anchorPoint = CGPoint(x: 0.5, y: 0.75); l.zPosition = 26
+            popIn(l); return l
+        }()
+        attach(l, si)
+        l.position = CGPoint(x: kp.x.rounded(), y: kp.y.rounded())
+        l.transform = CATransform3DMakeRotation(atan2(kp.y - hp.y, kp.x - hp.x) - .pi / 2, 0, 0, 1)
+        let s = kiteString ?? {
+            let s = CAShapeLayer(); s.strokeColor = NSColor(white: 0.2, alpha: 0.7).cgColor; s.fillColor = nil; s.lineWidth = 1
+            s.zPosition = 25; s.actions = ["path": NSNull(), "position": NSNull()]; return s
+        }()
+        attach(s, si)
+        let path = CGMutablePath()
+        path.move(to: hp)
+        path.addQuadCurve(to: kp, control: CGPoint(x: (hp.x + kp.x) / 2, y: (hp.y + kp.y) / 2 - 16))
+        s.path = path
+        kiteLayer = l; kiteString = s
+    }
+
     private func renderGliders() {
         var alive = Set<Int>()
         for c in world.creatures where c.gliding {

@@ -56,6 +56,36 @@ final class BonsaiRenderer {
         renderLedges()
         renderNests()
         renderNightLife()
+        renderWaitLanterns()
+    }
+
+    private var waitLanterns: [String: CALayer] = [:]
+
+    /// Claude is waiting for you: a lantern hangs from the project's tree until you answer, day or night.
+    private func renderWaitLanterns() {
+        var alive = Set<String>()
+        for p in world.bonsaiPlacements where p.slot < 0 {
+            guard let j = world.creatures.first(where: { $0.job?.label == p.project && $0.job?.kind == .claude })?.job, j.needsYou,
+                  let limb = p.layout.limbs.max(by: { abs($0.points.last?.x ?? 0) < abs($1.points.last?.x ?? 0) }), let tip = limb.points.last,
+                  let (si, pt) = local(p.base + Vec2(tip.x * 0.8, tip.y - 2) * p.scale) else { continue }
+            alive.insert(p.project)
+            let l = waitLanterns[p.project] ?? {
+                let l = pixelLayer(); l.contents = PropArt.lantern; l.anchorPoint = CGPoint(x: 0.5, y: 1)
+                l.bounds = CGRect(x: 0, y: 0, width: Double(PropArt.lantern.width) * artScale, height: Double(PropArt.lantern.height) * artScale)
+                l.shadowColor = NSColor(red: 1, green: 0.8, blue: 0.35, alpha: 1).cgColor; l.shadowOpacity = 0.9; l.shadowRadius = 9; l.shadowOffset = .zero
+                l.zPosition = 2.6
+                let pulse = CABasicAnimation(keyPath: "shadowRadius"); pulse.fromValue = 5; pulse.toValue = 14; pulse.duration = 1.1; pulse.autoreverses = true; pulse.repeatCount = .infinity
+                l.add(pulse, forKey: "pulse")
+                let swing = CABasicAnimation(keyPath: "transform.rotation.z"); swing.fromValue = -0.08; swing.toValue = 0.08; swing.duration = 1.6; swing.autoreverses = true; swing.repeatCount = .infinity
+                swing.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                l.add(swing, forKey: "swing")
+                popIn(l); return l
+            }()
+            attach(l, si)
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            waitLanterns[p.project] = l
+        }
+        for (k, l) in waitLanterns where !alive.contains(k) { fadeOut(l); waitLanterns[k] = nil }
     }
 
     private var nextFirefly: [String: CFTimeInterval] = [:]

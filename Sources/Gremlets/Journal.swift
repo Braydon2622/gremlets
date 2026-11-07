@@ -77,7 +77,7 @@ enum Journal {
     }
 
     /// The whole page: the postcard, every project's tree with its story, the last two weeks, the village and the mine.
-    static func page(world: World, species: [String: LoadedSpecies], log: DayLog) -> String {
+    static func page(world: World, species: [String: LoadedSpecies], log: DayLog, sessions: [SessionRecord] = []) -> String {
         let now = Date().timeIntervalSince1970
         let df = DateFormatter(); df.dateStyle = .full; df.timeStyle = .none
         let card = VillageSnapshot.render(world: world, species: species).map { pngDataURI($0.image) }
@@ -109,6 +109,15 @@ enum Journal {
         let gems = GemKind.allCases.compactMap { k -> String? in let n = g.gems[k.rawValue] ?? 0; return n > 0 ? "\(n) \(k.name.lowercased())" : nil }
         let items = VillageItem.allCases.filter { world.owns($0) }.map(\.name)
         let today = log[Date()]
+        let sf = DateFormatter(); sf.dateFormat = "EEE d MMM, HH:mm"
+        var sess = ""
+        for r in sessions.suffix(8).reversed() {
+            let maxM = max(1, r.minutes.map { $0.edits + $0.tools }.max() ?? 1)
+            let bars = r.minutes.map { m in "<i style=\"height:\(max(2, Int(Double(m.edits + m.tools) / Double(maxM) * 28)))px;opacity:\(m.edits > 0 ? 1 : 0.4)\"></i>" }.joined()
+            let extras = (r.testsPassed.isEmpty ? "" : " · \(r.testsPassed.count) green test\(r.testsPassed.count == 1 ? "" : "s")") + (r.helpers > 0 ? " · \(r.helpers) helper\(r.helpers == 1 ? "" : "s")" : "")
+            sess += "<div class=sess><div><b>\(esc(r.project))</b> · \(sf.string(from: Date(timeIntervalSince1970: r.started))) · \(SessionRecord.duration(r.seconds))<br><span class=muted>\(r.edits) edit\(r.edits == 1 ? "" : "s") · \(r.tasks.count) task\(r.tasks.count == 1 ? "" : "s")\(extras)</span></div><div class=strip title=\"edits and other tool calls, a bar per minute\">\(bars)</div></div>"
+        }
+        if sess.isEmpty { sess = "<p class=muted>No finished sessions yet. When a Claude Code session ends, its minute-by-minute strip shows here and a recap card is saved to Pictures › Gremlets › Sessions.</p>" }
         return """
         <!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
         <title>Garden journal</title>
@@ -129,6 +138,9 @@ enum Journal {
         .bar i{display:block;width:100%;max-width:34px;background:linear-gradient(#b8f2a0,#5db446);border-radius:5px 5px 2px 2px}
         .bar b{color:var(--ink);font-size:12px;margin-top:2px}
         footer{margin-top:40px;color:var(--muted);font-size:13px}
+        .sess{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:14px;background:var(--card);border-radius:12px;padding:10px 14px;margin:8px 0;align-items:center}
+        .strip{display:flex;gap:1px;align-items:flex-end;height:30px}.strip i{flex:1;background:#7fd36a;border-radius:1px 1px 0 0;display:block;min-width:1px}
+        @media (max-width:640px){.sess{grid-template-columns:1fr}}
         </style></head><body><main>
         <h1>Garden journal</h1><p class=muted>\(df.string(from: Date()))</p>
         <div class=stats>
@@ -142,6 +154,7 @@ enum Journal {
         \(card.map { "<div class=card><img src=\"\($0)\" alt=\"Your village\"></div>" } ?? "")
         <h2>Your projects' trees</h2><div class=trees>\(trees)</div>
         <h2>The last two weeks</h2><div class=chart>\(bars)</div>
+        <h2>Recent sessions</h2>\(sess)
         <h2>The village</h2>
         <p>\(houses.isEmpty ? "No buildings yet. A Claude session with four or more file edits leaves a house behind." : houses.map { "\(esc($0.project ?? "a project")) (\($0.blocks) edits\($0.day.map { ", \($0)" } ?? ""))\($0.owner.map { " · home of \(esc(species[$0]?.info.name ?? $0))" } ?? "")" }.joined(separator: " · "))</p>
         <p class=muted>\(gems.isEmpty ? "No gems yet (\(g.digCharges) dig\(g.digCharges == 1 ? "" : "s") earned)." : "Gems: " + gems.joined(separator: ", ") + ".") \(items.isEmpty ? "" : "From the merchant: " + items.joined(separator: ", ") + ".")</p>

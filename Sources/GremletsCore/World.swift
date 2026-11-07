@@ -84,6 +84,8 @@ public final class World {
     var adventureEvents: [AdventureEvent] = []
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
+    public internal(set) var kite: Kite?
+    var nextKiteAt = 0.0
     var pendingThrows: [(at: Double, from: Int, to: Int)] = []
     public var eventsAllowed = true
     var builtSurfaces: [Surface] = []
@@ -293,7 +295,7 @@ public final class World {
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()
         checkStartle()
-        updatePlay(dt)
+        updatePlay(dt); updateKite(dt)
         updateSpectacle(dt)
         updateSessionWeather()
     }

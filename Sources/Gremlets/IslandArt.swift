@@ -469,6 +469,29 @@ enum StoryArt {
         return cv.image
     }()
 
+    /// A paper kite with a ribbon tail, in one of four colourways, tail hanging below (rotated by the renderer).
+    static func kite(seed: UInt64) -> CGImage {
+        let ways: [(UInt32, UInt32, UInt32)] = [(0xE85D5D, 0xFFD45E, 0xFFF3C4), (0x4AA3E8, 0xB8E8FF, 0xFFFFFF), (0x8FD67A, 0xFFF08A, 0xF5FFE0), (0xB98CFF, 0xFFB6D9, 0xFFF0F8)]
+        let w = ways[Int(seed % 4)]
+        var cv = PixelCanvas(11, 22)
+        // Diamond: top at (5,21), sides at (0,15)/(10,15), bottom at (5,11).
+        for y in 11...21 {
+            let half = y <= 15 ? (y - 11) * 5 / 4 : (21 - y) * 5 / 6
+            for x in (5 - half)...(5 + half) { cv.set(x, y, (x + y) % 2 == 0 && x < 5 ? w.1 : w.0) }
+        }
+        cv.line(5, 11, 5, 21, w.2)
+        cv.line(0, 15, 10, 15, w.2)
+        // Tail: a wavy ribbon with three bows.
+        for y in 0..<11 { cv.set(5 + Int((sin(Double(y) * 0.9) * 1.6).rounded()), y, 0x6B4428) }
+        for (i, y) in [8, 5, 2].enumerated() {
+            let x = 5 + Int((sin(Double(y) * 0.9) * 1.6).rounded())
+            let col = [w.0, w.1, w.0][i]
+            cv.set(x - 1, y, col); cv.set(x + 1, y, col)
+        }
+        cv.outline(0.6)
+        return cv.image
+    }
+
     /// A shy night spirit: a round glowing seed with two leaf ears (original design).
     static func spirit(frame: Int) -> CGImage {
         Effects.pixels(frame % 2 == 0 ? [

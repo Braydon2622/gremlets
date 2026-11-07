@@ -782,7 +782,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
         server.pages["/journal"] = { [weak self] in
             guard let self else { return "" }
-            return Journal.page(world: self.world, species: self.species, log: self.dayLog)
+            return Journal.page(world: self.world, species: self.species, log: self.dayLog, sessions: self.buddy.sessionLog.recent)
         }
         overlay.onDoubleClick = { [weak self] id in self?.openChat(with: id) }
         overlay.icons = icons
@@ -933,6 +933,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = TreeCard.make(t, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "kite":
+            guard world.startKiteWithAnyone() else {
+                return (409, #"{"ok":false,"error":"nobody free to fly one right now"}"#)
+            }
+            return (200, #"{"ok":true}"#)
         case "wrapped":
             let m: WrappedPoster.Month
             if query["sample"] == "1" {

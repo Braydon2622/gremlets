@@ -175,8 +175,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
             if !showcase.running {
-                let leaves = growth.filter { if case .grew(_, "leaf", _) = $0 { return true }; return false }.count
-                if leaves > 0 { dayLog.add { $0.edits += leaves } }
+                var leavesByProject: [String: Int] = [:]
+                for case .grew(let p, "leaf", _) in growth { leavesByProject[p, default: 0] += 1 }
+                let leaves = leavesByProject.values.reduce(0, +)
+                if leaves > 0 {
+                    dayLog.add { d in
+                        d.edits += leaves
+                        var pr = d.projects ?? [:]
+                        for (p, n) in leavesByProject { pr[p, default: 0] += n }
+                        d.projects = pr
+                    }
+                }
             }
         }
         overlay.fx.handle(world.drainBuildEvents())
@@ -924,6 +933,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = TreeCard.make(t, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "wrapped":
+            let m: WrappedPoster.Month
+            if query["sample"] == "1" {
+                m = WrappedPoster.sample()
+            } else {
+                let parts = Self.decoded(query["month"] ?? "").split(separator: "-").compactMap { Int($0) }
+                let c = Calendar.current.dateComponents([.year, .month], from: Date())
+                let (y, mo) = parts.count == 2 && (1...12).contains(parts[1]) ? (parts[0], parts[1]) : (c.year ?? 2026, c.month ?? 1)
+                m = WrappedPoster.gather(year: y, month: mo, world: world, log: dayLog, sessions: buddy.sessionLog.recent)
+                if m.edits == 0 && m.tasks == 0 { return (404, #"{"ok":false,"error":"nothing logged for that month yet (try gremlet wrapped --sample)"}"#) }
+            }
+            guard let url = WrappedPoster.make(m, world: world) else { return (500, #"{"ok":false}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "snapshot":
             guard let url = VillageSnapshot.make(world: world, species: species) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
@@ -1218,6 +1240,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "chat": openChat(with: chatTarget(q["name"])?.id ?? 0)
             case "pair": pairPhone()
             case "journal": openJournal()
+            case "wrapped": saveWrapped()
             case "demo": playDemo()
             case "forest": saveForest()
             case "recap": saveRecap()
@@ -1349,6 +1372,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Play a Claude Session Demo", #selector(playDemo), tip: "A scripted 40-second Claude session on your front window: the tree takes root, edits build, helpers arrive, a storm then a rainbow, the house moves to the village. Nothing is kept. 'gremlet demo' records it too.")
         action("Save Forest Poster", #selector(saveForest), tip: "Every project's tree together on one hillside, with names and numbers. Saved to Pictures › Gremlets and copied.")
         action("Save Village Time-lapse", #selector(saveTimelapse), tip: "A postcard of the village is saved once a day (Pictures › Gremlets › Daily). This stitches them into a short video in Movies › Gremlets.")
+        action("Save This Month, Wrapped", #selector(saveWrapped), tip: "The month with Claude Code as one poster: the numbers, a calendar shaded by how much got done each day, the trees that grew. Saved to Pictures › Gremlets and copied.")
         action("Save Village Snapshot", #selector(saveSnapshot), tip: "Saves a picture of your village and its Claude stats to Pictures › Gremlets and copies it, ready to paste into a post.")
         action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
         let next = VillageItem.allCases.first { !world.owns($0) }
@@ -1474,6 +1498,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func playDemo() {
         if showcase.start() == nil { NSSound.beep() }
         schedule(rate: 60)
+    }
+
+    @objc private func saveWrapped() {
+        let c = Calendar.current.dateComponents([.year, .month], from: Date())
+        let m = WrappedPoster.gather(year: c.year ?? 2026, month: c.month ?? 1, world: world, log: dayLog, sessions: buddy.sessionLog.recent)
+        guard let url = WrappedPoster.make(m, world: world) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @objc private func saveSnapshot() {

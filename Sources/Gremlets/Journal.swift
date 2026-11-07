@@ -5,7 +5,11 @@ import GremletsCore
 /// page that shows it: open from the menu (Open Garden Journal) or at http://127.0.0.1:47920/journal. The log also
 /// feeds the morning greeting ("Yesterday you finished 9 Claude tasks…").
 final class DayLog {
-    struct Day: Codable { var tasks = 0; var edits = 0; var houses = 0; var gems = 0; var minutes = 0.0 }
+    struct Day: Codable {
+        var tasks = 0; var edits = 0; var houses = 0; var gems = 0; var minutes = 0.0
+        /// Edits per project that day (optional so older logs still decode).
+        var projects: [String: Int]?
+    }
     private let key = "daylog.v1"
     private(set) var days: [String: Day] = [:]
 

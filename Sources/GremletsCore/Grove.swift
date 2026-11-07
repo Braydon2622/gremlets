@@ -9,7 +9,7 @@ import Foundation
 /// |---|---|
 /// | Bouncecap | Its cap is a trampoline. Gremlets bounce sky high off it (and get launched at bosses). |
 /// | Skyvine | A beanstalk with leaf platforms that climbs higher up the screen every level. |
-/// | Lanternbloom | Glows after dark; Gremlets gather around it like a campfire. Lights up boss fights. |
+/// | Lanternbloom | Glows after dark; Gremlets gather around it like a campfire. |
 /// | Sunberry | Grows berries (more each level). Gremlets snack on them for energy and throw them at bosses. |
 /// | Snapjaw | A guardian plant that chomps bosses that fly too low, and fireflies at night. |
 /// | Wishwillow | Grants a wish a day from level 3 (the next seed anywhere is epic or better). |

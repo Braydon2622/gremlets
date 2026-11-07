@@ -40,7 +40,8 @@ final class ClaudeBuddy {
             if let c = world.creatures.first(where: { $0.id == id }), c.job?.craft == craft { lastCraft = craft }
             sessions[session] = Session(creatureID: id, project: project, lastEvent: Date(), finishedAt: nil)
             world.labelJob(workerID: id, project)
-            sessionLog.begin(session, project: project, before: world.bonsaiBook[project])
+            // The scripted demo is not a session of yours: it stays out of the log, the journal and the recap cards.
+            if !session.hasPrefix("showcase-") { sessionLog.begin(session, project: project, before: world.bonsaiBook[project]) }
             // The project's bonsai takes root on this window (a new session grows a new branch).
             world.bonsaiStart(project: project, session: session, windowID: windowID,
                               repoCommits: q["commits"].flatMap { Int($0) }, repoSince: q["since"].flatMap { Double($0) })

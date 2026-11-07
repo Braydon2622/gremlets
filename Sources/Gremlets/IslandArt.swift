@@ -533,3 +533,80 @@ enum AdventureArt {
         return cv.image
     }()
 }
+
+/// The traveling merchant and the things the village can buy from it.
+enum VillageArt {
+    /// A small hooded wanderer under a towering backpack hung with pots, a lantern and a bedroll (original design).
+    static func merchant(frame: Int) -> CGImage {
+        var cv = PixelCanvas(18, 26)
+        // Backpack stack
+        cv.rect(2, 8, 10, 14, 0x8A5A35); cv.rect(3, 9, 8, 12, 0xA9743F)
+        cv.rect(2, 21, 10, 3, 0xD9C08A)                       // bedroll on top
+        cv.blob(3, 14, 2, 2, base: 0x6E6A78)                  // pot
+        cv.rect(11, 15, 1, 3, 0x5E3B22); cv.blob(11.5, 14, 1.3, 1.3, base: 0xFFC845)   // lantern
+        // Hooded body
+        cv.blob(13, 9, 4.2, 6, base: 0x5A6E8A, light: 0x7F95B3, shade: 0x3E4E66)
+        cv.blob(14, 13.5, 3.2, 3, base: 0x5A6E8A, light: 0x7F95B3, shade: 0x3E4E66)
+        cv.rect(14, 12, 3, 2, 0x1E1A22); cv.set(15, 13, 0xFFE45C); cv.set(16, 13, 0xFFE45C)   // shadowed face, glinting eyes
+        // Walking stick and feet
+        cv.rect(17, 0, 1, 15, 0x7A5232)
+        if frame % 2 == 0 { cv.rect(11, 0, 2, 2, 0x3E4E66); cv.rect(14, 0, 2, 2, 0x3E4E66) } else { cv.rect(12, 0, 2, 2, 0x3E4E66); cv.rect(13, 1, 2, 1, 0x3E4E66) }
+        cv.outline(0.6)
+        return cv.image
+    }
+
+    static func item(_ i: VillageItem, night: Bool, frame: Int) -> CGImage {
+        switch i {
+        case .lamps:
+            var cv = PixelCanvas(50, 20)
+            for x in [4, 24, 44] {
+                cv.rect(x, 0, 1, 15, 0x3A3A44); cv.rect(x - 1, 0, 3, 1, 0x3A3A44)
+                cv.blob(Double(x) + 0.5, 16, 2, 2.2, base: night ? 0xFFF3A0 : 0xE8D7A0, light: 0xFFFFFF)
+                cv.rect(x - 2, 18, 5, 1, 0x3A3A44)
+            }
+            // A garland strung between them
+            for x in 4...44 { let y = 13 - Int(2 * sin(Double(x - 4) / 20 * .pi).magnitude); cv.set(x, y, (x % 4 == 0) ? (night ? 0xFFB45C : 0xC23B3B) : 0x6B4428) }
+            return cv.image
+        case .well:
+            var cv = PixelCanvas(22, 24)
+            cv.rect(2, 0, 18, 8, 0x8E8B83); for x in stride(from: 2, to: 20, by: 4) { cv.rect(x, 0, 1, 8, 0x6E6B65) }; cv.rect(2, 4, 18, 1, 0x6E6B65)
+            cv.rect(4, 8, 1, 10, 0x7A5232); cv.rect(17, 8, 1, 10, 0x7A5232)
+            for y in 0..<4 { cv.rect(1 + y, 18 + y, 20 - y * 2, 1, 0xC23B3B) }
+            cv.rect(10, 10, 2, 3, 0x8A5A35); cv.line(11, 13, 11, 17, 0xD9C08A)
+            cv.rect(3, 7, 16, 1, 0x3F7FE0)
+            cv.outline(0.6)
+            return cv.image
+        case .spring:
+            var cv = PixelCanvas(40, 12)
+            cv.blob(20, 4, 19, 4.5, base: 0x8E8B83, light: 0xB8B6AE, shade: 0x5E5B55)
+            cv.blob(20, 5, 16, 3, base: night ? 0x3F8FD0 : 0x6FC8E8, light: 0xBFF0FF)
+            for (x, y) in [(6.0, 8.0), (34, 8), (12, 9)] { cv.blob(x, y, 2.5, 2, base: 0x9C9488, light: 0xC9C2B4) }
+            cv.outline(0.7)
+            return cv.image
+        case .windmill:
+            var cv = PixelCanvas(26, 50)
+            for y in 0..<30 { let inset = y / 8; cv.rect(6 + inset, y, 14 - inset * 2, 1, y % 6 == 0 ? 0xB8B6AE : 0xE8DCC4) }
+            cv.rect(9, 0, 4, 7, 0x6B4428); cv.rect(14, 14, 3, 4, night ? 0xFFE08A : 0x9FD8F0)
+            for y in 30..<34 { cv.rect(5 + (y - 30), y, 16 - (y - 30) * 2, 1, 0xC23B3B) }
+            // Sails turn (two frames)
+            let c = (13.0, 31.0)
+            let arms: [(Double, Double)] = frame % 2 == 0 ? [(1, 1), (-1, -1), (1, -1), (-1, 1)] : [(1.4, 0), (-1.4, 0), (0, 1.4), (0, -1.4)]
+            for (dx, dy) in arms { cv.line(c.0, c.1, c.0 + dx * 11, c.1 + dy * 11, 0xF4EFE6, width: 2) }
+            cv.blob(c.0, c.1, 1.6, 1.6, base: 0x6B4428)
+            cv.outline(0.6)
+            return cv.image
+        case .arch:
+            var cv = PixelCanvas(30, 32)
+            for (x, _) in [(2, 0), (25, 0)] { cv.rect(x, 0, 3, 24, 0x7A5232) }
+            for k in 0..<28 {
+                let a = Double(k) / 27 * .pi
+                let x = 15 - cos(a) * 12, y = 22 + sin(a) * 8
+                cv.blob(x, y, 2.2, 2, base: 0x5E9E46, light: 0x8BD66A)
+                if k % 3 == 0 { cv.set(Int(x), Int(y) + 1, [0xFF8FB1, 0xFFE45C, 0xFFFFFF][k % 3 == 0 ? (k / 3) % 3 : 0]) }
+            }
+            if night { for k in stride(from: 2, to: 28, by: 5) { let a = Double(k) / 27 * .pi; cv.set(Int(15 - cos(a) * 12), Int(22 + sin(a) * 8) - 2, 0xFFF3A0) } }
+            cv.outline(0.7)
+            return cv.image
+        }
+    }
+}

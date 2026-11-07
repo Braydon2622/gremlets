@@ -65,6 +65,10 @@ public final class World {
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
     public internal(set) var ferry: Ferry?
     var nextFerryAt: Double?
+    /// The traveling merchant (when it's in the village).
+    public internal(set) var merchant: Merchant?
+    var nextMerchantAt: Double?
+    var merchantEvents: [MerchantEvent] = []
     var adventureEvents: [AdventureEvent] = []
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
@@ -267,6 +271,7 @@ public final class World {
         for c in creatures { c.prevPos = c.pos }
         carryRiders()
         updateFerry(dt)
+        updateMerchant(dt)
         // Lower creatures first so a carrier has moved before the friend standing on its head.
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()

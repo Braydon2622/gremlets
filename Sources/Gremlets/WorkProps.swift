@@ -576,6 +576,29 @@ enum PropArt {
     // MARK: What it's growing (hover text)
 
     static func describe(_ j: Job, dozing: Bool) -> String {
+        // Claude sessions: what Claude is up to, at a glance.
+        if j.kind == .claude {
+            var parts: [String] = [j.label ?? "Claude"]
+            if j.needsYou { parts.append("needs you") }
+            else if j.phase == .finished || j.phase == .leaving { parts.append("done ✓") }
+            else {
+                switch j.lastTool {
+                case .build?: parts.append("editing files")
+                case .look?: parts.append("reading")
+                case .run?: parts.append("running commands")
+                case .web?: parts.append("on the web")
+                case .spawn?: parts.append("sent out helpers")
+                case .plan?: parts.append("planning")
+                default: parts.append("thinking")
+                }
+            }
+            if j.blocks > 0 { parts.append("\(j.blocks) edit\(j.blocks == 1 ? "" : "s")") }
+            if j.helpers > 0 { parts.append("\(j.helpers) helper\(j.helpers == 1 ? "" : "s")") }
+            switch j.weather { case .storm: parts.append("stormy ⛈"); case .rain: parts.append("a failed command"); case .sunny: parts.append("tests passed ☀︎"); case .clear: break }
+            let mins = Int(j.workSeconds / 60)
+            if mins > 0 { parts.append("\(mins) min") }
+            return parts.joined(separator: " · ")
+        }
         if dozing { return "Zzz… the garden waits for you" }
         let g = j.garden
         if j.phase == .finished || j.phase == .leaving {

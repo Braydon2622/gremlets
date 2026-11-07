@@ -136,6 +136,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
         overlay.fx.handle(world.drainBuildEvents())
+        let trades = world.drainMerchantEvents()
+        overlay.fx.handle(trades)
+        if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
         let adventures = world.drainAdventureEvents()
         overlay.fx.handle(adventures)
         if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
@@ -145,7 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         if overlay.hasBubbles { wanted = max(wanted, 30) }
-        if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
+        if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.merchant != nil || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
@@ -802,6 +805,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "merchant":
+            guard world.callMerchant() else { return (409, #"{"ok":false,"error":"the merchant is already here"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "ferry":
             guard world.callFerry() else { return (409, #"{"ok":false,"error":"the ferry is already out, or there's no high window to dock at"}"#) }
             schedule(rate: 60)
@@ -1153,6 +1160,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let sub = NSMenu()
         func info(_ t: String, tip: String? = nil) { let i = NSMenuItem(title: t, action: nil, keyEquivalent: ""); i.isEnabled = false; i.toolTip = tip; sub.addItem(i) }
         info("Every Claude task you finish grows every plant here.")
+        let houses = g.village.filter { !$0.biome.hasPrefix("item:") && $0.biome != "mine" }.count
+        info("Today: \(world.tasksToday) Claude task\(world.tasksToday == 1 ? "" : "s") · village: \(houses) building\(houses == 1 ? "" : "s")")
         sub.addItem(.separator())
         for p in g.plants {
             let bar = String(repeating: "■", count: Int((p.levelProgress * 6).rounded())) + String(repeating: "□", count: 6 - Int((p.levelProgress * 6).rounded()))
@@ -1170,6 +1179,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
         action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
         action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
+        action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
+        let next = VillageItem.allCases.first { !world.owns($0) }
+        if let n = next {
+            let cost = n.cost.map { "\($0.value) \($0.key.rawValue)" }.joined(separator: ", ")
+            info("Next for the village: \(n.name) (\(cost))\(world.canAfford(n) ? " ✓ ready" : "")")
+        }
         let gems = GemKind.allCases.compactMap { k -> String? in let n = g.gems[k.rawValue] ?? 0; return n > 0 ? "\(k.name) \(n)" : nil }
         sub.addItem(.separator())
         info(gems.isEmpty ? "Mine: no gems yet (\(g.digCharges) dig\(g.digCharges == 1 ? "" : "s") earned)" : "Gems: " + gems.joined(separator: ", "),
@@ -1192,6 +1207,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleEpic() { epicEvents.toggle(); rebuildMenu() }
 
     @objc private func callFerry() { world.callFerry(); schedule(rate: 60) }
+    @objc private func callMerchant() { world.callMerchant(); schedule(rate: 60) }
 
     @objc private func toggleControls() {
         controls.enabled.toggle()

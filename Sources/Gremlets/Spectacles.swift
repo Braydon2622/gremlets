@@ -74,6 +74,7 @@ final class SpectacleRenderer {
         renderWind()
         renderCampfire()
         renderFerry()
+        renderMerchant()
         renderVillage()
         renderBridges()
         renderRopes()
@@ -368,6 +369,7 @@ final class SpectacleRenderer {
         for (n, h) in world.grove.village.enumerated() {
             guard let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }
             if h.biome == "mine" { renderMine(n, h, si: si, at: pt); continue }
+            if h.biome.hasPrefix("item:"), let item = VillageItem(rawValue: String(h.biome.dropFirst(5))) { renderItem(n, item, si: si, at: pt); continue }
             guard let b = Biome(rawValue: h.biome) else { continue }
             let stage = BuildArt.overgrowthStage(hours: h.builtAt.map { (Date().timeIntervalSince1970 - $0) / 3600 } ?? 0)
             let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)"
@@ -425,6 +427,77 @@ final class SpectacleRenderer {
             nextHouseSmoke[n] = now + Double.random(in: 0.5...0.9)
             let door = CGPoint(x: pt.x - 0, y: pt.y + 12)
             overlay.burst([Effects.dust, Effects.smallStar], si: si, at: door, count: 1, dx: -20...20, dy: 4...20, duration: 0.6)
+        }
+    }
+
+    private func renderItem(_ n: Int, _ item: VillageItem, si: Int, at pt: CGPoint) {
+        let night = world.isNight
+        let frame = item == .windmill ? Int(CACurrentMediaTime() * 2.5) % 2 : 0
+        let key = "\(item.rawValue)-\(night)-\(frame)-\(si)"
+        var entry = houses[n] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4.5; popIn(l); return (l, CALayer(), "") }()
+        attach(entry.layer, si)
+        if entry.key != key {
+            let img = VillageArt.item(item, night: night, frame: frame)
+            entry.layer.contents = img
+            entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+            entry.key = key
+            if item == .lamps || item == .arch {
+                entry.layer.shadowColor = NSColor(red: 1, green: 0.85, blue: 0.5, alpha: 1).cgColor
+                entry.layer.shadowRadius = night ? 8 : 0; entry.layer.shadowOpacity = night ? 0.8 : 0; entry.layer.shadowOffset = .zero
+            }
+        }
+        entry.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y)
+        houses[n] = entry
+        // The hot spring steams.
+        let now = CACurrentMediaTime()
+        if item == .spring, now >= (nextHouseSmoke[n] ?? 0) {
+            nextHouseSmoke[n] = now + Double.random(in: 0.6...1.2)
+            overlay.burst([Effects.steam], si: si, at: CGPoint(x: pt.x + .random(in: -40...40), y: pt.y + 14), count: 1, dx: -8...8, dy: 24...44, duration: 1.8)
+        }
+    }
+
+    private var merchantLayer: CALayer?
+
+    private func renderMerchant() {
+        guard let m = world.merchant, let floor = world.groveFloor, let (si, pt) = local(Vec2(m.x, floor.minY)) else {
+            if let l = merchantLayer { fade(l, to: 0, remove: true); merchantLayer = nil }
+            return
+        }
+        let l = merchantLayer ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 5; l.bounds = CGRect(x: 0, y: 0, width: 54, height: 78); popIn(l); return l }()
+        attach(l, si)
+        let walking = m.phase != .trading
+        l.contents = VillageArt.merchant(frame: walking ? Int(CACurrentMediaTime() * 4) % 2 : 0)
+        l.position = CGPoint(x: pt.x.rounded(), y: pt.y)
+        l.transform = CATransform3DMakeScale(m.facing < 0 ? -1 : 1, 1, 1)
+        merchantLayer = l
+    }
+
+    func handle(_ events: [MerchantEvent]) {
+        for e in events {
+            switch e {
+            case .sold(let item):
+                // A little shower of the gems it cost, over the merchant, then the new thing pops up with sparkles.
+                if let m = world.merchant, let floor = world.groveFloor, let (si, pt) = local(Vec2(m.x, floor.minY + 80)) {
+                    let gems = item.cost.flatMap { Array(repeating: AdventureArt.gem($0.key), count: $0.value) }
+                    overlay.burst(gems, si: si, at: pt, count: gems.count, dx: -30...30, dy: 10...50, duration: 1.2, stagger: 0.08)
+                }
+                if let n = world.grove.village.lastIndex(where: { $0.biome == item.houseKey }), let floor = world.groveFloor {
+                    let h = world.grove.village[n]
+                    if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + h.h * 0.5)) {
+                        overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 10, dx: -h.w * 0.6...h.w * 0.6, dy: 0...h.h * 0.8, duration: 1.2, stagger: 0.04)
+                    }
+                }
+            case .drink(let id):
+                if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = local(c.pos + Vec2(0, c.size.y * 0.8)) {
+                    overlay.burst([Effects.bubble, Effects.heart], si: si, at: pt, count: 2, dx: -10...10, dy: 14...30, duration: 1)
+                }
+            case .soak(let id):
+                if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = local(c.pos + Vec2(0, c.size.y * 0.5)) {
+                    overlay.burst([Effects.steam, Effects.heart, Effects.steam], si: si, at: pt, count: 6, dx: -24...24, dy: 20...60, duration: 2, stagger: 0.6)
+                }
+            case .arrived, .left:
+                break
+            }
         }
     }
 

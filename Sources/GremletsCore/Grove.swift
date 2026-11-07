@@ -201,7 +201,7 @@ public final class Grove: Codable {
             }
         }
         // Village roofs (plot = -1 - house index).
-        for (n, h) in village.enumerated() {
+        for (n, h) in village.enumerated() where h.biome != "item:spring" && h.biome != "item:lamps" {
             let x = floor.minX + h.x * floor.w
             out.append(GroveLedge(plot: -1 - n, y: floor.minY + h.h - 4, minX: x - h.w * 0.3, maxX: x + h.w * 0.3, bouncy: false))
         }
@@ -387,6 +387,8 @@ extension World {
             groveEvents.append(.berryPicked(i, by: c.id))
         case .bounce(let i):
             startGroveVisit(c, plot: i, task: .bounce)
+        case .drink, .soak:
+            arriveAtAmenity(c, t)
         case .home(let n):
             guard n < grove.village.count else { c.mining = false; return }
             c.homeUntil = c.mining ? clock + rng.range(6, 12) : clock + rng.range(isNight ? 60 : 25, isNight ? 180 : 70)
@@ -404,7 +406,7 @@ extension World {
 }
 
 /// Where a Gremlet is headed in the grove.
-enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int) }
+enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int) }
 
 extension World {
     func startHomeVisit(_ c: Creature, house n: Int) {

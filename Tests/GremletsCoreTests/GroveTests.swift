@@ -400,3 +400,46 @@ import Testing
         #expect(w.spectacle == nil, "once a day")
     }
 }
+
+@Suite struct MerchantTests {
+    @Test func merchantTradesGemsForVillageThingsThatGremletsUse() throws {
+        let w = World(seed: 41)
+        w.maxHobbies = 0
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let g = Grove()
+        let data = #"{"plants":[],"tasks":0,"tasksSinceBoss":0,"gems":{"amber":5,"sapphire":2}}"#
+        w.loadGrove(try #require(Grove.decode(Data(data.utf8))))
+        _ = g
+        #expect(w.nextPurchase == .lamps)
+        #expect(w.callMerchant())
+        var sold: [VillageItem] = []
+        for _ in 0..<(60 * 120) where w.merchant != nil {
+            w.step(1.0 / 60)
+            for e in w.drainMerchantEvents() { if case .sold(let i) = e { sold.append(i) } }
+        }
+        #expect(sold == [.lamps])
+        #expect(w.owns(.lamps) && w.grove.gems["amber"] == 2)
+        // Next visit: not enough amber left for the hot spring (needs 3), so nothing to buy.
+        #expect(w.nextPurchase == nil)
+    }
+
+    @Test func tiredGremletsSoakInTheHotSpring() throws {
+        let w = World(seed: 42)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [])
+        let data = #"{"plants":[],"tasks":0,"tasksSinceBoss":0,"gems":{"amber":3,"sapphire":2}}"#
+        w.loadGrove(try #require(Grove.decode(Data(data.utf8))))
+        w.buy(.spring)
+        #expect(w.owns(.spring))
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 20))
+        var soaked = false
+        for _ in 0..<(60 * 200) where !soaked {
+            if c.energy > 0.5 { c.energy = 0.3 }
+            w.step(1.0 / 60)
+            _ = w.drainEvents()
+            soaked = w.drainMerchantEvents().contains { if case .soak = $0 { return true }; return false }
+        }
+        #expect(soaked)
+    }
+}

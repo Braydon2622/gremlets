@@ -42,6 +42,7 @@ struct Brain {
         world.groveChoices(for: c, add: add)
         world.playChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
+        world.villageChoices(for: c, add: add)
         if world.spectacle == nil, c.job == nil {
             if world.bridgeCandidate(for: c) != nil { add("bridge", 0.7) { world.startBridge(c) } }
             if let a = world.grappleTarget(for: c) { add("grapple", 0.3 * (0.3 + e)) { world.startGrapple(c, to: a) } }

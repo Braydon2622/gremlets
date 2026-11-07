@@ -39,7 +39,8 @@ enum TreeCard {
         let mult = Double(max(3, min(9, Int(min(520.0 / Double(img.width), 430.0 / Double(img.height))))))
         let wpx = Double(img.width) * mult, hpx = Double(img.height) * mult
         let bx = 60 + Double(plank.width) * 3 / 2
-        ctx.draw(img, in: CGRect(x: bx - anchor.x * wpx, y: shelfY - anchor.y * hpx, width: wpx, height: hpx))
+        // The image's anchor is the soil line; the pot stands on the plank.
+        ctx.draw(img, in: CGRect(x: bx - anchor.x * wpx, y: shelfY + 4 + layout.potHeight * mult / 3 - anchor.y * hpx, width: wpx, height: hpx))
         // The story.
         let ns = NSGraphicsContext(cgContext: ctx, flipped: false)
         NSGraphicsContext.saveGraphicsState()

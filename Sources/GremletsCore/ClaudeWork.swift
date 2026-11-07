@@ -109,6 +109,13 @@ extension World {
         claudeEvents.append(.helperLeft(worker: c.id, count: j.helpers))
     }
 
+    /// Claude is compacting its context: the Gremlet crouches to tidy up and the project's tree sheds some leaves.
+    public func claudeCompact(workerID: Int) {
+        guard let c = creature(id: workerID), let j = c.job else { return }
+        c.workPose = "crouch"; j.poseTimer = 4
+        if let label = j.label, bonsaiPlacements.contains(where: { $0.project == label }) { bonsaiEvents.append(.shed(label)) }
+    }
+
     public func drainClaudeEvents() -> [ClaudeWorkEvent] {
         defer { claudeEvents.removeAll() }
         return claudeEvents

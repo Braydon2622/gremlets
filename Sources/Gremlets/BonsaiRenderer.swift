@@ -375,6 +375,13 @@ final class BonsaiRenderer {
                 }
             case .moved(let project, _):
                 moveBurst.insert(project)
+            case .shed(let project):
+                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), carrier(for: p) == nil else { continue }
+                for pad in p.layout.pads.prefix(10) {
+                    guard let (si, pt) = local(p.base + pad.center * p.scale) else { continue }
+                    overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 2, dx: -22...22, dy: -90 ... -30, duration: 1.8, stagger: 0.1)
+                }
+                if let l = trees[project]?.layer { boing(l) }
             case .milestone(let project, let text):
                 guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), carrier(for: p) == nil,
                       let (si, pt) = local(p.base + Vec2(0, p.layout.bounds.maxY * p.scale * 0.6)) else { continue }

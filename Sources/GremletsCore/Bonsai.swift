@@ -338,6 +338,8 @@ public enum BonsaiEvent: Equatable, Sendable {
     case moved(String, live: Bool)
     /// A round number reached: edits 50/100/250/500, sessions 5/10/25, tasks 25/100.
     case milestone(String, String)
+    /// Claude compacted its context: the tree lets a few leaves go (a picture only; nothing is lost from the record).
+    case shed(String)
 }
 
 /// A live Claude session: which window the tree is rooted on.

@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let world = World()
     private var overlay: OverlayController!
     private var statusItem: NSStatusItem!
+    private var defaultStatusImage: NSImage?
     private var timer: Timer?
     private var currentRate: Double = 0
     private var lastTick = CACurrentMediaTime()
@@ -71,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var buddy: ClaudeBuddy = {
         let b = ClaudeBuddy(world: world, overlay: overlay)
         b.onChange = { [weak self] in self?.rebuildMenu() }
+        b.onSessionEnded = { [weak self] r, after in self?.sessionEnded(r, after: after) }
         return b
     }()
     private var hideDuringCalls: Bool {
@@ -258,6 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let sp = species["kindlet"] ?? species.values.first, let frame = sp.frames.first {
             let img = NSImage(cgImage: frame, size: NSSize(width: 20, height: 20))
             statusItem.button?.image = img
+            defaultStatusImage = img
         } else {
             statusItem.button?.title = "G"
         }
@@ -901,6 +904,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = TimeLapse.build() else { return (404, #"{"ok":false,"error":"no daily postcards yet"}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "recap":
+            let name = Self.decoded(query["project"] ?? "")
+            if query["sample"] == "1" {
+                let (r, after) = SessionRecord.sample()
+                guard let url = SessionRecapCard.make(r, after: after, world: world, copy: true) else { return (500, #"{"ok":false}"#) }
+                return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+            }
+            guard let r = buddy.sessionLog.last(project: name) else { return (404, #"{"ok":false,"error":"no finished Claude sessions yet (try gremlet recap --sample)"}"#) }
+            guard let url = SessionRecapCard.make(r, after: world.bonsaiBook[r.project], world: world, copy: true) else { return (500, #"{"ok":false}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "forest":
             guard let url = ForestPoster.make(world: world, species: species) else { return (404, #"{"ok":false,"error":"no trees yet"}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
@@ -1078,6 +1091,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let needs = jobs.filter(\.needsYou).count
         let claudeLabel: String? = jobs.isEmpty ? nil : needs > 0 ? "\(needs) need\(needs == 1 ? "s" : "") you" : "\(jobs.count) growing"
         let title = focus.label ?? claudeLabel
+        // While a tree grows on a terminal it is the menu bar icon too, filling out as the session goes.
+        let liveTree = world.bonsaiPlacements.first { $0.slot < 0 }.flatMap { world.bonsaiBook[$0.project] }
+        let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month) } ?? defaultStatusImage
+        if statusItem.button?.image !== wantIcon { statusItem.button?.image = wantIcon }
         if title != lastTitle {
             statusItem.button?.title = title.map { " " + $0 } ?? ""
             statusItem.button?.imagePosition = .imageLeading
@@ -1203,6 +1220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "journal": openJournal()
             case "demo": playDemo()
             case "forest": saveForest()
+            case "recap": saveRecap()
             case "card":
                 let name = Self.decoded(q["project"] ?? "")
                 if let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name],
@@ -1376,6 +1394,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 sub.addItem(i)
             }
         }
+        if let last = buddy.sessionLog.last(project: nil) {
+            sub.addItem(.separator())
+            let rc = NSMenuItem(title: "Save Last Session Recap (\(last.project))", action: #selector(saveRecap), keyEquivalent: "")
+            rc.target = self
+            rc.toolTip = "The last Claude session as a card: the tree before and after, the numbers, and a minute-by-minute strip. Saved to Pictures › Gremlets › Sessions and copied."
+            sub.addItem(rc)
+        }
         sub.addItem(.separator())
         let side = NSMenuItem(title: "Nursery on the Right Side", action: #selector(toggleNurserySide), keyEquivalent: "")
         side.target = self
@@ -1389,6 +1414,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Query values arrive raw from the control server.
     static func decoded(_ raw: String) -> String {
         raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? raw
+    }
+
+    /// A Claude session ended: if it did real work, a recap card goes to Pictures › Gremlets › Sessions.
+    private func sessionEnded(_ r: SessionRecord, after: Bonsai?) {
+        guard !showcase.running, r.worthRecapping, SessionRecapCard.make(r, after: after, world: world) != nil else { return }
+        if let id = world.say() { overlay.showBubble("\(r.project): session recap saved (Pictures › Gremlets › Sessions)", on: id, seconds: 8) }
+        rebuildMenu()
+    }
+
+    @objc private func saveRecap() {
+        guard let r = buddy.sessionLog.last(project: nil), let url = SessionRecapCard.make(r, after: world.bonsaiBook[r.project], world: world, copy: true) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @objc private func saveForest() {

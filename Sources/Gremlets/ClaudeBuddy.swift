@@ -11,7 +11,10 @@ final class ClaudeBuddy {
     private let overlay: OverlayController
     private var lastCraft: Craft?
     let log = CreationLog()
+    let sessionLog = SessionLog()
     var onChange: () -> Void = {}
+    /// A session closed with its record and the project's tree as it is now.
+    var onSessionEnded: (SessionRecord, Bonsai?) -> Void = { _, _ in }
 
     var enabled: Bool {
         get { UserDefaults.standard.object(forKey: "claudeBuddy.enabled") as? Bool ?? true }
@@ -37,6 +40,7 @@ final class ClaudeBuddy {
             if let c = world.creatures.first(where: { $0.id == id }), c.job?.craft == craft { lastCraft = craft }
             sessions[session] = Session(creatureID: id, project: project, lastEvent: Date(), finishedAt: nil)
             world.labelJob(workerID: id, project)
+            sessionLog.begin(session, project: project, before: world.bonsaiBook[project])
             // The project's bonsai takes root on this window (a new session grows a new branch).
             world.bonsaiStart(project: project, session: session, windowID: windowID,
                               repoCommits: q["commits"].flatMap { Int($0) }, repoSince: q["since"].flatMap { Double($0) })
@@ -44,6 +48,7 @@ final class ClaudeBuddy {
             // Every finished Claude task grows the grove, and puts a flower on the project's bonsai.
             world.feedGrove()
             world.bonsaiGrow(project: project, .bloom)
+            sessionLog.task(session)
             let text = "\(project): Claude is done ✓"
             if var s = sessions[session], let c = worker(s.creatureID), let j = c.job, j.phase != .finished {
                 world.finishJob(c.id)
@@ -56,6 +61,7 @@ final class ClaudeBuddy {
             }
         case "attention":
             let permission = q["kind"] == "permission"
+            sessionLog.attention(session)
             if let s = sessions[session], !permission, let f = s.finishedAt, Date().timeIntervalSince(f) < 120 {
                 break   // "waiting for your input" right after "done" would be a double nag
             }
@@ -69,18 +75,25 @@ final class ClaudeBuddy {
         case "tool":
             // Claude used a tool: the Gremlet beside its window acts it out (an edit places a block, and so on).
             if var s = sessions[session], let c = worker(s.creatureID) {
-                world.claudeTool(workerID: c.id, ClaudeTool.from(q["tool"] ?? ""))
+                let tool = ClaudeTool.from(q["tool"] ?? "")
+                world.claudeTool(workerID: c.id, tool)
                 if q["kind"] == "test" { world.claudeTestsPassed(workerID: c.id) }
+                sessionLog.tool(session, edit: tool == .build, failed: false, test: q["kind"] == "test")
                 s.lastEvent = Date(); sessions[session] = s
             }
         case "toolfail":
             if let s = sessions[session] { world.claudeToolFailed(workerID: s.creatureID, tests: q["kind"] == "test") }
+            sessionLog.tool(session, edit: false, failed: true, test: q["kind"] == "test")
         case "helperdone":
             if let s = sessions[session] { world.claudeHelperDone(workerID: s.creatureID) }
+            sessionLog.helper(session)
+        case "compact":
+            if let s = sessions[session] { world.claudeCompact(workerID: s.creatureID) }
         case "end":
             if let s = sessions.removeValue(forKey: session) { world.endJob(s.creatureID); world.bonsaiEnd(project: s.project) }
+            close(session)
         default:
-            return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool, toolfail or helperdone"}"#)
+            return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool, toolfail, helperdone or compact"}"#)
         }
         return (200, #"{"ok":true}"#)
     }
@@ -90,16 +103,20 @@ final class ClaudeBuddy {
     func tick() {
         let now = Date()
         for (key, s) in sessions {
-            guard let c = worker(s.creatureID) else { world.bonsaiEnd(project: s.project); sessions[key] = nil; continue }
+            guard let c = worker(s.creatureID) else { world.bonsaiEnd(project: s.project); sessions[key] = nil; close(key); continue }
             if let f = s.finishedAt, now.timeIntervalSince(f) > 40, c.job != nil { world.endJob(c.id) }
-            if now.timeIntervalSince(s.lastEvent) > 45 * 60 { world.endJob(c.id); world.bonsaiEnd(project: s.project); sessions[key] = nil }
+            if now.timeIntervalSince(s.lastEvent) > 45 * 60 { world.endJob(c.id); world.bonsaiEnd(project: s.project); sessions[key] = nil; close(key) }
         }
     }
 
     private func worker(_ id: Int) -> Creature? { world.creatures.first { $0.id == id } }
 
+    private func close(_ session: String) {
+        if let r = sessionLog.end(session) { onSessionEnded(r, world.bonsaiBook[r.project]) }
+    }
+
     private func endAll() {
-        for s in sessions.values { world.endJob(s.creatureID); world.bonsaiEnd(project: s.project) }
+        for (key, s) in sessions { world.endJob(s.creatureID); world.bonsaiEnd(project: s.project); close(key) }
         sessions.removeAll()
     }
 }

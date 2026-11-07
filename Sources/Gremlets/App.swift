@@ -53,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hideHotKey: HotKey?
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
+    private let bridge = ScreenBridge()
+    private var lastDoorCheck: CFTimeInterval = 0
     private let icons = DesktopIcons()
     private let controls = AppControls()
     private let dayLog = DayLog()
@@ -194,6 +196,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainBuildEvents())
         overlay.fx.handle(world.drainTerrainEvents())
         overlay.fx.handle(world.drainExpeditionEvents())
+        // The doorway to a linked screen: open while the other screen is around; whoever walks through it goes over.
+        let doorNow = CACurrentMediaTime()
+        if doorNow - lastDoorCheck > 5 { lastDoorCheck = doorNow; updateDoor() }
+        for c in world.creaturesPastDoor() { crossOut(c) }
         let trades = world.drainMerchantEvents()
         overlay.fx.handle(trades)
         if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
@@ -248,7 +254,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             ids = UserDefaults.standard.stringArray(forKey: rosterKey) ?? []
         }
-        ids = ids.filter { species[$0] != nil && !phone.onPhone.contains($0) }
+        ids = ids.filter { species[$0] != nil && !phone.onPhone.contains($0) && !bridge.away.contains($0) }
         if ids.isEmpty {
             // First launch: your own Gremlets if you have any, otherwise the three starters as a demo.
             let owned = access.ownedSpecies.filter { species[$0] != nil }.sorted()
@@ -484,6 +490,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             phMenu.addItem(unlink)
             ph.submenu = phMenu
             menu.addItem(ph)
+        }
+        // Another screen (iPad, phone, a friend's laptop): a doorway at one edge of this screen.
+        if !bridge.linked {
+            let link = NSMenuItem(title: "Link Another Screen (iPad, Phone)…", action: nil, keyEquivalent: "")
+            link.toolTip = "Gremlets walk off one edge of your Mac and in from the edge of the other screen, and back."
+            let lm = NSMenu()
+            for (title, side) in [("Other screen is on the right", "right"), ("Other screen is on the left", "left")] {
+                let it = NSMenuItem(title: title, action: #selector(linkScreen(_:)), keyEquivalent: "")
+                it.target = self; it.representedObject = side
+                lm.addItem(it)
+            }
+            link.submenu = lm
+            menu.addItem(link)
+        } else {
+            let st = NSMenuItem(title: bridge.peerOnline ? "Screen link · open (\(bridge.side ?? "right") edge)" : "Screen link · waiting for the other screen…", action: nil, keyEquivalent: "")
+            let lm = NSMenu()
+            let away = bridge.away.compactMap { species[$0]?.info.name }
+            if !away.isEmpty {
+                let it = NSMenuItem(title: "On the other screen: " + away.joined(separator: ", "), action: nil, keyEquivalent: "")
+                it.isEnabled = false
+                lm.addItem(it)
+            }
+            if bridge.peerOnline {
+                let go = NSMenuItem(title: "Send One Over Now", action: #selector(crossNow), keyEquivalent: "")
+                go.target = self
+                lm.addItem(go)
+            }
+            let show = NSMenuItem(title: "Show Link Code…", action: #selector(showLinkCode), keyEquivalent: "")
+            show.target = self
+            lm.addItem(show)
+            lm.addItem(.separator())
+            let unlink = NSMenuItem(title: "Unlink Screen", action: #selector(unlinkScreen), keyEquivalent: "")
+            unlink.target = self
+            lm.addItem(unlink)
+            st.submenu = lm
+            menu.addItem(st)
         }
         let sb = NSMenuItem(title: "Seed Book (\(book.found)/\(PlantKind.allCases.count))", action: nil, keyEquivalent: "")
         let sbMenu = NSMenu()
@@ -784,6 +826,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
+        server.pages["/link"] = { [weak self] in self?.bridge.linkPage() ?? "" }
         server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
         server.pages["/journal"] = { [weak self] in
             guard let self else { return "" }
@@ -795,6 +838,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         icons.refresh()
         phone.onArrive = { [weak self] arrival in self?.arriveFromPhone(arrival) }
         phone.onStatus = { [weak self] in self?.rebuildMenu() }
+        bridge.onWalk = { [weak self] w in self?.arriveThroughBridge(w) }
+        bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
+        bridge.start()
         if phone.isPaired { phone.start() }
         server.start()
         control = server
@@ -834,8 +880,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let goal: String = { if case .treasure(let id) = ex.goal { return "chest \(id)" }; return "summit" }()
                 return #"{"gremlet":"\#(c.species.id)","goal":"\#(goal)","phase":"\#(ex.phase)","leg":\#(ex.index),"legs":[\#(ex.methods.map { "\"\($0.rawValue)\"" }.joined(separator: ","))],"x":\#(Int(c.pos.x)),"y":\#(Int(primaryTop - c.pos.y)),"activity":"\#(c.activity)"}"#
             }.joined(separator: ",")
+            let who = world.creatures.map { c -> String in
+                #"{"id":\#(c.id),"species":"\#(c.species.id)","activity":"\#(c.activity)","grounded":\#(c.isGrounded),"x":\#(Int(c.pos.x)),"y":\#(Int(primaryTop - c.pos.y)),"job":\#(c.job != nil),"home":\#(c.homeUntil != nil),"ground":\#(c.groundOwner.map(String.init) ?? "null")}"#
+            }.joined(separator: ",")
             let chests = world.chests.map { #"{"id":\#($0.id),"x":\#(Int($0.pos.x)),"y":\#(Int(primaryTop - $0.pos.y)),"golden":\#($0.golden),"carriedBy":\#($0.carriedBy.map(String.init) ?? "null")}"# }.joined(separator: ",")
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)],"expeditions":[\#(runs)],"chests":[\#(chests)],"flags":\#(world.flags.count),"ziplines":\#(world.ziplines.count),"stairs":\#(world.stairs.count),"rails":\#(world.rails.count)}"#)
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)],"expeditions":[\#(runs)],"chests":[\#(chests)],"who":[\#(who)],"door":\#(world.door.map { String(Int($0)) } ?? "null"),"flags":\#(world.flags.count),"ziplines":\#(world.ziplines.count),"stairs":\#(world.stairs.count),"rails":\#(world.rails.count)}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {
@@ -954,6 +1003,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startStairsWithAnyone() else {
                 return (409, #"{"ok":false,"error":"nowhere to build up to: a Gremlet standing on a floor or window needs another window's top 90 to 480 points above it, with room beside it"}"#)
             }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "link":
+            let side = (query["side"] == "left") ? "left" : "right"
+            let hab = Self.decoded(query["habitat"] ?? "")
+            if !hab.isEmpty { bridge.habitat = hab }
+            if !bridge.linked || bridge.side != side { bridge.create(side: side) }
+            updateDoor(); rebuildMenu()
+            return (200, #"{"ok":true,"url":"\#(bridge.inviteURL ?? "")","side":"\#(side)"}"#)
+        case "unlink":
+            bridge.unlink(); updateDoor(); rebuildMenu()
+            return (200, #"{"ok":true}"#)
+        case "cross":
+            guard world.door != nil else { return (409, #"{"ok":false,"error":"no doorway: link another screen first (gremlet link) and open the link there"}"#) }
+            guard world.sendThroughDoor() else { return (409, #"{"ok":false,"error":"nobody free to go over right now"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
         case "expedition":
@@ -1317,6 +1381,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func pairPhone() {
         phone.pair()
         if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/pair") { NSWorkspace.shared.open(url) }
+        rebuildMenu()
+    }
+
+    // MARK: Screen link (the doorway)
+
+    @objc private func linkScreen(_ sender: NSMenuItem) {
+        bridge.create(side: sender.representedObject as? String ?? "right")
+        updateDoor()
+        showLinkCode()
+    }
+
+    @objc private func showLinkCode() {
+        if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/link") { NSWorkspace.shared.open(url) }
+        rebuildMenu()
+    }
+
+    @objc private func unlinkScreen() {
+        bridge.unlink()
+        updateDoor()
+        rebuildMenu()
+    }
+
+    @objc private func crossNow() {
+        if world.sendThroughDoor() { schedule(rate: 60) }
+    }
+
+    /// The doorway is open while the other screen is around.
+    private func updateDoor() {
+        let want: Double? = bridge.linked && bridge.peerOnline ? (bridge.side == "left" ? -1 : 1) : nil
+        guard want != world.door else { return }
+        world.door = want
+        refreshEnvironment()
+        schedule(rate: 60)
+    }
+
+    /// A Gremlet walked out through the doorway: it carries on, on the other screen.
+    private func crossOut(_ c: Creature) {
+        guard let main = WindowTracker.screens().first else { return }
+        let usable = max(1, main.h - 80)
+        let y = ((c.pos.y - main.minY) / usable).clamped(0, 1)
+        let air = !c.isGrounded
+        bridge.cross(["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air])
+        let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
+        overlay.sparkle(at: Vec2(edgeX, c.pos.y + c.size.y * 0.5))
+        world.endJob(c.id)
+        world.remove(c.id)
+        bridge.away = bridge.away + [c.species.id]
+        saveRoster()
+        overlay.render()
+        rebuildMenu()
+    }
+
+    /// A Gremlet comes in from the other screen, through the doorway, keeping its stride.
+    private func arriveThroughBridge(_ w: ScreenBridge.Walk) {
+        guard let sp = species[w.species], let main = WindowTracker.screens().first else { return }
+        bridge.away = bridge.away.filter { $0 != w.species }
+        if world.door == nil { updateDoor() }
+        guard let c = world.arriveThroughDoor(sp.info, yFrac: w.y, vx: w.vx, vy: w.vy, airborne: w.air) else { return }
+        let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
+        overlay.sparkle(at: Vec2(edgeX, c.pos.y + c.size.y * 0.5))
+        saveRoster()
+        schedule(rate: 60)
+        let lines = ["Made it! ✨", "Hello, Mac!", "I walked here!", "Whoa, big screen."]
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }
+            self.overlay.showBubble(lines.randomElement()!, on: c.id, seconds: 2.4)
+        }
         rebuildMenu()
     }
 

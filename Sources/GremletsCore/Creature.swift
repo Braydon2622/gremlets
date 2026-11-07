@@ -70,6 +70,12 @@ public final class Creature {
     public internal(set) var expedition: Expedition?
     public internal(set) var zip: ZipRide?
     public var isZipping: Bool { zip != nil && activity == .float }
+    /// The doorway to another screen: decided whether to go through, and which way it went; `doorForced` is a
+    /// Gremlet that was sent. `arrivedAt` is when it last came in from the other screen.
+    var doorDecided = false
+    var doorChoice = false
+    var doorForced = false
+    var arrivedAt = -100.0
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?
     var grappleTime = 0.0

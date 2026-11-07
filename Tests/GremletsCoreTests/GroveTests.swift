@@ -782,3 +782,37 @@ import Testing
         #expect(landed2)
     }
 }
+
+@Suite struct DoorTests {
+    let scr = Rect(x: 0, y: 0, w: 1000, h: 800)
+
+    @Test func gremletsWalkOutThroughTheDoorAndInFromTheOtherScreen() throws {
+        let w = World(seed: 31)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(900, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        // No door: the edge is a wall.
+        c.facing = 1; c.set(.walk, duration: 5)
+        for _ in 0..<120 { w.step(1.0 / 60) }
+        #expect(c.pos.x <= 1000 && w.creaturesPastDoor().isEmpty)
+        // A door on the right, and this one is sent through.
+        w.door = 1
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        #expect(w.surfaces.contains { $0.kind == .floor && $0.maxX > 1100 }, "the floor runs on past the edge")
+        #expect(w.sendThroughDoor(preferring: c.id))
+        var out = false
+        for _ in 0..<(60 * 20) where !out { w.step(1.0 / 60); out = w.creaturesPastDoor().contains { $0 === c } }
+        #expect(out && c.pos.x > 1000)
+        w.remove(c.id)
+        // Someone walks in from the other screen and carries on along the floor.
+        let d = try #require(w.arriveThroughDoor(testSpecies(scale: 10), yFrac: 0, vx: 70, vy: 0, airborne: false))
+        #expect(d.pos.x > 1000 && d.facing == -1)
+        for _ in 0..<(60 * 4) { w.step(1.0 / 60) }
+        #expect(d.pos.x < 990 && d.isGrounded, "walked in onto the floor")
+        // A flyer comes in mid-air and lands.
+        let e = try #require(w.arriveThroughDoor(testSpecies(scale: 10), yFrac: 0.5, vx: 200, vy: 100, airborne: true))
+        for _ in 0..<(60 * 4) { w.step(1.0 / 60) }
+        #expect(e.pos.x < 1000 && e.isGrounded)
+    }
+}

@@ -18,6 +18,8 @@ final class SpectacleRenderer {
     private var railLayers: [Int: (rail: CALayer, cart: CALayer, px: Int, frame: Int)] = [:]
     private var nextCartSpark: [Int: CFTimeInterval] = [:]
     private var zipLayers: [Int: (line: CAShapeLayer, top: CALayer, bottom: CALayer)] = [:]
+    private var doorLayer: (glow: CAGradientLayer, line: CAShapeLayer, side: Double)?
+    private var routeLayers: [Int: (line: CAShapeLayer, until: CFTimeInterval)] = [:]
     private var pulleyLayers: [Int: CALayer] = [:]
     private var chestLayers: [Int: (layer: CALayer, key: String)] = [:]
     private var flagLayers: [Int: CALayer] = [:]
@@ -80,6 +82,8 @@ final class SpectacleRenderer {
         renderBridges()
         renderStairs(); renderRails()
         renderExpeditions()
+        renderDoor()
+        renderRoutes()
         renderRopes()
         renderSpectacle()
         renderBalls()
@@ -869,6 +873,7 @@ final class SpectacleRenderer {
             case .started(let by, let goal, _):
                 if case .treasure = goal { overlay.showBubble(["Treasure! Back soon.", "Ooh, a chest. Mine!", "Off to get it!"].randomElement()!, on: by, seconds: 2.5) }
                 else { overlay.showBubble(["To the top!", "Summit time.", "Going up!"].randomElement()!, on: by, seconds: 2.5) }
+                showRoute(of: by)
             case .legDone:
                 break
             case .gaveUp(let by):
@@ -905,6 +910,84 @@ final class SpectacleRenderer {
             case .zipLost:
                 break
             }
+        }
+    }
+
+    /// The doorway to a linked screen: a soft glow and a dashed line at the edge of the main screen's floor.
+    private func renderDoor() {
+        guard let d = world.door, let floor = world.groveFloor, let (si, pt) = local(Vec2(d > 0 ? floor.maxX : floor.minX, floor.minY)) else {
+            if let e = doorLayer { e.glow.removeFromSuperlayer(); e.line.removeFromSuperlayer(); doorLayer = nil }
+            return
+        }
+        var e = doorLayer ?? {
+            let glow = CAGradientLayer()
+            glow.colors = [NSColor(red: 0.66, green: 0.55, blue: 0.92, alpha: 0).cgColor, NSColor(red: 0.66, green: 0.55, blue: 0.92, alpha: 0.5).cgColor]
+            glow.startPoint = CGPoint(x: 0.5, y: 1); glow.endPoint = CGPoint(x: 0.5, y: 0)
+            glow.bounds = CGRect(x: 0, y: 0, width: 26, height: 150); glow.zPosition = -6
+            let line = CAShapeLayer()
+            line.strokeColor = NSColor(red: 0.66, green: 0.55, blue: 0.92, alpha: 1).cgColor
+            line.lineWidth = 3; line.lineDashPattern = [8, 6]; line.fillColor = nil; line.zPosition = -5.9
+            let p = CGMutablePath(); p.move(to: CGPoint(x: 0, y: 20)); p.addLine(to: CGPoint(x: 0, y: 150)); line.path = p
+            let dash = CABasicAnimation(keyPath: "lineDashPhase"); dash.fromValue = 0; dash.toValue = -14; dash.duration = 0.5; dash.repeatCount = .infinity
+            line.add(dash, forKey: "dash")
+            return (glow, line, d)
+        }()
+        attach(e.glow, si); attach(e.line, si)
+        e.glow.anchorPoint = CGPoint(x: d > 0 ? 1 : 0, y: 0)
+        e.glow.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+        e.line.position = CGPoint(x: (pt.x - d * 3).rounded(), y: pt.y.rounded())
+        e.side = d
+        doorLayer = e
+    }
+
+    /// The plan, drawn for a few seconds when an expedition sets out: a dotted line from the Gremlet through every
+    /// leg to the goal, so you can see the route it worked out across your windows before it takes it.
+    private func showRoute(of id: Int) {
+        guard let c = world.creatures.first(where: { $0.id == id }), let ex = c.expedition, !ex.legs.isEmpty,
+              let (si, start) = local(c.pos + Vec2(0, c.size.y * 0.5)) else { return }
+        let o = screens[si].frame.origin
+        let path = CGMutablePath()
+        path.move(to: start)
+        var last = c.pos
+        for leg in ex.legs {
+            let a = Vec2(leg.actX.clamped(leg.from.minX, leg.from.maxX), leg.from.y + 24)
+            let tx = leg.method == .walk || leg.method == .drop ? leg.actX : (leg.from.minX + leg.from.maxX) / 2 > (leg.to.minX + leg.to.maxX) / 2 ? leg.to.maxX - 30 : leg.to.minX + 30
+            let b = Vec2(tx.clamped(leg.to.minX + 10, leg.to.maxX - 10), leg.to.y + 24)
+            path.addLine(to: CGPoint(x: a.x - o.x, y: a.y - o.y))
+            // Arcs for the airborne moves, straight runs for the rest.
+            switch leg.method {
+            case .jump, .grapple, .glide, .zip, .drop:
+                let lift: Double = leg.method == .drop || leg.method == .glide || leg.method == .zip ? 20 : max(60, (b.y - a.y) * 0.5 + 40)
+                path.addQuadCurve(to: CGPoint(x: b.x - o.x, y: b.y - o.y), control: CGPoint(x: (a.x + b.x) / 2 - o.x, y: max(a.y, b.y) + lift - o.y))
+            default:
+                path.addLine(to: CGPoint(x: b.x - o.x, y: b.y - o.y))
+            }
+            last = b
+        }
+        _ = last
+        let l = routeLayers[id]?.line ?? {
+            let l = CAShapeLayer()
+            l.fillColor = nil; l.lineWidth = 2.5; l.lineCap = .round; l.lineJoin = .round
+            l.lineDashPattern = [1, 9]; l.zPosition = 25
+            l.actions = ["path": NSNull(), "opacity": NSNull()]
+            let flow = CABasicAnimation(keyPath: "lineDashPhase"); flow.fromValue = 0; flow.toValue = -10; flow.duration = 0.6; flow.repeatCount = .infinity
+            l.add(flow, forKey: "flow")
+            return l
+        }()
+        l.strokeColor = NSColor(red: 1, green: 0.93, blue: 0.6, alpha: 0.95).cgColor
+        l.shadowColor = NSColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 1).cgColor; l.shadowRadius = 2; l.shadowOpacity = 0.8; l.shadowOffset = .zero
+        l.path = path
+        l.opacity = 1
+        attach(l, si)
+        routeLayers[id] = (l, CACurrentMediaTime() + 4.5)
+    }
+
+    private func renderRoutes() {
+        let now = CACurrentMediaTime()
+        for (id, e) in routeLayers {
+            let left = e.until - now
+            if left <= 0 { e.line.removeFromSuperlayer(); routeLayers[id] = nil; continue }
+            e.line.opacity = Float(min(1, left / 1.2))
         }
     }
 

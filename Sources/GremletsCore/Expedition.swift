@@ -63,8 +63,8 @@ public struct Leg: Sendable {
     public let from: Surface, to: Surface
     public let method: LegMethod
     /// Where on `from` to be before acting, and which way the action goes.
-    let actX: Double
-    let dir: Double
+    public let actX: Double
+    public let dir: Double
 }
 
 public struct Expedition: Sendable {

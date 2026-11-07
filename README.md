@@ -37,7 +37,8 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   staircase, over a bridge, hook up to the next window, chest over its head, zip or glide back down, home to the
   village to open it (a gem for the merchant). When a landing goes wrong it plans again from where it ended up. Every
   so often one climbs to the highest point on the desktop just to plant its flag there. The route depends entirely on
-  where your windows happen to be. (`gremlet chest`, `gremlet expedition`.)
+  where your windows happen to be, and the plan flashes as a dotted line across the screen when it sets out.
+  (`gremlet chest`, `gremlet expedition`.)
 - **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
   ferry, wind that sweeps leaves along the floor, a kite on a free afternoon, shy night spirits.
 - **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
@@ -49,14 +50,19 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
   (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
   on your desktop, in a card and in the web habitat.
-- **Phone:** send a Gremlet through a portal to your phone and back.
+- **Walk off the Mac onto your iPad.** Link another screen (an iPad, a phone, a friend's laptop running the web
+  habitat; the Gremlets menu shows a QR code) and put it against one edge of your Mac. A Gremlet that wanders to that
+  edge walks straight off the Mac and in from the opposite edge of the other screen, keeping its stride and speed
+  (mid-air if it jumped), and wanders back the same way. A soft doorway glows at the edge while the other screen is
+  open. `gremlet link right`, `gremlet cross`.
+- **Phone:** or send a Gremlet through a portal to your phone and back.
 
 - **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon) ·
   **Try it in a browser:** [braydonhartai.com/gremlets](https://braydonhartai.com/gremlets/) · **Guide:** see below
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 124 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines and multi-leg expeditions, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 125 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.

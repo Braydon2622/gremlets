@@ -110,6 +110,10 @@ public final class World {
     var _gardenSpots: [Double] = []
     /// Pending wishes: the next seed planted is epic or better.
     public internal(set) var wishes = 0
+    /// A doorway at the edge of the main screen to a linked screen (an iPad, a phone: see the app's ScreenBridge):
+    /// +1 = the right edge, -1 = the left. The floor runs `doorDepth` points past that edge so Gremlets can walk out.
+    public var door: Double? { didSet { if door != oldValue { for c in creatures { c.doorDecided = false } } } }
+    public static let doorDepth = 120.0
     /// Calendar month (1-12) and whether it's night, set by the platform layer (seasonal and night-only plants).
     public var month = 6
     public var isNight = false
@@ -166,6 +170,9 @@ public final class World {
         self.windows = newWindows
         self.windowOrder = windowsFrontToBack.map(\.id)
         builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
+        if let d = door, let main = screens.first, let i = builtSurfaces.firstIndex(where: { $0.kind == .floor && $0.ownerID == -1 }) {
+            if d > 0 { builtSurfaces[i].maxX = main.maxX + World.doorDepth } else { builtSurfaces[i].minX = main.minX - World.doorDepth }
+        }
         validateBridges()
         validateStairs()
         validateRails()
@@ -462,8 +469,10 @@ public final class World {
     @discardableResult
     func move(_ c: Creature, _ dt: Double, speed: Double, on support: Surface, ledgeTurnChance: Double = 0.65) -> Bool {
         let nx = c.pos.x + c.facing * speed * dt
+        doorDecision(c)
         let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y + 1)
-        if nx < lo || nx > hi {
+        // The screen's edges are walls (only ever outward: something arriving through the doorway walks on in).
+        if (nx < lo && nx < c.pos.x) || (nx > hi && nx > c.pos.x) {
             c.facing *= -1
             return false
         }
@@ -724,7 +733,80 @@ public final class World {
                 if abs(s.minX - hi) < 1 && s.maxX > hi { hi = s.maxX; changed = true }
             }
         }
+        // The doorway to the other screen, for a Gremlet that has decided to go through.
+        if let d = door, let main = screens.first, y < main.maxY, c.doorChoice {
+            if d > 0, abs(hi - main.maxX) < 1 { hi += World.doorDepth } else if d < 0, abs(lo - main.minX) < 1 { lo -= World.doorDepth }
+        }
         return (lo + half, hi - half)
+    }
+
+    // MARK: The doorway to another screen
+
+    /// Nearing the doorway, a Gremlet decides once whether to go through (most think twice, so a screen doesn't
+    /// empty itself; just-arrived ones turn back).
+    func doorDecision(_ c: Creature) {
+        guard let d = door, let main = screens.first else { return }
+        let dist = d > 0 ? main.maxX - c.pos.x : c.pos.x - main.minX
+        if dist > 160 { if !c.doorForced { c.doorDecided = false }; return }
+        guard c.facing * d > 0, dist < 80, !c.doorDecided else { return }
+        c.doorDecided = true
+        c.doorChoice = canUseDoor(c) && clock - c.arrivedAt > 10 && rng.chance(0.3)
+    }
+
+    func canUseDoor(_ c: Creature) -> Bool {
+        c.job == nil && c.expedition == nil && c.stair == nil && c.rail == nil && c.building == nil && c.play == nil
+            && c.groveTask == nil && c.homeUntil == nil && !c.isAsleep
+    }
+
+    /// Gremlets that have walked (or flown) out through the doorway; the platform layer hands them to the other screen.
+    public func creaturesPastDoor() -> [Creature] {
+        guard let d = door, let main = screens.first else { return [] }
+        return creatures.filter { c in
+            let out = d > 0 ? c.pos.x - main.maxX : main.minX - c.pos.x
+            // Heading out, not just arrived from there (arrivals start a little outside the edge, walking in).
+            let outward = c.isGrounded || c.activity == .crouch ? c.facing * d > 0 : c.vel.x * d > 0
+            return out > c.size.x * 0.35 && outward && c.activity != .dragged && clock - c.arrivedAt > 1.5
+        }
+    }
+
+    /// A Gremlet arriving from the other screen through the doorway: walking in along the floor, or mid-air at
+    /// `yFrac` of the screen's height with the speed it left at.
+    @discardableResult
+    public func arriveThroughDoor(_ sp: SpeciesInfo, yFrac: Double, vx: Double, vy: Double, airborne: Bool) -> Creature? {
+        guard let main = screens.first else { return nil }
+        let d = door ?? 1
+        let x = d > 0 ? main.maxX + sp.pointSize.x * 0.4 : main.minX - sp.pointSize.x * 0.4
+        let y = airborne ? main.minY + yFrac.clamped(0, 1) * max(1, main.h - 80) : main.minY
+        let c = spawn(sp, at: Vec2(x, y))
+        c.facing = -d
+        c.arrivedAt = clock
+        c.doorDecided = true; c.doorChoice = false; c.doorForced = false
+        if airborne {
+            c.vel = Vec2(max(160, abs(vx)) * -d, vy)
+            c.set(.airborne)
+        } else {
+            c.groundOwner = -1
+            c.vel = .zero
+            c.set(.walk, duration: 2.5 + rng.range(0, 1))
+        }
+        return c
+    }
+
+    /// `gremlet cross`: a free Gremlet (the nearest to the door, or `id`) heads out through the doorway.
+    @discardableResult
+    public func sendThroughDoor(preferring id: Int? = nil) -> Bool {
+        guard let d = door, let main = screens.first else { return false }
+        let edge = d > 0 ? main.maxX : main.minX
+        let free = creatures.filter { canUseDoor($0) && $0.isGrounded }
+        let preferred = creature(id: id).flatMap { p in free.contains(where: { $0 === p }) ? p : nil }
+        guard let c = preferred ?? free.min(by: { abs($0.pos.x - edge) < abs($1.pos.x - edge) }) else { return false }
+        endSocial(c)
+        c.visitingID = nil; c.tendX = nil; c.targetX = nil
+        c.doorDecided = true; c.doorChoice = true; c.doorForced = true
+        c.facing = d
+        c.edgeDecisionMade = false
+        c.set(.walk, duration: 60)
+        return true
     }
 
     /// Launch velocity to land on `s` near x, arcing `apexExtra` above it.

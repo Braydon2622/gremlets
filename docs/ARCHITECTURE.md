@@ -198,7 +198,15 @@ Everything the Gremlets build lives in the engine as plain data and becomes surf
   wherever it is, up to three times) and `expeditionDecide` whenever the creature's current activity ends (walk to
   the acting spot, then act). Chests (`spawnChest`), summit flags and ziplines ride along with their windows
   (`validateChests/Flags/Zips`) and go when the window goes. A zipline ride reuses the `.float` activity (the dangling
-  pose) with its own integrator, `updateZip`.
+  pose) with its own integrator, `updateZip`. `SpectacleRenderer.showRoute` draws the plan for a few seconds when a
+  run starts.
+- **The doorway** (`World.door`, `ScreenBridge.swift`): the Mac can join the web habitat's "screen bridge" room
+  (`web/js/bridge.js`: a random room code, tiny `walk`/`hello` notes through the ntfy.sh relay). While the other screen
+  is open the main floor runs `doorDepth` past the linked edge and `horizontalLimits` lets a Gremlet that has decided to
+  go through (`doorDecision`: a 30% choice near the edge, never while busy) walk out; `creaturesPastDoor` hands it to
+  the app, which sends its species, height, speed and whether it was airborne, and removes it. `arriveThroughDoor`
+  spawns one coming the other way just outside the edge, walking in or mid-air. The web side needed no changes: it
+  already speaks this protocol between two browser screens.
 - **Bonsai** (`Bonsai.swift`): one `Bonsai` record per project, grown by `ClaudeBuddy` events. `BonsaiGeometry.layout`
   is a pure function of the record (seeded by an FNV-1a hash of the project name), so the same work always grows the
   same tree and the app, the postcard, the journal and the web port all draw it identically. `rebuildAttached()`

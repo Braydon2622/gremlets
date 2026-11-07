@@ -1139,6 +1139,14 @@ final class OverlayController {
     }
 
     /// A swirling portal (to and from the phone).
+    /// A little burst of sparkles at a world point (a Gremlet slipping through the doorway to another screen).
+    func sparkle(at p: Vec2) {
+        let si = screenIndexFor(p)
+        guard si < screens.count else { return }
+        let o = screens[si].frame.origin
+        burst([Effects.sparkle, Effects.smallStar], si: si, at: CGPoint(x: p.x - o.x, y: p.y - o.y), count: 6, dx: -30...30, dy: -20...40, duration: 0.8, stagger: 0.04)
+    }
+
     func portal(at p: Vec2) {
         guard !screens.isEmpty else { return }
         let si = screenIndex(for: p)

@@ -120,9 +120,24 @@ extension World {
         a.ownerID == b.ownerID && abs(a.y - b.y) < 3 && a.minX <= b.maxX + 1 && a.maxX >= b.minX - 1
     }
 
-    /// Something to land on between two heights at `x` (so a drop wouldn't reach `to`).
+    /// Something to land on between two heights at `x` (so a drop wouldn't reach `to`): any platform at all, not just
+    /// the ones worth planning through (a narrow roof catches a falling Gremlet just the same).
     func blocked(x: Double, from top: Double, to bottom: Double, nodes: [Surface]) -> Bool {
-        nodes.contains { $0.y < top - 1 && $0.y > bottom + 1 && $0.supports(x: x) }
+        surfaces.contains { $0.y < top - 1 && $0.y > bottom + 1 && $0.supports(x: x) && !World.isCartOwner($0.ownerID) }
+    }
+
+    /// The nodes to plan over, plus wherever we're standing and wherever the goal is (either may be a perch too
+    /// narrow to count as a node, like a roof ridge).
+    func planNodes(start: Surface, also: Surface? = nil) -> [Surface] {
+        var nodes = routeNodes()
+        if !nodes.contains(where: { sameNode($0, start) }) { nodes.append(start) }
+        if let a = also, !nodes.contains(where: { sameNode($0, a) }) { nodes.append(a) }
+        return nodes
+    }
+
+    /// The platform a chest sits on.
+    func perch(of ch: Chest) -> Surface? {
+        surfaces.first { abs($0.y - ch.pos.y) < 3 && $0.supports(x: ch.pos.x) && !World.isCartOwner($0.ownerID) }
     }
 
     /// The cheapest way (in seconds) from `a` straight to `b`, if there is one.
@@ -182,7 +197,10 @@ extension World {
     }
 
     /// Dijkstra over the nodes. `goal` picks the destination; with `summit` the farthest-up node reached wins.
-    func route(for c: Creature, from start: Surface, nodes: [Surface], goal: ExpeditionGoal) -> [Leg]? {
+    func route(for c: Creature, from start: Surface, nodes given: [Surface], goal: ExpeditionGoal) -> [Leg]? {
+        var nodes = given
+        if !nodes.contains(where: { sameNode($0, start) }) { nodes.append(start) }
+        if case .treasure(let id) = goal, let ch = chests.first(where: { $0.id == id }), let p = perch(of: ch), !nodes.contains(where: { sameNode($0, p) }) { nodes.append(p) }
         guard let s = nodes.firstIndex(where: { sameNode($0, start) }) else { return nil }
         let n = nodes.count
         var dist = Array(repeating: Double.infinity, count: n)
@@ -240,7 +258,7 @@ extension World {
     @discardableResult
     public func startExpedition(_ c: Creature, _ goal: ExpeditionGoal) -> Bool {
         guard c.expedition == nil, c.job == nil, c.isGrounded, let support = supportingSurface(for: c) else { return false }
-        let nodes = routeNodes()
+        let nodes = planNodes(start: support)
         var legs: [Leg] = []
         var phase = Expedition.Phase.outbound
         switch goal {
@@ -351,9 +369,8 @@ extension World {
 
     func routeHome(for c: Creature, from s: Surface) -> [Leg]? {
         guard let home = homeFloor else { return nil }
-        let nodes = routeNodes()
+        let nodes = planNodes(start: s)
         guard let hi = nodes.firstIndex(where: { sameNode($0, home) }) else { return nil }
-        // Reuse the planner by aiming at a chest-like point on the floor: plan to the node directly.
         return routeTo(nodeIndex: hi, for: c, from: s, nodes: nodes)
     }
 
@@ -386,7 +403,7 @@ extension World {
     func replan(_ c: Creature, _ ex: inout Expedition, from s: Surface) {
         ex.replans += 1
         guard ex.replans <= 3 else { giveUp(c); return }
-        let nodes = routeNodes()
+        let nodes = planNodes(start: s)
         let r: [Leg]?
         switch ex.phase {
         case .homebound: r = routeHome(for: c, from: s)
@@ -477,7 +494,7 @@ extension World {
         case .glide:
             startGlide(c, direction: leg.dir)
         case .climb:
-            if let plan = stairPlan(from: support, to: leg.to, nodes: routeNodes()) { startStairs(c, plan) }
+            if let plan = stairPlan(from: support, to: leg.to, nodes: nil) { startStairs(c, plan) }
             else if var ex = c.expedition { ex.legStarted = -1000; c.expedition = ex; c.set(.idle, duration: 0.2) }
         case .grapple:
             let anchor = Vec2(c.pos.x.clamped(leg.to.minX + 40, leg.to.maxX - 40), leg.to.y)

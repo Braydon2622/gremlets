@@ -678,12 +678,13 @@ enum OwnerArt {
 /// Staircases, rails and the minecart (see Terrain.swift).
 enum TerrainArt {
     /// A staircase of wooden blocks climbing `dir`, `built` of `steps` placed, with a rope handrail on the outside.
-    static func stairs(steps: Int, built: Int, dir: Double) -> CGImage {
-        // Each tread is a little wider than the run, so the blocks overlap into one solid zigzag.
+    static func stairs(steps: Int, built: Int, first: Int = 0, dir: Double) -> CGImage {
+        // Each tread is a little wider than the run, so the blocks overlap into one solid zigzag. Only the blocks
+        // standing right now (`first..<built`) are drawn: the climber takes the rest with it.
         let n = max(1, steps), b = BuildArt.block, bw = b + 2
         var cv = PixelCanvas(n * b + 2, n * b + 7)
         var posts: [(Int, Int)] = []
-        for k in 0..<min(built, n) {
+        for k in max(0, first)..<min(built, n) {
             let x = dir > 0 ? k * b : (n - 1 - k) * b, y = k * b
             cv.rect(x, y, bw, b, 0xC98B4A)
             cv.rect(x, y + b - 1, bw, 1, 0xE0A866)
@@ -803,7 +804,7 @@ extension TerrainArt {
     /// The flag a Gremlet plants at the top: a tall pole and a pennant in its colour.
     static func summitFlag(_ color: UInt32) -> CGImage {
         var cv = PixelCanvas(10, 18)
-        cv.vspan(1, 0, 17, 0x5E3B22); cv.set(1, 17, 0xF2C94C)
+        cv.vspan(1, 0, 17, 0xC98B4A); cv.vspan(0, 0, 16, 0x8A5A35); cv.set(1, 17, 0xF2C94C); cv.set(0, 17, 0xF2C94C)
         cv.hspan(0, 2, 0, 0x5E3B22)
         for (i, w) in [8, 7, 6, 5, 4].enumerated() { cv.hspan(2, 2 + w, 16 - i, i == 2 ? PixelCanvas.darken(color, 0.85) : color) }
         cv.set(3, 16, 0xFFFFFF)

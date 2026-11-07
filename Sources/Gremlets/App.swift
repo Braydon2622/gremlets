@@ -828,7 +828,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 return #"{"gremlet":"\#(c.species.id)","phase":"\#(j.phase)","blocks":\#(j.blocks),"work":\#(Int(j.workSeconds)),"window":\#(j.windowID.map(String.init) ?? "null"),"side":\#(j.shelfSide.map { String(Int($0)) } ?? "null"),"label":"\#(j.label ?? "")"}"#
             }.joined(separator: ",")
             let trees = world.bonsaiPlacements.map { #"{"project":"\#($0.project)","slot":\#($0.slot),"window":\#($0.windowID.map(String.init) ?? "null"),"x":\#(Int($0.base.x)),"y":\#(Int($0.base.y)),"scale":\#($0.scale)}"# }.joined(separator: ",")
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)]}"#)
+            // Expeditions underway (legs done / planned, the current move), chests and what's been built.
+            let runs = world.creatures.compactMap { c -> String? in
+                guard let ex = c.expedition else { return nil }
+                let goal: String = { if case .treasure(let id) = ex.goal { return "chest \(id)" }; return "summit" }()
+                return #"{"gremlet":"\#(c.species.id)","goal":"\#(goal)","phase":"\#(ex.phase)","leg":\#(ex.index),"legs":[\#(ex.methods.map { "\"\($0.rawValue)\"" }.joined(separator: ","))],"x":\#(Int(c.pos.x)),"y":\#(Int(primaryTop - c.pos.y)),"activity":"\#(c.activity)"}"#
+            }.joined(separator: ",")
+            let chests = world.chests.map { #"{"id":\#($0.id),"x":\#(Int($0.pos.x)),"y":\#(Int(primaryTop - $0.pos.y)),"golden":\#($0.golden),"carriedBy":\#($0.carriedBy.map(String.init) ?? "null")}"# }.joined(separator: ",")
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)],"expeditions":[\#(runs)],"chests":[\#(chests)],"flags":\#(world.flags.count),"ziplines":\#(world.ziplines.count),"stairs":\#(world.stairs.count),"rails":\#(world.rails.count)}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {

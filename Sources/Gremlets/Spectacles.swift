@@ -14,7 +14,7 @@ final class SpectacleRenderer {
     private var squashUntil: [Int: CFTimeInterval] = [:]
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
     private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
-    private var stairLayers: [Int: (layer: CALayer, built: Int)] = [:]
+    private var stairLayers: [Int: (layer: CALayer, key: Int)] = [:]
     private var railLayers: [Int: (rail: CALayer, cart: CALayer, px: Int, frame: Int)] = [:]
     private var nextCartSpark: [Int: CFTimeInterval] = [:]
     private var zipLayers: [Int: (line: CAShapeLayer, top: CALayer, bottom: CALayer)] = [:]
@@ -665,16 +665,17 @@ final class SpectacleRenderer {
     /// Wooden staircases up to windows, block by block.
     private func renderStairs() {
         var alive = Set<Int>()
-        for s in world.stairs where s.built > 0 {
+        for s in world.stairs where s.standing > 0 {
             alive.insert(s.id)
             guard let (si, pt) = local(Vec2(s.minX, s.base.y)) else { continue }
             var e = stairLayers[s.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = -0.3; return (l, -1) }()
             attach(e.layer, si)
-            if e.built != s.built {
-                let img = TerrainArt.stairs(steps: s.steps, built: s.built, dir: s.dir)
+            let key = s.built * 1000 + s.first
+            if e.key != key {
+                let img = TerrainArt.stairs(steps: s.steps, built: s.built, first: s.first, dir: s.dir)
                 e.layer.contents = img
                 e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
-                e.built = s.built
+                e.key = key
             }
             e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
             stairLayers[s.id] = e

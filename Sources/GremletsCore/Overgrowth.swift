@@ -44,6 +44,10 @@ public enum MossEvent: Equatable, Sendable {
     case padBuilt(Int, by: Int)
     case padLost(Vec2)
     case climbing(by: Int)
+    /// A strand was snipped back at this point (clippings fall); a friend may have held it steady.
+    case pruned(Vec2, by: Int)
+    /// Whee: sliding down a strand like a fire pole.
+    case sliding(by: Int)
     /// Trimmed back where it was getting thick (a puff of clippings at that spot).
     case trimmed(Vec2, by: Int)
     /// Watered a stretch of the moss on a window top.
@@ -51,7 +55,7 @@ public enum MossEvent: Equatable, Sendable {
 }
 
 struct MossTask: Sendable {
-    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double) }
+    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double), prune(vine: String), slide(vine: String), hold(vine: String) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -64,6 +68,10 @@ struct VineClimb: Sendable {
     var hangUntil: Double?
     var weaving: Double?   // weaving a pad at this height until the given time
     var padHeight: Double?
+    /// Pruning: snip at the target, then climb back up onto the window.
+    var pruning = false
+    /// Sliding down like a fire pole (fast).
+    var sliding = false
 }
 
 extension World {
@@ -83,12 +91,22 @@ extension World {
                                         x: side < 0 ? scr.minX + 8 : scr.maxX - 8, bottom: scr.minY, top: scr.minY + h))
                 }
             }
+        }
+        // Moss trickling down the sides of windows: from 20 minutes, each corner grows a strand (and a shorter one
+        // beside it) that keeps lengthening until a Gremlet prunes it back.
+        if m >= 20 {
             for s in builtSurfaces where s.kind == .windowTop && s.ownerID >= 0 {
                 guard let w = windows[s.ownerID] else { continue }
-                let len = min(w.h * 0.7, (m - 40) * 2.2 + 30)
                 for (side, x) in [(-1.0, w.minX), (1.0, w.maxX)] where abs((side < 0 ? s.minX : s.maxX) - x) < 2 {
-                    out.append(MossVine(key: "w\(s.ownerID)\(side < 0 ? "l" : "r")", anchor: .windowSide(window: s.ownerID, side: side),
-                                        x: x + side * 2, bottom: s.y - len, top: s.y))
+                    let key = "w\(s.ownerID)\(side < 0 ? "l" : "r")"
+                    // Each strand keeps its own length: it starts at the moss's level and grows until pruned.
+                    if strandGrowth[key] == nil { strandGrowth[key] = (m - 20) * 0.9 }
+                    let len = min(w.h * 0.85, 24 + strandGrowth[key]!)
+                    out.append(MossVine(key: key, anchor: .windowSide(window: s.ownerID, side: side), x: x + side * 2, bottom: s.y - len, top: s.y))
+                    let short = len * 0.55
+                    if short > 26 {
+                        out.append(MossVine(key: key + "2", anchor: .windowSide(window: s.ownerID, side: side), x: x - side * 7, bottom: s.y - short, top: s.y))
+                    }
                 }
             }
         }
@@ -120,6 +138,10 @@ extension World {
     }
 
     func updateOvergrowth(_ dt: Double) {
+        // Strands lengthen while the moss is cared for (about a window's height in an hour or two).
+        if !mossThirsty && mossMinutes >= 20 {
+            for v in mossVines where !v.key.hasSuffix("2") { if case .windowSide = v.anchor { strandGrowth[v.key, default: 0] += dt * (0.05 + 0.1 * mossCare) } }
+        }
         if clock - lastVineBuild > 1 { lastVineBuild = clock; rebuildVines() }
         // Patches grow on their own, faster when tended and while Claude works.
         let boost = 1 + mossMinutes / 100
@@ -137,6 +159,21 @@ extension World {
         if s.ownerID >= 0, let p = mossPatches.filter({ $0.windowID == s.ownerID && $0.size < 1 && clock - $0.lastTended > 60 })
             .min(by: { abs(patchX($0) - c.pos.x) < abs(patchX($1) - c.pos.x) }), s.supports(x: patchX(p)) {
             add("tendMoss", 0.8) { self.startMossTask(c, .tend(patch: p.id), walkTo: self.patchX(p)) }
+        }
+        // A strand hanging more than half-way down its window needs pruning: climb down from the top and snip it.
+        if s.kind == .windowTop, let w = windows[s.ownerID] {
+            for v in mossVines where !v.key.hasSuffix("2") {
+                guard case .windowSide(let wid, _) = v.anchor, wid == s.ownerID, abs(v.top - s.y) < 3 else { continue }
+                let corner = v.x - inward(v) * 14   // on the window top, just in from the strand
+                guard s.supports(x: corner), !creatures.contains(where: { if case .prune(let k)? = $0.mossTask?.kind { return k == v.key }; return false }) else { continue }
+                if v.length > w.h * 0.5 {
+                    add("pruneMoss", 1.2 + (v.length / w.h - 0.5) * 6) { self.startMossTask(c, .prune(vine: v.key), walkTo: corner) }
+                }
+                // Or just slide down it, for the fun of it.
+                if v.length > 70 && abs(corner - c.pos.x) < 300 {
+                    add("slideDown", 0.35) { self.startMossTask(c, .slide(vine: v.key), walkTo: corner) }
+                }
+            }
         }
         // Water the moss on this window top (they notice when it's getting dry, and go to it far more often).
         if mossMinutes >= 10, s.kind == .windowTop, let w = windows[s.ownerID] {
@@ -247,6 +284,40 @@ extension World {
             mossCare = min(1, mossCare + 0.1)
             c.mossTask = nil
             c.set(.idle, duration: 0.6)
+        case .prune(let key), .slide(let key):
+            guard let v = mossVines.first(where: { $0.key == key }), abs(s.y - v.top) < 3 else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            let corner = v.x - inward(v) * 14   // on the window top, just in from the strand
+            if abs(c.pos.x - corner) > 6 { c.targetX = corner; c.set(.walk, duration: 20); return }
+            let pruning: Bool = { if case .prune = t.kind { return true }; return false }()
+            c.mossTask = nil
+            if pruning {
+                // A friend on the same window comes to hold the strand steady.
+                // (Dropping a little moss chore of its own to help.)
+                if let f = creatures.filter({ $0 !== c && $0.job == nil && $0.expedition == nil && $0.play == nil && !$0.isAsleep && $0.climb == nil
+                    && $0.isGrounded && $0.groundOwner == s.ownerID && abs($0.pos.x - corner) < 700 })
+                    .min(by: { abs($0.pos.x - corner) < abs($1.pos.x - corner) }) {
+                    startMossTask(f, .hold(vine: key), walkTo: (corner - inward(v) * 26).clamped(s.minX + 6, s.maxX - 6))
+                }
+            }
+            endSocial(c)
+            c.climb = VineClimb(vine: v.key, target: pruning ? v.top - v.length * 0.5 : v.bottom, hangUntil: nil, weaving: nil, padHeight: nil, pruning: pruning, sliding: !pruning)
+            c.groundOwner = nil
+            c.vel = .zero
+            c.pos = Vec2(v.x, v.top - 4)
+            c.facing = inward(v)
+            c.set(.float, duration: 60)
+            mossEvents.append(pruning ? .climbing(by: c.id) : .sliding(by: c.id))
+        case .hold(let key):
+            guard let v = mossVines.first(where: { $0.key == key }) else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            let spot = v.x - inward(v) * 40
+            if !t.acting {
+                if abs(c.pos.x - spot) > 8, s.supports(x: spot) { c.targetX = spot; c.set(.walk, duration: 15); return }
+                t.acting = true; c.mossTask = t
+                c.facing = inward(v); c.workPose = "crouch"; c.set(.work, duration: 5)
+                return
+            }
+            c.mossTask = nil
+            c.set(.react, duration: c.animationLength(for: .react))
         case .water(let wid, let offset):
             guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = w.minX + offset
@@ -323,17 +394,38 @@ extension World {
             return
         }
         if let until = cl.hangUntil {
-            if clock >= until { cl.hangUntil = nil; cl.target = v.bottom; c.climb = cl }
+            if clock >= until {
+                cl.hangUntil = nil
+                if cl.pruning {
+                    // Snip: the strand's cut back to about half the window's height, and up we go again.
+                    if case .windowSide(let wid, _) = v.anchor, let w = windows[wid] {
+                        strandGrowth[v.key] = max(0, w.h * 0.35 - 24)
+                    }
+                    mossCare = min(1, mossCare + 0.05)
+                    mossEvents.append(.pruned(Vec2(v.x, c.pos.y - 10), by: c.id))
+                    cl.pruning = false
+                    cl.target = v.top
+                } else {
+                    cl.target = v.bottom
+                }
+                c.climb = cl
+            }
             return
         }
         let dy = cl.target - c.pos.y
-        let speed = dy < 0 ? 140.0 : 62.0
+        let speed = cl.sliding ? 380.0 : (dy < 0 ? 140.0 : 62.0)
         if abs(dy) > 2 {
             c.pos.y += max(-speed * dt, min(speed * dt, dy))
             c.climb = cl
             return
         }
         // Arrived.
+        if cl.pruning {
+            // Hold on and snip for a moment.
+            cl.hangUntil = clock + 2.4
+            c.climb = cl
+            return
+        }
         if cl.padHeight != nil {
             cl.weaving = clock + 2.8
             c.climb = cl
@@ -356,6 +448,8 @@ extension World {
         }
         if abs(cl.target - v.bottom) < 3 {
             c.climb = nil
+            // Off the end of a slide with a little hop outward.
+            if cl.sliding { c.vel = Vec2(-inward(v) * 90, 160) }
             c.set(.airborne)
             return
         }

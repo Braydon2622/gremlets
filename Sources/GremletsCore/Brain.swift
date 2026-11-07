@@ -185,7 +185,7 @@ struct Brain {
     }
 
     static let popUps: Set<String> = ["diveInLeaves", "blowPuff"]
-    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss", "waterMoss"]
+    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss", "waterMoss", "pruneMoss"]
     static let lively: Set<String> = ["walk", "hop", "chase", "tag", "follow", "stairs", "rail", "grapple", "glide", "bridge", "boost",
                                       "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
                                       "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]

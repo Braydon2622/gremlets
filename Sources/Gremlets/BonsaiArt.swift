@@ -335,7 +335,7 @@ enum MossArt {
         for xx in 0..<w {
             // Drips over the edge.
             if r.next() < 0.1 + density * 0.25 {
-                let len = 1 + Int(r.range(0, 1 + density * 2.5))
+                let len = 1 + Int(r.range(0, 1 + density * 3.5))   // longer drips as it thickens
                 for k in 1...len { cv.set(xx, base - k, k == len ? light : mid) }
             }
             // Speckles on top.

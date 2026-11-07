@@ -85,6 +85,8 @@ public final class World {
     /// How well looked after the moss is (0...1). It dries out over half an hour unless the Gremlets water, tend and
     /// trim it; well-kept moss grows, neglected moss turns dry and brown and slowly shrinks back.
     public var mossCare = 1.0
+    /// How much each window-side strand has grown since it was last pruned (points).
+    var strandGrowth: [String: Double] = [:]
     public var mossThirsty: Bool { mossCare < 0.35 }
     public static let mossMax = 300.0
     public internal(set) var mossVines: [MossVine] = []
@@ -396,7 +398,7 @@ public final class World {
         // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
         // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
         mossCare = max(0, mossCare - dt / 2400)
-        let growth = working ? dt * workClockScale / 60 : dt / 300
+        let growth = working ? dt * workClockScale / 45 : dt / 180
         mossMinutes = (mossMinutes + (mossThirsty ? -dt / 400 : growth * (0.4 + mossCare))).clamped(0, World.mossMax)
         updateFerry(dt)
         updateLift(dt)

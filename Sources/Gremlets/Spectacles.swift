@@ -1069,6 +1069,17 @@ final class SpectacleRenderer {
                 if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.dust], si: si, at: pt, count: 6, dx: -20...20, dy: -60 ... -10, duration: 0.8) }
             case .climbing:
                 break
+            case .pruned(let p, let by):
+                // Snip! A clump of moss tumbles off the end.
+                if let (si, pt) = local(p) {
+                    overlay.burst([Effects.leaf, Effects.leaf2, Effects.leaf], si: si, at: pt, count: 9, dx: -24...24, dy: -90 ... -20, duration: 1.1, stagger: 0.03)
+                }
+                overlay.showBubble(["Snip!", "There, tidy.", "Not too long now."].randomElement()!, on: by, seconds: 1.6)
+            case .sliding(let by):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 4, dx: -12...12, dy: -40 ... 0, duration: 0.8)
+                }
+                if Int.random(in: 0..<2) == 0 { overlay.showBubble(["Wheee!", "Weee!"].randomElement()!, on: by, seconds: 1.2) }
             case .watered(let p, let by):
                 // The watering can comes out; a little shower; the moss perks up.
                 if let (si, pt) = local(p + Vec2(0, 30)) {

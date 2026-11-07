@@ -16,7 +16,7 @@
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet timelapse            stitch the daily village postcards into a video (Movies/Gremlets)
 #   gremlet card [project]       save a card of a project's bonsai with its story (Pictures/Gremlets) and copy it
-#   gremlet demo [seconds]       play a scripted Claude session on your front window and record it (Movies/Gremlets)
+#   gremlet demo [seconds]       play a scripted Claude session on your front window and record it, plus a GIF (Movies/Gremlets)
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -65,7 +65,11 @@ except Exception: print("")')"
     mkdir -p "$HOME/Movies/Gremlets"
     f="$HOME/Movies/Gremlets/Claude session $(date '+%Y-%m-%d %H.%M').mov"
     echo "Recording ${secs}s of the front window to $f"
-    screencapture -V "$secs" -R "$region" "$f" && echo "Saved: $f" ;;
+    screencapture -V "$secs" -R "$region" "$f" && echo "Saved: $f"
+    gif="$(curl -s -m 120 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "path=$f" "${URL}/gif" | /usr/bin/python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("path",""))
+except Exception: print("")')"
+    [ -n "$gif" ] && echo "GIF:   $gif" ;;
   meteors|festival|lanterns) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
   run)

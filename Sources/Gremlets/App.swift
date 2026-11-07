@@ -851,6 +851,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             schedule(rate: 60)
             return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
+        case "gif":
+            // A looping GIF of a recording (the demo), for a README or a post.
+            guard let path = query["path"], path.hasPrefix(FileManager.default.homeDirectoryForCurrentUser.path), FileManager.default.fileExists(atPath: path) else {
+                return (400, #"{"ok":false,"error":"path must be a recording in your home folder"}"#)
+            }
+            guard let url = GIFMaker.make(from: URL(fileURLWithPath: path)) else { return (500, #"{"ok":false,"error":"couldn't read that recording"}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "timelapse":
             TimeLapse.saveToday(world: world, species: species)
             guard let url = TimeLapse.build() else { return (404, #"{"ok":false,"error":"no daily postcards yet"}"#) }

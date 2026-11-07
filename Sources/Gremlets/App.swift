@@ -104,6 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
+        world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
         // Houses built by older versions take the shape of today's pictures.
         world.refitHouses { h in Biome(rawValue: h.biome).map { BuildArt.fit($0) } }
         let storedSide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0
@@ -205,6 +206,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainExpeditionEvents())
         overlay.fx.handle(world.drainTeamEvents())
         watchTheMac()
+        let mossNow = CACurrentMediaTime()
+        if mossNow - lastMossSave > 30 { lastMossSave = mossNow; saveMoss() }
         // The doorway to a linked screen: open while the other screen is around; whoever walks through it goes over.
         let doorNow = CACurrentMediaTime()
         if doorNow - lastDoorCheck > 5 { lastDoorCheck = doorNow; updateDoor() }
@@ -1033,6 +1036,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "unlink":
             bridge.unlink(); updateDoor(); rebuildMenu()
             return (200, #"{"ok":true}"#)
+        case "moss":
+            // Preview the overgrowth at a number of minutes of Claude work (0 clears it).
+            if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes))}"#)
         case "boost":
             guard world.startBoostWithAnyone() else { return (409, #"{"ok":false,"error":"no pair free near a window just out of jumping reach"}"#) }
             schedule(rate: 60)
@@ -1420,6 +1428,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/pair") { NSWorkspace.shared.open(url) }
         rebuildMenu()
     }
+
+    // MARK: Overgrowth
+
+    private let mossKey = "moss.v1"
+    private var lastMossSave: CFTimeInterval = 0
+    func saveMoss() { UserDefaults.standard.set(world.mossMinutes, forKey: mossKey) }
 
     // MARK: Watching the Mac
 

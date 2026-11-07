@@ -27,8 +27,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
   a hot spring, a windmill and a flower arch.
 - **They reshape the desktop, Terraria style.** A window out of jumping reach gets a staircase of wooden blocks laid
-  up to its edge, one block at a time, climbed as it goes and picked up again behind the climber (it only carries
-  three), so the stairs travel up with it and are gone once it's on top. A wide window gets a stretch of rail along
+  up to its edge, one block at a time: it turns round, pulls the block behind it up into its arms (you see each one
+  arc up onto the stack it carries), turns back and sets it down ahead, so the staircase travels up with it; at the
+  top it hauls the last blocks up one by one. A wide window gets a stretch of rail along
   its top and a minecart that rolls end to end, sparks flying, Gremlets taking turns. Gaps between windows get plank
   bridges, a zipline runs from a high window down to a lower one, and a grappling hook reaches the rest.
   (`gremlet stairs`, `gremlet cart`.)
@@ -50,6 +51,11 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
   (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
   on your desktop, in a card and in the web habitat.
+- **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
+  every window's top edge, strands hang down window sides, vines climb the screen's edges, and after a long day the
+  carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It
+  recedes slowly when Claude is idle. A Claude tab dragged out into its own window takes its tree and ivy with it
+  (macOS asks once to let Gremlets read which Terminal window holds the tab). (`gremlet moss [minutes]` to preview.)
 - **They help each other, and notice your Mac.** A window just too high to jump? A friend walks to its foot, braces,
   and heaves the climber up off its head ("Hup!"). Press ⌘⇧4 and everyone strikes a pose before you take the shot.
   Battery low, one holds up a little battery sign (and cheers when you plug in); the internet drops, one holds up a

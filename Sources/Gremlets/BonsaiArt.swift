@@ -274,3 +274,83 @@ enum BonsaiArt {
         return cv.image
     }
 }
+
+/// Overgrowth: the moss that spreads over the whole desktop the longer Claude works (see `World.mossMinutes`).
+enum MossArt {
+    static let deep: UInt32 = 0x3E7A34, mid: UInt32 = 0x5E9E46, light: UInt32 = 0x8BD66A, pale: UInt32 = 0xB6E28A
+
+    /// A carpet of moss lying along an edge: `lengthPx` long, thicker and with more going on at higher `density`
+    /// (0...1): clumps, a few drips hanging over the edge, then flowers, ferns and mushrooms. Its baseline is row 3
+    /// (the edge itself); three rows hang below it.
+    static func carpet(lengthPx: Int, density: Double, seed: UInt64, night: Bool) -> CGImage {
+        let w = max(4, lengthPx), h = 14, base = 3
+        var cv = PixelCanvas(w, h)
+        var r = ArtRNG(s: seed &* 2654435761 &+ 11)
+        let thick = 1.2 + density * 3.2
+        var x = 0.0
+        while x < Double(w) {
+            let rad = r.range(1.6, 2.6) + density * r.range(0.5, 2.0)
+            let hgt = thick * r.range(0.6, 1.1)
+            cv.blob(x, Double(base) + hgt * 0.45, rad, hgt * 0.62, base: mid, light: light, shade: deep)
+            x += rad * r.range(0.9, 1.5)
+        }
+        cv.hspan(0, w - 1, base, deep)
+        for xx in 0..<w {
+            // Drips over the edge.
+            if r.next() < 0.1 + density * 0.25 {
+                let len = 1 + Int(r.range(0, 1 + density * 2.5))
+                for k in 1...len { cv.set(xx, base - k, k == len ? light : mid) }
+            }
+            // Speckles on top.
+            if r.next() < 0.18, let top = (base..<h).last(where: { cv.solid(xx, $0) }) { cv.set(xx, top, r.next() < 0.5 ? pale : light) }
+        }
+        if density > 0.35 {
+            for xx in stride(from: Int(r.range(3, 9)), to: w - 3, by: max(5, Int(22 - density * 14))) {
+                guard let top = (base..<h).last(where: { cv.solid(xx, $0) }), top + 3 < h else { continue }
+                switch Int(r.range(0, 4.99)) {
+                case 0, 1:
+                    // A flower on a short stem.
+                    let petal: UInt32 = [0xFF8FB1, 0xFFE45C, 0xFFFFFF, 0xB98CFF, 0x8FD3FF][Int(r.range(0, 4.99))]
+                    cv.set(xx, top + 1, deep); cv.set(xx, top + 2, petal); cv.set(xx - 1, top + 2, petal); cv.set(xx + 1, top + 2, petal); cv.set(xx, top + 3, petal)
+                    cv.set(xx, top + 2, 0xFFF3A0)
+                case 2:
+                    // A mushroom (glowing after dark).
+                    cv.vspan(xx, top + 1, top + 2, 0xEBDDC3)
+                    let cap: UInt32 = night ? 0x5FE8FF : (r.next() < 0.5 ? 0xC4467A : 0xD9855A)
+                    cv.hspan(xx - 1, xx + 1, top + 3, cap); cv.set(xx, top + 4 < h ? top + 4 : top + 3, cap)
+                case 3:
+                    // A fern frond.
+                    cv.line(Double(xx), Double(top), Double(xx) + 2, Double(min(h - 1, top + 5)), deep)
+                    cv.set(xx + 1, top + 2, light); cv.set(xx + 2, top + 3, light); cv.set(xx, top + 1, light)
+                default:
+                    // A tuft of grass.
+                    cv.set(xx, top + 1, light); cv.set(xx - 1, top + 2, mid); cv.set(xx + 1, top + 2, light)
+                }
+            }
+        }
+        cv.outline(0.8)
+        return cv.image
+    }
+
+    /// A strand of moss and vine hanging straight down `lengthPx`, swaying leaves either side, a bloom at the tip.
+    static func strand(lengthPx: Int, seed: UInt64, bloom: Bool) -> CGImage {
+        let h = max(4, lengthPx), w = 7
+        var cv = PixelCanvas(w, h)
+        var r = ArtRNG(s: seed &* 40503 &+ 5)
+        var x = 3.0
+        for y in stride(from: h - 1, through: 0, by: -1) {
+            if (h - y) % 4 == 0 { x += r.next() < 0.5 ? -0.6 : 0.6; x = x.clamped(2, 4) }
+            cv.set(Int(x.rounded()), y, deep)
+            if (h - y) % 3 == 1 {
+                let side = (h - y) % 6 == 1 ? -1 : 1
+                cv.set(Int(x.rounded()) + side, y, r.next() < 0.5 ? mid : light)
+                cv.set(Int(x.rounded()) + side * 2, y + 1 < h ? y + 1 : y, light)
+            }
+        }
+        // A thicker mossy start at the top.
+        cv.blob(3, Double(h) - 1.5, 3, 1.8, base: mid, light: light, shade: deep)
+        if bloom { cv.blob(x, 1.2, 1.4, 1.2, base: 0xFF8FB1, light: 0xFFD6E6) }
+        cv.outline(0.85)
+        return cv.image
+    }
+}

@@ -131,3 +131,24 @@ extension World {
         startFloat(c, to: sp)
     }
 }
+
+extension World {
+    /// A Claude session's tab moved to another window (dragged out into its own window, or into another one): the
+    /// worker, its shelf, the project's tree, the ivy and the mossy ledges all move over to the new window.
+    public func moveClaudeSession(workerID: Int, project: String, to windowID: Int) {
+        guard windows[windowID] != nil, let c = creature(id: workerID), let j = c.job, j.kind == .claude, j.windowID != windowID else { return }
+        let onShelf = c.groundOwner == World.shelfOwner(c.id)
+        j.windowID = windowID
+        j.shelfSide = shelfSideFor(window: windowID, near: c.pos.x, for: c.id)
+        j.lastShelfMinX = nil; j.lastShelfY = nil
+        if var live = liveBonsai[project] { live.windowID = windowID; liveBonsai[project] = live }
+        rebuildAttached()
+        bonsaiEvents.append(.moved(project, live: true))
+        // The worker follows: a balloon over to its new spot.
+        if (onShelf || j.phase == .working), let sp = standPoint(j, workerID: c.id) {
+            j.phase = .travel
+            startFloat(c, to: sp)
+        }
+    }
+}
+

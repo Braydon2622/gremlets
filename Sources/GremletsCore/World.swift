@@ -79,6 +79,10 @@ public final class World {
     var nextSummitAt = 900.0
     var nextExpeditionAt = 0.0
     var expeditionEvents: [ExpeditionEvent] = []
+    /// Overgrowth: minutes of Claude work the moss has soaked up. It grows a minute per minute while Claude works,
+    /// and slowly recedes (a minute per six) while nothing is running. The platform layer saves it and draws it.
+    public var mossMinutes = 0.0
+    public static let mossMax = 300.0
     /// Boosts and reactions to the Mac (see Teamwork.swift).
     var teamEvents: [TeamEvent] = []
     var nextBoostAt = 180.0
@@ -327,6 +331,8 @@ public final class World {
         updateExpeditions(dt)
         updateBoosts()
         updateSigns()
+        let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
+        mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
         updateFerry(dt)
         updateMerchant(dt)
         updateBonsai(dt)

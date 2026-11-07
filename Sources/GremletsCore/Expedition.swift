@@ -541,7 +541,7 @@ extension World {
         var i = 0
         while i < chests.count {
             if let by = chests[i].carriedBy, let c = creature(id: by) {
-                chests[i].pos = c.pos + Vec2(0, c.size.y - 2)
+                chests[i].pos = c.pos + Vec2(0, c.species.headTop - 2)
             } else if clock - chests[i].spawnedAt > Chest.lifetime {
                 chests.remove(at: i); continue
             }

@@ -25,6 +25,8 @@ final class SpectacleRenderer {
     private var flagLayers: [Int: CALayer] = [:]
     private var stackLayers: [Int: (layer: CALayer, n: Int)] = [:]
     private var signLayers: [Int: (layer: CALayer, sign: HeldSign)] = [:]
+    private var mossLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var lastMoss: CFTimeInterval = 0
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
@@ -84,6 +86,7 @@ final class SpectacleRenderer {
         renderStairs(); renderRails()
         renderExpeditions()
         renderDoor()
+        renderMoss()
         renderRoutes()
         renderRopes()
         renderSpectacle()
@@ -739,8 +742,34 @@ final class SpectacleRenderer {
             switch e {
             case .stairBlock(let p, _):
                 if let (si, pt) = local(p) { overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: -4...12, duration: 0.4) }
-            case .stairBlockTaken(let p):
-                if let (si, pt) = local(p) { overlay.burst([Effects.dust], si: si, at: pt, count: 2, dx: -8...8, dy: 6...16, duration: 0.35) }
+            case .stairBlockTaken(let p, let by):
+                guard let (si, pt) = local(p) else { continue }
+                // The block hops up out of the staircase and arcs into the climber's arms.
+                if let id = by, let c = world.creatures.first(where: { $0.id == id }), let (_, head) = local(c.pos + Vec2(c.facing * 2, c.species.headTop - 2 + Double(max(0, c.blocksInHand - 1)) * 15)) {
+                    let img = TerrainArt.blockStack(1)
+                    let l = pixelLayer(); l.contents = img
+                    l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    l.zPosition = 1.2
+                    attach(l, si)
+                    l.position = pt
+                    let path = CGMutablePath()
+                    path.move(to: pt)
+                    path.addQuadCurve(to: head, control: CGPoint(x: (pt.x + head.x) / 2, y: max(pt.y, head.y) + 34))
+                    let fly = CAKeyframeAnimation(keyPath: "position"); fly.path = path
+                    let spin = CABasicAnimation(keyPath: "transform.rotation.z"); spin.fromValue = 0; spin.toValue = (head.x > pt.x ? -1 : 1) * Double.pi
+                    let g = CAAnimationGroup(); g.animations = [fly, spin]; g.duration = 0.34
+                    g.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    l.position = head
+                    l.add(g, forKey: "fly")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) { l.removeFromSuperlayer() }
+                    overlay.burst([Effects.dust], si: si, at: pt, count: 2, dx: -8...8, dy: -4...8, duration: 0.3)
+                } else {
+                    overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 3, dx: -10...10, dy: 6...18, duration: 0.4)
+                }
+            case .blocksStowed(let by):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.sparkle], si: si, at: pt, count: 3, dx: -10...10, dy: 4...16, duration: 0.5)
+                }
             case .stairsDone(let id):
                 if let s = world.stairs.first(where: { $0.id == id }), let (si, pt) = local(Vec2((s.minX + s.maxX) / 2, s.topY)) {
                     overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 8, dx: -60...60, dy: 0...40, duration: 0.9, stagger: 0.03)
@@ -805,7 +834,7 @@ final class SpectacleRenderer {
                 l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() + 4)
                 pulleyLayers[c.id] = l
             }
-            if c.blocksInHand > 0, let (si, pt) = local(c.pos + Vec2(c.facing * 2, c.size.y - 2)) {
+            if c.blocksInHand > 0, let (si, pt) = local(c.pos + Vec2(c.facing * 2, c.species.headTop - 2)) {
                 climbers.insert(c.id)
                 var e = stackLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1; popIn(l); return (l, -1) }()
                 attach(e.layer, si)
@@ -822,7 +851,7 @@ final class SpectacleRenderer {
         // Signs held up over heads (battery low, no signal), bobbing a little.
         var holders = Set<Int>()
         for c in world.creatures {
-            guard let s = c.sign, let (si, pt) = local(c.pos + Vec2(0, c.size.y - 4)) else { continue }
+            guard let s = c.sign, let (si, pt) = local(c.pos + Vec2(0, c.species.headTop - 4)) else { continue }
             holders.insert(c.id)
             var e = signLayers[c.id] ?? {
                 let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1
@@ -1040,6 +1069,104 @@ final class SpectacleRenderer {
             if left <= 0 { e.line.removeFromSuperlayer(); routeLayers[id] = nil; continue }
             e.line.opacity = Float(min(1, left / 1.2))
         }
+    }
+
+    // MARK: Overgrowth
+
+    /// Moss over everything, by how long Claude has been working (`World.mossMinutes`):
+    /// from 10 minutes, carpets creep in from the ends of every window top; from 40, strands hang down window sides
+    /// and vines climb the screen's side edges; from 90, the carpets meet in the middle and flower; from 150, moss
+    /// fringes the bottom of the menu bar and the floor; at 300 everything is covered.
+    private func renderMoss() {
+        let now = CACurrentMediaTime()
+        guard now - lastMoss > 0.12 else { return }   // a few times a second is plenty for moss
+        lastMoss = now
+        let m = world.mossMinutes
+        var alive = Set<String>()
+        let night = world.isNight
+        func place(_ key: String, _ si: Int, at p: CGPoint, anchor: CGPoint, flip: Bool = false, rotate: Double = 0, imageKey: String, make: () -> CGImage) {
+            alive.insert(key)
+            var e = mossLayers[key] ?? {
+                let l = pixelLayer(); l.zPosition = 1.3
+                let grow = CABasicAnimation(keyPath: "opacity"); grow.fromValue = 0; grow.toValue = 1; grow.duration = 1.2
+                l.add(grow, forKey: "grow")
+                return (l, "")
+            }()
+            attach(e.layer, si)
+            if e.key != imageKey {
+                let img = make()
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                e.key = imageKey
+            }
+            e.layer.anchorPoint = anchor
+            var t = CGAffineTransform(scaleX: flip ? -1 : 1, y: 1)
+            if rotate != 0 { t = t.rotated(by: rotate) }
+            e.layer.setAffineTransform(t)
+            e.layer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded())
+            mossLayers[key] = e
+        }
+        if m >= 10 {
+            // Window tops: carpets creeping in from both ends.
+            let reach = ((m - 10) / 90).clamped(0, 1)       // fraction of each half covered
+            let density = ((m - 10) / 200).clamped(0, 1)
+            for s in world.surfaces where s.kind == .windowTop && s.width >= 40 {
+                let half = s.width / 2 * max(0.12, reach)
+                let px = max(4, Int(half / artScale / 4) * 4)
+                let dq = Int(density * 5)
+                for (end, x, flip) in [("l", s.minX, false), ("r", s.maxX, true)] {
+                    guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
+                    let seed = UInt64(abs(s.ownerID) &* 31 &+ (end == "l" ? 1 : 2))
+                    place("w\(s.ownerID)-\(Int(s.minX))-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
+                          imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night) }
+                }
+                // Strands hanging down the window's sides, from the corners that are really the window's corners.
+                if m >= 40, let w = world.windows[s.ownerID] {
+                    let len = min(w.h * 0.7, (m - 40) * 2.2 + 30)
+                    let lpx = max(6, Int(len / artScale / 4) * 4)
+                    for (end, x) in [("l", w.minX), ("r", w.maxX)] where abs((end == "l" ? s.minX : s.maxX) - x) < 2 {
+                        guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
+                        let seed = UInt64(abs(s.ownerID) &* 17 &+ (end == "l" ? 3 : 4))
+                        place("s\(s.ownerID)-\(end)", si, at: CGPoint(x: pt.x + (end == "l" ? -2 : 2), y: pt.y + 4), anchor: CGPoint(x: 0.5, y: 1),
+                              imageKey: "\(lpx)-\(m >= 90)") { MossArt.strand(lengthPx: lpx, seed: seed, bloom: m >= 90) }
+                        // A second, shorter strand a little way in once it's thick.
+                        if m >= 120 {
+                            let x2 = end == "l" ? x + 26 : x - 26
+                            if let (si2, pt2) = local(Vec2(x2, s.y)) {
+                                let l2 = max(6, lpx / 2)
+                                place("s\(s.ownerID)-\(end)2", si2, at: CGPoint(x: pt2.x, y: pt2.y + 2), anchor: CGPoint(x: 0.5, y: 1),
+                                      imageKey: "\(l2)") { MossArt.strand(lengthPx: l2, seed: seed &+ 9, bloom: false) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Screens: vines up the side edges, then the floor and the menu bar's underside.
+        for (i, scr) in world.screens.enumerated() where m >= 40 {
+            let climb = min(scr.h * 0.9, (m - 40) * 4)
+            let cpx = max(8, Int(climb / artScale / 4) * 4)
+            for (end, x) in [("l", scr.minX + 2), ("r", scr.maxX - 2)] {
+                guard let (si, pt) = local(Vec2(x, scr.minY)) else { continue }
+                place("v\(i)-\(end)", si, at: pt, anchor: CGPoint(x: 0, y: 0.5), rotate: end == "l" ? Double.pi / 2 : Double.pi / 2,
+                      imageKey: "\(cpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: cpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (end == "l" ? 1 : 2)), night: night) }
+            }
+            if m >= 150 {
+                let frac = ((m - 150) / 150).clamped(0.15, 1)
+                let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
+                if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
+                    place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), flip: false, rotate: 0,
+                          imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night) }
+                    mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
+                }
+                if let (si, pt) = local(Vec2(scr.minX, scr.minY)) {
+                    let gpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
+                    place("floor\(i)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
+                          imageKey: "\(gpx)-\(night)") { MossArt.carpet(lengthPx: gpx, density: frac, seed: UInt64(i + 60), night: night) }
+                }
+            }
+        }
+        for (k, e) in mossLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); mossLayers[k] = nil }
     }
 
     private func renderRopes() {

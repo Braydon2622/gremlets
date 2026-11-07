@@ -76,8 +76,10 @@ public struct Rail: Sendable {
 
 public enum TerrainEvent: Equatable, Sendable {
     case stairBlock(Vec2, stair: Int)
-    /// The climber picked a block back up (its centre).
-    case stairBlockTaken(Vec2)
+    /// A block picked back up (its centre), flying into the climber's arms (`by`), or just packed away.
+    case stairBlockTaken(Vec2, by: Int?)
+    /// The climber tucks its stack of blocks away.
+    case blocksStowed(by: Int)
     case stairsDone(Int)
     /// The blocks that fell (their centres), for the crumble effect.
     case stairsCrumbled(blocks: [Vec2])
@@ -225,28 +227,34 @@ extension World {
             if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 0) { abandonStairs(c) }
             return true
         }
-        // Standing on block k-1: the blocks more than a trail behind come up into its hands.
+        // Standing on block k-1. Each beat it either turns round and pulls up a block from more than a trail behind
+        // (you see it fly up into its arms), or turns forward and sets one down ahead from the stack it carries.
         let keepFrom = max(0, k - 1 - Stair.trail)
-        if st.first < keepFrom {
-            while st.first < keepFrom {
-                let t = st.step(st.first)
-                terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2)))
-                st.first += 1
-            }
-            stairs[i] = st
-            setSurfacesDirty()
-        }
-        c.facing = st.dir
         c.buildTimer -= dt
         if c.buildTimer <= 0 {
-            c.buildTimer = 0.42
-            st.built += 1
-            stairs[i] = st
-            setSurfacesDirty()
-            let top = st.step(k)
-            terrainEvents.append(.stairBlock(Vec2((top.minX + top.maxX) / 2, top.y), stair: st.id))
-            c.set(.special, duration: min(0.32, c.animationLength(for: .special)))
-        } else if c.activity != .special {
+            if st.first < keepFrom {
+                let t = st.step(st.first)
+                c.facing = -st.dir
+                terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2), by: c.id))
+                st.first += 1
+                c.blocksInHand += 1
+                c.buildTimer = 0.5
+                stairs[i] = st
+                setSurfacesDirty()
+                c.idleVariant = "look"
+                c.set(.idle, duration: 0.5)
+            } else {
+                c.facing = st.dir
+                c.buildTimer = 0.45
+                st.built += 1
+                c.blocksInHand = max(0, c.blocksInHand - 1)
+                stairs[i] = st
+                setSurfacesDirty()
+                let top = st.step(k)
+                terrainEvents.append(.stairBlock(Vec2((top.minX + top.maxX) / 2, top.y), stair: st.id))
+                c.set(.special, duration: min(0.32, c.animationLength(for: .special)))
+            }
+        } else if c.activity != .special && c.activity != .idle {
             c.set(.idle, duration: 1)
         }
         return true
@@ -275,16 +283,24 @@ extension World {
                 let climber = creature(id: s.climber)
                 let off = climber.map { $0.groundOwner != World.stairOwner(s.id) } ?? true
                 if off || clock - done > 4 {
-                    s.nextTake = clock + 0.12
+                    // Off the stairs: it turns round and hauls the rest up one at a time, nearest first.
+                    let near = climber.map { abs($0.pos.y - s.topY) < 3 && $0.isGrounded } ?? false
+                    s.nextTake = clock + (near ? 0.38 : 0.15)
                     if s.first < s.built {
-                        let t = s.step(s.first)
-                        terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2)))
-                        s.first += 1
+                        s.built -= 1
+                        let t = s.step(s.built)
+                        terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2), by: near ? s.climber : nil))
+                        if near, let c = climber {
+                            c.blocksInHand = min(6, c.blocksInHand + 1)
+                            c.facing = -s.dir
+                            if c.job == nil && c.expedition == nil { c.idleVariant = "look"; c.set(.idle, duration: 0.6) }
+                        }
                         changed = true
                     }
                     if s.first >= s.built {
-                        climber?.blocksInHand = 0
+                        if let c = climber { c.blocksInHand = 0; terrainEvents.append(.blocksStowed(by: c.id)) }
                         stairs.remove(at: i)
+                        changed = true
                         continue
                     }
                 }

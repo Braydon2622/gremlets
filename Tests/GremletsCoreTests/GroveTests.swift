@@ -513,3 +513,24 @@ import Testing
         #expect(abs((w.terminalLedges.first?.surface.minX ?? 0) - x0 - 50) < 0.01, "ledges move with the window")
     }
 }
+
+@Suite struct TreeLifeTests {
+    @Test func sleepyGremletsClimbUpAndNapInTheTree() throws {
+        let w = World(seed: 61)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [WindowInfo(id: 2, frame: Rect(x: 400, y: 100, w: 700, h: 300))])
+        w.loadBonsai(BonsaiBook())
+        w.bonsaiStart(project: "Nap", session: "s", windowID: 2)
+        for _ in 0..<80 { w.bonsaiGrow(project: "Nap", .leaf) }
+        w.isNight = true
+        let pad = try #require(w.surfaces.first { World.isBonsaiOwner($0.ownerID) })
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2((pad.minX + pad.maxX) / 2, 400))
+        c.energy = 0.3
+        var napped = false
+        for _ in 0..<(60 * 150) where !napped {
+            w.step(1.0 / 60); _ = w.drainEvents()
+            napped = c.activity == .sleep && World.isBonsaiOwner(c.groundOwner)
+        }
+        #expect(napped, "asleep up in the foliage (\(c.activity), on \(String(describing: c.groundOwner)))")
+    }
+}

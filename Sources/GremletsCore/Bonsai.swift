@@ -489,6 +489,21 @@ extension World {
         setSurfacesDirty()
     }
 
+    /// Brain choices around the trees: after dark, or when sleepy, climb up into a foliage pad for a nap.
+    func bonsaiChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
+        guard c.job == nil, c.isGrounded, isNight || c.energy < 0.5 else { return }
+        let pad = attachedSurfaces.filter { p in
+            guard World.isBonsaiOwner(p.ownerID) else { return false }
+            let dy = p.y - c.pos.y, cx = p.minX + p.width / 2
+            return dy > 20 && dy < maxJumpHeight && abs(cx - c.pos.x) < maxJumpDistance * 0.9
+        }.min { abs($0.minX + $0.width / 2 - c.pos.x) < abs($1.minX + $1.width / 2 - c.pos.x) }
+        guard let s = pad else { return }
+        add("climbTree", isNight ? 1.4 : 0.8) {
+            let tx = (s.minX + s.width / 2).clamped(s.minX + 8, s.maxX - 8)
+            self.launch(c, velocity: self.ballistic(from: c.pos, toX: tx, y: s.y, apexExtra: 40))
+        }
+    }
+
     /// The tree under a point, if any (for clicks).
     public func bonsai(at p: Vec2) -> BonsaiPlacement? {
         bonsaiPlacements.last { pl in

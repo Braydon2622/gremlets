@@ -37,6 +37,17 @@ struct Brain {
         }
 
         c.campfire = false
+        // Up in a bonsai: sit and look around, nap in the foliage after dark or when sleepy, or hop down.
+        if World.isBonsaiOwner(c.groundOwner) {
+            add("sitInTree", 2.0) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(3, 7)) }
+            if c.energy < 0.75 || world.isNight {
+                add("napInTree", 3.0) { c.set(.sleep, duration: world.rng.range(40, 120)); world.emit(.fellAsleep(c.id)) }
+            }
+            add("hopDown", 0.4) { world.launch(c, velocity: Vec2(c.facing * 140, 380)) }
+            pickAndStart(choices, world)
+            return
+        }
+        world.bonsaiChoices(for: c, add: add)
         // In the middle of a game with a friend: wait for our turn.
         if c.play != nil { c.set(.idle, duration: 0.4); return }
         world.groveChoices(for: c, add: add)

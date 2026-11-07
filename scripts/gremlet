@@ -14,6 +14,7 @@
 #   gremlet meteors | festival | lanterns   start a little grove moment now
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
+#   gremlet card [project]       save a card of a project's bonsai with its story (Pictures/Gremlets) and copy it
 #   gremlet demo [seconds]       play a scripted Claude session on your front window and record it (Movies/Gremlets)
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
@@ -50,6 +51,7 @@ case "${1:-}" in
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
   snapshot) call snapshot; echo ;;
+  card)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/card"; echo ;;
   demo)
     secs="${2:-42}"
     out="$(curl -s -m 2 -X POST -H 'X-Gremlets: 1' "${URL}/demo?seconds=${secs}&pid=$PPID")" || { echo "gremlet: the Gremlets app isn't running" >&2; exit 1; }
@@ -70,6 +72,6 @@ except Exception: print("")')"
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

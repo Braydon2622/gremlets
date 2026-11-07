@@ -54,6 +54,69 @@ final class BonsaiRenderer {
         renderTrees()
         renderIvy()
         renderLedges()
+        renderNightLife()
+    }
+
+    private var nextFirefly: [String: CFTimeInterval] = [:]
+    private var lanterns: [Int: CALayer] = [:]
+
+    /// After dark: fireflies drift through the trees that are growing right now, and a lantern hangs under the
+    /// lowest ledge of every window Claude is working in.
+    private func renderNightLife() {
+        let now = CACurrentMediaTime()
+        guard world.isNight else {
+            for (_, l) in lanterns { fadeOut(l) }; lanterns.removeAll()
+            return
+        }
+        for p in world.bonsaiPlacements where p.slot < 0 && now >= (nextFirefly[p.project] ?? 0) {
+            nextFirefly[p.project] = now + Double.random(in: 0.9...1.8)
+            let L = p.layout
+            let x = p.base.x + Double.random(in: L.bounds.minX...L.bounds.maxX) * p.scale
+            let y = p.base.y + Double.random(in: max(10, L.bounds.maxY * 0.3)...max(12, L.bounds.maxY)) * p.scale
+            if let (si, pt) = local(Vec2(x, y)) { firefly(si, at: pt) }
+        }
+        var alive = Set<Int>()
+        for l in world.terminalLedges where l.index == 0 {
+            let s = l.surface
+            alive.insert(s.ownerID)
+            guard let (si, pt) = local(Vec2(l.side > 0 ? s.maxX - 12 : s.minX + 12, s.y - 9)) else { continue }
+            let layer = lanterns[s.ownerID] ?? {
+                let l = pixelLayer()
+                l.contents = PropArt.lantern
+                l.anchorPoint = CGPoint(x: 0.5, y: 1)
+                l.bounds = CGRect(x: 0, y: 0, width: Double(PropArt.lantern.width) * artScale, height: Double(PropArt.lantern.height) * artScale)
+                l.shadowColor = NSColor(red: 1, green: 0.8, blue: 0.35, alpha: 1).cgColor; l.shadowOpacity = 0.9; l.shadowRadius = 9; l.shadowOffset = .zero
+                l.zPosition = 1.6
+                popIn(l)
+                return l
+            }()
+            attach(layer, si)
+            layer.position = pt
+            lanterns[s.ownerID] = layer
+        }
+        for (id, l) in lanterns where !alive.contains(id) { fadeOut(l); lanterns[id] = nil }
+    }
+
+    private func firefly(_ si: Int, at p: CGPoint) {
+        guard si < screens.count else { return }
+        let l = CALayer()
+        l.bounds = CGRect(x: 0, y: 0, width: 4, height: 4)
+        l.cornerRadius = 2
+        l.backgroundColor = NSColor(red: 1, green: 0.9, blue: 0.45, alpha: 1).cgColor
+        l.shadowColor = NSColor(red: 1, green: 0.85, blue: 0.3, alpha: 1).cgColor; l.shadowRadius = 5; l.shadowOpacity = 1; l.shadowOffset = .zero
+        l.position = p
+        l.zPosition = 26
+        screens[si].root.addSublayer(l)
+        let path = CAKeyframeAnimation(keyPath: "position")
+        var pts: [NSValue] = [NSValue(point: p)]
+        var cur = p
+        for _ in 0..<5 { cur = CGPoint(x: cur.x + .random(in: -26...26), y: cur.y + .random(in: -14...18)); pts.append(NSValue(point: cur)) }
+        path.values = pts
+        let blink = CAKeyframeAnimation(keyPath: "opacity"); blink.values = [0, 1, 0.2, 1, 0.3, 1, 0]
+        let g = CAAnimationGroup(); g.animations = [path, blink]; g.duration = Double.random(in: 3...5)
+        g.isRemovedOnCompletion = false; g.fillMode = .forwards
+        CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+        l.add(g, forKey: "fly"); CATransaction.commit()
     }
 
     private func renderTrees() {

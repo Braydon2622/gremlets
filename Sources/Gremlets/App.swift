@@ -849,6 +849,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             schedule(rate: 60)
             return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
+        case "card":
+            let name = query["project"] ?? ""
+            guard let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name] else {
+                return (404, #"{"ok":false,"error":"no tree for that project"}"#)
+            }
+            guard let url = TreeCard.make(t, world: world) else { return (500, #"{"ok":false}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "snapshot":
             guard let url = VillageSnapshot.make(world: world, species: species) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
@@ -1273,6 +1280,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if t.fruit > 0 { parts.append("\(t.fruit) ●") }
             info((live ? "● " : "") + parts.joined(separator: "  ·  "), tip: live ? "Growing on its terminal right now" : "Resting in the nursery")
         }
+        if !trees.isEmpty {
+            sub.addItem(.separator())
+            for (n, t) in trees.prefix(12).enumerated() {
+                let i = NSMenuItem(title: "Save Tree Card: \(t.project)", action: #selector(saveTreeCard(_:)), keyEquivalent: "")
+                i.target = self; i.tag = n
+                i.toolTip = "A card of this tree with its story, saved to Pictures › Gremlets and copied, ready to post."
+                sub.addItem(i)
+            }
+        }
         sub.addItem(.separator())
         let side = NSMenuItem(title: "Nursery on the Right Side", action: #selector(toggleNurserySide), keyEquivalent: "")
         side.target = self
@@ -1281,6 +1297,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sub.addItem(side)
         item.submenu = sub
         return item
+    }
+
+    @objc private func saveTreeCard(_ sender: NSMenuItem) {
+        let trees = world.bonsaiBook.trees.sorted { $0.lastSeen > $1.lastSeen }
+        guard sender.tag < trees.count, let url = TreeCard.make(trees[sender.tag], world: world) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @objc private func openJournal() {

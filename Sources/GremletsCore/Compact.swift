@@ -73,11 +73,13 @@ extension Brain {
         if c.isAsleep { c.set(.sleep, duration: world.rng.range(20, 60)); return }
         guard let here = perches.first(where: { $0.ownerID == c.groundOwner }) else {
             // Float up to the least crowded perch (counting those already on their way to it).
-            func crowd(_ p: Surface) -> Int {
-                world.creatures.filter { o in o !== c && (o.groundOwner == p.ownerID || (o.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false)) }.count
+            // How full a perch is, for its size (a Gremlet needs about 34 points).
+            func crowd(_ p: Surface) -> Double {
+                let n = world.creatures.filter { o in o !== c && (o.groundOwner == p.ownerID || (o.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false)) }.count
+                return Double(n) / max(1, p.width / 34)
             }
             let p = perches.min { crowd($0) < crowd($1) }!
-            let x = (p.minX + p.width * world.rng.range(0.3, 0.7))
+            let x = (p.minX + p.width * world.rng.range(0.2, 0.8))
             world.startFloat(c, to: Vec2(x, p.y), ride: .dandelion)
             return
         }
@@ -94,7 +96,7 @@ extension Brain {
         // Hop over to a nearby perch (the swing, the hammock, the porch).
         for p in perches where p.ownerID != here.ownerID {
             let mid = (p.minX + p.maxX) / 2
-            if abs(mid - c.pos.x) < 160 && abs(p.y - c.pos.y) < 70 {
+            if abs(mid - c.pos.x) < 170 && abs(p.y - c.pos.y) < 90 {
                 add("hop", 0.5) { world.launch(c, velocity: world.ballistic(from: c.pos, toX: mid, y: p.y, apexExtra: 26)) }
             }
         }

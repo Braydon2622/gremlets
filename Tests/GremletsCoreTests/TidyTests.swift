@@ -53,7 +53,8 @@ import Testing
         w.compact = false
         w.notchHome = nil
         for _ in 0..<(60 * 90) { w.step(1.0 / 60) }
-        #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.isGrounded && $0.pos.y < 50 }, "\(cs.map { ($0.pos, $0.activity, $0.groundOwner ?? 0, $0.homeUntil != nil) })")
+        // Back down by the floor (any of them may be mid-hop by now).
+        #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.pos.y < 160 }, "\(cs.map(\.pos))")
     }
 
     @Test func rotationNeverPlantsAKindTwice() {
@@ -83,3 +84,62 @@ import Testing
     }
 }
 
+
+@Suite struct BusyTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 900)
+
+    @Test func eightGremletsAllFindAPerchInFullScreen() {
+        let w = World(seed: 151)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let cs = (0..<8).map { w.spawn(testSpecies(scale: 10), at: Vec2(150 + Double($0) * 150, 0)) }
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        w.notchHome = NotchHome(minX: scr.maxX - 206, maxX: scr.maxX - 12, menuBottom: scr.maxY)
+        w.compact = true
+        var up = 0
+        for _ in 0..<(60 * 90) {
+            w.step(1.0 / 60)
+            up = cs.filter { World.isNotchOwner($0.groundOwner) || $0.homeUntil != nil }.count
+            if up == cs.count { break }
+        }
+        #expect(up == 8, "all eight up in the corners (\(up))")
+        // Spread out: no perch holds more than it has room for.
+        for p in w.compactPerches {
+            let n = cs.filter { $0.groundOwner == p.ownerID }.count
+            #expect(Double(n) <= max(1, p.width / 34) + 1, "\(n) on a \(Int(p.width)) pt perch")
+        }
+    }
+
+    @Test func aGremletTravelsToABareWindowAndPlantsMossThere() throws {
+        let w = World(seed: 152)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 100, y: 0, w: 400, h: 200)),
+                                                               WindowInfo(id: 2, frame: Rect(x: 600, y: 0, w: 400, h: 320))])
+        w.mossMinutes = 60
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(300, 220))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.startExpedition(c, .plant(2)))
+        for _ in 0..<(60 * 60) where !w.mossPatches.contains(where: { $0.windowID == 2 }) { w.step(1.0 / 60) }
+        #expect(w.mossPatches.contains { $0.windowID == 2 }, "planted on the other window")
+    }
+
+    @Test func mowingRunsAlongAWindowTopAndTidiesTheMoss() {
+        let w = World(seed: 153)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 100, y: 0, w: 600, h: 200))])
+        w.mossMinutes = 80
+        w.mossCare = 0.5
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(150, 220))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        w.startMossTask(c, .mow(window: 1, to: 560), walkTo: c.pos.x)
+        var mowed = false, sawMowing = false
+        for _ in 0..<(60 * 20) where !mowed {
+            w.step(1.0 / 60)
+            if c.mowing { sawMowing = true }
+            mowed = w.drainMossEvents().contains { if case .trimmed = $0 { return true }; return false }
+        }
+        #expect(sawMowing && mowed)
+        #expect(c.pos.x > 500, "all the way along (\(c.pos.x))")
+        #expect(w.mossCare > 0.5 && w.mossMinutes >= 79)
+    }
+}

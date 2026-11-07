@@ -14,9 +14,10 @@ final class SpectacleRenderer {
     private var podLayers: [String: (branch: CALayer, pod: CALayer, rope: CAShapeLayer, key: String)] = [:]
     private var liftLayer: CALayer?
     private var carryLayers: [Int: (layer: CALayer, what: String)] = [:]
+    private var nextMowPuff: [Int: CFTimeInterval] = [:]
     private var nextChimneyPuff: CFTimeInterval = 0
     private var swingLayer: CAShapeLayer?
-    private var cornerBranchLayer: CALayer?
+    private var cornerBranchLayers: [CALayer] = []
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -1074,6 +1075,13 @@ final class SpectacleRenderer {
                 if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.dust], si: si, at: pt, count: 6, dx: -20...20, dy: -60 ... -10, duration: 0.8) }
             case .climbing:
                 break
+            case .treeTended(let p, let by):
+                if let (si, pt) = local(p + Vec2(0, 28)) {
+                    overlay.burst([PropArt.wateringCan], si: si, at: CGPoint(x: pt.x + 10, y: pt.y + 8), count: 1, dx: 0...0, dy: 0...4, duration: 1.4)
+                    overlay.burst([Effects.rain, Effects.sparkle], si: si, at: pt, count: 8, dx: -18...18, dy: -30 ... -6, duration: 0.7, stagger: 0.08)
+                    overlay.burst([Effects.leaf], si: si, at: pt, count: 2, dx: -20...20, dy: -60 ... -20, duration: 1.0)
+                }
+                if Int.random(in: 0..<3) == 0 { overlay.showBubble(["Looking good, tree.", "A little water…", "Snip, there."].randomElement()!, on: by, seconds: 1.6) }
             case .pruned(let p, let by):
                 // Snip! A clump of moss tumbles off the end.
                 if let (si, pt) = local(p) {
@@ -1309,8 +1317,9 @@ final class SpectacleRenderer {
         }
         if m >= 10 {
             // Window tops: carpets creeping in from both ends.
-            let reach = ((m - 10) / 90).clamped(0, 1)       // fraction of each half covered
-            let density = ((m - 10) / 140).clamped(0, 1)
+            // Spreads quicker and thicker than it used to: noticeable within the first hour.
+            let reach = ((m - 10) / 55).clamped(0, 1)       // fraction of each half covered
+            let density = ((m - 10) / 110).clamped(0, 1)
             var segIndex: [Int: Int] = [:]
             for s in world.surfaces.filter({ $0.kind == .windowTop && $0.width >= 40 }).sorted(by: { ($0.ownerID, $0.minX) < ($1.ownerID, $1.minX) }) {
                 let seg = segIndex[s.ownerID, default: 0]; segIndex[s.ownerID] = seg + 1
@@ -1970,7 +1979,7 @@ extension SpectacleRenderer {
         var out: [CALayer] = []
         if let l = notchLayers { out += [l.house, l.hammock, l.ropes] }
         if let s = swingLayer { out.append(s) }
-        if let b = cornerBranchLayer { out.append(b) }
+        out += cornerBranchLayers
         if let l = liftLayer { out.append(l) }
         out += carryLayers.values.map(\.layer)
         return out
@@ -1985,19 +1994,23 @@ extension SpectacleRenderer {
     }
 
     fileprivate func renderCornerBranch() {
-        guard let b = world.cornerBranch, let (si, pt) = local(Vec2(b.minX, b.y)) else {
-            cornerBranchLayer?.removeFromSuperlayer(); cornerBranchLayer = nil; return
+        let branches = world.cornerBranches
+        while cornerBranchLayers.count > branches.count { cornerBranchLayers.removeLast().removeFromSuperlayer() }
+        for (i, b) in branches.enumerated() {
+            let fromRight = b.maxX >= (screens.first?.frame.maxX ?? .infinity) - 1
+            guard let (si, pt) = local(Vec2(fromRight ? b.maxX : b.minX, b.y)) else { continue }
+            if i >= cornerBranchLayers.count {
+                let l = pixelLayer(); l.contents = PodArt.branch
+                l.anchorPoint = CGPoint(x: 0, y: 2.0 / 6.0); l.zPosition = 1.2
+                popIn(l)
+                cornerBranchLayers.append(l)
+            }
+            let l = cornerBranchLayers[i]
+            attach(l, si)
+            l.bounds = CGRect(x: 0, y: 0, width: b.width, height: 6 * 5)
+            l.setAffineTransform(CGAffineTransform(scaleX: fromRight ? -1 : 1, y: 1))
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 1)
         }
-        let l = cornerBranchLayer ?? {
-            let l = pixelLayer(); l.contents = PodArt.branch
-            l.bounds = CGRect(x: 0, y: 0, width: 24 * 5, height: 6 * 5)
-            l.anchorPoint = CGPoint(x: 0, y: 2.0 / 6.0); l.zPosition = 1.2
-            popIn(l)
-            return l
-        }()
-        attach(l, si)
-        l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 1)
-        cornerBranchLayer = l
     }
 }
 
@@ -2046,6 +2059,14 @@ extension SpectacleRenderer {
 
 extension SpectacleRenderer {
     fileprivate func renderCarried() {
+        // Mowing: clippings fly up behind a Gremlet walking along a mossy window top.
+        let now = CACurrentMediaTime()
+        for c in world.creatures where c.mowing && c.activity == .walk && now >= nextMowPuff[c.id] ?? 0 {
+            nextMowPuff[c.id] = now + 0.22
+            if let (si, pt) = local(c.pos + Vec2(-c.facing * c.size.x * 0.3, 2)) {
+                overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 1, dx: (c.facing > 0 ? -40 : 10)...(c.facing > 0 ? -10 : 40), dy: 10...36, duration: 0.6)
+            }
+        }
         var alive = Set<Int>()
         for c in world.creatures {
             guard let what = c.carrying, c.homeUntil == nil, let (si, pt) = local(c.pos + Vec2(c.facing * 2, c.species.headTop - 2)) else { continue }

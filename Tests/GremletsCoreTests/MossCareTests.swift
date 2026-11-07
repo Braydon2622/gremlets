@@ -70,10 +70,14 @@ import Testing
         let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 520))
         for _ in 0..<60 { w.step(1.0 / 60) }
         w.startMossTask(c, .slide(vine: v.key), walkTo: v.x + 16)
-        var slid = false
-        for _ in 0..<(60 * 20) { w.step(1.0 / 60); if c.climb?.sliding == true { slid = true } }
+        var slid = false, landed = false
+        for _ in 0..<(60 * 20) where !landed {
+            w.step(1.0 / 60)
+            if c.climb?.sliding == true { slid = true }
+            if slid && c.isGrounded && c.pos.y < 100 { landed = true }
+        }
         #expect(slid)
-        #expect(c.isGrounded && c.pos.y < 100, "landed down below (\(c.pos))")
+        #expect(landed, "landed down below (\(c.pos))")
     }
 }
 

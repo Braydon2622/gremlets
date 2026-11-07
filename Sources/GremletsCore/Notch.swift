@@ -29,13 +29,17 @@ public struct NotchHome: Equatable, Sendable {
 
 extension World {
     static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003, cornerBranchOwner = -430_004
-    static func isNotchOwner(_ o: Int?) -> Bool { o == notchPorchOwner || o == notchHammockOwner || o == notchSwingOwner || o == cornerBranchOwner }
+    static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerBranchOwner - 3 }
 
-    /// Full screen: a mossy branch out from the top-left corner, the other place they hang out.
-    public var cornerBranch: Surface? {
-        guard compact, let scr = screens.first else { return nil }
-        return Surface(ownerID: World.cornerBranchOwner, kind: .plant, y: scr.maxY - 96, minX: scr.minX, maxX: scr.minX + 120)
+    /// Full screen: mossy branches out from the screen's top corners, more places to hang out (room for a crowd):
+    /// two from the top-left, one from the right edge under the house.
+    public var cornerBranches: [Surface] {
+        guard compact, let scr = screens.first else { return [] }
+        return [Surface(ownerID: World.cornerBranchOwner, kind: .plant, y: scr.maxY - 96, minX: scr.minX, maxX: scr.minX + 140),
+                Surface(ownerID: World.cornerBranchOwner - 1, kind: .plant, y: scr.maxY - 176, minX: scr.minX, maxX: scr.minX + 110),
+                Surface(ownerID: World.cornerBranchOwner - 2, kind: .plant, y: scr.maxY - 196, minX: scr.maxX - 120, maxX: scr.maxX)]
     }
+    public var cornerBranch: Surface? { cornerBranches.first }
 
     /// The home only shows (and can be reached) while no window is in the space under the notch: it never sits over
     /// a toolbar or a title bar.
@@ -52,7 +56,7 @@ extension World {
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
                 Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
                 Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
-            + (cornerBranch.map { [$0] } ?? [])
+            + cornerBranches
     }
 
     /// Who's napping in the hammock.

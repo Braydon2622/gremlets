@@ -59,10 +59,12 @@ public enum MossEvent: Equatable, Sendable {
     case trimmed(Vec2, by: Int)
     /// Watered a stretch of the moss on a window top.
     case watered(Vec2, by: Int)
+    /// Tended the project's bonsai (from up on one of its pads).
+    case treeTended(Vec2, by: Int)
 }
 
 struct MossTask: Sendable {
-    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double), prune(vine: String), slide(vine: String), hold(vine: String) }
+    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double), prune(vine: String), slide(vine: String), hold(vine: String), mow(window: Int, to: Double), tendTree(pad: Int) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -110,7 +112,7 @@ extension World {
                     let key = "w\(s.ownerID)\(side < 0 ? "l" : "r")"
                     // Each strand keeps its own length: it starts at the moss's level and grows until pruned.
                     if strandGrowth[key] == nil { strandGrowth[key] = (m - 20) * 0.9 }
-                    let len = min(w.h * 0.85, 24 + strandGrowth[key]!)
+                    let len = min(w.h * 0.85, 34 + strandGrowth[key]!)
                     out.append(MossVine(key: key, anchor: .windowSide(window: s.ownerID, side: side), x: x + side * 2, bottom: s.y - len, top: s.y))
                     let short = len * 0.55
                     if short > 26 {
@@ -166,7 +168,7 @@ extension World {
     func updateOvergrowth(_ dt: Double) {
         // Strands lengthen while the moss is cared for (about a window's height in an hour or two).
         if !mossThirsty && mossMinutes >= 20 {
-            for v in mossVines where !v.key.hasSuffix("2") { if case .windowSide = v.anchor { strandGrowth[v.key, default: 0] += dt * (0.05 + 0.1 * mossCare) } }
+            for v in mossVines where !v.key.hasSuffix("2") { if case .windowSide = v.anchor { strandGrowth[v.key, default: 0] += dt * (0.08 + 0.14 * mossCare) } }
         }
         if clock - lastVineBuild > 1 { lastVineBuild = clock; rebuildVines() }
         // Patches grow on their own, faster when tended and while Claude works.
@@ -186,6 +188,29 @@ extension World {
             .min(by: { abs(patchX($0) - c.pos.x) < abs(patchX($1) - c.pos.x) }), s.supports(x: patchX(p)) {
             add("tendMoss", 0.8) { self.startMossTask(c, .tend(patch: p.id), walkTo: self.patchX(p)) }
         }
+        // Mow the moss along this window top, end to end.
+        if mossMinutes >= 30, !mossThirsty, s.kind == .windowTop, s.width >= 140, let w = windows[s.ownerID] {
+            let to = c.pos.x - s.minX < s.maxX - c.pos.x ? s.maxX - 14 : s.minX + 14
+            add("mowMoss", 0.5 + (mossMinutes > 150 ? 0.6 : 0)) { self.startMossTask(c, .mow(window: s.ownerID, to: to - w.minX), walkTo: c.pos.x) }
+        }
+        // Up into the project's bonsai to tend it: water its pads, nip off a stray shoot.
+        if let pad = surfaces.filter({ World.isBonsaiOwner($0.ownerID) && $0.y > s.y + 18 && $0.y - s.y < maxJumpHeight * c.species.jumpPower * 0.9
+                                        && abs(($0.minX + $0.maxX) / 2 - c.pos.x) < 260 }).randomElement(using: &rng) {
+            add("tendTree", 0.9) {
+                self.endSocial(c)
+                c.mossTask = MossTask(kind: .tendTree(pad: pad.ownerID), started: self.clock)
+                c.carrying = "can"
+                self.launch(c, velocity: self.ballistic(from: c.pos, toX: (pad.minX + pad.maxX) / 2, y: pad.y, apexExtra: 30))
+            }
+        }
+        // A bare window somewhere else: set off to plant moss there (stairs, bridges and all, if that's what it takes).
+        if mossMinutes >= 10, !mossThirsty, !compact, clock >= nextExpeditionAt - 60, c.expedition == nil {
+            let bare = builtSurfaces.filter { t in t.kind == .windowTop && t.ownerID >= 0 && t.ownerID != s.ownerID && t.width >= 100
+                && !mossPatches.contains(where: { $0.windowID == t.ownerID }) }
+            if let target = bare.randomElement(using: &rng) {
+                add("plantFar", 0.45) { if !self.startExpedition(c, .plant(target.ownerID)) { self.nextMossTaskAt = self.clock + 20 } }
+            }
+        }
         // A strand hanging more than half-way down its window needs pruning: climb down from the top and snip it.
         if s.kind == .windowTop, let w = windows[s.ownerID] {
             for v in mossVines where !v.key.hasSuffix("2") {
@@ -204,7 +229,7 @@ extension World {
         // Water the moss on this window top (they notice when it's getting dry, and go to it far more often).
         if mossMinutes >= 10 || mossCare < 0.6, s.kind == .windowTop, let w = windows[s.ownerID] {
             let x = (c.pos.x + c.facing * rng.range(20, 90)).clamped(s.minX + 16, s.maxX - 16)
-            add("waterMoss", 0.4 + (1 - mossCare) * 4) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
+            add("waterMoss", 0.4 + (1 - mossCare) * (mossThirsty ? 9 : 4)) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }
         // Keep it tidy: once the moss is thick, trim the carpet back near an end of this window top.
         if mossMinutes > 170, s.kind == .windowTop, let w = windows[s.ownerID] {
@@ -262,7 +287,7 @@ extension World {
         c.targetX = x; c.facing = x > c.pos.x ? 1 : -1
         c.set(.walk, duration: 30)
         // While Claude works they're busy gardeners: the next moss job comes round quickly.
-        nextMossTaskAt = clock + (claudeWorking ? rng.range(2, 5) : rng.range(8, 20))
+        nextMossTaskAt = clock + (claudeWorking ? rng.range(2, 4) : rng.range(4, 10))
     }
 
     /// `gremlet moss climb|pad|plant`: someone does it now, if anyone can.
@@ -350,6 +375,34 @@ extension World {
             }
             c.mossTask = nil
             c.set(.react, duration: c.animationLength(for: .react))
+        case .mow(let wid, let to):
+            guard let w = windows[wid], s.ownerID == wid else { c.mowing = false; c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            if !t.acting {
+                t.acting = true; c.mossTask = t
+                c.mowing = true
+                c.targetX = (w.minX + to).clamped(s.minX + 8, s.maxX - 8)
+                c.facing = c.targetX! > c.pos.x ? 1 : -1
+                c.set(.walk, duration: 14)
+                return
+            }
+            // Mowing tidies (and keeps it healthy) without taking the moss away: only the trim when it's very thick does.
+            c.mowing = false
+            mossCare = min(1, mossCare + 0.08)
+            mossEvents.append(.trimmed(Vec2(c.pos.x, s.y), by: c.id))
+            c.mossTask = nil
+            c.set(.react, duration: c.animationLength(for: .react))
+        case .tendTree(let pad):
+            guard c.groundOwner == pad else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            if !t.acting {
+                t.acting = true; c.mossTask = t
+                c.workPose = "crouch"; c.set(.work, duration: 2.6)
+                mossEvents.append(.treeTended(c.pos, by: c.id))
+                return
+            }
+            c.mossTask = nil
+            c.carrying = nil
+            c.idleVariant = "look"
+            c.set(.idle, duration: 2)
         case .water(let wid, let offset):
             guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = w.minX + offset
@@ -360,7 +413,7 @@ extension World {
                 mossEvents.append(.watered(Vec2(x, s.y), by: c.id))
                 return
             }
-            mossCare = min(1, mossCare + 0.2)
+            mossCare = min(1, mossCare + 0.25)
             c.mossTask = nil
             c.set(.idle, duration: 0.5)
         case .trim(let wid, let offset):

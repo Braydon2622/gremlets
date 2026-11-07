@@ -87,6 +87,10 @@ public final class Creature {
     public internal(set) var carrying: String?
     /// Just woke up in the hanging house on a morning: floats down under a leaf next.
     var driftDown = false
+    /// Mowing the moss along a window top (clippings fly behind it).
+    public internal(set) var mowing = false
+    /// Bounces left in a run of hops on a window top.
+    var bounces = 0
     /// The snow-Gremlet it's helping to build (see Weather.swift).
     var snowmanTask: Int?
     /// When it came over from the linked screen on the sky ferry (it gets off here rather than riding straight back).

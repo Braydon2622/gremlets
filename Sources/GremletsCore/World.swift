@@ -577,6 +577,13 @@ public final class World {
             if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
             if c.mossTask == nil { c.carrying = nil }
             if c.driftDown && (c.job != nil || compact || !c.isGrounded) { c.driftDown = false }   // the moment's passed
+            if c.mossTask == nil { c.mowing = false }
+            // A run of bounces on a window top: boing, boing, boing.
+            if c.bounces > 0, !compact, c.isGrounded {
+                c.bounces -= 1
+                launch(c, velocity: Vec2(c.facing * rng.range(0, 30), (2 * gravity * rng.range(46, 80) * c.species.jumpPower).squareRoot()))
+                return
+            }
             if c.driftDown, let scr = screen(containingX: c.pos.x, y: c.pos.y) ?? screens.first {
                 c.driftDown = false
                 startFloat(c, to: Vec2((c.pos.x + c.facing * 60).clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)

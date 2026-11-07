@@ -85,6 +85,9 @@ struct Brain {
             c.edgeDecisionMade = false
             c.set(.walk, duration: world.rng.range(1.5, 4.5))
         }
+        if let s = world.supportingSurface(for: c), s.kind == .windowTop {
+            add("bounceOnWindow", 0.3 * (0.4 + e)) { c.bounces = Int(world.rng.range(2, 4.99)); world.launch(c, velocity: Vec2(0, (2 * world.gravity * 60 * c.species.jumpPower).squareRoot())) }
+        }
         add("hop", 0.3 * e) {
             let h = world.rng.range(30, 60) * c.species.jumpPower
             world.launch(c, velocity: Vec2(c.facing * world.rng.range(40, 110), (2 * world.gravity * h).squareRoot()))
@@ -185,7 +188,7 @@ struct Brain {
     }
 
     static let popUps: Set<String> = ["diveInLeaves", "blowPuff"]
-    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss", "waterMoss", "pruneMoss"]
+    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss", "waterMoss", "pruneMoss", "mowMoss", "tendTree", "plantFar"]
     static let lively: Set<String> = ["walk", "hop", "chase", "tag", "follow", "stairs", "rail", "grapple", "glide", "bridge", "boost",
                                       "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
                                       "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]

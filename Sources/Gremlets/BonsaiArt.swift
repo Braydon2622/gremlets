@@ -323,7 +323,7 @@ enum MossArt {
         let density = dry ? min(density, 0.3) : density
         var cv = PixelCanvas(w, h)
         var r = ArtRNG(s: seed &* 2654435761 &+ 11)
-        let thick = 1.2 + density * 3.2
+        let thick = 1.6 + density * 4.2
         var x = 0.0
         while x < Double(w) {
             let rad = r.range(1.6, 2.6) + density * r.range(0.5, 2.0)

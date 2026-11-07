@@ -55,6 +55,8 @@ public enum ExpeditionGoal: Equatable, Sendable {
     case summit
     /// Up to the home under the notch, for a nap in the hammock.
     case notch
+    /// Over to a bare window to plant moss on it.
+    case plant(Int)
 }
 
 public enum LegMethod: String, Sendable {
@@ -214,6 +216,10 @@ extension World {
             target = nodes.firstIndex { abs($0.y - ch.pos.y) < 3 && $0.supports(x: ch.pos.x) }
             guard target != nil else { return nil }
         }
+        if case .plant(let wid) = goal {
+            target = nodes.indices.filter { nodes[$0].ownerID == wid && nodes[$0].kind == .windowTop }.max { nodes[$0].width < nodes[$1].width }
+            guard target != nil else { return nil }
+        }
         if goal == .notch {
             target = nodes.firstIndex { $0.ownerID == World.notchPorchOwner } ?? nodes.firstIndex { $0.ownerID == World.notchHammockOwner }
             guard target != nil else { return nil }
@@ -280,7 +286,7 @@ extension World {
             guard let r = route(for: c, from: support, nodes: nodes, goal: goal), !r.isEmpty else { return false }
             legs = r
             nextSummitAt = clock + rng.range(1500, 2700)
-        case .notch:
+        case .notch, .plant:
             guard let r = route(for: c, from: support, nodes: nodes, goal: goal), !r.isEmpty else { return false }
             legs = r
         }
@@ -444,6 +450,13 @@ extension World {
             case .notch:
                 c.expedition = nil
                 settleInHammock(c)
+            case .plant(let wid):
+                // Arrived: plant a tuft here.
+                c.expedition = nil
+                if let w = windows[wid], s.ownerID == wid {
+                    let x = (c.pos.x + c.facing * 30).clamped(s.minX + 20, s.maxX - 20)
+                    startMossTask(c, .plant(window: wid, offset: x - w.minX), walkTo: x)
+                }
             }
         case .homebound:
             ex.phase = .opening; ex.legStarted = clock

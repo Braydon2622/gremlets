@@ -14,6 +14,8 @@
 #   gremlet meteors | festival | lanterns   start a little grove moment now
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
+#   gremlet season winter|spring|summer|autumn|auto   preview a season for ten minutes (trees, village, islands)
+#   gremlet night on|off|auto    preview night (lanterns, fireflies, spirits) for ten minutes
 #   gremlet timelapse            stitch the daily village postcards into a video (Movies/Gremlets)
 #   gremlet card [project]       save a card of a project's bonsai with its story (Pictures/Gremlets) and copy it
 #   gremlet demo [seconds]       play a scripted Claude session on your front window and record it, plus a GIF (Movies/Gremlets)
@@ -52,6 +54,8 @@ case "${1:-}" in
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
   snapshot) call snapshot; echo ;;
+  season)  call "season?name=${2:-auto}"; echo ;;
+  night)   call "night?on=${2:-auto}"; echo ;;
   timelapse) curl -s -m 60 -X POST -H 'X-Gremlets: 1' "${URL}/timelapse"; echo ;;
   card)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/card"; echo ;;
   demo)
@@ -78,6 +82,6 @@ except Exception: print("")')"
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

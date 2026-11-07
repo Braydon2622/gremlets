@@ -54,7 +54,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let icons = DesktopIcons()
     private let controls = AppControls()
     private let dayLog = DayLog()
+    private let sounds = GardenSounds()
+    private var soundsAllowed: Bool { sounds.enabled && !focus.isFocusing && !presence.isHidden && !paused }
     private var dailyPostcardTried = false
+    private var seasonOverride: (Int, Date)?
+    private var nightOverride: (Bool, Date)?
     private let launchTime = CACurrentMediaTime()
     private lazy var showcase: Showcase = {
         let sc = Showcase(world: world, buddy: buddy)
@@ -147,7 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !showcase.running {
             for e in groveEvents {
                 if case .fed = e { dayLog.add { $0.tasks += 1 } }
-                if case .houseAdded = e { dayLog.add { $0.houses += 1 } }
+                if case .houseAdded = e { dayLog.add { $0.houses += 1 }; if soundsAllowed { sounds.play(.house) } }
             }
         }
         if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; if case .houseAdded = $0 { return true }; return false }) { saveGrove() }
@@ -156,6 +160,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let growth = world.drainBonsaiEvents()
         if !growth.isEmpty {
             overlay.bonsaiFX.handle(growth); bonsaiDirty = true
+            if soundsAllowed {
+                for e in growth {
+                    switch e {
+                    case .grew(_, "bloom", _): sounds.play(.bloom)
+                    case .grew(_, "fruit", _): sounds.play(.fruit)
+                    case .sprouted: sounds.play(.sprout)
+                    case .milestone: sounds.play(.milestone)
+                    default: break
+                    }
+                }
+            }
             if !showcase.running {
                 let leaves = growth.filter { if case .grew(_, "leaf", _) = $0 { return true }; return false }.count
                 if leaves > 0 { dayLog.add { $0.edits += leaves } }
@@ -169,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(adventures)
         if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) {
             saveGrove(); rebuildMenu()
+            if soundsAllowed { sounds.play(.gem) }
             if !showcase.running { dayLog.add { $0.gems += adventures.filter { if case .gemFound = $0 { return true }; return false }.count } }
         }
         overlay.render()
@@ -484,6 +500,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             t.isEnabled = false
             menu.addItem(t)
         }
+        let snd = NSMenuItem(title: "Garden Sounds", action: #selector(toggleSounds), keyEquivalent: "")
+        snd.target = self
+        snd.state = sounds.enabled ? .on : .off
+        snd.toolTip = "Tiny chimes when a flower opens on a tree, a fruit ripens, a house joins the village or a gem turns up. Quiet, and never during focus sessions."
+        menu.addItem(snd)
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
         rem.state = remindersOn ? .on : .off
@@ -851,6 +872,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             schedule(rate: 60)
             return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
+        case "season":
+            let names = ["winter": 1, "spring": 4, "summer": 7, "autumn": 10, "fall": 10]
+            let arg = (query["name"] ?? "auto").lowercased()
+            if arg == "auto" { seasonOverride = nil } else if let m = names[arg] ?? Int(arg), (1...12).contains(m) { seasonOverride = (m, Date().addingTimeInterval(600)) }
+            else { return (400, #"{"ok":false,"error":"season must be winter, spring, summer, autumn, a month number or auto"}"#) }
+            housekeeping(elapsed: 0); overlay.fx.rebuild(); overlay.bonsaiFX.rebuild(); schedule(rate: 60)
+            return (200, #"{"ok":true,"month":\#(world.month)}"#)
+        case "night":
+            let arg = (query["on"] ?? "auto").lowercased()
+            if arg == "auto" { nightOverride = nil } else { nightOverride = (["on", "1", "true", "yes"].contains(arg), Date().addingTimeInterval(600)) }
+            housekeeping(elapsed: 0); overlay.fx.rebuild(); overlay.bonsaiFX.rebuild(); schedule(rate: 60)
+            return (200, #"{"ok":true,"night":\#(world.isNight)}"#)
         case "gif":
             // A looping GIF of a recording (the demo), for a README or a post.
             let path = Self.decoded(query["path"] ?? "")
@@ -1019,8 +1052,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if icons.enabled && Int(Date().timeIntervalSince1970) % 15 == 0 { icons.refresh() }
         // Seasons and night-time for the garden; now and then a shooting star at night grants a wish.
         let cal = Calendar.current, nowDate = Date()
-        world.month = cal.component(.month, from: nowDate)
-        world.isNight = PropArt.isEvening
+        // Previews (gremlet season winter / gremlet night on) hold for ten minutes.
+        if let (m, until) = seasonOverride, Date() < until { world.month = m } else { seasonOverride = nil; world.month = cal.component(.month, from: nowDate) }
+        if let (n, until) = nightOverride, Date() < until { world.isNight = n } else { nightOverride = nil; world.isNight = PropArt.isEvening }
         if world.isNight && world.userActive && !presence.isHidden && Double.random(in: 0..<1) < elapsed / (40 * 60) {
             wishOnAStar()
         }
@@ -1358,6 +1392,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let port = ProcessInfo.processInfo.environment["GREMLETS_PORT"] ?? "47920"
         if let url = URL(string: "http://127.0.0.1:\(port)/journal") { NSWorkspace.shared.open(url) }
     }
+
+    @objc private func toggleSounds() { sounds.enabled.toggle(); if sounds.enabled { sounds.play(.bloom) }; rebuildMenu() }
 
     @objc private func toggleNurserySide() {
         world.nurserySide = -world.nurserySide

@@ -41,7 +41,7 @@ q = {
     "pid": sys.argv[1],
 }
 if event == "start":
-    # The project's git history, as two numbers (commit count, first commit time), so an old repo grows an old tree.
+    # The git history of the project, as two numbers (commit count, first commit time), so an old repo grows an old tree.
     import subprocess
     try:
         cwd = d.get("cwd") or "."
@@ -61,7 +61,7 @@ if event in ("tool", "toolfail"):
     import re
     if re.search(r"\b(test|tests|pytest|jest|vitest|mocha|rspec|go test|cargo test|swift test|xcodebuild test|npm t)\b", cmd):
         q["kind"] = "test"
-    # Claude's to-do list, as two numbers (steps, steps done): it builds the plan bridge. Never the steps' text.
+    # The to-do list, as two numbers (steps, steps done): it builds the plan bridge. Never the text of a step.
     todos = (d.get("tool_input") or {}).get("todos") if q["tool"] == "TodoWrite" else None
     if isinstance(todos, list):
         q["todos"] = str(len(todos))

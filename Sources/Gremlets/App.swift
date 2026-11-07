@@ -163,10 +163,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.step(dt)
         let events = world.drainEvents()
         trackBond(events)
-        // A hard landing on a window makes it wobble (if you've let Gremlets nudge windows).
-        for case .landed(let id, let impact) in events where impact > 750 {
-            if let c = world.creatures.first(where: { $0.id == id }), let wid = c.groundOwner, wid >= 0 { sense.nudge(windowID: wid, by: min(8, impact / 160)) }
-        }
         overlay.handle(events)
         let groveEvents = world.drainGroveEvents()
         overlay.fx.handle(groveEvents)
@@ -218,9 +214,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(team)
         for e in team {
             if case .boostStarted = e { sense.startClip("Boost", seconds: 12) }
-            if case .heave(_, let helper) = e, let h = world.creatures.first(where: { $0.id == helper }), let wid = world.windows.first(where: { abs($0.value.minX - h.pos.x) < 40 || abs($0.value.maxX - h.pos.x) < 40 })?.key {
-                sense.nudge(windowID: wid, by: 4)
-            }
         }
         overlay.fx.handle(world.drainMossEvents())
         overlay.fx.handle(world.drainPlanEvents())
@@ -533,7 +526,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for (title, key, on, granted) in [
             ("Stand on Text and Buttons (Screen Recording)", "text", sense.standOnText, ScreenSense.hasScreenAccess),
             ("Save Highlight Clips (Screen Recording)", "clips", sense.highlightClips, ScreenSense.hasScreenAccess),
-            ("Let Gremlets Nudge Windows (Accessibility)", "nudge", sense.nudgeWindows, ScreenSense.hasAccessibility),
         ] {
             let it = NSMenuItem(title: title + (on && !granted ? " · needs permission" : ""), action: #selector(toggleSense(_:)), keyEquivalent: "")
             it.target = self; it.representedObject = key; it.state = on ? .on : .off
@@ -1540,9 +1532,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "clips":
             sense.highlightClips.toggle()
             if sense.highlightClips && !ScreenSense.hasScreenAccess { ScreenSense.requestScreenAccess() }
-        case "nudge":
-            sense.nudgeWindows.toggle()
-            if sense.nudgeWindows && !ScreenSense.hasAccessibility { ScreenSense.requestAccessibility() }
         default: break
         }
         refreshEnvironment()

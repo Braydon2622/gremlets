@@ -58,8 +58,8 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   compaction. Click a Claude session's Gremlet to jump to that terminal window.
 - **Opt-in, with your permission (menu → Your Mac):** Gremlets stand on lines of text and search fields inside the
   front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
-  and boosts to Movies › Gremlets › Highlights (Screen Recording), and make windows wobble when they land hard
-  (Accessibility).
+  and boosts to Movies › Gremlets › Highlights (Screen Recording). Gremlets never move, resize or focus your windows
+  on their own.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, vines climb the screen's edges, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It

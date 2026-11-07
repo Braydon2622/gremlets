@@ -1,12 +1,11 @@
 import AppKit
-import ApplicationServices
 import ImageIO
 import ScreenCaptureKit
 import UniformTypeIdentifiers
 import Vision
 import GremletsCore
 
-/// The opt-in features that need you to grant a permission. All three are off until you switch them on in the menu
+/// The opt-in features that need you to grant a permission. Both are off until you switch them on in the menu
 /// (Gremlets → Your Mac), and each asks macOS for its permission only when you do.
 ///
 /// - **Stand on text and buttons** (Screen Recording): every few seconds the front window is captured and Apple's
@@ -15,7 +14,8 @@ import GremletsCore
 ///   or sent anywhere: only the boxes' positions are used, never the text.
 /// - **Highlight clips** (Screen Recording): when something good happens (a treasure run, a boost, a summit), a few
 ///   frames a second of the screen are saved as a GIF in Movies › Gremlets › Highlights.
-/// - **Window nudges** (Accessibility): a hard landing or a heave makes the window under it wobble a few points.
+///
+/// Nothing here moves, resizes or focuses your windows: Gremlets never get in the way of work.
 final class ScreenSense {
     struct Spans { let size: CGSize; let spans: [WindowSpan] }
 
@@ -32,17 +32,9 @@ final class ScreenSense {
         get { UserDefaults.standard.bool(forKey: "sense.clips") }
         set { UserDefaults.standard.set(newValue, forKey: "sense.clips") }
     }
-    var nudgeWindows: Bool {
-        get { UserDefaults.standard.bool(forKey: "sense.nudge") }
-        set { UserDefaults.standard.set(newValue, forKey: "sense.nudge") }
-    }
 
     static var hasScreenAccess: Bool { CGPreflightScreenCaptureAccess() }
     static func requestScreenAccess() { _ = CGRequestScreenCaptureAccess() }
-    static var hasAccessibility: Bool { AXIsProcessTrusted() }
-    static func requestAccessibility() {
-        _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
-    }
 
     // MARK: Standing on text
 
@@ -138,33 +130,5 @@ final class ScreenSense {
         let props = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: 0.2]] as CFDictionary
         for img in frames { CGImageDestinationAddImage(dest, img, props) }
         CGImageDestinationFinalize(dest)
-    }
-
-    // MARK: Window nudges
-
-    /// Wobbles a window a few points (down, back up, a smaller bounce) through the Accessibility API.
-    func nudge(windowID: Int, by amount: Double = 5) {
-        guard nudgeWindows, Self.hasAccessibility,
-              let info = (CGWindowListCopyWindowInfo([.optionIncludingWindow], CGWindowID(windowID)) as? [[String: Any]])?.first,
-              let pid = info[kCGWindowOwnerPID as String] as? Int32,
-              let b = info[kCGWindowBounds as String] as? [String: Double], let x = b["X"], let y = b["Y"] else { return }
-        let app = AXUIElementCreateApplication(pid)
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value) == .success, let wins = value as? [AXUIElement] else { return }
-        for w in wins {
-            var posRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &posRef) == .success, let pv = posRef else { continue }
-            var p = CGPoint.zero
-            AXValueGetValue(pv as! AXValue, .cgPoint, &p)
-            guard abs(p.x - x) < 2, abs(p.y - y) < 2 else { continue }
-            let steps: [(Double, Double)] = [(amount, 0), (-amount * 0.4, 0.09), (amount * 0.25, 0.17), (0, 0.24)]
-            for (dy, t) in steps {
-                DispatchQueue.main.asyncAfter(deadline: .now() + t) {
-                    var np = CGPoint(x: x, y: y + dy)
-                    if let v = AXValueCreate(.cgPoint, &np) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
-                }
-            }
-            return
-        }
     }
 }

@@ -27,21 +27,33 @@ import Testing
         #expect(w.mineIndex == nil)
     }
 
-    @Test func fullScreenSendsEveryoneToTheBottomCornersAndKeepsThemThere() {
+    @Test func fullScreenSendsEveryoneUpToTheTopCornersAndBackDownAfter() {
         let w = World(seed: 112)
         w.maxHobbies = 0
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         let cs = [300.0, 700, 1000].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 0)) }
         for _ in 0..<60 { w.step(1.0 / 60) }
         w.compact = true
-        for _ in 0..<(60 * 30) { w.step(1.0 / 60) }
-        for c in cs { #expect(w.inCorner(c), "\(c.pos.x) in a corner") }
-        // And they stay there.
+        // The house hangs in the top-right corner, a branch grows from the top-left.
+        w.notchHome = NotchHome(minX: scr.maxX - 206, maxX: scr.maxX - 12, menuBottom: scr.maxY)
+        #expect(w.cornerBranch != nil && w.notchHomeShowing)
+        var upThere = 0
+        for _ in 0..<(60 * 60) {
+            w.step(1.0 / 60)
+            upThere = cs.filter { World.isNotchOwner($0.groundOwner) || $0.homeUntil != nil }.count
+            if upThere == cs.count { break }
+        }
+        #expect(upThere == cs.count, "all up in the corners")
         for _ in 0..<(60 * 120) {
             w.step(1.0 / 60)
-            for c in cs where c.isGrounded { #expect(c.pos.x < World.cornerZone + 3 || c.pos.x > scr.maxX - World.cornerZone - 3) }
+            for c in cs where c.isGrounded { #expect(c.pos.y > scr.maxY - 200, "stays up top (\(c.pos))") }
         }
         #expect(w.kite == nil && w.ferry == nil && w.chests.isEmpty)
+        // Back to normal: they drift down.
+        w.compact = false
+        w.notchHome = nil
+        for _ in 0..<(60 * 40) { w.step(1.0 / 60) }
+        #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.isGrounded && $0.pos.y < 50 }, "\(cs.map(\.pos))")
     }
 
     @Test func rotationNeverPlantsAKindTwice() {

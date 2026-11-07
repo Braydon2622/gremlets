@@ -124,7 +124,7 @@ public final class World {
     public var wallClock: Double = 0
     var now: Double { wallClock > 0 ? wallClock : clock }
     /// An app is full screen: everything keeps to the bottom corners, and the rest is put away (see Compact.swift).
-    public var compact = false { didSet { if compact && !oldValue { enterCompact() } } }
+    public var compact = false { didSet { if compact && !oldValue { enterCompact() } else if !compact && oldValue { leaveCompact() } } }
     /// The cloud under the pointer while ⌃⌥ is held (see Lift.swift).
     public internal(set) var lift: CursorLift?
     /// The home under the notch (nil on screens without one); see Notch.swift.

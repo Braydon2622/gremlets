@@ -136,7 +136,7 @@ public final class Creature {
     /// What it's floating with (balloon, bubble, dandelion, umbrella, leaf), for the platform layer to draw.
     public internal(set) var ride: Ride = .dandelion
     /// Where a balloon ride is headed.
-    var floatTarget: Vec2?
+    public internal(set) var floatTarget: Vec2?
     /// Dozing next to its project because you stepped away.
     public var isDozingAtWork: Bool { activity == .work && workPose == "sleep" }
     /// 0...1: how close this Gremlet is to you (see `Bond`).

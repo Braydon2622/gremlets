@@ -28,13 +28,21 @@ public struct NotchHome: Equatable, Sendable {
 }
 
 extension World {
-    static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003
-    static func isNotchOwner(_ o: Int?) -> Bool { o == notchPorchOwner || o == notchHammockOwner || o == notchSwingOwner }
+    static let notchPorchOwner = -430_001, notchHammockOwner = -430_002, notchSwingOwner = -430_003, cornerBranchOwner = -430_004
+    static func isNotchOwner(_ o: Int?) -> Bool { o == notchPorchOwner || o == notchHammockOwner || o == notchSwingOwner || o == cornerBranchOwner }
+
+    /// Full screen: a mossy branch out from the top-left corner, the other place they hang out.
+    public var cornerBranch: Surface? {
+        guard compact, let scr = screens.first else { return nil }
+        return Surface(ownerID: World.cornerBranchOwner, kind: .plant, y: scr.maxY - 96, minX: scr.minX, maxX: scr.minX + 120)
+    }
 
     /// The home only shows (and can be reached) while no window is in the space under the notch: it never sits over
     /// a toolbar or a title bar.
     public var notchHomeShowing: Bool {
         guard let n = notchHome else { return false }
+        // Full screen: the house hangs in the top-right corner over the app on purpose (it's where they live then).
+        if compact { return true }
         let lo = n.houseMinX - 8, hi = n.hammock.maxX + 10, bottom = n.menuBottom - 104
         return !windows.values.contains { $0.minX < hi && $0.maxX > lo && $0.maxY > bottom }
     }
@@ -44,6 +52,7 @@ extension World {
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
                 Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
                 Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
+            + (cornerBranch.map { [$0] } ?? [])
     }
 
     /// Who's napping in the hammock.

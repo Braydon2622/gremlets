@@ -271,7 +271,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshEnvironment() {
         lastWindowPoll = CACurrentMediaTime()
-        world.notchHome = Self.notchHome()
         var wins = WindowTracker.snapshot()
         if sense.standOnText {
             for i in wins.indices { wins[i].spans = sense.spans(for: wins[i].id, size: CGSize(width: wins[i].frame.w, height: wins[i].frame.h)) }
@@ -295,6 +294,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Full screen (an app filling the whole main screen, menu bar and all): everything keeps to the corners, and
         // the floor is the true bottom of the screen (the Dock is tucked away).
         let isFull = WindowTracker.fullScreenSpace || CACurrentMediaTime() < compactPreviewUntil
+        // The hanging house: under the notch normally; in the top-right corner while an app is full screen.
+        world.notchHome = isFull ? Self.cornerHome() : Self.notchHome()
         if isFull != world.compact { world.compact = isFull; schedule(rate: 60) }
         // (Below the notch band, where a full-screen app's content starts.)
         let screens = isFull ? NSScreen.screens.map { s -> Rect in
@@ -1639,6 +1640,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (id, CGRect(x: b["X"] ?? 0, y: b["Y"] ?? 0, width: width, height: height))
         }
         return nil
+    }
+
+    /// Full screen: the house hangs in the top-right corner, below the notch band.
+    static func cornerHome() -> NotchHome? {
+        guard let s = NSScreen.screens.first else { return nil }
+        let top: Double
+        if #available(macOS 12, *) { top = Double(s.safeAreaInsets.top) } else { top = 0 }
+        return NotchHome(minX: s.frame.maxX - 206, maxX: s.frame.maxX - 12, menuBottom: s.frame.maxY - top)
     }
 
     /// The built-in screen's notch (MacBooks from 2021 on): its left and right edges and the bottom of the menu bar.

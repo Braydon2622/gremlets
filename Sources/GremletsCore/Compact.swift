@@ -1,8 +1,9 @@
 import Foundation
 
-/// Full screen (a browser or any app filling the whole screen): the Gremlets keep to the two bottom corners and
-/// everything else is put away until you leave full screen. No kites, ferries, expeditions, shelves or village
-/// visitors; jobs pause (the Claude helper waits in a corner); flying ones come down.
+/// Full screen (a browser or any app filling the whole screen): the corner plant and everything else is put away,
+/// the hanging house hangs in the top-right corner and a mossy branch grows from the top-left, and the Gremlets float
+/// up to them on dandelions and spend the time there: napping, swinging, going inside, hopping between perches.
+/// No kites, ferries, expeditions or shelves; jobs pause.
 extension World {
     public static let cornerZone = 180.0
 
@@ -23,9 +24,23 @@ extension World {
             if c.climb != nil { c.climb = nil; if c.activity == .float { c.set(.airborne) } }
             if c.activity == .fly || c.activity == .float { c.set(.airborne) }
             endSocial(c)
+            // Off up to the corners in a little while (one after another).
+            if c.isGrounded && !c.isAsleep { c.set(.idle, duration: rng.range(0.3, 3)) }
         }
         setSurfacesDirty()
     }
+
+    /// Out of full screen: everyone up in the corners drifts back down under a leaf.
+    func leaveCompact() {
+        guard let scr = screens.first else { return }
+        for c in creatures where World.isNotchOwner(c.groundOwner) || (c.activity == .float && c.floatTarget != nil) {
+            if c.homeUntil != nil { continue }   // still asleep inside: it'll come out on the porch
+            startFloat(c, to: Vec2((c.pos.x + rng.range(-80, 80)).clamped(scr.minX + 40, scr.maxX - 40), scr.minY), ride: .leaf)
+        }
+    }
+
+    /// The places they hang out in full screen: the porch, hammock and swing, and the top-left branch.
+    var compactPerches: [Surface] { notchSurfaces }
 
     /// The bottom corner a Gremlet belongs to (the nearer one), as an x range on its screen's floor.
     func corner(for c: Creature) -> (lo: Double, hi: Double, floorY: Double)? {
@@ -41,34 +56,44 @@ extension World {
 }
 
 extension Brain {
-    /// Full screen: head for the nearest bottom corner, then keep to small, quiet things there.
+    /// Full screen: up to the top corners, then small things on the perches there.
     static func decideCompact(_ c: Creature, in world: World) {
         var choices: [Choice] = []
         func add(_ name: String, _ w: Double, _ f: @escaping () -> Void) { if w > 0 { choices.append(Choice(name: name, weight: w, start: f)) } }
-        guard let k = world.corner(for: c) else { c.set(.idle, duration: 2); return }
+        let perches = world.compactPerches
+        guard !perches.isEmpty else { c.idleVariant = "look"; c.set(.idle, duration: 3); return }
         if c.isAsleep { c.set(.sleep, duration: world.rng.range(20, 60)); return }
-        if !world.inCorner(c) {
-            // Off to the corner (from wherever it was when the app went full screen).
-            c.targetX = c.pos.x < k.lo ? k.lo + 20 : k.hi - 20
-            c.facing = c.targetX! > c.pos.x ? 1 : -1
-            c.set(.walk, duration: 40)
+        guard let here = perches.first(where: { $0.ownerID == c.groundOwner }) else {
+            // Float up to the least crowded perch (counting those already on their way to it).
+            func crowd(_ p: Surface) -> Int {
+                world.creatures.filter { o in o !== c && (o.groundOwner == p.ownerID || (o.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false)) }.count
+            }
+            let p = perches.min { crowd($0) < crowd($1) }!
+            let x = (p.minX + p.width * world.rng.range(0.3, 0.7))
+            world.startFloat(c, to: Vec2(x, p.y), ride: .dandelion)
             return
         }
-        c.targetX = nil
-        add("idle", 2.0) { c.idleVariant = world.rng.chance(0.4) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(3, 9)) }
-        add("potter", 0.9) {
-            c.targetX = world.rng.range(k.lo + 10, k.hi - 10)
+        add("idle", 2.0) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(4, 10)) }
+        add("potter", 0.6) {
+            c.targetX = world.rng.range(here.minX + 8, here.maxX - 8)
             c.facing = c.targetX! > c.pos.x ? 1 : -1
-            c.set(.walk, duration: 8)
+            c.set(.walk, duration: 5)
         }
-        if c.energy < 0.6 { add("sleep", 2.0) { c.set(.yawn, duration: c.animationLength(for: .yawn)) } }
+        if here.ownerID == World.notchHammockOwner || c.energy < 0.6 { add("nap", here.ownerID == World.notchHammockOwner ? 2.5 : 1.5) { c.set(.yawn, duration: c.animationLength(for: .yawn)) } }
+        if here.ownerID == World.notchPorchOwner, world.insideHangingHome.count < 2 { add("goInside", 0.7) { world.goInsideHangingHome(c) } }
+        if here.ownerID == World.notchSwingOwner { add("swing", 1.5) { c.set(.special, duration: c.animationLength(for: .special)) } }
         add("special", 0.25) { world.startSpecial(c) }
+        // Hop over to a nearby perch (the swing, the hammock, the porch).
+        for p in perches where p.ownerID != here.ownerID {
+            let mid = (p.minX + p.maxX) / 2
+            if abs(mid - c.pos.x) < 160 && abs(p.y - c.pos.y) < 70 {
+                add("hop", 0.5) { world.launch(c, velocity: world.ballistic(from: c.pos, toX: mid, y: p.y, apexExtra: 26)) }
+            }
+        }
         if let cur = world.cursor, abs(cur.x - c.pos.x) < 220, abs(cur.y - c.pos.y) < 200 {
             add("wave", 1.2) { c.facing = cur.x > c.pos.x ? 1 : -1; c.set(.wave, duration: 1.3) }
         }
-        // The corner plant is in the bottom-left corner.
-        world.groveChoices(for: c) { name, w, f in if name != "goHome" && name != "dig" { add(name, w, f) } }
-        let friends = world.nearbyFriends(of: c, range: World.cornerZone)
+        let friends = world.nearbyFriends(of: c, range: 120)
         if c.energy < 0.75, let sleeper = friends.first(where: { $0.activity == .sleep }) {
             add("napTogether", 1.2) { world.startNap(c, sleeper) }
         }

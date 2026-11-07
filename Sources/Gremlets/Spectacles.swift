@@ -16,6 +16,7 @@ final class SpectacleRenderer {
     private var carryLayers: [Int: (layer: CALayer, what: String)] = [:]
     private var nextChimneyPuff: CFTimeInterval = 0
     private var swingLayer: CAShapeLayer?
+    private var cornerBranchLayer: CALayer?
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -109,6 +110,7 @@ final class SpectacleRenderer {
         renderWeather()
         renderPods()
         renderNotch()
+        renderCornerBranch()
         renderLift()
         renderCarried()
         renderPlans()
@@ -1964,15 +1966,38 @@ extension SpectacleRenderer {
 extension SpectacleRenderer {
     /// Layers that stay visible in full screen.
     var compactKeep: [CALayer] {
-        var out: [CALayer] = plants.values.flatMap { [$0.layer] + ($0.glow.map { [$0] } ?? []) }
+        // The hanging house, its swing and the corner branch stay; the corner plant and everything else hide.
+        var out: [CALayer] = []
+        if let l = notchLayers { out += [l.house, l.hammock, l.ropes] }
+        if let s = swingLayer { out.append(s) }
+        if let b = cornerBranchLayer { out.append(b) }
         if let l = liftLayer { out.append(l) }
+        out += carryLayers.values.map(\.layer)
         return out
     }
 
-    /// Full screen: just the corner plant and the lift.
+    /// Full screen: the hanging house in the top-right corner, the branch in the top-left, the lift.
     func renderCompact() {
-        renderGrove()
+        renderNotch()
+        renderCornerBranch()
         renderLift()
+        renderCarried()
+    }
+
+    fileprivate func renderCornerBranch() {
+        guard let b = world.cornerBranch, let (si, pt) = local(Vec2(b.minX, b.y)) else {
+            cornerBranchLayer?.removeFromSuperlayer(); cornerBranchLayer = nil; return
+        }
+        let l = cornerBranchLayer ?? {
+            let l = pixelLayer(); l.contents = PodArt.branch
+            l.bounds = CGRect(x: 0, y: 0, width: 24 * 5, height: 6 * 5)
+            l.anchorPoint = CGPoint(x: 0, y: 2.0 / 6.0); l.zPosition = 1.2
+            popIn(l)
+            return l
+        }()
+        attach(l, si)
+        l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 1)
+        cornerBranchLayer = l
     }
 }
 

@@ -23,6 +23,13 @@ import Testing
         #expect(w.grove.plants[0].level == 5 && w.grove.plants[1].level == 5)
         #expect(w.grove.size(0).y > small * 2.5, "a maxed plant is far bigger than a sprout")
         // Bigger plants offer platforms: the skyvine has leaves all the way up.
+        // Only the skyvine is rooted on the floor; everything else lives on brackets up the left edge.
+        let f = try! #require(w.groveFloor)
+        for i in w.grove.plants.indices where w.grove.plants[i].kind != .skyvine {
+            let b = w.grove.base(i, floor: f)
+            #expect(b.y > f.minY + 100 && b.x < f.minX + 220, "\(w.grove.plants[i].kind) on a bracket")
+            #expect(w.groveLedges.contains { $0.plot == i && abs($0.y - b.y) < 0.5 }, "a plank to stand on")
+        }
         let vine = w.groveLedges.filter { $0.plot == 2 }
         #expect(vine.count >= 4)
         #expect(w.surfaces.contains { $0.kind == .plant })

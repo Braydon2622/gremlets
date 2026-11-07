@@ -10,6 +10,7 @@ final class SpectacleRenderer {
 
     private struct PlantLayer { let layer: CALayer; var glow: CALayer?; var key: String; var si: Int; var size: CGSize }
     private var plants: [Int: PlantLayer] = [:]
+    private var brackets: [Int: (layer: CALayer, key: String)] = [:]
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
@@ -164,7 +165,23 @@ final class SpectacleRenderer {
                 } else if let g = pl.glow { g.removeFromSuperlayer(); pl.glow = nil }
             }
             plants[i] = pl
+            // Its bracket on the wall, under the pot.
+            if let reach = world.grove.bracketReach(i), let (bsi, bpt) = local(Vec2(floor.minX, base.y)) {
+                let px = max(12, Int(reach / 3))
+                var e = brackets[i] ?? { let l = pixelLayer(); l.anchorPoint = .zero; l.zPosition = -5.5; popIn(l); return (l, "") }()
+                attach(e.layer, bsi)
+                let k = "\(px)"
+                if e.key != k {
+                    let img = BonsaiArt.bracket(widthPx: px, hanging: i % 2 == 1)
+                    e.layer.contents = img
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    e.key = k
+                }
+                e.layer.position = CGPoint(x: bpt.x.rounded(), y: bpt.y.rounded() - 42)
+                brackets[i] = e
+            } else if let e = brackets[i] { e.layer.removeFromSuperlayer(); brackets[i] = nil }
         }
+        for i in brackets.keys where i >= world.grove.plants.count { brackets[i]?.layer.removeFromSuperlayer(); brackets[i] = nil }
         for i in plants.keys where i >= world.grove.plants.count {
             plants[i]?.layer.removeFromSuperlayer(); plants[i]?.glow?.removeFromSuperlayer(); plants[i] = nil
         }

@@ -144,6 +144,25 @@ public final class Grove: Codable {
     }
     static let slots: [Double] = [0.16, 0.30, 0.44, 0.58, 0.72, 0.86]
 
+    /// Plants that live on wooden brackets up the left edge of the screen (off the floor, off the bottoms of windows),
+    /// and how high above the floor their shelf is. The skyvine stays rooted on the floor: it's the ladder up the wall
+    /// between them.
+    static func shelf(_ k: GroveKind) -> Double? {
+        switch k {
+        case .skyvine, .sunberry: return nil
+        case .bouncecap: return 150
+        case .lanternbloom: return 270
+        case .snapjaw: return 390
+        case .wishwillow: return 520
+        }
+    }
+
+    /// How far a plant's bracket reaches out from the wall (points).
+    public func bracketReach(_ i: Int) -> Double? {
+        guard Grove.shelf(plants[i].kind) != nil else { return nil }
+        return 40 + size(i).x + 18
+    }
+
     public init() {}
 
     public var unlockedPlots: Int { Grove.unlockAt.filter { tasks >= $0 }.count }
@@ -165,9 +184,15 @@ public final class Grove: Codable {
 
     // MARK: Geometry (global points, y-up)
 
-    /// Where a plot sits on the floor of the main screen.
+    /// Where a plot sits: on its bracket up the left edge, or (the skyvine) on the floor.
     public func base(_ i: Int, floor: Rect) -> Vec2 {
-        Vec2(floor.minX + Grove.offset(plants[i].kind), floor.minY)
+        let k = plants[i].kind
+        if let h = Grove.shelf(k) {
+            // Never above the top of a short screen.
+            let y = floor.minY + min(h, max(120, floor.h - size(i).y - 80))
+            return Vec2(floor.minX + 40 + size(i).x / 2, y)
+        }
+        return Vec2(floor.minX + Grove.offset(k), floor.minY)
     }
 
     /// Size of the drawn plant (points). The platform layer draws it centered on `base` x, sitting on the floor.
@@ -188,6 +213,10 @@ public final class Grove: Codable {
         var out: [GroveLedge] = []
         for i in plants.indices {
             let b = base(i, floor: floor), sz = size(i), p = plants[i]
+            // The bracket's plank, either side of the pot.
+            if let reach = bracketReach(i) {
+                out.append(GroveLedge(plot: i, y: b.y, minX: floor.minX + 6, maxX: floor.minX + reach - 4, bouncy: false))
+            }
             switch p.kind {
             case .bouncecap:
                 out.append(GroveLedge(plot: i, y: b.y + sz.y * 0.92, minX: b.x - sz.x * 0.38, maxX: b.x + sz.x * 0.38, bouncy: true))

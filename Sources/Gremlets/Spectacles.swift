@@ -362,8 +362,26 @@ final class SpectacleRenderer {
 
     // MARK: Village, bridges, ropes
 
+    private var pathLayer: (layer: CALayer, key: String)?
+
     private func renderVillage() {
         guard let floor = world.groveFloor else { return }
+        // The path runs from the first house to the last.
+        let xs = world.grove.village.map { floor.minX + $0.x * floor.w }
+        if let lo = xs.min(), let hi = xs.max(), hi - lo > 40, let (si, pt) = local(Vec2(lo - 40, floor.minY)) {
+            let px = Int((hi - lo + 80) / artScale / 6) * 6
+            let key = "\(px)-\(si)"
+            var e = pathLayer ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = -5.5; return (l, "") }()
+            attach(e.layer, si)
+            if e.key != key {
+                let img = VillageArt.path(widthPx: px)
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                e.key = key
+            }
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            pathLayer = e
+        } else if let e = pathLayer { e.layer.removeFromSuperlayer(); pathLayer = nil }
         let night = world.isNight
         for (n, h) in world.grove.village.enumerated() {
             guard let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }

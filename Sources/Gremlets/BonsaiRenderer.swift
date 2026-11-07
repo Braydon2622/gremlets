@@ -54,6 +54,7 @@ final class BonsaiRenderer {
         renderTrees()
         renderIvy()
         renderLedges()
+        renderNests()
         renderNightLife()
     }
 
@@ -120,6 +121,55 @@ final class BonsaiRenderer {
     }
 
     private var carried: [Int: CALayer] = [:]
+    private var nests: [String: CALayer] = [:]
+    private var nextBird: [String: CFTimeInterval] = [:]
+
+    /// Seconds Claude has been working in the session this live tree belongs to.
+    private func sessionSeconds(_ p: BonsaiPlacement) -> Double {
+        world.creatures.first { $0.job?.label == p.project && $0.job?.kind == .claude }?.job?.workSeconds ?? 0
+    }
+
+    /// An hour into a session a pair of birds nests in the lowest pad; after two, one flies off and back now and then.
+    private func renderNests() {
+        var alive = Set<String>()
+        let now = CACurrentMediaTime()
+        for p in world.bonsaiPlacements where p.slot < 0 {
+            let worked = sessionSeconds(p)
+            guard worked >= 3600, let pad = p.layout.pads.filter({ $0.branch >= 0 }).min(by: { $0.center.y < $1.center.y }),
+                  let (si, pt) = local(p.base + (pad.center + Vec2(0, pad.ry * 0.5)) * p.scale) else { continue }
+            alive.insert(p.project)
+            let l = nests[p.project] ?? { let l = pixelLayer(); l.contents = BonsaiArt.nest; l.anchorPoint = CGPoint(x: 0.5, y: 0); l.bounds = CGRect(x: 0, y: 0, width: 30, height: 18); l.zPosition = 2.5; popIn(l); return l }()
+            attach(l, si)
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            nests[p.project] = l
+            if worked >= 7200, now >= (nextBird[p.project] ?? now + 10) {
+                nextBird[p.project] = now + Double.random(in: 30...60)
+                birdVisit(si, nest: CGPoint(x: pt.x, y: pt.y + 10))
+            } else if nextBird[p.project] == nil { nextBird[p.project] = now + 15 }
+        }
+        for (k, l) in nests where !alive.contains(k) { fadeOut(l); nests[k] = nil }
+    }
+
+    private func birdVisit(_ si: Int, nest: CGPoint) {
+        guard si < screens.count, PropArt.bird.count > 1 else { return }
+        let l = pixelLayer()
+        l.contents = PropArt.bird[0]
+        l.bounds = CGRect(x: 0, y: 0, width: Double(PropArt.bird[0].width) * artScale, height: Double(PropArt.bird[0].height) * artScale)
+        l.zPosition = 27
+        attach(l, si)
+        let side: CGFloat = Bool.random() ? 1 : -1
+        let away = CGPoint(x: nest.x + side * 320, y: nest.y + 220)
+        let fly = CAKeyframeAnimation(keyPath: "position")
+        fly.values = [nest, CGPoint(x: (nest.x + away.x) / 2, y: max(nest.y, away.y) + 60), away, CGPoint(x: (nest.x + away.x) / 2, y: max(nest.y, away.y) + 60), nest].map { NSValue(point: $0) }
+        fly.keyTimes = [0, 0.25, 0.5, 0.75, 1]
+        fly.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        let flap = CAKeyframeAnimation(keyPath: "contents"); flap.values = PropArt.bird; flap.calculationMode = .discrete; flap.duration = 0.3; flap.repeatCount = .infinity
+        let g = CAAnimationGroup(); g.animations = [fly]; g.duration = 6
+        g.isRemovedOnCompletion = false; g.fillMode = .forwards
+        l.add(flap, forKey: "flap")
+        CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+        l.add(g, forKey: "visit"); CATransaction.commit()
+    }
 
     /// The Gremlet whose session a live tree belongs to, while it's still on its way to the window.
     private func carrier(for p: BonsaiPlacement) -> Creature? {

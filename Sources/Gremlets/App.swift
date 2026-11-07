@@ -1024,7 +1024,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if world.isNight && world.userActive && !presence.isHidden && Double.random(in: 0..<1) < elapsed / (40 * 60) {
             wishOnAStar()
         }
-        let title = focus.label
+        // The menu bar says what the Claude sessions need, when the focus timer isn't using it.
+        let jobs = world.creatures.compactMap { $0.job }.filter { $0.kind == .claude && $0.phase != .leaving }
+        let needs = jobs.filter(\.needsYou).count
+        let claudeLabel: String? = jobs.isEmpty ? nil : needs > 0 ? "\(needs) need\(needs == 1 ? "s" : "") you" : "\(jobs.count) growing"
+        let title = focus.label ?? claudeLabel
         if title != lastTitle {
             statusItem.button?.title = title.map { " " + $0 } ?? ""
             statusItem.button?.imagePosition = .imageLeading

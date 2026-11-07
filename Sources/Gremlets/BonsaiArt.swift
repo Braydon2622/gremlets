@@ -203,6 +203,16 @@ enum BonsaiArt {
         "..bbb..",
     ], ["g": 0x6CC04A, "k": 0x4A3424, "b": 0x3F6FA8])
 
+    /// A nest of twigs with two small birds, for a tree whose session has run an hour.
+    static let nest: CGImage = Effects.pixels([
+        "..b...b..",
+        ".bbb.bbb.",
+        "..y...y..",
+        "tttttttttt",
+        ".ttttttt.",
+        "..ttttt..",
+    ].map { $0.padding(toLength: 10, withPad: ".", startingAt: 0) }, ["b": 0x5FB8FF, "y": 0xFFC845, "t": 0x8A5A35])
+
     // MARK: Around a Claude window
 
     /// Ivy creeping along the top edge of a terminal Claude is working in: a stem with heart leaves, the odd tiny

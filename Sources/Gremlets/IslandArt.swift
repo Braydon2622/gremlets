@@ -588,6 +588,17 @@ enum VillageArt {
         return cv.image
     }
 
+    /// A worn dirt path along the village, with pebbles and the odd tuft.
+    static func path(widthPx w: Int) -> CGImage {
+        var cv = PixelCanvas(max(4, w), 3)
+        var r = ArtRNG(s: UInt64(w) &+ 5)
+        for x in 0..<cv.w {
+            cv.set(x, 0, 0x8A6A4A); cv.set(x, 1, x % 7 == 3 ? 0xA8886A : 0x9C7A58)
+            if r.next() < 0.08 { cv.set(x, 2, 0xB8B6AE) } else if r.next() < 0.06 { cv.set(x, 2, 0x5DBB46) }
+        }
+        return cv.image
+    }
+
     static func item(_ i: VillageItem, night: Bool, frame: Int) -> CGImage {
         switch i {
         case .lamps:

@@ -13,6 +13,7 @@
 #   gremlet status               what's out and whether a focus timer is running
 #   gremlet meteors | festival | lanterns   start a little grove moment now
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
+#   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -47,6 +48,7 @@ case "${1:-}" in
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
+  snapshot) call snapshot; echo ;;
   meteors|festival|lanterns) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
   run)
@@ -55,6 +57,6 @@ case "${1:-}" in
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

@@ -265,6 +265,7 @@ import Testing
         }
         #expect(wentIn && cameOut)
         #expect(c.homeUntil == nil)
+        #expect(w.grove.village[0].owner == c.species.id, "it claimed the house as its own")
     }
 
     @Test func claudeSessionStatusFlags() throws {

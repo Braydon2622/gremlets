@@ -243,7 +243,7 @@ enum BuildArt {
 
     static func size(_ b: Biome) -> (cols: Int, rows: Int) { let r = blueprint(b); return (r.map(\.count).max() ?? 0, r.count) }
 
-    static func image(_ b: Biome, blocks: Int, night: Bool, overgrowth: Int = 0, seed: UInt64 = 1) -> CGImage? {
+    static func image(_ b: Biome, blocks: Int, night: Bool, overgrowth: Int = 0, seed: UInt64 = 1, month: Int? = nil) -> CGImage? {
         let cs = cells(b)
         let n = min(blocks, cs.count)
         guard n > 0 else { return nil }
@@ -255,6 +255,7 @@ enum BuildArt {
         }
         cv.outline(0.7)
         if overgrowth > 0 { overgrow(&cv, stage: overgrowth, seed: seed) }
+        if let m = month { dressForSeason(&cv, month: m, seed: seed) }
         return cv.image
     }
 
@@ -307,6 +308,27 @@ enum BuildArt {
             if top > 0 && top + 5 < h {
                 cv.rect(x, top + 1, 1, 3, 0x6B4428)
                 cv.blob(Double(x) + 0.5, Double(top + 5), 3.2, 2.2, base: 0x5E9E46, light: 0x8BD66A, shade: 0x3E7A34)
+            }
+        }
+    }
+
+    /// Seasons on the village: snow piled on every ledge in winter, blossoms in spring, fallen leaves in autumn.
+    static func dressForSeason(_ cv: inout PixelCanvas, month: Int, seed: UInt64) {
+        var r = ArtRNG(s: seed &+ 77)
+        func solid(_ x: Int, _ y: Int) -> Bool { cv.get(x, y) != nil }
+        for x in 0..<cv.w {
+            for y in stride(from: cv.h - 2, through: 0, by: -1) where solid(x, y) && !solid(x, y + 1) {
+                switch month {
+                case 12, 1, 2:
+                    // Snow on every upward-facing edge (roofs, sills, the top of the door frame).
+                    cv.set(x, y + 1, 0xFFFFFF)
+                    if r.next() < 0.5 && y + 2 < cv.h { cv.set(x, y + 2, 0xEAF4FF) }
+                case 3, 4, 5:
+                    if r.next() < 0.22 { cv.set(x, y + 1, r.next() < 0.6 ? 0xFFB6D9 : 0xFFFFFF) }
+                case 9, 10, 11:
+                    if r.next() < 0.2 { cv.set(x, y + 1, [0xE8862C, 0xC2562C, 0xF2C94C][Int(r.range(0, 2.99))]) }
+                default: break
+                }
             }
         }
     }
@@ -608,5 +630,17 @@ enum VillageArt {
             cv.outline(0.7)
             return cv.image
         }
+    }
+}
+
+enum OwnerArt {
+    /// A little pennant on the roof in the owner's colour (from its element).
+    static func pennant(_ color: UInt32) -> CGImage {
+        Effects.pixels(["kcc..", "kcccc", "kcc..", "k....", "k...."], ["k": 0x5E3B22, "c": color])
+    }
+    static func color(for speciesID: String) -> UInt32 {
+        let palette: [UInt32] = [0xE8574A, 0x3F7FE0, 0x5DBB46, 0xF2C94C, 0xB57AF2, 0xF07AA6, 0x3FC0B0, 0xE8862C]
+        let h = speciesID.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
+        return palette[h % palette.count]
     }
 }

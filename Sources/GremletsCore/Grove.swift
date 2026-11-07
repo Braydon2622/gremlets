@@ -226,6 +226,7 @@ public enum GroveEvent: Equatable, Sendable {
     case chomp(Int)
     case houseAdded(Int)
     case wentHome(Int, by: Int)
+    case claimed(Int, by: Int)
     case leftHome(Int, by: Int)
 }
 
@@ -340,8 +341,11 @@ extension World {
         }
         let sleepingIn = creatures.filter { $0.homeHouse != nil }.count
         if !grove.village.isEmpty, isNight || c.energy < 0.35, sleepingIn < grove.village.count * 2 {
-            let n = Int(rng.next() % UInt64(grove.village.count))
-            add("goHome", isNight ? 1.3 : 0.8) { self.startHomeVisit(c, house: n) }
+            // Its own house if it has one, otherwise any house (not the mine or the village amenities).
+            let homes = grove.village.indices.filter { !grove.village[$0].biome.hasPrefix("item:") && grove.village[$0].biome != "mine" }
+            if let n = grove.village.firstIndex(where: { $0.owner == c.species.id }) ?? (homes.isEmpty ? nil : homes[Int(rng.next() % UInt64(homes.count))]) {
+                add("goHome", isNight ? 1.3 : 0.8) { self.startHomeVisit(c, house: n) }
+            }
         }
         if isNight, let i = grove.plant(of: .lanternbloom) {
             add("campfire", 1.1) { self.startGroveVisit(c, plot: i, task: .campfire) }
@@ -391,6 +395,12 @@ extension World {
             arriveAtAmenity(c, t)
         case .home(let n):
             guard n < grove.village.count else { c.mining = false; return }
+            // A Gremlet without a home claims the first free house it sleeps in.
+            if !c.mining, grove.village[n].owner == nil, !grove.village[n].biome.hasPrefix("item:"), grove.village[n].biome != "mine",
+               !grove.village.contains(where: { $0.owner == c.species.id }) {
+                grove.village[n].owner = c.species.id
+                groveEvents.append(.claimed(n, by: c.id))
+            }
             c.homeUntil = c.mining ? clock + rng.range(6, 12) : clock + rng.range(isNight ? 60 : 25, isNight ? 180 : 70)
             if c.mining { adventureEvents.append(.digging(house: n)) }
             c.homeHouse = n

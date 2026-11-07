@@ -805,6 +805,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "snapshot":
+            guard let url = VillageSnapshot.make(world: world, species: species) else { return (500, #"{"ok":false}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "merchant":
             guard world.callMerchant() else { return (409, #"{"ok":false,"error":"the merchant is already here"}"#) }
             schedule(rate: 60)
@@ -1179,6 +1182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
         action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
         action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
+        action("Save Village Snapshot", #selector(saveSnapshot), tip: "Saves a picture of your village and its Claude stats to Pictures › Gremlets and copies it, ready to paste into a post.")
         action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
         let next = VillageItem.allCases.first { !world.owns($0) }
         if let n = next {
@@ -1208,6 +1212,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func callFerry() { world.callFerry(); schedule(rate: 60) }
     @objc private func callMerchant() { world.callMerchant(); schedule(rate: 60) }
+
+    @objc private func saveSnapshot() {
+        guard let url = VillageSnapshot.make(world: world, species: species) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
 
     @objc private func toggleControls() {
         controls.enabled.toggle()

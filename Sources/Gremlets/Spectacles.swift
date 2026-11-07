@@ -20,6 +20,7 @@ final class SpectacleRenderer {
     private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
+    private var pennants: [Int: CALayer] = [:]
     private var projectiles: [CALayer] = []
     private var balls: [CALayer] = []
     private var shards: [Int: CALayer] = [:]
@@ -181,6 +182,12 @@ final class SpectacleRenderer {
                 }
             case .chomp(let i):
                 snapUntil[i] = CACurrentMediaTime() + 0.35
+            case .claimed(let n, _):
+                guard n < world.grove.village.count else { continue }
+                let h = world.grove.village[n]
+                if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + h.h)) {
+                    overlay.burst([Effects.heart, Effects.sparkle], si: si, at: pt, count: 6, dx: -30...30, dy: 10...50, duration: 1.2, stagger: 0.05)
+                }
             case .wentHome(let n, _), .leftHome(let n, _):
                 guard n < world.grove.village.count else { continue }
                 let h = world.grove.village[n]
@@ -372,7 +379,7 @@ final class SpectacleRenderer {
             if h.biome.hasPrefix("item:"), let item = VillageItem(rawValue: String(h.biome.dropFirst(5))) { renderItem(n, item, si: si, at: pt); continue }
             guard let b = Biome(rawValue: h.biome) else { continue }
             let stage = BuildArt.overgrowthStage(hours: h.builtAt.map { (Date().timeIntervalSince1970 - $0) / 3600 } ?? 0)
-            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)"
+            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)-\(world.month)"
             var entry = houses[n] ?? {
                 let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4
                 // A strip of its biome's ground under it, so each house sits in its own little patch of world.
@@ -381,7 +388,7 @@ final class SpectacleRenderer {
                 return (l, g, "")
             }()
             attach(entry.layer, si); attach(entry.ground, si)
-            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night, overgrowth: stage, seed: UInt64(n * 31 + 7)) {
+            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night, overgrowth: stage, seed: UInt64(n * 31 + 7), month: world.month) {
                 entry.layer.contents = img
                 entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
                 let gw = Int(h.w / 3) + 8
@@ -394,6 +401,15 @@ final class SpectacleRenderer {
             entry.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y)
             entry.ground.position = CGPoint(x: pt.x.rounded(), y: pt.y + 6)
             houses[n] = entry
+            // Its owner's pennant on the roof.
+            if let owner = h.owner {
+                let p = pennants[n] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0, y: 0); l.zPosition = -3.9; l.bounds = CGRect(x: 0, y: 0, width: 15, height: 15); popIn(l); return l }()
+                attach(p, si)
+                p.contents = OwnerArt.pennant(OwnerArt.color(for: owner))
+                let f = entry.layer.frame
+                p.position = CGPoint(x: f.minX + f.width * 0.25, y: f.maxY - 3)
+                pennants[n] = p
+            } else if let p = pennants[n] { p.removeFromSuperlayer(); pennants[n] = nil }
             // Someone's home: smoke from the chimney, and the odd "z" drifting out.
             let now = CACurrentMediaTime()
             if world.creatures.contains(where: { $0.homeHouse == n }), now >= (nextHouseSmoke[n] ?? 0) {
@@ -403,6 +419,7 @@ final class SpectacleRenderer {
                 if Int(now) % 3 == 0 { overlay.burst([Effects.zzz], si: si, at: CGPoint(x: f.midX, y: f.maxY - 10), count: 1, dx: -10...10, dy: 20...34, duration: 1.8) }
             }
         }
+        for n in pennants.keys where n >= world.grove.village.count { pennants[n]?.removeFromSuperlayer(); pennants[n] = nil }
         for n in houses.keys where n >= world.grove.village.count {
             houses[n]?.layer.removeFromSuperlayer(); houses[n]?.ground.removeFromSuperlayer(); houses[n] = nil
         }
@@ -1048,6 +1065,7 @@ final class SpectacleRenderer {
         let h = world.grove.village[n]
         var parts = ["Built while Claude worked on \(h.project ?? "a project")", "\(h.blocks) edits"]
         if let d = h.day { parts.append(d) }
+        if let o = h.owner { parts.insert("\(overlay.species[o]?.info.name ?? "A Gremlet")'s home", at: 0) }
         if world.creatures.contains(where: { $0.homeHouse == n }) { parts.append("someone's asleep inside") }
         if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + h.h + 24)) {
             floatText(parts.joined(separator: " · "), si: si, at: pt, color: .systemBrown, size: 14, rise: 40, duration: 3.6)

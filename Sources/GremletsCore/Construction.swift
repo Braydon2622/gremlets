@@ -40,6 +40,8 @@ public struct House: Codable, Equatable, Sendable {
     public var day: String?
     /// When it was built (seconds since 1970): houses slowly get overgrown with moss, ivy and flowers.
     public var builtAt: Double?
+    /// The Gremlet (species id) who has made this house its home.
+    public var owner: String?
 }
 
 public enum BuildEvent: Equatable, Sendable {

@@ -95,6 +95,16 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   After dark, fireflies drift over the thick moss and the Gremlets chase them (`gremlet fireflies`).
 - **Gardens grow in the moss.** While Claude works, its Gremlet gardens right on the window's top edge, the plants
   coming up out of a mound of moss (no planter, no shelf).
+- **Claude's mood, at a glance.** While Claude thinks between steps, its Gremlet gets a little thought cloud with
+  dots filling in (and stops to look up at it now and then); when Claude needs you, it turns to you and holds up a
+  glowing lantern until you answer.
+- **Seasons on their own.** Cherry petals in spring, autumn leaves and snowflakes in winter let go of mossy window
+  corners, the corner branches and the house now and then; in winter the moss wears a cap of snow.
+- **A scrapbook.** A page a day with a flower pressed into it: what they picked from the moss, the fireflies they
+  caught, the moss they planted and what Claude got done (More → Open Scrapbook). In the evening one of them
+  mentions what went into today's page.
+- **Say hello.** Double-click a Gremlet: it turns and waves, and tells you its name, how long you've been together
+  and its favourite spot (the one where it spends the most time).
 - **Top-corner hangouts.** Mossy branches in the top-left and top-right corners where they rest when Claude is
   quiet; they hop out of the pointer's way there and clicks always go through to your app.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of

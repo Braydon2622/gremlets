@@ -165,3 +165,33 @@ public enum SpeechText {
         return squashed.count > maxLength ? String(squashed.prefix(maxLength - 1)) + "…" : squashed
     }
 }
+
+// MARK: Saying hello (double-click)
+
+extension World {
+    /// Where a Gremlet is, in plain words (for its favourite-spot tally): nil while it's in the air or being carried.
+    public func placeName(of c: Creature) -> String? {
+        if c.homeUntil != nil || World.isHouseOwner(c.groundOwner) { return "the hanging house" }
+        guard c.isGrounded, let o = c.groundOwner else { return nil }
+        if World.isCornerSpot(o) { return "the corner branches" }
+        if World.isBonsaiOwner(o) { return "up in the bonsai" }
+        if World.isMossPadOwner(o) || o <= World.mossBridgeOwnerBase && o > World.mossBridgeOwnerBase - 100 { return "the moss bridges" }
+        guard let s = supportingSurface(for: c) else { return nil }
+        switch s.kind {
+        case .windowTop: return creatures.contains { $0.job?.kind == .claude && $0.job?.windowID == o } ? "the top of Claude's window" : "the tops of your windows"
+        case .floor: return "the mossy floor"
+        case .shelf: return "the shelves"
+        default: return "the moss"
+        }
+    }
+
+    /// Double-clicked: it stops what it's doing (unless it's working for Claude), turns to you and waves.
+    public func sayHello(_ c: Creature) {
+        guard c.isGrounded, c.activity != .dragged else { return }
+        if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
+        if c.job != nil && c.activity == .work { emit(.alert(c.id)); return }
+        endSocial(c)
+        c.set(.wave, duration: 1.6)
+        emit(.alert(c.id))
+    }
+}

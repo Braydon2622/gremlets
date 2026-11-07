@@ -320,7 +320,7 @@ enum MossArt {
     /// A carpet of moss lying along an edge: `lengthPx` long, thicker and with more going on at higher `density`
     /// (0...1): clumps, a few drips hanging over the edge, then flowers, ferns and mushrooms. Its baseline is row 3
     /// (the edge itself); three rows hang below it.
-    static func carpet(lengthPx: Int, density: Double, seed: UInt64, night: Bool, dry: Bool = false) -> CGImage {
+    static func carpet(lengthPx: Int, density: Double, seed: UInt64, night: Bool, dry: Bool = false, snow: Bool = false) -> CGImage {
         let w = max(4, lengthPx), h = 14, base = 3
         // Neglected moss dries out: olive and straw instead of green, and no flowers.
         let (mid, light, deep, pale): (UInt32, UInt32, UInt32, UInt32) = dry ? (0x8E8A48, 0xB4AC62, 0x6A6434, 0xCBBE7A) : (MossArt.mid, MossArt.light, MossArt.deep, MossArt.pale)
@@ -369,9 +369,30 @@ enum MossArt {
                 }
             }
         }
+        // Winter: a cap of snow along the top of the moss.
+        var snowy: [Int] = []
+        if snow {
+            for xx in 0..<w {
+                guard let top = (0..<h).last(where: { cv.solid(xx, $0) }) else { continue }
+                cv.set(xx, top, xx % 5 == 2 ? 0xDCE8F6 : 0xF6FAFF)
+                if r.next() < 0.55, top + 1 < h { cv.set(xx, top + 1, 0xF6FAFF) }
+                snowy.append(top * w + xx)
+            }
+        }
         cv.outline(0.8)
+        _ = snowy
         return cv.image
     }
+
+    /// Little things drifting down with the seasons: a cherry petal, autumn leaves (three colours), a snowflake.
+    static let petal: CGImage = { var cv = PixelCanvas(3, 2); cv.set(0, 0, 0xFFB6D9); cv.set(1, 0, 0xFF8FB1); cv.set(1, 1, 0xFFD6E6); cv.set(2, 1, 0xFFB6D9); return cv.image }()
+    static let autumnLeaves: [CGImage] = [0xE08A2C, 0xC8402E, 0xE8C04A].map { (c: UInt32) -> CGImage in
+        var cv = PixelCanvas(4, 4)
+        cv.set(1, 0, 0x7A4A24); cv.set(1, 1, c); cv.set(2, 1, c); cv.set(0, 2, c); cv.set(1, 2, c); cv.set(2, 2, c); cv.set(2, 3, c); cv.set(3, 2, c)
+        cv.outline(0.7)
+        return cv.image
+    }
+    static let snowflake: CGImage = { var cv = PixelCanvas(3, 3); cv.set(1, 0, 0xF6FAFF); cv.set(0, 1, 0xF6FAFF); cv.set(1, 1, 0xFFFFFF); cv.set(2, 1, 0xF6FAFF); cv.set(1, 2, 0xF6FAFF); return cv.image }()
 
     /// A strand of moss and vine hanging straight down `lengthPx`, swaying leaves either side, a bloom at the tip.
     static func strand(lengthPx: Int, seed: UInt64, bloom: Bool) -> CGImage {

@@ -20,6 +20,8 @@ final class SpectacleRenderer {
     private var cornerBranchLayers: [CALayer] = []
     private var cornerStumpLayers: [CALayer] = []
     private var fireflyLayers: [Int: CALayer] = [:]
+    private var moodLayers: [Int: (layer: CALayer, mood: String)] = [:]
+    private var nextSeasonDrift = 0.0
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -111,6 +113,8 @@ final class SpectacleRenderer {
         renderDoor()
         renderMoss()
         renderFireflies()
+        renderMoods()
+        renderSeason()
         renderWeather()
         renderPods()
         renderNotch()
@@ -1345,6 +1349,7 @@ final class SpectacleRenderer {
         for id in windowPrev.keys where world.windows[id] == nil { windowPrev[id] = nil; windowSway[id] = nil }
         var alive = Set<String>()
         let night = world.isNight
+        let winter = [12, 1, 2].contains(world.month)
         func place(_ key: String, _ si: Int, at p: CGPoint, anchor: CGPoint, flip: Bool = false, rotate: Double = 0, imageKey: String, make: () -> CGImage) {
             alive.insert(key)
             var e = mossLayers[key] ?? {
@@ -1388,7 +1393,7 @@ final class SpectacleRenderer {
                     guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
                     let seed = UInt64(abs(s.ownerID) &* 31 &+ (end == "l" ? 1 : 2))
                     place("w\(s.ownerID)-\(seg)-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
-                          imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night, dry: world.mossThirsty) }
+                          imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)-\(winter)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night, dry: world.mossThirsty, snow: winter) }
                 }
             }
         }
@@ -1405,7 +1410,7 @@ final class SpectacleRenderer {
             case .screenEdge(let i, let side):
                 guard let (si, pt) = local(Vec2(v.x - side * 6, v.bottom)) else { continue }
                 place("v\(v.key)", si, at: pt, anchor: CGPoint(x: 0, y: 0.5), rotate: Double.pi / 2,
-                      imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night, dry: world.mossThirsty) }
+                      imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night, dry: world.mossThirsty, snow: winter) }
             }
         }
         // Bridges the moss has woven between windows.
@@ -1430,7 +1435,7 @@ final class SpectacleRenderer {
             guard let (si, pt) = local(Vec2(x0, top.y)) else { continue }
             let dq = Int(p.size * 4)
             place("p\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                  imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty) }
+                  imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)-\(winter)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty, snow: winter) }
         }
         // Little things growing in the moss: daisies, mushrooms, berries, dandelions.
         for sp in world.sprouts {
@@ -1455,7 +1460,7 @@ final class SpectacleRenderer {
                 let density = ((m - 15) / 200).clamped(0.35, 1)
                 if let (si, pt) = local(Vec2(k == 0 ? span.lo : span.hi - Double(fpx) * artScale, scr.minY)) {
                     place("floor\(i)-\(k)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                          imageKey: "\(fpx)-\(Int(density * 4))-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: density, seed: UInt64(i * 2 + k + 60), night: night, dry: world.mossThirsty) }
+                          imageKey: "\(fpx)-\(Int(density * 4))-\(night)-\(world.mossThirsty)-\(winter)") { MossArt.carpet(lengthPx: fpx, density: density, seed: UInt64(i * 2 + k + 60), night: night, dry: world.mossThirsty, snow: winter) }
                 }
             }
         }
@@ -2087,6 +2092,68 @@ extension SpectacleRenderer {
             l.setAffineTransform(CGAffineTransform(scaleX: fromRight ? -1 : 1, y: 1))
             l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
         }
+    }
+
+    /// The seasons, on their own: now and then a cherry petal (spring), an autumn leaf, or a snowflake (winter) lets
+    /// go of a mossy window corner, a corner branch or the hanging house and drifts down. (Summer is calm.)
+    fileprivate func renderSeason() {
+        let now = CACurrentMediaTime()
+        guard now >= nextSeasonDrift, !world.compact else { return }
+        let m = world.month
+        let spring = [3, 4, 5].contains(m), autumn = [9, 10, 11].contains(m), winter = [12, 1, 2].contains(m)
+        guard spring || autumn || winter else { nextSeasonDrift = now + 10; return }
+        nextSeasonDrift = now + Double.random(in: autumn ? 1.6...3.5 : 2.2...4.5)
+        var anchors: [Vec2] = world.mossVines.compactMap { v in if case .windowSide = v.anchor { return Vec2(v.x, v.top - 4) }; return nil }
+        anchors += world.cornerBranches.map { Vec2($0.minX < (world.screens.first.map { $0.minX + $0.w / 2 } ?? 0) ? $0.minX + $0.width * 0.7 : $0.minX + $0.width * 0.3, $0.y + 6) }
+        if let n = world.notchHome, world.notchHomeShowing { anchors.append(Vec2(n.houseMinX + 20, n.houseBottom + 40)) }
+        guard let a = anchors.randomElement(), let (si, pt) = local(a) else { return }
+        let img = spring ? MossArt.petal : autumn ? MossArt.autumnLeaves.randomElement()! : MossArt.snowflake
+        overlay.burst([img], si: si, at: pt, count: Int.random(in: 1...2), dx: -60...60, dy: -190 ... -110, duration: 4.2, stagger: 0.5)
+    }
+
+    /// Claude's mood, shown by the Gremlet beside its window: a thought cloud while it thinks, a lantern held up
+    /// high while it waits for you.
+    fileprivate func renderMoods() {
+        var alive = Set<Int>()
+        let t = CACurrentMediaTime()
+        for c in world.creatures where c.homeUntil == nil {
+            guard let mood = world.claudeMood(c), let (si, pt) = local(c.pos + Vec2(0, c.species.headTop + 4)) else { continue }
+            alive.insert(c.id)
+            let key = mood == .waiting ? "lantern" : "thought"
+            var e = moodLayers[c.id] ?? {
+                let l = pixelLayer(); l.zPosition = 2.7; popIn(l)
+                return (l, "")
+            }()
+            attach(e.layer, si)
+            if e.mood != key {
+                e.layer.removeAllAnimations()
+                e.layer.shadowOpacity = 0
+                if mood == .waiting {
+                    let img = PropArt.lantern
+                    e.layer.contents = img
+                    e.layer.anchorPoint = CGPoint(x: 0.5, y: 0)
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                    e.layer.shadowColor = NSColor(red: 1, green: 0.8, blue: 0.35, alpha: 1).cgColor
+                    e.layer.shadowOpacity = 0.95; e.layer.shadowRadius = 10; e.layer.shadowOffset = .zero
+                    let pulse = CABasicAnimation(keyPath: "shadowRadius"); pulse.fromValue = 6; pulse.toValue = 16
+                    pulse.duration = 1.0; pulse.autoreverses = true; pulse.repeatCount = .infinity
+                    e.layer.add(pulse, forKey: "pulse")
+                } else {
+                    e.layer.anchorPoint = CGPoint(x: 0.15, y: 0)
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: 17 * 2.0, height: 12 * 2.0)
+                }
+                e.mood = key
+            }
+            if mood == .thinking {
+                e.layer.contents = MoodArt.thought(dots: Int(t * 2.2) % 4)
+                e.layer.position = CGPoint(x: (pt.x + c.facing * 4).rounded(), y: (pt.y + 4 + sin(t * 1.6) * 1.5).rounded())
+            } else {
+                // Held up high in both hands, bobbing a little.
+                e.layer.position = CGPoint(x: pt.x.rounded(), y: (pt.y - 2 + abs(sin(t * 2.4)) * 3).rounded())
+            }
+            moodLayers[c.id] = e
+        }
+        for (id, e) in moodLayers where !alive.contains(id) { fade(e.layer, to: 0, remove: true); moodLayers[id] = nil }
     }
 
     /// Fireflies over the moss after dark: a warm dot with a soft glow, blinking on its own rhythm.

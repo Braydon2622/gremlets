@@ -32,8 +32,8 @@ extension World {
     static let cornerStumpOwner = -430_010
     public static func isNotchOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= cornerStumpOwner - 1 }
     /// The house itself: porch, hammock and swing.
-    static func isHouseOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= notchSwingOwner }
-    static func isCornerSpot(_ o: Int) -> Bool { o <= cornerBranchOwner && o >= cornerStumpOwner - 1 }
+    public static func isHouseOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= notchPorchOwner && o >= notchSwingOwner }
+    public static func isCornerSpot(_ o: Int) -> Bool { o <= cornerBranchOwner && o >= cornerStumpOwner - 1 }
 
     /// Full screen: mossy branches out from the screen's top corners, added a few at a time as more Gremlets need
     /// room (two Gremlets only get one; a crowd gets five), fewest first.

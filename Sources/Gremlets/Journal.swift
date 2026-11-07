@@ -9,6 +9,9 @@ final class DayLog {
         var tasks = 0; var edits = 0; var houses = 0; var gems = 0; var minutes = 0.0
         /// Edits per project that day (optional so older logs still decode).
         var projects: [String: Int]?
+        /// The garden that day, for the scrapbook (optional so older logs still decode): things picked from the moss,
+        /// fireflies caught, tufts of moss planted, daisies put in the house's window box.
+        var daisies: Int?, mushrooms: Int?, berries: Int?, dandelions: Int?, fireflies: Int?, tufts: Int?, boxed: Int?
     }
     private let key = "daylog.v1"
     private(set) var days: [String: Day] = [:]

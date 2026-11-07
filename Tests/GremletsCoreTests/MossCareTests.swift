@@ -254,3 +254,30 @@ import Testing
         #expect(up, "someone went up to a corner branch")
     }
 }
+
+@Suite struct ClaudeMoodTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func thinkingBetweenToolsAndALanternWhileItWaitsForYou() throws {
+        let w = World(seed: 191)
+        w.maxHobbies = 0
+        w.gardenInMoss = true
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 800, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 0))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        _ = try #require(w.startJob(windowID: 1, craft: .garden, prefer: c.id))
+        for _ in 0..<(60 * 40) where c.job?.phase != .working { w.step(1.0 / 60) }
+        w.claudeTool(workerID: c.id, .build)
+        w.step(1.0 / 60)
+        #expect(w.claudeMood(c) == nil, "busy with a tool")
+        for _ in 0..<(60 * 6) { w.step(1.0 / 60) }
+        #expect(w.claudeMood(c) == .thinking, "quiet for a bit: thinking")
+        w.jobNeedsAttention(c.id)
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.claudeMood(c) == .waiting)
+        // You answer: a new prompt in the same session.
+        _ = w.startJob(windowID: 1, craft: .garden, prefer: c.id)
+        #expect(w.claudeMood(c) == nil)
+        #expect(w.placeName(of: c) == "the top of Claude's window")
+    }
+}

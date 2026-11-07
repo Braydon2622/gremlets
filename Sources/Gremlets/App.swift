@@ -239,8 +239,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for e in team {
             if case .boostStarted = e { sense.startClip("Boost", seconds: 12) }
         }
-        overlay.fx.handle(world.drainMossEvents())
-        overlay.fx.handle(world.drainSproutEvents())
+        let mossEvents = world.drainMossEvents(), sproutEvents = world.drainSproutEvents()
+        overlay.fx.handle(mossEvents)
+        overlay.fx.handle(sproutEvents)
+        Scrapbook.record(sproutEvents, moss: mossEvents, into: dayLog)
         overlay.fx.handle(world.drainPlanEvents())
         sense.tick(frontWindow: frontWindowForSense())
         sense.clipTick()
@@ -522,6 +524,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         journal.target = self
         journal.toolTip = "Your projects' trees and their stories, the village, the last two weeks of Claude work, and today's postcard. Stays on your Mac."
         more.addItem(journal)
+        let scrap = NSMenuItem(title: "Open Scrapbook", action: #selector(openScrapbook), keyEquivalent: "")
+        scrap.target = self
+        scrap.toolTip = "A page a day with a flower pressed into it: what the Gremlets picked from the moss, the fireflies they caught, and what Claude got done. Stays on your Mac."
+        more.addItem(scrap)
         let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on Buttons and Search Bars · allow in System Settings" : "Stand on Buttons and Search Bars",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
@@ -956,11 +962,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
         server.pages["/link"] = { [weak self] in self?.bridge.linkPage() ?? "" }
         server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
+        server.pages["/scrapbook"] = { [weak self] in self.map { Scrapbook.page(log: $0.dayLog) } ?? "" }
         server.pages["/journal"] = { [weak self] in
             guard let self else { return "" }
             return Journal.page(world: self.world, species: self.species, log: self.dayLog, sessions: self.buddy.sessionLog.recent)
         }
-        overlay.onDoubleClick = { [weak self] id in self?.openChat(with: id) }
+        overlay.onDoubleClick = { [weak self] id in self?.sayHello(id) }
         overlay.icons = icons
         icons.onChange = { [weak self] in self?.rebuildMenu() }
         icons.refresh()
@@ -1414,6 +1421,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func housekeeping(elapsed: Double) {
         updatePresence()
+        // Where each one spends its time (for its favourite spot); out of full screen only, so it's their own choice.
+        if !world.compact && !presence.isHidden {
+            for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
+            if Int(CACurrentMediaTime()) % 300 == 0 { bonds.save() }
+        }
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
         if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
@@ -1562,6 +1574,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func openChatMenu() { openChat(with: world.creatures.first?.id ?? 0) }
 
+    /// Double-click a Gremlet: it turns and waves, and a little card says who it is, how long you've been together and
+    /// where it likes to be.
+    private func sayHello(_ id: Int) {
+        guard let c = world.creatures.first(where: { $0.id == id }) else { return }
+        world.sayHello(c)
+        let key = c.species.id
+        let days = bonds.daysTogether(key)
+        let together = days <= 1 ? "We met today!" : "We've been together \(days) days."
+        let spot = bonds.favouriteSpot(key).map { " Favourite spot: \($0)." } ?? ""
+        overlay.showBubble("Hi, I'm \(c.species.name)! \(together)\(spot)", on: id, seconds: 6)
+        schedule(rate: 60)
+    }
+
     /// Good morning the first time you're around each day; a recap of the day in the evening.
     private func dailyMoments() {
         guard world.userActive, !presence.isHidden, let c = world.creatures.filter({ $0.isGrounded && $0.job == nil }).randomElement(),
@@ -1577,6 +1602,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.world.receive(.wave)
             self?.overlay.showBubble(line, on: id, seconds: 8)
             // In the morning, what yesterday added up to (the garden journal has the rest).
+            // In the evening, today's flower goes into the scrapbook.
+            if kind == "evening", let self, let k = Scrapbook.pressed(self.dayLog[Date()]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 9) {
+                    self.overlay.showBubble("Pressed a \(k == .berries ? "berry sprig" : k == .dandelion ? "dandelion" : k.rawValue) into today's scrapbook page.", on: id, seconds: 7)
+                }
+            }
             if kind == "morning", let y = self?.dayLog.yesterdayLine {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 9) { self?.overlay.showBubble(y + " The journal's in the menu.", on: id, seconds: 10) }
             }
@@ -1594,6 +1625,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "chat": openChat(with: chatTarget(q["name"])?.id ?? 0)
             case "pair": pairPhone()
             case "journal": openJournal()
+            case "scrapbook": openScrapbook()
             case "wrapped": saveWrapped()
             case "demo": playDemo()
             case "forest": saveForest()
@@ -2171,6 +2203,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let trees = world.bonsaiBook.trees.sorted { $0.lastSeen > $1.lastSeen }
         guard sender.tag < trees.count, let url = TreeCard.make(trees[sender.tag], world: world) else { NSSound.beep(); return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    @objc private func openScrapbook() {
+        let port = ProcessInfo.processInfo.environment["GREMLETS_PORT"] ?? "47920"
+        if let url = URL(string: "http://127.0.0.1:\(port)/scrapbook") { NSWorkspace.shared.open(url) }
     }
 
     @objc private func openJournal() {

@@ -10,6 +10,8 @@ final class BondStore {
         var days = 0, pets = 0, pokes = 0, focus = 0
         var hours = 0.0
         var lastDay = ""
+        /// Seconds spent in each kind of place (its favourite spot is the one with the most).
+        var spots: [String: Double] = [:]
 
         init() {}
         // Tolerant decoding: records saved by older versions lack newer fields, and must still load.
@@ -21,6 +23,7 @@ final class BondStore {
             focus = try c.decodeIfPresent(Int.self, forKey: .focus) ?? 0
             hours = try c.decodeIfPresent(Double.self, forKey: .hours) ?? 0
             lastDay = try c.decodeIfPresent(String.self, forKey: .lastDay) ?? ""
+            spots = try c.decodeIfPresent([String: Double].self, forKey: .spots) ?? [:]
         }
     }
     private var records: [String: Record] = [:]
@@ -53,6 +56,9 @@ final class BondStore {
     func addPoke(_ id: String) { records[id, default: Record()].pokes += 1 }
     func addFocusSession(_ id: String) { records[id, default: Record()].focus += 1 }
     func addTime(_ id: String, seconds: Double) { records[id, default: Record()].hours += seconds / 3600 }
+    func addSpot(_ id: String, _ place: String, seconds: Double) { records[id, default: Record()].spots[place, default: 0] += seconds }
+    func favouriteSpot(_ id: String) -> String? { records[id]?.spots.max { $0.value < $1.value }?.key }
+    func daysTogether(_ id: String) -> Int { records[id]?.days ?? 0 }
 
     func save() {
         if let data = try? JSONEncoder().encode(records) { UserDefaults.standard.set(data, forKey: key) }

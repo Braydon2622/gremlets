@@ -191,8 +191,13 @@ extension World {
             return abs(a.pos.x - t.midX) + abs(a.pos.y - t.maxY) < abs(b.pos.x - t.midX) + abs(b.pos.y - t.maxY)
         } ?? creatures.first
         guard let c = pick else { return nil }
-        if let j = c.job, j.kind == .claude, j.phase == .travel || j.phase == .working, j.windowID == windowID { return c.id }
+        if let j = c.job, j.kind == .claude, j.phase == .travel || j.phase == .working, j.windowID == windowID {
+            // A new prompt in the same session: you answered, and Claude's thinking again.
+            j.needsYou = false; j.lastToolTime = clock
+            return c.id
+        }
         assign(c, Job(craft: craft, kind: .claude, windowID: windowID, seed: rng.next(), now: clock))
+        c.job?.lastToolTime = clock
         if c.isGrounded { c.set(.react, duration: c.animationLength(for: .react)) }   // perks up, then off to work
         emit(.alert(c.id))
         return c.id
@@ -707,12 +712,18 @@ extension World {
             if j.isHobby && j.garden.allBloomed {
                 finishJob(c.id); return true
             }
-            c.facing = j.propSide
+            if claudeMood(c) != .waiting { c.facing = j.propSide }
             j.poseTimer -= dt
             if c.activity != .work || j.poseTimer <= 0 || (resting != (c.workPose == "sleep")) {
                 if resting {
                     c.workPose = "sleep"
                     j.poseTimer = 5
+                } else if let mood = claudeMood(c), mood == .waiting || rng.chance(0.5) {
+                    // Claude's thinking: now and then it stops to think too, looking up at the thought cloud. Waiting
+                    // on you: it turns to you, holding up the lantern.
+                    c.workPose = "look"
+                    if mood == .waiting, let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
+                    j.poseTimer = rng.range(1.5, 2.5)
                 } else {
                     // Every couple of seconds: a chore (planting, watering, shooing a bug, weeding), or a moment
                     // to admire the plants.

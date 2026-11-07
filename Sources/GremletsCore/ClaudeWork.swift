@@ -206,3 +206,23 @@ extension World {
     public func requestReview(workerID: Int) { jobNeedsAttention(workerID) }
 }
 
+
+
+// MARK: Claude's mood, shown by its Gremlet
+
+public enum ClaudeMood: Sendable, Equatable {
+    /// Between tool calls: Claude is thinking (or writing). A thought cloud over its Gremlet.
+    case thinking
+    /// Claude asked you something or needs your OK. Its Gremlet holds up a lantern until you answer.
+    case waiting
+}
+
+extension World {
+    /// What Claude is up to, for the Gremlet working beside its window (nil when it's busy using tools, or done).
+    public func claudeMood(_ c: Creature) -> ClaudeMood? {
+        guard let j = c.job, j.kind == .claude, j.phase == .working else { return nil }
+        if j.needsYou { return .waiting }
+        let quiet = clock - j.lastToolTime
+        return quiet > 4 && quiet < 150 ? .thinking : nil
+    }
+}

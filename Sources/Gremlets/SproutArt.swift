@@ -85,3 +85,29 @@ enum SproutArt {
         return cv.image
     }()
 }
+
+/// Claude's mood over its Gremlet: a thought cloud while it thinks (the dots fill in one by one).
+enum MoodArt {
+    private static var cache: [Int: CGImage] = [:]
+
+    /// `dots` 0...3 lit.
+    static func thought(dots: Int) -> CGImage {
+        if let i = cache[dots] { return i }
+        var cv = PixelCanvas(17, 12)
+        let white: UInt32 = 0xFFFFFF, soft: UInt32 = 0xE6EAF2
+        // The cloud: three puffs.
+        cv.blob(6, 7.5, 4.2, 3.2, base: white, light: white, shade: soft)
+        cv.blob(11, 7.8, 4.4, 3.4, base: white, light: white, shade: soft)
+        cv.blob(8.5, 9.2, 3.6, 2.4, base: white, light: white, shade: soft)
+        // Two little bubbles trailing down to its head.
+        cv.blob(3.2, 2.6, 1.3, 1.2, base: white, light: white, shade: soft)
+        cv.set(1, 0, white)
+        for k in 0..<3 { cv.set(5 + k * 3, 7, k < dots ? 0x6E7891 : 0xC9CFDC); cv.set(6 + k * 3, 7, k < dots ? 0x6E7891 : 0xC9CFDC) }
+        let keep = cv.px.indices.filter { cv.px[$0] == white }
+        cv.outline(0.7)
+        for i in keep { cv.px[i] = white }
+        let img = cv.image
+        cache[dots] = img
+        return img
+    }
+}

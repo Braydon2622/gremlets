@@ -1345,11 +1345,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         PresenceInput(now: CACurrentMediaTime(), manuallyHidden: manuallyHidden, inCall: inCall,
                       hideDuringCalls: hideDuringCalls, idleSeconds: idleSeconds, lowPower: lowPower)
     }
-    private var inCall = false, idleSeconds = 0.0, lowPower = false
+    private var inCall = false, idleSeconds = 0.0, lowPower = false, lastCallCheck = 0.0
 
     /// Reads camera/mic/idle/power once a second and applies hide / show / away / welcome-back.
     private func updatePresence() {
-        inCall = hideDuringCalls && (SystemSignals.cameraInUse() || SystemSignals.microphoneInUse())
+        // Camera and microphone are checked every few seconds (walking the audio process list is not free).
+        let t = CACurrentMediaTime()
+        if !hideDuringCalls { inCall = false } else if t - lastCallCheck >= 3 {
+            lastCallCheck = t
+            inCall = SystemSignals.cameraInUse() || SystemSignals.microphoneInUse()
+        }
         idleSeconds = SystemSignals.idleSeconds()
         world.userActive = idleSeconds < 90 && !presence.isHidden
         lowPower = SystemSignals.lowPowerMode

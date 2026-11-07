@@ -39,11 +39,13 @@ final class ScreenSense {
     // MARK: Standing on text
 
     /// Called often; scans the front window every few seconds when switched on.
-    func tick(frontWindow: (id: Int, frame: CGRect)?) {
-        guard standOnText, Self.hasScreenAccess, !busy, let fw = frontWindow else { return }
+    /// `frontWindow` is only looked up when a scan is due (listing every window each frame is costly).
+    func tick(frontWindow: @autoclosure () -> (id: Int, frame: CGRect)?) {
+        guard standOnText, !busy else { return }
         let now = CACurrentMediaTime()
         guard now - lastScan > 6 else { return }
         lastScan = now
+        guard Self.hasScreenAccess, let fw = frontWindow() else { return }
         guard #available(macOS 14, *) else { return }
         busy = true
         Task { [weak self] in

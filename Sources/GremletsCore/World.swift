@@ -205,6 +205,8 @@ public final class World {
     public private(set) var surfaces: [Surface] = []
     public private(set) var creatures: [Creature] = []
     public var cursor: Vec2?
+    /// Full screen: when each Gremlet last skittered away from the pointer.
+    var spookedAt: [Int: Double] = [:]
     /// Simulation time (seconds), the clock jobs and events are stamped with.
     public var time: Double { clock }
     public var rng: SplitMix64
@@ -416,6 +418,7 @@ public final class World {
         // Thirsty moss shrinks back, but never below a little base for the Gremlets to bring back to life.
         mossMinutes = mossThirsty ? max(min(mossMinutes, 15), mossMinutes - dt / 400) : min(World.mossMax, mossMinutes + growth * (0.4 + mossCare))
         updateFerry(dt)
+        if compact { shyFromCursor() }
         updateLift(dt)
         updateMerchant(dt)
         updateBonsai(dt)

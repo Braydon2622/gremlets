@@ -1800,6 +1800,8 @@ final class OverlayController {
         if paused { return }
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
+        // Full screen: clicks always go through to the app (they keep out of the pointer's way instead).
+        if world.compact { setClickThrough(nil); return }
         let hot = world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil
             || fx.plant(at: p) != nil || fx.house(at: p) != nil || bonsaiFX.hit(at: p) != nil
         setClickThrough(hot ? screenIndex(for: p) : nil)

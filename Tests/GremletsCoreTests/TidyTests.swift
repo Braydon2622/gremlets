@@ -57,6 +57,33 @@ import Testing
         #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.pos.y < 160 }, "\(cs.map(\.pos))")
     }
 
+    @Test func inFullScreenTheyKeepOutOfThePointersWay() {
+        let w = World(seed: 115)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let cs = [300.0, 700, 1000].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 0)) }
+        w.compact = true
+        w.notchHome = NotchHome(minX: scr.maxX - 206, maxX: scr.maxX - 12, menuBottom: scr.maxY)
+        for _ in 0..<(60 * 60) {
+            w.step(1.0 / 60)
+            if cs.allSatisfy({ World.isNotchOwner($0.groundOwner) || $0.homeUntil != nil }) { break }
+        }
+        // Hover over each one in turn: within a second or two it's skittered off from under the pointer.
+        // (Anyone tucked up inside the house is out of sight, so out of the way already.)
+        for c in cs where c.isGrounded && World.isNotchOwner(c.groundOwner) && c.homeUntil == nil {
+            let cur = Vec2(c.pos.x, c.pos.y + c.size.y / 2)
+            w.cursor = cur
+            for _ in 0..<(60 * 2) { w.step(1.0 / 60) }
+            let gap = Vec2(abs(c.pos.x - cur.x), abs(c.pos.y + c.size.y / 2 - cur.y))
+            #expect(gap.x > 30 + c.size.x / 2 || gap.y > 26 + c.size.y / 2, "moved away (\(c.pos) vs \(cur))")
+            // Nobody else settles under it either.
+            for o in w.creatures where o.isGrounded && World.isNotchOwner(o.groundOwner) && o.homeUntil == nil {
+                #expect(abs(o.pos.x - cur.x) > 20 || abs(o.pos.y + o.size.y / 2 - cur.y) > 20, "\(o.id) under the pointer")
+            }
+        }
+        w.cursor = nil
+    }
+
     @Test func rotationNeverPlantsAKindTwice() {
         let w = World(seed: 113)
         w.rotateGrove = true

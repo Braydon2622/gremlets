@@ -60,6 +60,9 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
   and boosts to Movies › Gremlets › Highlights (Screen Recording). Gremlets never move, resize or focus your windows
   on their own.
+- **A page for your village.** `gremlet village-page [folder]` writes a small read-only web page of your village as
+  it is now (the postcard, the counts behind it, the Gremlets who live there, a share preview for X) to drop on any
+  static host. Counts and Gremlet names only: no project names or anything from your sessions.
 - **Weather where you are (opt-in, menu → Weather).** Type your city once (no location permission; Open-Meteo, no
   account). Rain splashes on window tops and drips off their corners, snow piles up along them and on the floor,
   wind sends the kites up. It only shows where it lands, never across your work. In the rain the Gremlets hold a

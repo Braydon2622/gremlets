@@ -109,8 +109,9 @@ enum VillageSnapshot {
         let houses = g.village.filter { Biome(rawValue: $0.biome) != nil }.count
         let gems = g.gems.values.reduce(0, +)
         let trees = world.bonsaiBook.trees.count
-        var stats = ["\(g.tasks) Claude task\(g.tasks == 1 ? "" : "s")", "\(trees) project tree\(trees == 1 ? "" : "s")", "\(houses) building\(houses == 1 ? "" : "s")", "\(edits + world.bonsaiBook.trees.reduce(0) { $0 + $1.edits }) file edits"]
-        if gems > 0 { stats.append("\(gems) gem\(gems == 1 ? "" : "s")") }
+        let allEdits = edits + world.bonsaiBook.trees.reduce(0) { $0 + $1.edits }
+        let stats = [(g.tasks, "Claude task"), (trees, "project tree"), (houses, "building"), (allEdits, "file edit"), (gems, "gem")]
+            .filter { $0.0 > 0 }.map { "\($0.0) \($0.1)\($0.0 == 1 ? "" : "s")" }
         let ns = NSGraphicsContext(cgContext: ctx, flipped: false)
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = ns

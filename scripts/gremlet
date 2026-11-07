@@ -15,6 +15,7 @@
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
 #   gremlet ferry cross          the ferry makes one stop and sails through the doorway to the linked screen
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
+#   gremlet village-page [folder] a read-only web page of your village to put online (counts only, no project names)
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
 #   gremlet kite                 a free Gremlet flies a kite for a while
 #   gremlet stairs | cart        build a block staircase up to a window / lay a minecart rail along a wide one
@@ -76,6 +77,7 @@ case "${1:-}" in
              "") call moss ;;
              *) call "moss?minutes=$2" ;;
            esac; echo ;;
+  village-page) curl -s -m 20 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=${2:-}" "${URL}/village-page"; echo ;;
   weather) case "${2:-}" in
              "") call weather ;;
              snowman) call "weather?do=snowman" ;;

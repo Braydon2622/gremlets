@@ -1177,6 +1177,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = WrappedPoster.make(m, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "village-page":
+            // A static page of the village to put online (default: ~/Pictures/Gremlets/Village Page).
+            let raw = query["dir"].map(Self.decoded) ?? ""
+            let dir = raw.isEmpty ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/Gremlets/Village Page", isDirectory: true)
+                : URL(fileURLWithPath: (raw as NSString).expandingTildeInPath, isDirectory: true)
+            do {
+                let url = try VillagePage.write(to: dir, world: world, species: species)
+                return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+            } catch {
+                return (500, #"{"ok":false,"error":"couldn't write the page there"}"#)
+            }
         case "snapshot":
             guard let url = VillageSnapshot.make(world: world, species: species) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)

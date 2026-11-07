@@ -12,13 +12,14 @@ import Foundation
 /// Everything is visual and playful: nothing blocks your clicks except the boss's own body, and events never start
 /// during a focus session or while the Gremlets are hidden for a call.
 public enum SpectacleKind: String, CaseIterable, Sendable {
-    case boss, meteors, festival
+    case boss, meteors, festival, lanterns
 
     public var title: String {
         switch self {
         case .boss: return "The Stormwyrm"
         case .meteors: return "Meteor shower"
         case .festival: return "Bloom festival"
+        case .lanterns: return "Lantern festival"
         }
     }
 }
@@ -108,6 +109,7 @@ public final class Spectacle {
         case .boss: duration = 70; maxHP = 100; hp = 100
         case .meteors: duration = 26
         case .festival: duration = 22
+        case .lanterns: duration = 40
         }
     }
 
@@ -226,6 +228,7 @@ extension World {
         case .boss: updateBoss(s, dt, f)
         case .meteors: updateMeteors(s, dt, f)
         case .festival: updateFestival(s, dt, f)
+        case .lanterns: updateLanterns(s, dt)
         }
         updateShards(s, dt, f)
         let outroLength = s.kind == .boss ? (s.won ? 9.0 : 4.0) : 6.0
@@ -420,6 +423,17 @@ extension World {
         guard s.phase == .main else { return }
         for c in creatures where c.job == nil && c.isGrounded && c.activity == .idle && rng.chance(dt * 0.5) {
             startDance(c, duration: rng.range(3, 6), invite: true)
+        }
+    }
+
+    // MARK: Lantern festival
+
+    private func updateLanterns(_ s: Spectacle, _ dt: Double) {
+        guard s.phase == .main else { return }
+        // Everyone on the floor stops to watch the lanterns go up.
+        for c in creatures where c.job == nil && c.isGrounded && c.activity == .idle && rng.chance(dt * 0.6) {
+            c.idleVariant = "look"
+            c.set(.idle, duration: rng.range(3, 6))
         }
     }
 

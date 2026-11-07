@@ -334,3 +334,69 @@ import Testing
         #expect(cs.allSatisfy { $0.facing == -1 })
     }
 }
+
+@Suite struct AdventureTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func mineOpensAndClaudeTasksTurnUpGems() {
+        let w = World(seed: 31)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        #expect(w.mineIndex == nil)
+        for _ in 0..<10 { w.feedGrove() }
+        #expect(w.mineIndex != nil, "the mine opens once the grove has three plots")
+        #expect(w.grove.digCharges == 10)
+        for i in 0..<3 { w.spawn(testSpecies(scale: 10), at: Vec2(200 + Double(i) * 300, 20)) }
+        var gems = 0
+        for _ in 0..<(60 * 300) where gems < 2 {
+            w.step(1.0 / 60)
+            _ = w.drainEvents(); _ = w.drainGroveEvents()
+            gems += w.drainAdventureEvents().filter { if case .gemFound = $0 { return true }; return false }.count
+        }
+        #expect(gems >= 2)
+        #expect(w.grove.gems.values.reduce(0, +) == gems)
+    }
+
+    @Test func skyFerryDocksCarriesPassengersAndLeaves() {
+        let w = World(seed: 32)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 200, w: 400, h: 350)),
+                                                               WindowInfo(id: 2, frame: Rect(x: 850, y: 250, w: 400, h: 300))])
+        w.loadGrove(Grove())
+        for i in 0..<4 { w.spawn(testSpecies(scale: 10), at: Vec2(300 + Double(i) * 60, 600)) }
+        #expect(w.callFerry())
+        var rode = false, docked = false, steps = 0
+        while w.ferry != nil && steps < 60 * 120 {
+            steps += 1
+            w.step(1.0 / 60)
+            _ = w.drainEvents()
+            if w.ferry?.phase == .docked { docked = true }
+            if w.creatures.contains(where: { $0.groundOwner == World.ferryOwner }) { rode = true }
+            for c in w.creatures { #expect(c.pos.x.isFinite && c.pos.y >= -1 && c.pos.y <= scr.maxY + 1) }
+        }
+        #expect(docked)
+        #expect(rode, "someone hopped aboard")
+        #expect(w.ferry == nil, "it sailed off")
+        #expect(!w.creatures.contains { $0.groundOwner == World.ferryOwner })
+    }
+
+    @Test func lanternFestivalAfterAGoodDay() {
+        let w = World(seed: 33)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        w.isNight = true
+        w.checkLanternFestival(hour: 21)
+        w.step(1.0 / 30)
+        #expect(w.spectacle == nil, "not after a quiet day")
+        for _ in 0..<9 { w.feedGrove() }
+        #expect(w.tasksToday == 9)
+        w.checkLanternFestival(hour: 21)
+        w.step(1.0 / 30)
+        #expect(w.spectacle?.kind == .lanterns)
+        for _ in 0..<(30 * 60) { w.step(1.0 / 30) }
+        w.checkLanternFestival(hour: 22)
+        w.step(1.0 / 30)
+        #expect(w.spectacle == nil, "once a day")
+    }
+}

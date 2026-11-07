@@ -11,7 +11,8 @@
 #   gremlet pair                 pair with your phone (opens a QR code to scan)
 #   gremlet send [name]          send a Gremlet through the portal to your phone
 #   gremlet status               what's out and whether a focus timer is running
-#   gremlet meteors | festival   start a little grove moment now (a meteor shower, a festival)
+#   gremlet meteors | festival | lanterns   start a little grove moment now
+#   gremlet ferry                call the sky ferry
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -45,7 +46,8 @@ case "${1:-}" in
   send)    curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "name=${2:-}" "${URL}/phone/send"; echo ;;
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
-  meteors|festival) call "event?kind=$1" >/dev/null ;;
+  ferry)   call ferry >/dev/null ;;
+  meteors|festival|lanterns) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
   run)
     shift
@@ -53,6 +55,6 @@ case "${1:-}" in
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

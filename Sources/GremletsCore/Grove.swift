@@ -105,14 +105,26 @@ public final class Grove: Codable {
     /// Finished Claude buildings along the bottom of the screen.
     public internal(set) var village: [House] = []
     public static let maxHouses = 14
+    /// The mine: digs earned (one per Claude task) and the gems found so far.
+    public internal(set) var digCharges = 0
+    public internal(set) var gems: [String: Int] = [:]
+    /// Today's Claude tasks, for the lantern festival.
+    var todayKey: String?
+    var todayTasks = 0
+    var festivalDone = false
 
-    enum CodingKeys: String, CodingKey { case plants, tasks, tasksSinceBoss, village }
+    enum CodingKeys: String, CodingKey { case plants, tasks, tasksSinceBoss, village, digCharges, gems, todayKey, todayTasks, festivalDone }
     public required init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         plants = try c.decodeIfPresent([GrovePlant].self, forKey: .plants) ?? []
         tasks = try c.decodeIfPresent(Int.self, forKey: .tasks) ?? 0
         tasksSinceBoss = try c.decodeIfPresent(Int.self, forKey: .tasksSinceBoss) ?? 0
         village = try c.decodeIfPresent([House].self, forKey: .village) ?? []
+        digCharges = try c.decodeIfPresent(Int.self, forKey: .digCharges) ?? 0
+        gems = try c.decodeIfPresent([String: Int].self, forKey: .gems) ?? [:]
+        todayKey = try c.decodeIfPresent(String.self, forKey: .todayKey)
+        todayTasks = try c.decodeIfPresent(Int.self, forKey: .todayTasks) ?? 0
+        festivalDone = try c.decodeIfPresent(Bool.self, forKey: .festivalDone) ?? false
     }
 
     public static let maxPlots = 6
@@ -240,6 +252,7 @@ extension World {
         for i in grove.fillPlots() { groveEvents.append(.planted(i)) }
         rebuildGroveSurfaces()
         setSurfacesDirty()
+        openMineIfReady()
     }
 
     /// Claude finished a task: every grove plant soaks up a spark, new plots unlock, berries grow, and every so
@@ -259,9 +272,12 @@ extension World {
             if after > before { ups.append(i); groveEvents.append(.levelUp(i, level: after)) }
         }
         for i in grove.fillPlots() { groveEvents.append(.planted(i)) }
+        grove.digCharges = min(20, grove.digCharges + 1)
+        countTaskToday()
         groveEvents.append(.fed(tasks: grove.tasks))
         rebuildGroveSurfaces()
         setSurfacesDirty()
+        openMineIfReady()
         if !ups.isEmpty, ups.contains(where: { grove.plants[$0].level == 5 }) { requestEvent(.festival) }
         return ups
     }
@@ -319,6 +335,9 @@ extension World {
             add("bounce", 0.5 * (0.3 + c.energy)) { self.startGroveVisit(c, plot: i, task: .bounce) }
         }
         // Bedtime (or just tired): walk home to a house in the village and sleep inside.
+        if let m = mineIndex, !creatures.contains(where: { $0.mining }) {
+            add("dig", grove.digCharges > 0 ? 1.3 : 0.12) { self.startDig(c); _ = m }
+        }
         let sleepingIn = creatures.filter { $0.homeHouse != nil }.count
         if !grove.village.isEmpty, isNight || c.energy < 0.35, sleepingIn < grove.village.count * 2 {
             let n = Int(rng.next() % UInt64(grove.village.count))
@@ -369,8 +388,9 @@ extension World {
         case .bounce(let i):
             startGroveVisit(c, plot: i, task: .bounce)
         case .home(let n):
-            guard n < grove.village.count else { return }
-            c.homeUntil = clock + rng.range(isNight ? 60 : 25, isNight ? 180 : 70)
+            guard n < grove.village.count else { c.mining = false; return }
+            c.homeUntil = c.mining ? clock + rng.range(6, 12) : clock + rng.range(isNight ? 60 : 25, isNight ? 180 : 70)
+            if c.mining { adventureEvents.append(.digging(house: n)) }
             c.homeHouse = n
             c.set(.sleep, duration: 9999)
             groveEvents.append(.wentHome(n, by: c.id))

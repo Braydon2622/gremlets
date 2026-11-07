@@ -62,6 +62,10 @@ public final class World {
     public internal(set) var bridges: [Bridge] = []
     var nextBridgeID = 0
     var buildEvents: [BuildEvent] = []
+    /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
+    public internal(set) var ferry: Ferry?
+    var nextFerryAt: Double?
+    var adventureEvents: [AdventureEvent] = []
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
     var pendingThrows: [(at: Double, from: Int, to: Int)] = []
@@ -262,6 +266,7 @@ public final class World {
         }
         for c in creatures { c.prevPos = c.pos }
         carryRiders()
+        updateFerry(dt)
         // Lower creatures first so a carrier has moved before the friend standing on its head.
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()
@@ -280,6 +285,7 @@ public final class World {
                 c.homeUntil = nil
                 if let n = c.homeHouse { groveEvents.append(.leftHome(n, by: c.id)) }
                 c.homeHouse = nil
+                if c.mining { finishDig(c) }
                 c.set(.wake, duration: c.animationLength(for: .wake))
                 emit(.wokeUp(c.id))
             } else {
@@ -616,6 +622,7 @@ public final class World {
     func allSurfaces(excluding c: Creature) -> [Surface] {
         // A shelf only holds the Gremlet who put it up.
         var out = surfaces + shelfSurfaces.filter { $0.ownerID == World.shelfOwner(c.id) }
+        if let deck = ferrySurface { out.append(deck) }
         // Mid-game of tag, runners leapfrog over heads instead of landing on them.
         let tagging = c.social == .runner || c.social == .chaser
         for o in creatures where !tagging && o !== c && o.groundOwner != c.carrierOwnerID

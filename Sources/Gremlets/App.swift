@@ -136,13 +136,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
         overlay.fx.handle(world.drainBuildEvents())
+        let adventures = world.drainAdventureEvents()
+        overlay.fx.handle(adventures)
+        if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         if overlay.hasBubbles { wanted = max(wanted, 30) }
-        if world.spectacle != nil || !world.playBalls.isEmpty || world.creatures.contains(where: { $0.grapple != nil }) { wanted = 60 }
+        if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
@@ -799,6 +802,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "ferry":
+            guard world.callFerry() else { return (409, #"{"ok":false,"error":"the ferry is already out, or there's no high window to dock at"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "grove/feed":
             let n = min(50, max(1, Int(query["tasks"] ?? "") ?? 1))
             for _ in 0..<n { world.feedGrove() }
@@ -905,6 +912,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func housekeeping(elapsed: Double) {
         updatePresence()
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
+        world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
         if Int(CACurrentMediaTime()) % 60 == 0 {
             world.checkWishwillow(day: Int(Date().timeIntervalSinceReferenceDate / 86400))
             saveGrove()
@@ -1160,6 +1168,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         action("Start a Meteor Shower", #selector(summonEvent(_:)), tag: 1, tip: "Shooting stars drop star shards. Every shard the Gremlets catch grows the grove.")
         action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
+        action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
+        action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
+        let gems = GemKind.allCases.compactMap { k -> String? in let n = g.gems[k.rawValue] ?? 0; return n > 0 ? "\(k.name) \(n)" : nil }
+        sub.addItem(.separator())
+        info(gems.isEmpty ? "Mine: no gems yet (\(g.digCharges) dig\(g.digCharges == 1 ? "" : "s") earned)" : "Gems: " + gems.joined(separator: ", "),
+             tip: "Every Claude task earns a dig. Gremlets go into the mine (it opens once the grove has 3 plots) and come back with gems.")
         let epic = NSMenuItem(title: "Surprise Events", action: #selector(toggleEpic), keyEquivalent: "")
         epic.target = self
         epic.state = epicEvents ? .on : .off
@@ -1170,12 +1184,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func summonEvent(_ sender: NSMenuItem) {
-        let k: SpectacleKind = [.meteors, .festival][max(0, min(1, sender.tag - 1))]
+        let k: SpectacleKind = [.meteors, .festival, .lanterns][max(0, min(2, sender.tag - 1))]
         world.startEvent(k)
         schedule(rate: 60)
     }
 
     @objc private func toggleEpic() { epicEvents.toggle(); rebuildMenu() }
+
+    @objc private func callFerry() { world.callFerry(); schedule(rate: 60) }
 
     @objc private func toggleControls() {
         controls.enabled.toggle()

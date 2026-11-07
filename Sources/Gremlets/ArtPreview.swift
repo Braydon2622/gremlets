@@ -55,10 +55,10 @@ enum ArtPreview {
             }
         }
         write(ctx4.makeImage()!, dir.appendingPathComponent("overgrowth.png"))
-        let sp = [StoryArt.spirit(frame: 0), StoryArt.gliderLeaf, StoryArt.pot]
-        let ctx5 = CGContext(data: nil, width: 300, height: 80, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-        ctx5.setFillColor(CGColor(red: 0.1, green: 0.12, blue: 0.2, alpha: 1)); ctx5.fill(CGRect(x: 0, y: 0, width: 300, height: 80)); ctx5.interpolationQuality = .none
-        for (k, im) in sp.enumerated() { ctx5.draw(im, in: CGRect(x: 10 + k * 95, y: 10, width: im.width * 4, height: im.height * 4)) }
+        let sp = [StoryArt.spirit(frame: 0), StoryArt.gliderLeaf, StoryArt.pot, AdventureArt.mine(night: false), AdventureArt.ferry(frame: 0), AdventureArt.lantern, AdventureArt.gem(.amethyst), AdventureArt.gem(.starstone)]
+        let ctx5 = CGContext(data: nil, width: 1000, height: 160, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx5.setFillColor(CGColor(red: 0.1, green: 0.12, blue: 0.2, alpha: 1)); ctx5.fill(CGRect(x: 0, y: 0, width: 1000, height: 160)); ctx5.interpolationQuality = .none
+        var cx = 10; for im in sp { ctx5.draw(im, in: CGRect(x: cx, y: 10, width: im.width * 3, height: im.height * 3)); cx += im.width * 3 + 20 }
         write(ctx5.makeImage()!, dir.appendingPathComponent("story.png"))
         // Grove plants, levels 1...5.
         let g = Grove()

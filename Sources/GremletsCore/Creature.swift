@@ -69,6 +69,8 @@ public final class Creature {
     /// Asleep inside a village house until this time (hidden from view; pops back out after).
     public internal(set) var homeUntil: Double?
     public internal(set) var homeHouse: Int?
+    /// Down the mine (the "home" it's in is the mine).
+    public internal(set) var mining = false
     var petAmount: Double = 0
     var edgeDecisionMade = false
     var grabOffset: Vec2 = .zero

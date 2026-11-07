@@ -465,3 +465,71 @@ enum StoryArt {
         ".fFfFf.",
     ], ["k": 0x3A3A44, "p": 0x5A5A68, "f": 0xFF9A3A, "F": 0xFFE45C])
 }
+
+/// The mine, the gems, the sky ferry and the festival lanterns.
+enum AdventureArt {
+    /// A grassy mound with a timber-framed mine entrance, a lantern and a little cart on rails.
+    static func mine(night: Bool) -> CGImage {
+        var cv = PixelCanvas(40, 22)
+        for x in 0..<40 {
+            let u = (Double(x) + 0.5) / 40 * 2 - 1
+            let top = Int(20 * pow(max(0, 1 - u * u), 0.6))
+            for y in 0..<max(1, top) {
+                let c: UInt32 = y >= top - 1 ? 0x5DBB46 : y >= top - 2 ? (x % 3 == 0 ? 0x5DBB46 : 0x8A5A35) : ((x * 7 + y * 3) % 11 == 0 ? 0x6B4428 : (y < 5 && (x + y) % 9 == 0 ? 0xF2C94C : 0x8A5A35))
+                cv.set(x, y, c)
+            }
+        }
+        cv.outline(0.62)
+        // Entrance: dark opening framed in timber.
+        cv.rect(15, 0, 10, 11, 0x1E1A22)
+        cv.rect(14, 0, 2, 12, 0x7A5232); cv.rect(24, 0, 2, 12, 0x7A5232); cv.rect(13, 11, 14, 2, 0x8A5A35)
+        // Rails and a cart of ore.
+        cv.rect(4, 0, 34, 1, 0x6E6A78)
+        cv.rect(28, 1, 7, 3, 0x7A5232); cv.rect(29, 4, 5, 1, 0x9C9488); cv.set(30, 4, 0xD58CFF); cv.set(32, 4, 0x8FE3FF)
+        // A lantern by the door.
+        cv.rect(27, 8, 1, 3, 0x5E3B22); cv.blob(27.5, 11.5, 1.4, 1.4, base: night ? 0xFFF3A0 : 0xFFC845)
+        return cv.image
+    }
+
+    static func gem(_ k: GemKind) -> CGImage {
+        let (a, b): (UInt32, UInt32) = {
+            switch k {
+            case .amber: return (0xF2A33A, 0xFFE09A)
+            case .emerald: return (0x3FBF6A, 0xA6F0BF)
+            case .sapphire: return (0x3F7FE0, 0xA9D0FF)
+            case .amethyst: return (0x9A5AE0, 0xE0C2FF)
+            case .starstone: return (0xFFD84A, 0xFFFFFF)
+            }
+        }()
+        return Effects.pixels([".bb.", "baab", "aaaa", ".aa."], ["a": a, "b": b])
+    }
+    static let pebble = Effects.pixels([".gg.", "gGgg", ".gg."], ["g": 0x9C9488, "G": 0xC9C2B4])
+
+    /// The sky ferry: a little wooden boat under a patched cloth balloon, with a turning propeller.
+    static func ferry(frame: Int) -> CGImage {
+        var cv = PixelCanvas(44, 34)
+        // Balloon
+        cv.blob(22, 26, 15, 7, base: 0xE8D7B0, light: 0xFFF4DA, shade: 0xC2A878)
+        cv.rect(14, 25, 4, 3, 0xD9855A); cv.rect(27, 27, 3, 3, 0x7FB0D9)   // patches
+        // Ropes
+        cv.line(10, 19, 9, 10, 0x8A6A4A); cv.line(34, 19, 35, 10, 0x8A6A4A); cv.line(22, 19, 22, 10, 0x8A6A4A)
+        // Hull
+        for y in 0..<9 { let inset = max(0, 4 - y); cv.rect(4 + inset, y, 36 - inset * 2, 1, y > 6 ? 0xB97E42 : (y % 3 == 0 ? 0x8A5A35 : 0xA9743F)) }
+        cv.rect(4, 8, 36, 1, 0xD9A066)            // deck edge
+        cv.rect(6, 9, 1, 2, 0x8A5A35); cv.rect(37, 9, 1, 2, 0x8A5A35); cv.rect(6, 10, 32, 1, 0xC9A36A)   // rail
+        // Portholes
+        cv.set(14, 4, 0xBFE6FF); cv.set(22, 4, 0xBFE6FF); cv.set(30, 4, 0xBFE6FF)
+        // Propeller at the stern
+        cv.rect(1, 4, 3, 1, 0x6E6A78)
+        if frame % 2 == 0 { cv.rect(0, 1, 1, 7, 0xC8C8D0) } else { cv.rect(0, 4, 1, 1, 0xC8C8D0); cv.rect(0, 2, 1, 1, 0x9A9AA6); cv.rect(0, 6, 1, 1, 0x9A9AA6) }
+        cv.outline(0.6)
+        return cv.image
+    }
+
+    static let lantern: CGImage = {
+        var cv = PixelCanvas(7, 9)
+        cv.blob(3.5, 5, 3.3, 3.8, base: 0xFF9A4A, light: 0xFFE09A, shade: 0xE0703A)
+        cv.rect(2, 0, 3, 1, 0x8A5A35); cv.rect(2, 8, 3, 1, 0x8A5A35)
+        return cv.image
+    }()
+}

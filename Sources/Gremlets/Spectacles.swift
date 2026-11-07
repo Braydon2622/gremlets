@@ -73,6 +73,7 @@ final class SpectacleRenderer {
         renderSpirits()
         renderWind()
         renderCampfire()
+        renderFerry()
         renderVillage()
         renderBridges()
         renderRopes()
@@ -365,7 +366,9 @@ final class SpectacleRenderer {
         guard let floor = world.groveFloor else { return }
         let night = world.isNight
         for (n, h) in world.grove.village.enumerated() {
-            guard let b = Biome(rawValue: h.biome), let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }
+            guard let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }
+            if h.biome == "mine" { renderMine(n, h, si: si, at: pt); continue }
+            guard let b = Biome(rawValue: h.biome) else { continue }
             let stage = BuildArt.overgrowthStage(hours: h.builtAt.map { (Date().timeIntervalSince1970 - $0) / 3600 } ?? 0)
             let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)"
             var entry = houses[n] ?? {
@@ -400,6 +403,98 @@ final class SpectacleRenderer {
         }
         for n in houses.keys where n >= world.grove.village.count {
             houses[n]?.layer.removeFromSuperlayer(); houses[n]?.ground.removeFromSuperlayer(); houses[n] = nil
+        }
+    }
+
+    private func renderMine(_ n: Int, _ h: House, si: Int, at pt: CGPoint) {
+        let night = world.isNight
+        let key = "mine-\(night)-\(si)"
+        var entry = houses[n] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4; popIn(l); return (l, CALayer(), "") }()
+        attach(entry.layer, si)
+        if entry.key != key {
+            let img = AdventureArt.mine(night: night)
+            entry.layer.contents = img
+            entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+            entry.key = key
+        }
+        entry.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y)
+        houses[n] = entry
+        // Digging inside: puffs of dust and the odd spark from the entrance.
+        let now = CACurrentMediaTime()
+        if world.creatures.contains(where: { $0.homeHouse == n && $0.mining }), now >= (nextHouseSmoke[n] ?? 0) {
+            nextHouseSmoke[n] = now + Double.random(in: 0.5...0.9)
+            let door = CGPoint(x: pt.x - 0, y: pt.y + 12)
+            overlay.burst([Effects.dust, Effects.smallStar], si: si, at: door, count: 1, dx: -20...20, dy: 4...20, duration: 0.6)
+        }
+    }
+
+    private var ferryLayer: CALayer?
+
+    private func renderFerry() {
+        guard let fe = world.ferry, let (si, pt) = local(fe.pos) else {
+            if let l = ferryLayer { fade(l, to: 0, remove: true); ferryLayer = nil }
+            return
+        }
+        let l = ferryLayer ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 12; l.bounds = CGRect(x: 0, y: 0, width: 132, height: 102); popIn(l); return l }()
+        attach(l, si)
+        l.contents = AdventureArt.ferry(frame: Int(CACurrentMediaTime() * 10) % 2)
+        // The deck (art row 9) lines up with the ferry's walkable surface.
+        l.position = CGPoint(x: pt.x.rounded(), y: (pt.y + Ferry.deckHeight - 27).rounded())
+        l.transform = CATransform3DMakeScale(fe.facing < 0 ? -1 : 1, 1, 1)
+        ferryLayer = l
+    }
+
+    func handle(_ events: [AdventureEvent]) {
+        for e in events {
+            switch e {
+            case .gemFound(let g, let id):
+                if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = local(c.pos + Vec2(0, c.size.y + 6)) {
+                    overlay.burst([AdventureArt.gem(g)], si: si, at: pt, count: 1, dx: 0...0, dy: 30...40, duration: 1.8)
+                    overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: g == .starstone ? 10 : 4, dx: -24...24, dy: 0...40, duration: 0.9)
+                }
+            case .pebble(let id):
+                if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = local(c.pos + Vec2(0, c.size.y + 6)) {
+                    overlay.burst([AdventureArt.pebble], si: si, at: pt, count: 1, dx: 0...0, dy: 20...26, duration: 1.2)
+                }
+            case .digging, .ferryArrived, .ferryLeft:
+                break
+            }
+        }
+    }
+
+    /// Lanterns rising from the village and the grove, one per Claude task finished today.
+    private func releaseLanterns() {
+        guard let floor = world.groveFloor, let (si, _) = local(Vec2(floor.minX + 10, floor.minY + 10)) else { return }
+        let count = max(8, min(40, world.tasksToday))
+        var spots: [Double] = world.grove.village.map { floor.minX + $0.x * floor.w }
+        spots += world.grove.plants.indices.map { world.grove.base($0, floor: floor).x }
+        if spots.isEmpty { spots = [floor.minX + floor.w / 2] }
+        let o = screens[si].frame.origin
+        for i in 0..<count {
+            let x0 = spots[i % spots.count] + Double.random(in: -40...40)
+            let start = CGPoint(x: x0 - o.x, y: floor.minY - o.y + 30)
+            let l = CALayer()
+            l.contents = AdventureArt.lantern
+            l.magnificationFilter = .nearest
+            l.bounds = CGRect(x: 0, y: 0, width: 21, height: 27)
+            l.zPosition = 20
+            l.shadowColor = NSColor(red: 1, green: 0.7, blue: 0.3, alpha: 1).cgColor; l.shadowRadius = 10; l.shadowOpacity = 0.9; l.shadowOffset = .zero
+            attach(l, si)
+            let rise = CAKeyframeAnimation(keyPath: "position")
+            let h = CGFloat(Double.random(in: 0.55...0.9)) * screens[si].frame.height
+            rise.values = (0...8).map { k -> NSValue in
+                let t = CGFloat(k) / 8
+                let sway = CGFloat(sin(Double(t) * 7 + Double(i))) * 22
+                return NSValue(point: CGPoint(x: start.x + sway + t * 40, y: start.y + h * t))
+            }
+            let fade = CAKeyframeAnimation(keyPath: "opacity"); fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.1, 0.7, 1]
+            let g = CAAnimationGroup(); g.animations = [rise, fade]
+            g.duration = Double.random(in: 14...22)
+            g.beginTime = CACurrentMediaTime() + Double(i) * 0.6
+            g.fillMode = .both; g.isRemovedOnCompletion = false
+            CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+            l.add(g, forKey: "rise")
+            CATransaction.commit()
         }
     }
 
@@ -703,6 +798,7 @@ final class SpectacleRenderer {
             switch e {
             case .started(let k):
                 if k == .festival { startEmitter(petals: true) }
+                if k == .lanterns { releaseLanterns() }
             case .roar:
                 if let h = world.spectacle?.head, let (si, pt) = local(h) {
                     overlay.burst([Effects.cloud, Effects.smallStar], si: si, at: pt, count: 6, dx: -90...90, dy: -40...60, duration: 0.9)
@@ -767,6 +863,7 @@ final class SpectacleRenderer {
         case .boss: banner(text: "THE STORMWYRM", sub: "Throw berries! Bounce! Click it!", color: NSColor(red: 0.55, green: 0.85, blue: 1, alpha: 1))
         case .meteors: banner(text: "METEOR SHOWER", sub: "Catch the falling star shards", color: .systemYellow)
         case .festival: banner(text: "BLOOM FESTIVAL", sub: "A grove plant reached full bloom!", color: .systemPink)
+        case .lanterns: break
         }
     }
 

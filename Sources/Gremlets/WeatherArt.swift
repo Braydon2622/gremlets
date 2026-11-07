@@ -132,88 +132,6 @@ enum ClimateArt {
     }()
 }
 
-/// The codebase castle (see Castle.swift): a small storybook castle. Cream stone towers with pointed roofs in the
-/// colour of each folder's main language, the keep in the middle with an arched door, a flat lookout and a flag.
-enum CastleArt {
-    static func color(_ lang: String) -> UInt32 {
-        switch lang {
-        case "swift": return 0xE8743E
-        case "js": return 0xE9C94A
-        case "ts": return 0x4F86CF
-        case "py": return 0x5A82B8
-        case "rb": return 0xC2414A
-        case "go": return 0x5BBFD6
-        case "rust": return 0xB8794C
-        case "jvm": return 0xD9823A
-        case "c": return 0x7F8DA3
-        case "html": return 0xDE6A45
-        case "css": return 0x9670CF
-        case "docs": return 0x8FB8A8
-        case "data": return 0x7DBB76
-        case "shell": return 0x6E9F68
-        case "sol": return 0x8E8CAE
-        case "media": return 0xDB8FAE
-        default: return 0x9DB3C9
-        }
-    }
-
-    /// The whole castle at art scale (3 points per pixel before the placement's scale).
-    static func image(_ c: Castle) -> CGImage {
-        let px = { (v: Double) in max(1, Int((v / 3).rounded())) }
-        let w = max(4, px(c.totalWidth)), h = px(c.tallest) + 2
-        var cv = PixelCanvas(w, h)
-        let stone: UInt32 = 0xEFE6D2, stoneLight: UInt32 = 0xFBF5E8, stoneShade: UInt32 = 0xD3C6AA, line: UInt32 = 0xE0D4BA
-        func roofColour(_ t: CastleTower) -> UInt32 {
-            let main = t.mix.filter { !["docs", "data", "media"].contains($0.key) }.max { $0.value < $1.value }?.key ?? t.mainLanguage
-            return color(main)
-        }
-        // Low curtain walls joining the towers.
-        for i in c.towers.indices.dropLast() {
-            let a = px(c.minX(i) + c.width(i)) - 1, b = px(c.minX(i + 1))
-            let wh = px(min(c.height(i), c.height(i + 1)) * 0.42)
-            cv.rect(a, 0, b - a + 1, wh, stoneShade)
-            for x in stride(from: a, through: b, by: 2) { cv.set(x, wh, stoneShade) }
-        }
-        for (i, t) in c.towers.enumerated() {
-            let x0 = px(c.minX(i)), tw = px(c.width(i)), x1 = x0 + tw - 1, th = px(c.height(i))
-            // Smooth stone: lit on the left, shaded on the right, a few faint courses.
-            for y in 0..<th { for x in x0...x1 {
-                cv.set(x, y, x == x0 ? stoneLight : (x >= x1 - 1 ? stoneShade : (y % 4 == 3 && (x + y / 4) % 3 != 0 ? line : stone)))
-            } }
-            let mid = (x0 + x1) / 2
-            if t.isKeep {
-                // Arched door, two windows, a flat lookout with crenellations and a flag.
-                cv.rect(mid - 1, 0, 3, 4, 0x6B4428); cv.set(mid, 4, 0x6B4428); cv.set(mid + 1, 2, 0xE8C060)
-                for wx in [x0 + 2, x1 - 2] where th > 9 { cv.set(wx, th - 4, 0x5B4A6E); cv.set(wx, th - 5, 0x5B4A6E) }
-                for x in stride(from: x0, through: x1, by: 2) { cv.set(x, th, stone); cv.set(x, th + 1, stoneShade) }
-                cv.vspan(mid, th, th + 3, 0x6B4428)
-                let flag = roofColour(t)
-                cv.rect(mid + 1, th + 2, 3, 2, flag); cv.set(mid + 4, th + 3, flag)
-            } else {
-                // A round window, then a pointed roof in the folder's colour.
-                if th > 7 { cv.set(mid, th - 4, 0x5B4A6E); cv.set(mid, th - 3, 0x5B4A6E) }
-                let roof = roofColour(t), roofDark = PixelCanvas.darken(roof, 0.75)
-                let rh = px(Castle.roofHeight)
-                for k in 0..<rh {
-                    let half = Double(tw + 2) / 2 * (1 - Double(k) / Double(rh))
-                    let lo = Int((Double(x0 + x1) / 2 - half).rounded()), hi = Int((Double(x0 + x1) / 2 + half).rounded())
-                    guard hi >= lo else { continue }
-                    for x in lo...hi { cv.set(x, th + k, x <= mid ? roof : roofDark) }
-                }
-                cv.set(mid, th + rh, roofDark)
-            }
-        }
-        // Moss tufts at the foot (the castle grows out of the window's moss too).
-        var r = ArtRNG(s: UInt64(w * 977 + h))
-        for x in 0..<w where cv.get(x, 0) != nil && r.next() < 0.45 {
-            cv.set(x, 0, r.next() < 0.5 ? 0x5E9E46 : 0x8BD66A)
-            if r.next() < 0.3 { cv.set(x, 1, 0x8BD66A) }
-        }
-        cv.outline(0.62)
-        return cv.image
-    }
-}
-
 /// The home under the notch (see Notch.swift).
 enum NotchArt {
     /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
@@ -274,3 +192,43 @@ extension SkyArt {
         return cv.image
     }()
 }
+
+/// The hut that hangs beside Claude's terminal (see Pod.swift): a woven acorn with a leafy cap for a roof, a round
+/// door and a round window (warm and lit while Claude works), and the mossy branch it hangs from.
+enum PodArt {
+    static func pod(lit: Bool) -> CGImage {
+        var cv = PixelCanvas(12, 15)
+        let weave: UInt32 = 0xC98B4A, weaveLight: UInt32 = 0xE0B070, weaveDark: UInt32 = 0x9A6A3A
+        // The woven body, rounder at the bottom like an acorn.
+        cv.blob(6, 5.2, 5.4, 5.6, base: weave, light: weaveLight, shade: weaveDark)
+        for y in stride(from: 1, to: 10, by: 3) { for x in 0..<12 where cv.get(x, y) != nil && (x + y / 3) % 2 == 0 { cv.set(x, y, weaveDark) } }
+        // The leafy cap roof, overhanging, with a stalk on top where the vine ties on.
+        for k in 0..<4 { cv.hspan(-1 + k, 12 - k, 9 + k, k == 0 ? 0x3E7A34 : (k == 3 ? 0x8BD66A : 0x5E9E46)) }
+        cv.set(1, 10, 0x8BD66A); cv.set(5, 11, 0x3E7A34); cv.set(9, 10, 0x8BD66A)
+        cv.vspan(6, 13, 14, 0x6B4428)
+        // A round door at the bottom and a round window above it.
+        cv.blob(6, 1.6, 1.5, 1.6, base: 0x5E3B22); cv.set(7, 1, 0xE8C060)
+        cv.blob(4, 6, 1.4, 1.4, base: lit ? 0xFFD36B : 0x3B4660, light: lit ? 0xFFF0B8 : 0x56627E)
+        cv.set(4, 6, lit ? 0xFFF7D6 : 0x56627E)
+        // A tiny flower by the window.
+        cv.set(9, 6, 0xFF8FB1); cv.set(9, 5, 0x5E9E46)
+        cv.outline(0.62)
+        return cv.image
+    }
+
+    /// The branch, growing out from the window's corner to the right: bark, moss on top, a couple of leaves, a
+    /// tapering tip.
+    static let branch: CGImage = {
+        var cv = PixelCanvas(24, 6)
+        for x in 0..<24 {
+            let thick = x < 16 ? 3 : (x < 21 ? 2 : 1)
+            for y in 0..<thick { cv.set(x, 2 + y - (x > 20 ? 0 : 0), y == thick - 1 ? 0x8A5A35 : 0x6B4428) }
+            if x < 19 && x % 5 != 3 { cv.set(x, 2 + thick, x % 3 == 0 ? 0x8BD66A : 0x5E9E46) }   // moss along the top
+        }
+        cv.set(21, 5, 0x6CC04A); cv.set(22, 5, 0x8BD66A); cv.set(23, 4, 0x6CC04A)               // leaves at the tip
+        cv.set(9, 1, 0x5E9E46); cv.set(10, 0, 0x6CC04A)                                        // and one hanging
+        cv.outline(0.66)
+        return cv.image
+    }()
+}
+

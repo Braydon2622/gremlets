@@ -189,34 +189,28 @@ public struct BonsaiLayout: Sendable {
 }
 
 public enum BonsaiGeometry {
-    /// A classic bonsai silhouette: a tapering trunk with movement, the lowest branches longest and each one shorter
-    /// up the tree, pads of foliage at the end of every limb and twig, a crown on top and surface roots at the base.
-    /// A seedling is a short stem with one tuft; a tree with hundreds of edits sprawls three hundred points wide.
+    /// A simple, readable bonsai in the classic "cloud pad" look: a thick trunk that tapers and curves, roots flaring
+    /// at its foot, and a few flat-bottomed pads of foliage arranged in a lopsided triangle (an apex on top, the
+    /// longest branch low on one side, the next higher on the other). A seedling is a stem with one pad; a mature
+    /// tree has five. It grows bigger and fuller with the work, never busier.
     public static func layout(_ b: Bonsai) -> BonsaiLayout {
         var rng = SplitMix64(seed: b.seed &+ 1)
         let s = b.stature
-        let H = 56 + 152 * s
-        let W = 76 + 244 * s
-        let windDir: Double = (b.seed >> 24) % 2 == 0 ? 1 : -1
+        let H = 42 + 92 * s
+        let lean: Double = (b.seed >> 24) % 2 == 0 ? 1 : -1
         let phase = rng.range(0, 6.28)
-        let wiggle = (0..<10).map { _ in rng.range(-1, 1) }
 
-        // Trunk.
+        // Trunk: upright, the classic gentle S of an informal upright, or slanting (a cascade would hang over the
+        // window's edge, so those grow slanting too).
         var trunk: [Vec2] = [.zero]
         let n = 8
         for k in 1...n {
             let t = Double(k) / Double(n)
-            var p: Vec2
+            let p: Vec2
             switch b.form {
-            case .upright:
-                p = Vec2(0.05 * H * t + wiggle[k] * 3 * s, t * H)
-            case .informal:
-                p = Vec2(sin(t * .pi * 1.7 + phase) * (12 + 18 * s) + wiggle[k] * 2, t * H)
-            case .windswept:
-                p = Vec2(windDir * (0.08 * H * t + 0.45 * H * t * t), t * H * (1 - 0.28 * t))
-            case .cascade:
-                if t < 0.3 { p = Vec2(windDir * t * 26, t * H * 0.9) }
-                else { p = Vec2(windDir * (8 + (t - 0.3) * H * 0.8), 0.27 * H - (t - 0.3) * H * 0.9) }
+            case .upright: p = Vec2(lean * 0.04 * H * t, t * H)
+            case .informal: p = Vec2(sin(t * .pi * 1.5 + phase) * (6 + 12 * s) * (1 - 0.4 * t), t * H)
+            case .windswept, .cascade: p = Vec2(lean * (0.32 * H * t - 0.1 * H * t * t), t * H * 0.95)
             }
             trunk.append(p)
         }
@@ -225,82 +219,59 @@ public enum BonsaiGeometry {
             let i = min(n - 1, Int(f)), u = f - Double(i)
             return trunk[i] + (trunk[i + 1] - trunk[i]) * u
         }
-        let baseThickness = 6 + 14 * s
+        let baseThickness = 7 + 15 * s
 
-        // Surface roots.
+        // Roots flaring at the foot (nebari), from the start.
         var roots: [[Vec2]] = []
-        let rootCount = s < 0.15 ? 0 : 2 + Int(s * 3)
+        let rootCount = s < 0.08 ? 0 : 2 + Int(s * 2.5)
         for r in 0..<rootCount {
             let dir: Double = r % 2 == 0 ? 1 : -1
-            let len = (8 + 14 * s) * rng.range(0.7, 1.3)
-            roots.append([Vec2(dir * baseThickness * 0.3, 2), Vec2(dir * len * 0.6, 0.5), Vec2(dir * len, -1)])
+            let len = (7 + 12 * s) * rng.range(0.75, 1.2)
+            roots.append([Vec2(dir * baseThickness * 0.25, 2), Vec2(dir * len * 0.6, 0.6), Vec2(dir * len, -1)])
         }
 
-        // Branches, longest at the bottom, each with its pad and (as it fills out) a twig or two.
+        // The pads: tier height up the trunk, side (+1 = the first branch's side), reach and size.
+        let first: Double = b.branches.first?.side ?? lean
+        var tiers: [(t: Double, side: Double, reach: Double, size: Double)] = []
+        if s >= 0.12 { tiers.append((0.42, first, 1.0, 1.0)) }
+        if s >= 0.12 { tiers.append((0.62, -first, 0.78, 0.85)) }
+        if s >= 0.4 { tiers.append((0.78, first, 0.5, 0.68)) }
+        if s >= 0.68 { tiers.append((0.3, -first, 0.62, 0.72)) }
+        let W0 = 26 + 64 * s
+        // Flowers and fruit from every branch, spread over the pads.
+        let totalBlooms = min(4 * (tiers.count + 1), b.branches.reduce(0) { $0 + $1.blooms })
+        let totalFruit = min(2 * (tiers.count + 1), b.branches.reduce(0) { $0 + $1.fruit })
         var limbs: [(points: [Vec2], thickness: Double)] = []
         var pads: [BonsaiLayout.Pad] = []
-        let count = b.branches.count
-        for (i, br) in b.branches.enumerated() {
+        func spots(_ c: Vec2, _ rx: Double, _ count: Int, _ r: inout SplitMix64, fruit: Bool) -> [Vec2] {
+            (0..<count).map { _ in fruit ? c + Vec2(r.range(-0.6, 0.6) * rx, -rx * 0.42 - 3 - r.range(0, 3)) : c + Vec2(r.range(-0.75, 0.75) * rx, r.range(0, 0.8) * rx * 0.42) }
+        }
+        let pieces = tiers.count + 1
+        for (i, tier) in tiers.enumerated() {
             var brng = SplitMix64(seed: b.seed ^ (UInt64(i + 1) &* 0x9E3779B97F4A7C15))
-            let t = min(0.9, 0.2 + 0.68 * (Double(i) + 0.5) / Double(max(count, 1)))
-            let root = along(t)
-            let fullness = min(1, log2(1 + Double(br.edits)) / 7)
-            let L = W * 0.5 * (1 - 0.55 * t) * (0.45 + 0.55 * fullness)
-            let side = b.form == .windswept ? windDir : br.side
-            var angle: Double
-            switch b.form {
-            case .windswept: angle = brng.range(-0.1, 0.25)
-            case .cascade: angle = t > 0.45 ? brng.range(-0.55, -0.2) : brng.range(0.05, 0.35)
-            default: angle = brng.range(0.08, 0.32) - 0.12 * t   // upper branches flatter
-            }
-            let droop = s > 0.6 ? -0.08 * fullness : 0   // old branches sag a little at the tip
-            let p1 = root + Vec2(side * cos(angle + 0.22) * L * 0.45, sin(angle + 0.22) * L * 0.45)
-            let end = p1 + Vec2(side * cos(angle + droop) * L * 0.55, sin(angle + droop) * L * 0.55)
-            let thick = baseThickness * (0.55 - 0.3 * t)
-            limbs.append((points: [root, p1, end], thickness: thick))
-            let rx = (10 + 26 * fullness) * (0.55 + 0.45 * s)
-            var padCenters = [end]
-            if fullness > 0.35 {
-                let q = p1 + Vec2(side * cos(angle + 0.9) * L * 0.32, sin(angle + 0.9) * L * 0.32)
-                limbs.append((points: [p1, q], thickness: thick * 0.5))
-                padCenters.append(q)
-            }
-            if fullness > 0.7 {
-                let m = p1 + (end - p1) * 0.55
-                let q = m + Vec2(side * cos(angle - 0.35) * L * 0.28, sin(angle - 0.35) * L * 0.28 - 4)
-                limbs.append((points: [m, q], thickness: thick * 0.45))
-                padCenters.append(q)
-            }
-            // Blooms and fruit spread over this branch's pads.
-            var bloomSpots: [[Vec2]] = Array(repeating: [], count: padCenters.count)
-            var fruitSpots: [[Vec2]] = Array(repeating: [], count: padCenters.count)
-            for (k, c) in padCenters.enumerated() {
-                let r = k == 0 ? rx : rx * 0.68
-                for _ in 0..<4 { bloomSpots[k].append(c + Vec2(brng.range(-0.8, 0.8) * r, brng.range(-0.1, 0.9) * r * 0.4)) }
-                for _ in 0..<3 { fruitSpots[k].append(c + Vec2(brng.range(-0.7, 0.7) * r, -r * 0.4 - 3 - brng.range(0, 5))) }
-            }
-            var bloomsLeft = min(br.blooms, 4 * padCenters.count), fruitLeft = min(br.fruit, 3 * padCenters.count)
-            for (k, c) in padCenters.enumerated() {
-                let r = k == 0 ? rx : rx * 0.68
-                let nb = min(bloomSpots[k].count, (bloomsLeft + padCenters.count - 1 - k) / padCenters.count)
-                let nf = min(fruitSpots[k].count, (fruitLeft + padCenters.count - 1 - k) / padCenters.count)
-                bloomsLeft -= nb; fruitLeft -= nf
-                pads.append(.init(center: c, rx: r, ry: r * 0.4, branch: i, blooms: Array(bloomSpots[k].prefix(nb)), fruit: Array(fruitSpots[k].prefix(nf))))
-            }
+            let root = along(tier.t)
+            let L = W0 * tier.reach * (1 - 0.35 * tier.t)
+            let elbow = root + Vec2(tier.side * L * 0.5, 3 + 3 * s)
+            let end = root + Vec2(tier.side * L, 6 + 6 * s - 4 * tier.t)
+            limbs.append((points: [root, elbow, end], thickness: baseThickness * (0.48 - 0.25 * tier.t)))
+            let rx = (16 + 30 * s) * tier.size
+            let c = end + Vec2(tier.side * rx * 0.15, rx * 0.22)
+            pads.append(.init(center: c, rx: rx, ry: rx * 0.46, branch: min(i, max(0, b.branches.count - 1)),
+                              blooms: spots(c, rx, (totalBlooms + pieces - 1 - i) / pieces, &brng, fruit: false),
+                              fruit: spots(c, rx, (totalFruit + pieces - 1 - i) / pieces, &brng, fruit: true)))
         }
-        // The crown: a cluster at the top (for a cascade, at the bend).
-        let top = b.form == .cascade ? along(0.3) + Vec2(-windDir * 5, 10) : trunk[n] + Vec2(0, 5)
-        let crx = (13 + 20 * s), cry = crx * 0.42
-        pads.append(.init(center: top, rx: crx, ry: cry, branch: -1, blooms: [], fruit: []))
-        if s > 0.4 {
-            pads.append(.init(center: top + Vec2(-crx * 0.7, -cry * 0.9), rx: crx * 0.65, ry: cry * 0.7, branch: -1, blooms: [], fruit: []))
-            pads.append(.init(center: top + Vec2(crx * 0.75, -cry * 1.1), rx: crx * 0.6, ry: cry * 0.7, branch: -1, blooms: [], fruit: []))
-        }
+        // The apex, a rounded dome on top of the trunk.
+        var arng = SplitMix64(seed: b.seed &+ 99)
+        let top = trunk[n] + Vec2(0, 4)
+        let arx = 15 + 24 * s
+        pads.append(.init(center: top, rx: arx, ry: arx * 0.55, branch: -1,
+                          blooms: spots(top, arx, totalBlooms / pieces, &arng, fruit: false),
+                          fruit: spots(top, arx, totalFruit / pieces, &arng, fruit: true)))
 
-        // Pot, and the bounds of it all.
-        let potW = 44 + 56 * s, potH = 15 + 13 * s
+        // The moss mound's width (it used to be a pot), and the bounds of it all.
+        let potW = 34 + 40 * s, potH = 4.0
         var minX = -potW / 2, maxX = potW / 2, minY = -potH, maxY = 0.0
-        for p in trunk { minX = min(minX, p.x - 6); maxX = max(maxX, p.x + 6); minY = min(minY, p.y); maxY = max(maxY, p.y) }
+        for p in trunk { minX = min(minX, p.x - 8); maxX = max(maxX, p.x + 8); minY = min(minY, p.y); maxY = max(maxY, p.y) }
         for r in roots { for p in r { minX = min(minX, p.x - 2); maxX = max(maxX, p.x + 2) } }
         for p in pads {
             minX = min(minX, p.center.x - p.rx - 3); maxX = max(maxX, p.center.x + p.rx + 3)
@@ -518,14 +489,14 @@ extension World {
             }
         }
         bonsaiPlacements = placements
-        // Codebase castles, at the other end of the same window tops.
-        var castlesOut: [CastlePlacement] = []
+        // The hut hanging beside each live terminal, from a branch at the corner away from the tree.
+        var podsOut: [PodPlacement] = []
         for (k, p) in placements.enumerated() where p.slot < 0 {
-            guard let (cp, tops) = castleLayout(for: p, k: k) else { continue }
-            castlesOut.append(cp)
-            for s in tops { surfacesOut.append(s); attached[s.ownerID] = cp.windowID }
+            guard let (pod, branch) = podLayout(for: p, k: k) else { continue }
+            podsOut.append(pod)
+            surfacesOut.append(branch); attached[branch.ownerID] = pod.windowID
         }
-        castlePlacements = castlesOut
+        podPlacements = podsOut
 
         // Terminal ledges: mossy shelves that grow out of a Claude window's side as the edits pile up.
         var ledges: [TerminalLedge] = []

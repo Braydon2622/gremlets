@@ -59,7 +59,7 @@ enum BonsaiArt {
         let segs = layout.trunk.count - 1
         for i in 0..<segs {
             let t = Double(i) / Double(segs)
-            let thick = max(1, Int((layout.thickness * (1 - 0.7 * t) * k).rounded()))
+            let thick = max(1, Int((layout.thickness * (1 - 0.62 * t) * k).rounded()))
             pline(layout.trunk[i], layout.trunk[i + 1], pal.bark, width: thick)
         }
         // Bark texture: a light column on the left of the trunk, dark on the right.
@@ -99,10 +99,23 @@ enum BonsaiArt {
                 }
                 continue
             }
-            cv.blob(cx, cy - ry * 0.25, rx, ry * 0.95, base: pal.leafDark)
-            cv.blob(cx, cy, rx, ry, base: pal.leaf, light: pal.leafLight, shade: pal.leafDark)
-            cv.blob(cx - rx * 0.28, cy + ry * 0.3, rx * 0.5, ry * 0.5, base: pal.leafLight)
-            texture(&cv, b.species, cx: cx, cy: cy, rx: rx, ry: ry, pal: pal, r: &r)
+            // A cloud pad: a few overlapping domes on a flat underside, drawn on its own so the bottom can be
+            // trimmed flat without cutting into the branch beneath.
+            var pc = PixelCanvas(w, h)
+            let lumps = rx > 9 ? 3 : 2
+            for i in 0..<lumps {
+                let f = (Double(i) + 0.5) / Double(lumps)
+                let lx = cx - rx * 0.6 + rx * 1.2 * f
+                let mid = i == lumps / 2
+                pc.blob(lx, cy + ry * (mid ? 0.28 : 0.0), rx * (lumps == 3 ? 0.52 : 0.64), ry * (mid ? 1.0 : 0.85), base: pal.leaf, light: pal.leafLight, shade: pal.leaf)
+            }
+            texture(&pc, b.species, cx: cx, cy: cy, rx: rx, ry: ry, pal: pal, r: &r)
+            let flat = Int((cy - ry * 0.55).rounded())
+            for x in 0..<w { for y in 0..<h {
+                guard let c = pc.get(x, y) else { continue }
+                if y < flat { continue }                               // trimmed: a flat-bottomed pad
+                cv.set(x, y, y <= flat + 1 ? pal.leafDark : c)        // a dark underside, like real foliage pads
+            } }
             if winter {
                 // Snow along the top of evergreen pads.
                 for x in Int(cx - rx)...Int(cx + rx) {
@@ -303,8 +316,11 @@ enum MossArt {
     /// A carpet of moss lying along an edge: `lengthPx` long, thicker and with more going on at higher `density`
     /// (0...1): clumps, a few drips hanging over the edge, then flowers, ferns and mushrooms. Its baseline is row 3
     /// (the edge itself); three rows hang below it.
-    static func carpet(lengthPx: Int, density: Double, seed: UInt64, night: Bool) -> CGImage {
+    static func carpet(lengthPx: Int, density: Double, seed: UInt64, night: Bool, dry: Bool = false) -> CGImage {
         let w = max(4, lengthPx), h = 14, base = 3
+        // Neglected moss dries out: olive and straw instead of green, and no flowers.
+        let (mid, light, deep, pale): (UInt32, UInt32, UInt32, UInt32) = dry ? (0x8E8A48, 0xB4AC62, 0x6A6434, 0xCBBE7A) : (MossArt.mid, MossArt.light, MossArt.deep, MossArt.pale)
+        let density = dry ? min(density, 0.3) : density
         var cv = PixelCanvas(w, h)
         var r = ArtRNG(s: seed &* 2654435761 &+ 11)
         let thick = 1.2 + density * 3.2

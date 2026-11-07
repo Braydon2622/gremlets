@@ -89,6 +89,26 @@ enum GroveArt {
         var r = ArtRNG(s: UInt64(GroveKind.allCases.firstIndex(of: p.kind) ?? 0) &+ 77)
         let W = Double(w), H = Double(h), cx = W / 2
         switch p.kind {
+        case .leafpile:
+            // A heap of fallen leaves in autumn colours.
+            let cols: [UInt32] = [0xE07A2E, 0xF2B33A, 0xC2462E, 0xD9935A, 0x9E5C34, 0xF2C94C]
+            for n in 0..<34 {
+                let t = r.next(), x = W * (0.08 + 0.84 * t), top = H * 0.85 * sin(t * .pi)
+                let y = r.range(0, max(1, top))
+                cv.blob(x, y, 1.6, 1.1, base: cols[n % cols.count])
+            }
+            cv.outline(0.7)
+        case .puffball:
+            // A dandelion clock: a white seed sphere on a tall stalk, two leaves at the foot.
+            cv.line(cx, 0, cx + 0.5, H * 0.62, 0x5E9E46)
+            cv.line(cx - 4, 0, cx - 1, 3, 0x6CC04A); cv.line(cx + 4, 1, cx + 1, 3, 0x6CC04A)
+            let c0 = H * 0.76, rr = W * 0.36
+            for n in 0..<18 {
+                let a = Double(n) / 18 * 2 * .pi
+                cv.line(cx, c0, cx + cos(a) * rr, c0 + sin(a) * rr, 0xF4F4EC)
+                cv.set(Int(cx + cos(a) * rr), Int(c0 + sin(a) * rr), 0xFFFFFF)
+            }
+            cv.blob(cx, c0, 1.4, 1.4, base: 0xC9B79C)
         case .sunberry:
             // A round bush of overlapping leafy clumps, berries tucked in, sun-coloured highlights.
             let clumps = 5 + p.level

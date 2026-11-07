@@ -82,6 +82,10 @@ public final class World {
     /// Overgrowth: minutes of Claude work the moss has soaked up. It grows a minute per minute while Claude works,
     /// and slowly recedes (a minute per six) while nothing is running. The platform layer saves it and draws it.
     public var mossMinutes = 0.0
+    /// How well looked after the moss is (0...1). It dries out over half an hour unless the Gremlets water, tend and
+    /// trim it; well-kept moss grows, neglected moss turns dry and brown and slowly shrinks back.
+    public var mossCare = 1.0
+    public var mossThirsty: Bool { mossCare < 0.35 }
     public static let mossMax = 300.0
     public internal(set) var mossVines: [MossVine] = []
     public internal(set) var mossPads: [MossPad] = []
@@ -107,6 +111,11 @@ public final class World {
     public var edgeVines = true
     public var rotateGrove = false
     var nextGroveRotation = 0.0
+    var lastCornerKind: GroveKind?
+    /// Wall-clock seconds since 1970, set by the app every tick (the grove's corner keeps real time); the engine's
+    /// own clock when nobody sets it (tests).
+    public var wallClock: Double = 0
+    var now: Double { wallClock > 0 ? wallClock : clock }
     /// An app is full screen: everything keeps to the bottom corners, and the rest is put away (see Compact.swift).
     public var compact = false { didSet { if compact && !oldValue { enterCompact() } } }
     /// The cloud under the pointer while ⌃⌥ is held (see Lift.swift).
@@ -116,10 +125,8 @@ public final class World {
     var nextNotchTripAt = 0.0
     /// The Gremlet napping (or about to) in the notch hammock: id, since when, and whether it has dozed off yet.
     var hammockNapper: (Int, Double, Bool)?
-    /// Codebase castles by project, where they stand, and what just landed on them (see Castle.swift).
-    public internal(set) var castles: [String: Castle] = [:]
-    public internal(set) var castlePlacements: [CastlePlacement] = []
-    var castleEvents: [CastleEvent] = []
+    /// The huts hanging beside live Claude terminals (see Pod.swift).
+    public internal(set) var podPlacements: [PodPlacement] = []
     /// Resting project trees on brackets up the side of the screen (off by default; see rebuildAttached).
     public var showNursery = false
     /// The weather where you are (see Weather.swift).
@@ -388,7 +395,9 @@ public final class World {
         if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
         // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
         // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
-        mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : dt / 300)).clamped(0, World.mossMax)
+        mossCare = max(0, mossCare - dt / 2400)
+        let growth = working ? dt * workClockScale / 60 : dt / 300
+        mossMinutes = (mossMinutes + (mossThirsty ? -dt / 400 : growth * (0.4 + mossCare))).clamped(0, World.mossMax)
         updateFerry(dt)
         updateLift(dt)
         updateMerchant(dt)

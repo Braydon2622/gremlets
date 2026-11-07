@@ -23,9 +23,6 @@ final class ClaudeBuddy {
         set { UserDefaults.standard.set(newValue, forKey: "claudeBuddy.enabled"); if !newValue { endAll() } }
     }
 
-    /// Project folders seen this run (for rereading the castle's file list).
-    private var roots: [String: String] = [:]
-
     init(world: World, overlay: OverlayController) { self.world = world; self.overlay = overlay }
 
     func handle(_ q: [String: String]) -> (Int, String) {
@@ -51,14 +48,7 @@ final class ClaudeBuddy {
             // The project's bonsai takes root on this window (a new session grows a new branch).
             world.bonsaiStart(project: project, session: session, windowID: windowID,
                               repoCommits: q["commits"].flatMap { Int($0) }, repoSince: q["since"].flatMap { Double($0) })
-            // The codebase castle, from the project's file list (read on this Mac).
-            if let raw = q["cwd"], let root = raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding, root.hasPrefix("/") {
-                roots[project] = root
-                CastleScanner.scan(project: project, root: root) { [weak self] in self?.world.setCastle($0) }
-            }
         case "done":
-            // New files may have appeared: read the castle's file list again.
-            if let root = roots[project] { CastleScanner.scan(project: project, root: root) { [weak self] in self?.world.setCastle($0) } }
             // Every finished Claude task grows the grove, and puts a flower on the project's bonsai.
             world.feedGrove()
             world.bonsaiGrow(project: project, .bloom)
@@ -92,9 +82,6 @@ final class ClaudeBuddy {
                 let tool = ClaudeTool.from(q["tool"] ?? "")
                 world.claudeTool(workerID: c.id, tool)
                 if q["kind"] == "test" { world.claudeTestsPassed(workerID: c.id) }
-                if let raw = q["area"], let area = raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding {
-                    world.castleEdit(project: project, area: area)
-                }
                 if let t = q["todos"].flatMap(Int.init), let d = q["done"].flatMap(Int.init) { world.claudePlan(workerID: c.id, total: t, done: d) }
                 sessionLog.tool(session, edit: tool == .build, failed: false, test: q["kind"] == "test")
                 s.lastEvent = Date(); sessions[session] = s

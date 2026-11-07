@@ -17,6 +17,11 @@ import Foundation
 /// New plots unlock as you finish more Claude tasks, so the grove keeps filling in the more work gets done.
 public enum GroveKind: String, CaseIterable, Codable, Sendable {
     case sunberry, bouncecap, lanternbloom, skyvine, snapjaw, wishwillow
+    /// Pop-ups: here for a few minutes, then gone. A pile of fallen leaves to dive into, a dandelion clock to blow.
+    case leafpile, puffball
+
+    /// Here for a few minutes, not a quarter of an hour.
+    public var brief: Bool { self == .leafpile || self == .puffball }
 
     public var name: String {
         switch self {
@@ -26,6 +31,8 @@ public enum GroveKind: String, CaseIterable, Codable, Sendable {
         case .skyvine: return "Skyvine"
         case .snapjaw: return "Snapjaw"
         case .wishwillow: return "Wishwillow"
+        case .leafpile: return "Leaf pile"
+        case .puffball: return "Dandelion clock"
         }
     }
 
@@ -37,13 +44,15 @@ public enum GroveKind: String, CaseIterable, Codable, Sendable {
         case .skyvine: return "a beanstalk ladder up the side of the screen"
         case .snapjaw: return "snaps at passers-by, and catches fireflies at night to feed the grove"
         case .wishwillow: return "a wish a day from level 3"
+        case .leafpile: return "a pile of leaves to dive into"
+        case .puffball: return "a dandelion clock to blow"
         }
     }
 
     /// Bigger plants need more sparks per level.
     public var cost: Double {
         switch self {
-        case .sunberry, .bouncecap: return 1
+        case .sunberry, .bouncecap, .leafpile, .puffball: return 1
         case .lanternbloom, .snapjaw: return 1.2
         case .skyvine: return 1.4
         case .wishwillow: return 1.6
@@ -112,9 +121,12 @@ public final class Grove: Codable {
     var festivalDone = false
     /// The one plant out at the moment (the app shows a single, smaller plant in the bottom-left corner and swaps it
     /// for another every so often). nil: every plant shows (on its bracket up the left edge).
+    /// -1: the corner is empty for a while between plants.
     public internal(set) var featured: Int?
+    /// When the corner next changes (seconds since 1970, so restarting the app doesn't reset it).
+    public internal(set) var nextCornerChange: Double?
 
-    enum CodingKeys: String, CodingKey { case plants, tasks, village, digCharges, gems, todayKey, todayTasks, festivalDone, featured }
+    enum CodingKeys: String, CodingKey { case plants, tasks, village, digCharges, gems, todayKey, todayTasks, festivalDone, featured, nextCornerChange }
     public required init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         plants = try c.decodeIfPresent([GrovePlant].self, forKey: .plants) ?? []
@@ -126,6 +138,7 @@ public final class Grove: Codable {
         todayTasks = try c.decodeIfPresent(Int.self, forKey: .todayTasks) ?? 0
         festivalDone = try c.decodeIfPresent(Bool.self, forKey: .festivalDone) ?? false
         featured = try c.decodeIfPresent(Int.self, forKey: .featured)
+        nextCornerChange = try c.decodeIfPresent(Double.self, forKey: .nextCornerChange)
     }
 
     public static let maxPlots = 5
@@ -144,6 +157,7 @@ public final class Grove: Codable {
         case .lanternbloom: return 268
         case .snapjaw: return 322
         case .wishwillow: return 426
+        case .leafpile, .puffball: return 112
         }
     }
     static let slots: [Double] = [0.16, 0.30, 0.44, 0.58, 0.72, 0.86]
@@ -153,7 +167,7 @@ public final class Grove: Codable {
     /// between them.
     static func shelf(_ k: GroveKind) -> Double? {
         switch k {
-        case .skyvine, .sunberry: return nil
+        case .skyvine, .sunberry, .leafpile, .puffball: return nil
         case .bouncecap: return 150
         case .lanternbloom: return 270
         case .snapjaw: return 390
@@ -214,6 +228,8 @@ public final class Grove: Codable {
             case .sunberry: return Vec2(52 * s, 30 * s)
             case .snapjaw: return Vec2(40 * s, 44 * s)
             case .wishwillow: return Vec2(90 * s, 96 * s)
+            case .leafpile: return Vec2(60, 24)
+            case .puffball: return Vec2(30, 48)
             }
         }
         let s = p.scale
@@ -224,6 +240,8 @@ public final class Grove: Codable {
         case .sunberry: return Vec2(52 * s, 30 * s)
         case .snapjaw: return Vec2(40 * s, 44 * s)
         case .wishwillow: return Vec2(90 * s, 96 * s)
+        case .leafpile: return Vec2(60, 24)
+        case .puffball: return Vec2(30, 48)
         }
     }
 
@@ -251,7 +269,7 @@ public final class Grove: Codable {
             case .wishwillow:
                 out.append(GroveLedge(plot: i, y: b.y + sz.y * 0.55, minX: b.x - sz.x * 0.46, maxX: b.x - sz.x * 0.08, bouncy: false))
                 out.append(GroveLedge(plot: i, y: b.y + sz.y * 0.78, minX: b.x + sz.x * 0.06, maxX: b.x + sz.x * 0.42, bouncy: false))
-            case .lanternbloom, .snapjaw:
+            case .lanternbloom, .snapjaw, .leafpile, .puffball:
                 break
             }
         }
@@ -282,6 +300,10 @@ public enum GroveEvent: Equatable, Sendable {
     case bounce(Int, by: Int)
     case chomp(Int)
     case houseAdded(Int)
+    /// The corner plant went away for a while.
+    case cornerCleared
+    /// A Gremlet dove into the leaf pile / blew the dandelion clock.
+    case played(Int, by: Int)
     case wentHome(Int, by: Int)
     case claimed(Int, by: Int)
     case leftHome(Int, by: Int)
@@ -442,6 +464,17 @@ extension World {
                 c.set(.walk, duration: 14)
             }
         }
+        // Pop-ups: everyone wants a go before they're gone.
+        for k in [GroveKind.leafpile, .puffball] {
+            guard let i = shownPlant(k), let f = groveFloor else { continue }
+            let b = grove.base(i, floor: f)
+            add(k == .leafpile ? "diveInLeaves" : "blowPuff", 1.8) {
+                let side: Double = c.pos.x < b.x ? -1 : 1
+                c.targetX = (b.x + side * (k == .leafpile ? 44 : 22)).clamped(f.minX + 14, f.maxX - 14)
+                c.groveTask = .pop(i)
+                c.set(.walk, duration: 14)
+            }
+        }
         // Climb the skyvine's leaves, or sit up in the willow's branches.
         for k in [GroveKind.skyvine, .wishwillow] {
             guard let i = shownPlant(k), let leaf = groveLedges.enumerated().filter({ $0.element.plot == i }).min(by: { $0.element.y < $1.element.y }) else { continue }
@@ -526,6 +559,20 @@ extension World {
             c.set(.react, duration: c.animationLength(for: .react))
         case .hangingHome:
             goInsideHangingHome(c)
+        case .pop(let i):
+            guard grove.featured == i, grove.plants.indices.contains(i), let f = groveFloor else { return }
+            let b = grove.base(i, floor: f)
+            c.facing = b.x > c.pos.x ? 1 : -1
+            groveEvents.append(.played(i, by: c.id))
+            if grove.plants[i].kind == .leafpile {
+                // A run and a dive into the leaves; after a few dives they're scattered.
+                launch(c, velocity: ballistic(from: c.pos, toX: b.x, y: f.minY, apexExtra: 50))
+                if rng.chance(0.3) { useUpCorner() }
+            } else {
+                // A big breath: the seeds float away.
+                c.set(.special, duration: c.animationLength(for: .special))
+                useUpCorner()
+            }
         case .campfire(let i):
             if let f = groveFloor { c.facing = grove.base(i, floor: f).x > c.pos.x ? 1 : -1 }
             c.idleVariant = "idle"
@@ -536,7 +583,7 @@ extension World {
 }
 
 /// Where a Gremlet is headed in the grove.
-enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int), dare(Int), hangingHome }
+enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int), dare(Int), hangingHome, pop(Int) }
 
 extension World {
     /// A plant of this kind that's out right now (with one plant at a time, only the featured one is).
@@ -545,25 +592,51 @@ extension World {
         return grove.plant(of: k)
     }
 
-    /// One plant at a time: every 20 to 40 minutes a different one takes the corner (planted fresh if it's new).
+    /// The corner's day: a plant stays 8 to 15 minutes (a pop-up only 3 or 4), then the corner rests empty for a few
+    /// minutes, then something else turns up. Timed on the wall clock (`now`), so restarting doesn't freeze it.
     func rotateGroveIfDue() {
-        if grove.featured != nil && nextGroveRotation == 0 { nextGroveRotation = clock + rng.range(1200, 2400); return }
-        guard clock >= nextGroveRotation else { return }
-        nextGroveRotation = clock + rng.range(1200, 2400)
-        let pool: [GroveKind] = [.bouncecap, .lanternbloom, .skyvine, .snapjaw, .wishwillow]
-        let current = grove.featured.flatMap { grove.plants.indices.contains($0) ? grove.plants[$0].kind : nil }
+        let t = now
+        if let due = grove.nextCornerChange, t < due { return }
+        if grove.featured == nil || grove.nextCornerChange == nil || grove.featured! >= 0 {
+            if grove.featured != nil && grove.nextCornerChange != nil {
+                // Time's up for this one: the corner rests.
+                grove.featured = -1
+                grove.nextCornerChange = t + rng.range(180, 480)
+                rebuildGroveSurfaces(); setSurfacesDirty()
+                groveEvents.append(.cornerCleared)
+                return
+            }
+        }
+        // Something new: a plant most of the time, now and then a quick pop-up.
+        let current = lastCornerKind
+        let plantsPool: [GroveKind] = [.bouncecap, .lanternbloom, .skyvine, .snapjaw, .wishwillow]
+        let pool = rng.chance(0.35) ? [GroveKind.leafpile, .puffball] : plantsPool
         let options = pool.filter { $0 != current }
         let k = options[Int(rng.next() % UInt64(options.count))]
         let i: Int
         if let found = grove.plant(of: k) { i = found } else { grove.plants.append(GrovePlant(kind: k, x: 0.16)); i = grove.plants.count - 1 }
         grove.featured = i
+        lastCornerKind = k
+        grove.nextCornerChange = t + (k.brief ? rng.range(180, 260) : rng.range(480, 900))
         rebuildGroveSurfaces()
         setSurfacesDirty()
         groveEvents.append(.planted(i))
     }
 
+    /// A pop-up was played with and is used up (the leaves scattered, the seeds blown away): the corner rests.
+    func useUpCorner() {
+        grove.featured = -1
+        grove.nextCornerChange = now + rng.range(180, 420)
+        rebuildGroveSurfaces(); setSurfacesDirty()
+    }
+
     /// `gremlet plant`: swap the corner plant now.
-    public func rotateGroveNow() { nextGroveRotation = 0; if grove.featured == nil { rotateGroveIfDue() } else { nextGroveRotation = clock; rotateGroveIfDue() } }
+    public func rotateGroveNow() {
+        // Straight to something new (skipping the empty spell).
+        grove.featured = -1
+        grove.nextCornerChange = nil
+        rotateGroveIfDue()
+    }
 }
 
 extension World {

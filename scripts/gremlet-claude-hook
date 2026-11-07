@@ -18,9 +18,8 @@
 #   }
 #
 # Never blocks or fails Claude: prints nothing (UserPromptSubmit output would reach Claude), makes one 1-second local
-# request and always exits 0. Sends only the event, the session id, the project folder (its name, and on start its
-# path, so the app can read the file list for the codebase castle), the top-level folder an edit was in, and a process
-# id (used to find the window). Everything goes to 127.0.0.1: nothing leaves your Mac.
+# request and always exits 0. Sends only the event, the session id, the project folder's name and a process id
+# (used to find the window). Everything goes to 127.0.0.1: nothing leaves your Mac.
 PORT="${GREMLETS_PORT:-47920}"
 input="$(cat)"
 query="$(printf '%s' "$input" | /usr/bin/python3 -c '
@@ -42,8 +41,6 @@ q = {
     "pid": sys.argv[1],
 }
 if event == "start":
-    # The project folder (stays on this Mac: the app reads its file list to build the codebase castle).
-    q["cwd"] = d.get("cwd") or ""
     # The git history of the project, as two numbers (commit count, first commit time), so an old repo grows an old tree.
     import subprocess
     try:
@@ -59,12 +56,6 @@ if event == "start":
         pass
 if event in ("tool", "toolfail"):
     q["tool"] = str(d.get("tool_name", ""))[:60]
-    # For an edit: only which top-level folder of the project the file is in (a block lands on that castle tower).
-    fp = str((d.get("tool_input") or {}).get("file_path") or (d.get("tool_input") or {}).get("notebook_path") or "")
-    root = (d.get("cwd") or "").rstrip("/") + "/"
-    if fp.startswith(root) and q["tool"] in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-        rel = fp[len(root):].split("/")
-        q["area"] = rel[0] if len(rel) > 1 else ""
     # Only a yes/no "was this a test run?", never the command itself (it drives the weather).
     cmd = str((d.get("tool_input") or {}).get("command", "")) if q["tool"] == "Bash" else ""
     import re

@@ -549,23 +549,32 @@ enum AdventureArt {
     }
     static let pebble = Effects.pixels([".gg.", "gGgg", ".gg."], ["g": 0x9C9488, "G": 0xC9C2B4])
 
-    /// The sky ferry: a little wooden boat under a patched cloth balloon, with a turning propeller.
+    /// The sky ferry: a big curled leaf for a boat, carried on the breeze by a huge dandelion puff (its seeds
+    /// shimmering as it drifts). Same size and deck as before: the deck is the leaf's flat middle.
     static func ferry(frame: Int) -> CGImage {
         var cv = PixelCanvas(44, 34)
-        // Balloon
-        cv.blob(22, 26, 15, 7, base: 0xE8D7B0, light: 0xFFF4DA, shade: 0xC2A878)
-        cv.rect(14, 25, 4, 3, 0xD9855A); cv.rect(27, 27, 3, 3, 0x7FB0D9)   // patches
-        // Ropes
-        cv.line(10, 19, 9, 10, 0x8A6A4A); cv.line(34, 19, 35, 10, 0x8A6A4A); cv.line(22, 19, 22, 10, 0x8A6A4A)
-        // Hull
-        for y in 0..<9 { let inset = max(0, 4 - y); cv.rect(4 + inset, y, 36 - inset * 2, 1, y > 6 ? 0xB97E42 : (y % 3 == 0 ? 0x8A5A35 : 0xA9743F)) }
-        cv.rect(4, 8, 36, 1, 0xD9A066)            // deck edge
-        cv.rect(6, 9, 1, 2, 0x8A5A35); cv.rect(37, 9, 1, 2, 0x8A5A35); cv.rect(6, 10, 32, 1, 0xC9A36A)   // rail
-        // Portholes
-        cv.set(14, 4, 0xBFE6FF); cv.set(22, 4, 0xBFE6FF); cv.set(30, 4, 0xBFE6FF)
-        // Propeller at the stern
-        cv.rect(1, 4, 3, 1, 0x6E6A78)
-        if frame % 2 == 0 { cv.rect(0, 1, 1, 7, 0xC8C8D0) } else { cv.rect(0, 4, 1, 1, 0xC8C8D0); cv.rect(0, 2, 1, 1, 0x9A9AA6); cv.rect(0, 6, 1, 1, 0x9A9AA6) }
+        // The dandelion puff: a white sphere of seeds on fine spokes.
+        let cx = 22.0, cy = 25.0
+        for n in 0..<26 {
+            let a = Double(n) / 26 * 2 * .pi + (frame % 2 == 0 ? 0 : 0.12)
+            let r = n % 2 == 0 ? 8.6 : 7.4
+            cv.line(cx, cy, cx + cos(a) * r, cy + sin(a) * r * 0.9, 0xEDEDE4)
+            cv.set(Int(cx + cos(a) * r), Int(cy + sin(a) * r * 0.9), 0xFFFFFF)
+        }
+        cv.blob(cx, cy, 2, 2, base: 0xC9B79C, light: 0xE0D2B8)
+        // Its stalk, and two silk threads down to the leaf's tips.
+        cv.line(cx, cy - 2, cx, 10, 0x6CC04A)
+        cv.line(cx - 1, 16, 7, 9, 0xD8D4C8); cv.line(cx + 1, 16, 37, 9, 0xD8D4C8)
+        // The leaf boat: curled up at both ends, a midrib, veins.
+        for x in 2..<42 {
+            let t = Double(x - 2) / 39
+            let curl = Int((pow(abs(t - 0.5) * 2, 3) * 5).rounded())
+            let depth = max(2, Int((sin(t * .pi) * 5).rounded()))
+            for y in 0..<depth { cv.set(x, 3 + curl + y - (depth - 1) + 3, y == depth - 1 ? 0x8BD66A : (y == 0 ? 0x3E7A34 : 0x5E9E46)) }
+        }
+        cv.hspan(5, 38, 8, 0x8BD66A)                                            // the deck: the leaf's flat middle
+        for x in stride(from: 8, to: 38, by: 6) { cv.set(x, 6, 0x3E7A34); cv.set(x + 1, 5, 0x3E7A34) }   // veins
+        cv.hspan(6, 37, 7, 0x6CC04A)
         cv.outline(0.6)
         return cv.image
     }

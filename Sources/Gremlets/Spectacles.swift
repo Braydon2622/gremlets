@@ -11,7 +11,7 @@ final class SpectacleRenderer {
     private struct PlantLayer { let layer: CALayer; var glow: CALayer?; var key: String; var si: Int; var size: CGSize }
     private var plants: [Int: PlantLayer] = [:]
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
-    private var castleLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var podLayers: [String: (branch: CALayer, pod: CALayer, rope: CAShapeLayer, key: String)] = [:]
     private var liftLayer: CALayer?
     private var nextChimneyPuff: CFTimeInterval = 0
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
@@ -105,7 +105,7 @@ final class SpectacleRenderer {
         renderDoor()
         renderMoss()
         renderWeather()
-        renderCastles()
+        renderPods()
         renderNotch()
         renderLift()
         renderPlans()
@@ -209,7 +209,7 @@ final class SpectacleRenderer {
             switch e {
             case .fed:
                 // A little shower of sparks over the whole grove: Claude's work feeding it.
-                for i in world.grove.plants.indices {
+                for i in world.grove.plants.indices where world.grove.featured == nil || world.grove.featured == i {
                     let sz = world.grove.size(i)
                     if let (si, pt) = local(world.grove.base(i, floor: floor) + Vec2(0, sz.y * 0.6)) {
                         overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 3, dx: -30...30, dy: 10...50, duration: 1.2, stagger: 0.1)
@@ -249,6 +249,18 @@ final class SpectacleRenderer {
                     overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 3, dx: -16...16, dy: 0...18, duration: 0.5)
                 }
                 if let l = houses[n]?.layer { boing(l, amount: 0.05) }
+            case .cornerCleared:
+                if let (si, pt) = local(Vec2(floor.minX + 60, floor.minY + 10)) {
+                    overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 6, dx: -40...40, dy: 0...40, duration: 1.0, stagger: 0.04)
+                }
+            case .played(let i, _):
+                guard world.grove.plants.indices.contains(i), let (si, pt) = local(world.grove.base(i, floor: floor)) else { break }
+                if world.grove.plants[i].kind == .leafpile {
+                    overlay.burst([Effects.leaf, Effects.leaf2, Effects.leaf], si: si, at: CGPoint(x: pt.x, y: pt.y + 12), count: 14, dx: -60...60, dy: 20...90, duration: 1.3, stagger: 0.02)
+                } else {
+                    // The seeds float away on the breeze.
+                    overlay.burst([Effects.sparkle, Effects.petal], si: si, at: CGPoint(x: pt.x, y: pt.y + 36), count: 12, dx: 30...160, dy: 30...140, duration: 3.0, stagger: 0.08)
+                }
             case .houseAdded(let n):
                 guard n < world.grove.village.count else { continue }
                 let h = world.grove.village[n]
@@ -1057,6 +1069,13 @@ final class SpectacleRenderer {
                 if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.dust], si: si, at: pt, count: 6, dx: -20...20, dy: -60 ... -10, duration: 0.8) }
             case .climbing:
                 break
+            case .watered(let p, let by):
+                // The watering can comes out; a little shower; the moss perks up.
+                if let (si, pt) = local(p + Vec2(0, 30)) {
+                    overlay.burst([PropArt.wateringCan], si: si, at: CGPoint(x: pt.x + 10, y: pt.y + 10), count: 1, dx: 0...0, dy: 0...4, duration: 1.4)
+                    overlay.burst([Effects.rain], si: si, at: pt, count: 8, dx: -14...14, dy: -30 ... -10, duration: 0.6, stagger: 0.1)
+                }
+                if world.mossThirsty || Int.random(in: 0..<4) == 0 { overlay.showBubble(["There you go.", "Drink up, moss!", "So thirsty…"].randomElement()!, on: by, seconds: 1.6) }
             case .trimmed(let p, let by):
                 // Snip snip: clippings tumble off the edge.
                 if let (si, pt) = local(p) {
@@ -1292,7 +1311,7 @@ final class SpectacleRenderer {
                     guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
                     let seed = UInt64(abs(s.ownerID) &* 31 &+ (end == "l" ? 1 : 2))
                     place("w\(s.ownerID)-\(seg)-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
-                          imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night) }
+                          imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night, dry: world.mossThirsty) }
                 }
             }
         }
@@ -1309,7 +1328,7 @@ final class SpectacleRenderer {
             case .screenEdge(let i, let side):
                 guard let (si, pt) = local(Vec2(v.x - side * 6, v.bottom)) else { continue }
                 place("v\(v.key)", si, at: pt, anchor: CGPoint(x: 0, y: 0.5), rotate: Double.pi / 2,
-                      imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night) }
+                      imageKey: "\(lpx)-\(Int((m / 60).rounded()))") { MossArt.carpet(lengthPx: lpx, density: (m / 300).clamped(0.1, 1), seed: UInt64(i * 7 + (side < 0 ? 1 : 2)), night: night, dry: world.mossThirsty) }
             }
         }
         // Platforms woven into the edge vines.
@@ -1327,19 +1346,19 @@ final class SpectacleRenderer {
             guard let (si, pt) = local(Vec2(x0, top.y)) else { continue }
             let dq = Int(p.size * 4)
             place("p\(p.id)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                  imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night) }
+                  imageKey: "\(px)-\(dq)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: px, density: 0.3 + p.size * 0.7, seed: UInt64(p.id &* 977), night: night, dry: world.mossThirsty) }
         }
         // Screens: moss along the floor and under the menu bar on a long day.
         for (i, scr) in world.screens.enumerated() where m >= 150 {
             let frac = ((m - 150) / 150).clamped(0.15, 1)
             let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
             if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
-                place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night) }
+                place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night, dry: world.mossThirsty) }
                 mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
             }
             if let (si, pt) = local(Vec2(scr.minX, scr.minY)) {
                 place("floor\(i)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0),
-                      imageKey: "\(fpx)-\(night)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 60), night: night) }
+                      imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 60), night: night, dry: world.mossThirsty) }
             }
         }
         for (k, e) in mossLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); mossLayers[k] = nil }
@@ -1829,42 +1848,6 @@ extension SpectacleRenderer {
     }
 }
 
-// MARK: Codebase castles (see Castle.swift)
-
-extension SpectacleRenderer {
-    fileprivate func renderCastles() {
-        var alive = Set<String>()
-        for p in world.castlePlacements {
-            guard let c = world.castles[p.project], let (si, pt) = local(p.origin) else { continue }
-            alive.insert(p.project)
-            var e = castleLayers[p.project] ?? {
-                let l = pixelLayer(); l.anchorPoint = .zero; l.zPosition = 1.9
-                popIn(l)
-                return (l, "")
-            }()
-            attach(e.layer, si)
-            let key = c.towers.map { "\($0.name):\($0.files):\($0.edits)" }.joined(separator: ",") + "@\(p.scale)"
-            if e.key != key {
-                let img = CastleArt.image(c)
-                e.layer.contents = img
-                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * 3 * p.scale, height: Double(img.height) * 3 * p.scale)
-                e.key = key
-            }
-            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 2)
-            castleLayers[p.project] = e
-        }
-        for (k, e) in castleLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); castleLayers[k] = nil }
-        // A block lands on a tower: a little burst of sparkle on its top.
-        for case .block(let project, let i) in world.drainCastleEvents() {
-            guard let p = world.castlePlacements.first(where: { $0.project == project }), let c = world.castles[project], c.towers.indices.contains(i) else { continue }
-            let top = Vec2(p.origin.x + (c.minX(i) + c.width(i) / 2) * p.scale, p.origin.y + c.height(i) * p.scale + 4)
-            if let (si, pt) = local(top) {
-                overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 5, dx: -16...16, dy: 10...40, duration: 0.8)
-            }
-        }
-    }
-}
-
 // MARK: The home under the notch (see Notch.swift)
 
 extension SpectacleRenderer {
@@ -1949,6 +1932,47 @@ extension SpectacleRenderer {
     func renderCompact() {
         renderGrove()
         renderLift()
+    }
+}
+
+// MARK: The hut beside Claude's terminal (see Pod.swift)
+
+extension SpectacleRenderer {
+    fileprivate func renderPods() {
+        var alive = Set<String>()
+        let now = CACurrentMediaTime()
+        for (n, p) in world.podPlacements.enumerated() {
+            guard let (si, tie) = local(p.tie), let (_, edge) = local(Vec2(p.side > 0 ? p.branch.minX : p.branch.maxX, p.branch.y)) else { continue }
+            alive.insert(p.project)
+            var e = podLayers[p.project] ?? {
+                let b = pixelLayer(); b.contents = PodArt.branch; b.bounds = CGRect(x: 0, y: 0, width: 72, height: 18)
+                b.anchorPoint = CGPoint(x: 0, y: 2.0 / 6.0); b.zPosition = 1.2
+                let pod = pixelLayer(); pod.anchorPoint = CGPoint(x: 0.5, y: 1); pod.zPosition = 1.19
+                pod.bounds = CGRect(x: 0, y: 0, width: PodPlacement.podSize.x, height: PodPlacement.podSize.y)
+                let rope = CAShapeLayer(); rope.strokeColor = NSColor(red: 0.33, green: 0.58, blue: 0.27, alpha: 1).cgColor
+                rope.lineWidth = 2; rope.fillColor = nil; rope.zPosition = 1.18; rope.actions = ["path": NSNull()]
+                popIn(b); popIn(pod)
+                return (b, pod, rope, "")
+            }()
+            for l in [e.branch, e.pod, e.rope] as [CALayer] { attach(l, si) }
+            let lit = world.claudeWorking || world.isNight
+            if e.key != "\(lit)" { e.pod.contents = PodArt.pod(lit: lit); e.key = "\(lit)" }
+            // The branch grows out from the window's corner.
+            e.branch.setAffineTransform(CGAffineTransform(scaleX: p.side < 0 ? -1 : 1, y: 1))
+            e.branch.position = CGPoint(x: edge.x.rounded(), y: (edge.y - 1).rounded())
+            // A gentle swing, and a bigger one when the window is dragged.
+            let angle = sin(now * 1.3 + Double(n)) * 0.05 + (windowSway[p.windowID] ?? 0) * 0.9
+            let L = PodPlacement.ropeLength
+            let top = CGPoint(x: tie.x + CGFloat(sin(angle) * L), y: tie.y - CGFloat(cos(angle) * L))
+            e.pod.position = CGPoint(x: top.x.rounded(), y: top.y.rounded())
+            e.pod.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(angle)))
+            let path = CGMutablePath(); path.move(to: tie); path.addLine(to: top)
+            e.rope.path = path
+            podLayers[p.project] = e
+        }
+        for (k, e) in podLayers where !alive.contains(k) {
+            fade(e.branch, to: 0, remove: true); fade(e.pod, to: 0, remove: true); e.rope.removeFromSuperlayer(); podLayers[k] = nil
+        }
     }
 }
 

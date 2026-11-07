@@ -291,7 +291,7 @@ final class OverlayController {
     private var compactShown = false
     private var compactHidden: [CALayer] = []
 
-    /// Entering full screen hides every decoration on every screen (trees, moss, castles, props, the village...);
+    /// Entering full screen hides every decoration on every screen (trees, moss, huts, props...);
     /// leaving brings them back exactly as they were.
     private func applyCompact() {
         if compactShown {
@@ -823,7 +823,7 @@ final class OverlayController {
     /// A little bird lands on the end of a platform, looks around, and flies off.
     /// Claude buddy: the building on this Gremlet's island (a block per file Claude edits), and its helpers.
     private func updateBuild(_ st: inout PropState, _ c: Creature, _ j: Job, ground: Double, x: Double, si: Int, origin o: CGPoint) {
-        // The little house a session used to build is retired with the village (the castle shows the project now).
+        // The little house a session used to build is retired with the village (the hut beside the terminal is its home now).
         guard j.kind == .claude, world.villageOn else { return }
         let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
         let key = "\(b.rawValue)-\(j.blocks)-\(world.isNight)-\(si)"
@@ -1379,7 +1379,7 @@ final class OverlayController {
                 // minutes for a hobby shelf).
                 let grow = ((CACurrentMediaTime() - st.mossSince) / (j.kind == .claude ? 900 : 240)).clamped(0, 1)
                 let reach = max(4, Int(Double(px) * (0.25 + 0.75 * grow) / 2) * 2)
-                let mkey = "\(reach)-\(Int(grow * 5))-\(world.isNight)-\(si)"
+                let mkey = "\(reach)-\(Int(grow * 5))-\(world.isNight)-\(world.mossThirsty)-\(si)"
                 if grow > 0.04 && st.mossKey != mkey {
                     let m = st.moss ?? {
                         let m = pixelLayer(si, anchor: .zero)
@@ -1387,7 +1387,7 @@ final class OverlayController {
                         screens[si].root.addSublayer(m)
                         return m
                     }()
-                    setImage(m, MossArt.carpet(lengthPx: reach, density: 0.12 + grow * 0.8, seed: seed &+ 77, night: world.isNight))
+                    setImage(m, MossArt.carpet(lengthPx: reach, density: 0.12 + grow * 0.8, seed: seed &+ 77, night: world.isNight, dry: world.mossThirsty))
                     st.moss = m; st.mossKey = mkey
                 }
                 if let m = st.moss {

@@ -731,22 +731,30 @@ function drawTravellers(t) {
 //
 // The Mac's sky ferry leaves through the doorway with its passengers. Here it sails in at the height it left, stops
 // a while so they hop off, lets a couple of Gremlets from this screen climb aboard, and sails back to the Mac.
-// Same boat as IslandArt.ferry on the Mac (a straight port of the pixel drawing).
+// The same leaf boat and dandelion as IslandArt.ferry on the Mac (a straight port of the pixel drawing).
 
 let ferry = null;      // { x, y, dir, phase: 'in'|'docked'|'out', targetX, until, pass: [{ species, art }], boarding: Map(id -> deadline), t0 }
 const ferryFrames = [];
 function ferryImage(frame) {
   if (ferryFrames[frame]) return ferryFrames[frame];
   const cv = new PixelCanvas(44, 34);
-  cv.blob(22, 26, 15, 7, 0xE8D7B0, 0xFFF4DA, 0xC2A878);
-  cv.rect(14, 25, 4, 3, 0xD9855A); cv.rect(27, 27, 3, 3, 0x7FB0D9);
-  cv.line(10, 19, 9, 10, 0x8A6A4A); cv.line(34, 19, 35, 10, 0x8A6A4A); cv.line(22, 19, 22, 10, 0x8A6A4A);
-  for (let y = 0; y < 9; y++) { const inset = Math.max(0, 4 - y); cv.rect(4 + inset, y, 36 - inset * 2, 1, y > 6 ? 0xB97E42 : (y % 3 === 0 ? 0x8A5A35 : 0xA9743F)); }
-  cv.rect(4, 8, 36, 1, 0xD9A066);
-  cv.rect(6, 9, 1, 2, 0x8A5A35); cv.rect(37, 9, 1, 2, 0x8A5A35); cv.rect(6, 10, 32, 1, 0xC9A36A);
-  cv.set(14, 4, 0xBFE6FF); cv.set(22, 4, 0xBFE6FF); cv.set(30, 4, 0xBFE6FF);
-  cv.rect(1, 4, 3, 1, 0x6E6A78);
-  if (frame % 2 === 0) cv.rect(0, 1, 1, 7, 0xC8C8D0); else { cv.rect(0, 4, 1, 1, 0xC8C8D0); cv.rect(0, 2, 1, 1, 0x9A9AA6); cv.rect(0, 6, 1, 1, 0x9A9AA6); }
+  // A big curled leaf for a boat, carried by a huge dandelion puff (same as the Mac's).
+  const cx = 22, cy = 25;
+  for (let n = 0; n < 26; n++) {
+    const a = n / 26 * 2 * Math.PI + (frame % 2 === 0 ? 0 : 0.12), r = n % 2 === 0 ? 8.6 : 7.4;
+    cv.line(cx, cy, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.9, 0xEDEDE4);
+    cv.set(Math.trunc(cx + Math.cos(a) * r), Math.trunc(cy + Math.sin(a) * r * 0.9), 0xFFFFFF);
+  }
+  cv.blob(cx, cy, 2, 2, 0xC9B79C, 0xE0D2B8);
+  cv.line(cx, cy - 2, cx, 10, 0x6CC04A);
+  cv.line(cx - 1, 16, 7, 9, 0xD8D4C8); cv.line(cx + 1, 16, 37, 9, 0xD8D4C8);
+  for (let x = 2; x < 42; x++) {
+    const t = (x - 2) / 39, curl = Math.round(Math.pow(Math.abs(t - 0.5) * 2, 3) * 5), depth = Math.max(2, Math.round(Math.sin(t * Math.PI) * 5));
+    for (let y = 0; y < depth; y++) cv.set(x, 3 + curl + y - (depth - 1) + 3, y === depth - 1 ? 0x8BD66A : (y === 0 ? 0x3E7A34 : 0x5E9E46));
+  }
+  for (let x = 5; x <= 38; x++) cv.set(x, 8, 0x8BD66A);
+  for (let x = 8; x < 38; x += 6) { cv.set(x, 6, 0x3E7A34); cv.set(x + 1, 5, 0x3E7A34); }
+  for (let x = 6; x <= 37; x++) cv.set(x, 7, 0x6CC04A);
   cv.outline(0.6);
   ferryFrames[frame] = cv.toCanvas();
   return ferryFrames[frame];

@@ -46,10 +46,12 @@ public enum MossEvent: Equatable, Sendable {
     case climbing(by: Int)
     /// Trimmed back where it was getting thick (a puff of clippings at that spot).
     case trimmed(Vec2, by: Int)
+    /// Watered a stretch of the moss on a window top.
+    case watered(Vec2, by: Int)
 }
 
 struct MossTask: Sendable {
-    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double) }
+    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double), water(window: Int, offset: Double) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -135,6 +137,11 @@ extension World {
         if s.ownerID >= 0, let p = mossPatches.filter({ $0.windowID == s.ownerID && $0.size < 1 && clock - $0.lastTended > 60 })
             .min(by: { abs(patchX($0) - c.pos.x) < abs(patchX($1) - c.pos.x) }), s.supports(x: patchX(p)) {
             add("tendMoss", 0.8) { self.startMossTask(c, .tend(patch: p.id), walkTo: self.patchX(p)) }
+        }
+        // Water the moss on this window top (they notice when it's getting dry, and go to it far more often).
+        if mossMinutes >= 10, s.kind == .windowTop, let w = windows[s.ownerID] {
+            let x = (c.pos.x + c.facing * rng.range(20, 90)).clamped(s.minX + 16, s.maxX - 16)
+            add("waterMoss", 0.4 + (1 - mossCare) * 4) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }
         // Keep it tidy: once the moss is thick, trim the carpet back near an end of this window top.
         if mossMinutes > 170, s.kind == .windowTop, let w = windows[s.ownerID] {
@@ -237,8 +244,22 @@ extension World {
             }
             mossPatches[i].size = min(1, mossPatches[i].size + 0.2)
             mossPatches[i].lastTended = clock
+            mossCare = min(1, mossCare + 0.1)
             c.mossTask = nil
             c.set(.idle, duration: 0.6)
+        case .water(let wid, let offset):
+            guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            let x = w.minX + offset
+            if !t.acting {
+                if abs(c.pos.x - x) > 6 { c.targetX = x; c.set(.walk, duration: 20); return }
+                t.acting = true; c.mossTask = t
+                c.workPose = "crouch"; c.set(.work, duration: 2.2)
+                mossEvents.append(.watered(Vec2(x, s.y), by: c.id))
+                return
+            }
+            mossCare = min(1, mossCare + 0.2)
+            c.mossTask = nil
+            c.set(.idle, duration: 0.5)
         case .trim(let wid, let offset):
             guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = w.minX + offset
@@ -249,6 +270,7 @@ extension World {
                 return
             }
             mossMinutes = max(0, mossMinutes - 8)
+            mossCare = min(1, mossCare + 0.06)
             mossEvents.append(.trimmed(Vec2(x, s.y), by: c.id))
             c.mossTask = nil
             c.set(.idle, duration: 0.6)

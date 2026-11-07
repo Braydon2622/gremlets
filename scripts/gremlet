@@ -15,7 +15,6 @@
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
 #   gremlet ferry cross          the ferry makes one stop and sails through the doorway to the linked screen
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
-#   gremlet castle [folder] [edit <subfolder>]  build that project's codebase castle on its Claude terminal (default: here)
 #   gremlet fullscreen [off]     preview how they tidy into the corners when an app is full screen (30 s)
 #   gremlet plant                swap the corner plant for another one now
 #   gremlet notch                someone climbs up to the home under the notch for a nap in the hammock
@@ -81,10 +80,6 @@ case "${1:-}" in
              "") call moss ;;
              *) call "moss?minutes=$2" ;;
            esac; echo ;;
-  castle)  dir="${2:-$PWD}"; [ "$dir" = "edit" ] && dir="$PWD"
-           area=""; for a in "$@"; do [ "$prev" = "edit" ] && area="$a"; prev="$a"; done
-           if [ -n "$area" ]; then curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=$(cd "$dir" && pwd)" --data-urlencode "edit=$area" "${URL}/castle"
-           else curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=$(cd "$dir" && pwd)" "${URL}/castle"; fi; echo ;;
   village-page) curl -s -m 20 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=${2:-}" "${URL}/village-page"; echo ;;
   fullscreen) if [ "${2:-}" = "off" ]; then call "compact?off=1"; else call compact; fi; echo ;;
   weather) case "${2:-}" in

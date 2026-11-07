@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
         world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
+        world.mossCare = UserDefaults.standard.object(forKey: "moss.care") as? Double ?? 1
         // Houses built by older versions take the shape of today's pictures.
         world.refitHouses { h in Biome(rawValue: h.biome).map { BuildArt.fit($0) } }
         let storedSide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0
@@ -169,6 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if now - lastWindowPoll >= pollInterval { refreshEnvironment() }
 
         world.cursor = Vec2(Double(NSEvent.mouseLocation.x), Double(NSEvent.mouseLocation.y))
+        world.wallClock = Date().timeIntervalSince1970
         // The cursor elevator: while ⌃⌥ (and nothing else) is held with no button down, a cloud rides under the pointer.
         let mods = NSEvent.modifierFlags.intersection([.control, .option, .command, .shift])
         // Held for half a second first, so a quick ⌃⌥ shortcut (like ⌃⌥G) doesn't launch anyone.
@@ -188,7 +190,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if case .houseAdded = e { dayLog.add { $0.houses += 1 }; if soundsAllowed { sounds.play(.house) } }
             }
         }
-        if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; if case .houseAdded = $0 { return true }; return false }) { saveGrove() }
+        if groveEvents.contains(where: {
+            switch $0 { case .fed, .wish, .houseAdded, .planted, .cornerCleared: return true; default: return false }
+        }) { saveGrove() }
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
         let growth = world.drainBonsaiEvents()
@@ -363,7 +367,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func buildMenuItems() -> [NSMenuItem] {
         // Kept short: the everyday things up top, then Settings (a few plain switches) and More (everything else).
         let menu = NSMenu(), settings = NSMenu(), more = NSMenu(), focusMenu = NSMenu()
-        var headerText = "Gremlets: \(world.creatures.count) out"
+        var headerText = "Gremlets: \(world.creatures.count) out" + (world.mossMinutes >= 10 ? (world.mossThirsty ? " · the moss is thirsty" : " · the moss is thriving") : "")
         switch presence.hidden {
         case .call?: headerText = "Gremlets: hiding while you're on a call"
         case .manual?: headerText = "Gremlets: hidden (⌃⌥G to bring them back)"
@@ -1141,7 +1145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             if let v = query["minutes"].flatMap(Double.init) { world.mossMinutes = v.clamped(0, World.mossMax); saveMoss() }
             schedule(rate: 60)
-            return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes))}"#)
+            return (200, #"{"ok":true,"minutes":\#(Int(world.mossMinutes)),"care":\#(Int(world.mossCare * 100))}"#)
         case "weather":
             // Preview a sky for two minutes (rain, drizzle, storm, snow, wind, clear), start a snow-Gremlet, or set the city.
             if let city = query["city"].map(Self.decoded), !city.isEmpty {
@@ -1218,37 +1222,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = WrappedPoster.make(m, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
-        case "castle":
-            // Build (or rebuild) the codebase castle for a folder; it shows while that project's Claude session is live.
-            let dir = (Self.decoded(query["dir"] ?? "") as NSString).expandingTildeInPath
-            guard dir.hasPrefix("/") else { return (400, #"{"ok":false,"error":"dir must be a folder path"}"#) }
-            // Keyed exactly like the Claude hook's sessions (cleaned, at most 40 characters), so it finds its tree.
-            let folder = (dir as NSString).lastPathComponent
-            let project = String((SpeechText.clean(folder) ?? folder).prefix(40))
-            let edit = query["edit"].map(Self.decoded)
-            CastleScanner.scan(project: project, root: dir) { [weak self] c in
-                self?.world.setCastle(c)
-                if let e = edit { self?.world.castleEdit(project: project, area: e) }
-                self?.schedule(rate: 60)
-            }
-            let live = world.bonsaiPlacements.contains { $0.project == project && $0.windowID != nil }
-            return (200, #"{"ok":true,"project":"\#(project)","live":\#(live)}"#)
-        case "plant":
-            world.rotateGroveNow()
-            schedule(rate: 60)
-            let k = world.grove.featured.map { world.grove.plants[$0].kind.rawValue } ?? "none"
-            return (200, #"{"ok":true,"plant":"\#(k)"}"#)
-        case "compact":
-            // Preview full-screen mode for 30 seconds (it follows the real full-screen state after that).
-            compactPreviewUntil = query["off"] == nil ? CACurrentMediaTime() + 30 : 0
-            refreshEnvironment()
-            schedule(rate: 60)
-            return (200, #"{"ok":true,"compact":\#(world.compact)}"#)
-        case "notch":
-            guard world.notchHomeShowing else { return (409, #"{"ok":false,"error":"a window is in the space under the notch, so the home is tucked away"}"#) }
-            guard world.startNotchTrip() else { return (409, #"{"ok":false,"error":"nobody can find a way up right now (it needs windows reaching up toward the top of the screen)"}"#) }
-            schedule(rate: 60)
-            return (200, #"{"ok":true}"#)
         case "village-page":
             // A static page of the village to put online (default: ~/Pictures/Gremlets/Village Page).
             let raw = query["dir"].map(Self.decoded) ?? ""
@@ -1722,7 +1695,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private let mossKey = "moss.v1"
     private var lastMossSave: CFTimeInterval = 0
-    func saveMoss() { UserDefaults.standard.set(world.mossMinutes, forKey: mossKey) }
+    func saveMoss() {
+        UserDefaults.standard.set(world.mossMinutes, forKey: mossKey)
+        UserDefaults.standard.set(world.mossCare, forKey: "moss.care")
+    }
 
     // MARK: Watching the Mac
 

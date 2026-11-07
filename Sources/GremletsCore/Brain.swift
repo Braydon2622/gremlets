@@ -184,7 +184,8 @@ struct Brain {
         pickAndStart(reweighted(choices, world), world)
     }
 
-    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss"]
+    static let popUps: Set<String> = ["diveInLeaves", "blowPuff"]
+    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine", "trimMoss", "waterMoss"]
     static let lively: Set<String> = ["walk", "hop", "chase", "tag", "follow", "stairs", "rail", "grapple", "glide", "bridge", "boost",
                                       "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
                                       "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]

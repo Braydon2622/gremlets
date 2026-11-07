@@ -108,7 +108,7 @@ enum VillagePage {
         <body>
         <main>
           <h1>My Gremlets village</h1>
-          <p class="lede">Gremlets are little spirits that live on my Mac's desktop. Every time Claude Code works on one of my projects, they build: a block on the project's castle for each file edit, a branch on its tree for each session, and they garden the moss while it works. This is what they've made so far.</p>
+          <p class="lede">Gremlets are little spirits that live on my Mac's desktop. Every time Claude Code works on one of my projects, they build: a little hut hangs beside the terminal Claude works in, its tree grows with every session, and they garden the moss while it works. This is what they've made so far.</p>
           <img class="postcard" src="village.png" alt="A pixel-art scene: a little house and hammock hanging from the top, a plant in the corner, project bonsai trees on brackets and the Gremlets out front" width="1600" height="660">
           <div class="tiles">
             \(tiles.joined(separator: "\n    "))

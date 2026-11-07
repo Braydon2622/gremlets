@@ -189,3 +189,13 @@ Everything the Gremlets build lives in the engine as plain data and becomes surf
   `PixelCanvas` and shown at 3× with nearest-neighbour scaling, regenerated only when its cache key changes.
 - **Events** (`ClaudeBuddy` → `World.claudeTool`, `bonsaiGrow`, `feedGrove` …): the Claude Code hook sends only event
   names, the project folder's name and a tool name. Nothing about files, prompts or output ever reaches the app.
+- **Session log and cards** (`SessionRecap.swift`, `TreeCard.swift`, `Forest.swift`, `Wrapped.swift`, `Snapshot.swift`,
+  `TimeLapse.swift`): `SessionLog` keeps each Claude session minute by minute (edits, other tools, failures, tasks, test
+  runs, helpers) and the last thirty after they end (`sessions.v1`); `DayLog` keeps per-day totals and edits per project
+  (`daylog.v1`). The cards are plain Core Graphics drawings over `BonsaiArt` images, so a tree looks the same on the
+  desktop, in a recap, on the forest hillside and in the month poster. `MenuTreeIcon` redraws the live tree at 18 points
+  for the menu bar while a session runs.
+- **Kites** (`Kite.swift`): a point mass on a string (wind, a little gravity, a length that pays out and reels in). The
+  flyer stands on a floor; friends within reach turn to look. `SpectacleRenderer.renderKite` draws the kite rotated along
+  the string and the string as a sagging quadratic curve. The brain offers a kite only after a few minutes of life, by
+  day, and never in tests that set `maxHobbies = 0`.

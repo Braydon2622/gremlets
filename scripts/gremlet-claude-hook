@@ -10,10 +10,11 @@
 #     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "PostToolUse":      [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "SubagentStop":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
-#     "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
+#     "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "PreCompact":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
 #
 # PostToolUse sends only the tool's *name* (Edit, Read, Bash...), never its input or output: an edit places a block on
-# the Gremlet's island, a subagent brings a tiny helper along.
+# the Gremlet's island, a subagent brings a tiny helper along. PreCompact makes the project's tree shed a few leaves.
 #   }
 #
 # Never blocks or fails Claude: prints nothing (UserPromptSubmit output would reach Claude), makes one 1-second local

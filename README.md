@@ -12,21 +12,29 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   window: a new branch per session, a leaf per file edit, a flower per finished task, golden fruit when tests pass.
   Species and style come from the project's name; maples turn in autumn, cherries blossom in spring, the deciduous
   ones stand bare under snow. Between sessions the trees rest on bracket shelves up the side of the screen. Gremlets
-  sit in the foliage and nap there after dark. Click a tree for its story; `gremlet card <project>` makes a postcard.
+  sit in the foliage and nap there after dark. Click a tree for its story. While a session runs the growing tree is
+  also the menu bar icon, and a lantern hangs from it whenever Claude is waiting for your OK.
 - **The terminal comes alive while Claude works.** Ivy creeps along its top edge, mossy ledges grow out of its side
   every few edits (platforms the Gremlets use), each edit places a block of a little building beside it, subagents
   arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow. When the session ends the
   building moves down to a village along the bottom of the screen, where Gremlets claim houses and sleep in them.
+  When Claude compacts its context, the tree lets a few leaves go.
 - **A garden that grows from tasks.** Six useful plants in a corner of the screen grow a level at a time as Claude
   tasks finish: a berry bush, a trampoline mushroom, a lantern flower the Gremlets gather around at night, a beanstalk
   ladder up the wall, a snapping plant that catches fireflies, a wishing willow. A mine opens once the garden is
   established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
   a hot spring, a windmill and a flower arch.
 - **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
-  ferry, wind that sweeps leaves along the floor, shy night spirits.
+  ferry, wind that sweeps leaves along the floor, a kite on a free afternoon, shy night spirits.
 - **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
-  windows, a garden journal (today, your streak, every tree's story, two weeks of Claude work), a morning recap, a
-  daily postcard and a time-lapse of your village, and a 44-second scripted demo you can record with one command.
+  windows, a garden journal (today, your streak, every tree's story, two weeks of Claude work, your recent sessions
+  minute by minute), a morning recap, a daily postcard and a time-lapse of your village, and a 44-second scripted demo
+  you can record with one command.
+- **Pictures of your work, ready to post:** `gremlet recap` (a session as a card: the tree before and after, the
+  numbers, a bar per minute; one is saved automatically when a session with real work ends), `gremlet card <project>`,
+  `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
+  (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
+  on your desktop, in a card and in the web habitat.
 - **Phone:** send a Gremlet through a portal to your phone and back.
 
 - **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon) ·
@@ -34,8 +42,8 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 116 engine tests (physics, gardens, platforms, bonsai growth and placement, a boss-free event system,
-  a 10-minute soak test), 1–3% CPU with eight creatures,
+- **Engineering:** 119 engine tests (physics, gardens, platforms, bonsai growth and placement, kites, a boss-free event
+  system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.
 
@@ -162,7 +170,8 @@ is done, then the whole box bursts into flower (rare seeds are a bit likelier on
 waiting on you), and floats back down a little later. Each Claude session gets its own Gremlet, the menu counts what
 they made today, and *Claude Buddy* in the menu turns it off.
 
-`scripts/gremlet-claude-hook` connects Claude Code's `UserPromptSubmit`, `Stop`, `Notification` and `SessionEnd` hooks
+`scripts/gremlet-claude-hook` connects Claude Code's `UserPromptSubmit`, `Stop`, `Notification`, `SessionEnd`, `PostToolUse`, `PostToolUseFailure`, `SubagentStop` and
+`PreCompact` hooks
 (setup is in the script's header). It sends only the event, the session id, the project folder's name and a process id.
 The app finds the window by walking up from that process to the terminal or editor that owns it (process ids and
 window bounds only, never titles or contents). A window with no room beside it (full width) gets a Gremlet working on

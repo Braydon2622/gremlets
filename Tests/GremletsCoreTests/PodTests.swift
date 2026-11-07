@@ -29,4 +29,20 @@ import Testing
         w.bonsaiEnd(project: "Demo")
         #expect(!w.surfaces.contains { World.isPodOwner($0.ownerID) })
     }
+
+    @Test func theHutHangsOnTheOtherSideFromTheHelpersShelf() throws {
+        let w = World(seed: 82)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 9, frame: Rect(x: 300, y: 150, w: 700, h: 400))])
+        w.loadBonsai(BonsaiBook())
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(500, 0))
+        for _ in 0..<30 { w.step(1.0 / 60) }
+        w.bonsaiStart(project: "Demo", session: "a", windowID: 9)
+        _ = w.startJob(windowID: 9, craft: .garden, prefer: c.id)
+        for _ in 0..<(60 * 20) { w.step(1.0 / 60) }
+        let side = try #require(c.job?.shelfSide)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 9, frame: Rect(x: 300, y: 150, w: 700, h: 400))])
+        let pod = try #require(w.podPlacements.first)
+        #expect(pod.side == -side, "hut on the other side from the shelf")
+    }
 }

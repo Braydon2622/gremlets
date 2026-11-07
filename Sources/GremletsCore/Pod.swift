@@ -30,7 +30,9 @@ extension World {
             let corner = side > 0 ? w.maxX - 12 : w.minX + 12
             return room >= 72 && builtSurfaces.contains { $0.ownerID == wid && $0.kind == .windowTop && $0.supports(x: corner) }
         }
-        let preferred: Double = tree.base.x < w.midX ? 1 : -1
+        // Keep clear of the Claude helper's shelf on this window; otherwise the corner away from the tree.
+        let shelfSide = creatures.first { $0.job?.kind == .claude && $0.job?.windowID == wid }?.job?.shelfSide
+        let preferred: Double = shelfSide.map { -$0 } ?? (tree.base.x < w.midX ? 1 : -1)
         guard let side = [preferred, -preferred].first(where: fits) else { return nil }
         let y = w.maxY + 3
         let edge = side > 0 ? w.maxX : w.minX

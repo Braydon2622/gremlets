@@ -53,11 +53,12 @@ case "${1:-}" in
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
-  snapshot) call snapshot; echo ;;
+  snapshot) call snapshot; echo; echo 'Caption idea: "My desktop village so far. Every building is a Claude Code session, every plant grew from a finished task."' ;;
   season)  call "season?name=${2:-auto}"; echo ;;
   night)   call "night?on=${2:-auto}"; echo ;;
   timelapse) curl -s -m 60 -X POST -H 'X-Gremlets: 1' "${URL}/timelapse"; echo ;;
-  card)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/card"; echo ;;
+  card)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/card"; echo
+           echo 'Caption idea: "This bonsai is my project. A branch per Claude Code session, a leaf per file edit, a flower per task, fruit when the tests pass."' ;;
   demo)
     secs="${2:-42}"
     out="$(curl -s -m 2 -X POST -H 'X-Gremlets: 1' "${URL}/demo?seconds=${secs}&pid=$PPID")" || { echo "gremlet: the Gremlets app isn't running" >&2; exit 1; }

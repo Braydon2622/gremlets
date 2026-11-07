@@ -345,7 +345,7 @@ final class BonsaiRenderer {
             }
             // The slab's top row sits at the surface; it grows out of the window's side.
             e.layer.setAffineTransform(CGAffineTransform(scaleX: l.side > 0 ? 1 : -1, y: 1))
-            e.layer.anchorPoint = CGPoint(x: l.side > 0 ? 0 : 1, y: 6.0 / 9.0)
+            e.layer.anchorPoint = CGPoint(x: l.side > 0 ? 0 : 1, y: 7.0 / 10.0)
             e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
             ledges[s.ownerID] = e
         }

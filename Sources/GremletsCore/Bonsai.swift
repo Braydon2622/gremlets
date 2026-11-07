@@ -195,8 +195,8 @@ public enum BonsaiGeometry {
     public static func layout(_ b: Bonsai) -> BonsaiLayout {
         var rng = SplitMix64(seed: b.seed &+ 1)
         let s = b.stature
-        let H = 48 + 160 * s
-        let W = 70 + 250 * s
+        let H = 56 + 152 * s
+        let W = 76 + 244 * s
         let windDir: Double = (b.seed >> 24) % 2 == 0 ? 1 : -1
         let phase = rng.range(0, 6.28)
         let wiggle = (0..<10).map { _ in rng.range(-1, 1) }
@@ -225,7 +225,7 @@ public enum BonsaiGeometry {
             let i = min(n - 1, Int(f)), u = f - Double(i)
             return trunk[i] + (trunk[i + 1] - trunk[i]) * u
         }
-        let baseThickness = 5 + 15 * s
+        let baseThickness = 6 + 14 * s
 
         // Surface roots.
         var roots: [[Vec2]] = []
@@ -290,7 +290,7 @@ public enum BonsaiGeometry {
         }
         // The crown: a cluster at the top (for a cascade, at the bend).
         let top = b.form == .cascade ? along(0.3) + Vec2(-windDir * 5, 10) : trunk[n] + Vec2(0, 5)
-        let crx = (11 + 22 * s), cry = crx * 0.42
+        let crx = (13 + 20 * s), cry = crx * 0.42
         pads.append(.init(center: top, rx: crx, ry: cry, branch: -1, blooms: [], fruit: []))
         if s > 0.4 {
             pads.append(.init(center: top + Vec2(-crx * 0.7, -cry * 0.9), rx: crx * 0.65, ry: cry * 0.7, branch: -1, blooms: [], fruit: []))
@@ -524,11 +524,11 @@ extension World {
             let count = min(4, j.blocks / 4)
             guard count > 0 else { continue }
             let side: Double = j.shelfSide.map { -$0 } ?? (scr.maxX - w.maxX > w.minX - scr.minX ? 1 : -1)
-            let width = 56.0
+            let width = 72.0
             let fits = side > 0 ? w.maxX + width <= scr.maxX : w.minX - width >= scr.minX
             guard fits else { continue }
             for k in 0..<count {
-                let y = w.maxY - 70 - Double(k) * 64
+                let y = w.maxY - 92 - Double(k) * 68
                 guard y > w.minY + 40 else { break }
                 let owner = World.ledgeOwnerBase - (c.id * 8 + k)
                 let lo = side > 0 ? w.maxX - 4 : w.minX - width

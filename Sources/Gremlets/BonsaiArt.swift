@@ -246,14 +246,18 @@ enum BonsaiArt {
 
     /// A mossy ledge growing out of a terminal's side: a stone slab under moss, bracket fungi on its underside.
     static func ledge(index: Int) -> CGImage {
-        var cv = PixelCanvas(20, 9)
+        var cv = PixelCanvas(25, 10)
         var r = ArtRNG(s: UInt64(index + 1) &* 7919)
-        for x in 1..<19 { cv.rect(x, 3, 1, 3, x % 6 == 0 ? 0x6E6B65 : 0x8E8B83) }   // the slab
-        cv.rect(0, 4, 1, 1, 0x6E6B65); cv.rect(19, 4, 1, 2, 0x6E6B65)
-        for x in 1..<19 where r.next() < 0.8 { cv.set(x, 6, r.next() < 0.5 ? 0x5DBB46 : 0x7DBE52); if r.next() < 0.3 { cv.set(x, 7, 0x9BE36A) } }
-        for x in [4, 11, 16] { cv.blob(Double(x), 2.5, 2.4, 1.3, base: 0xD9855A, light: 0xF2B48A, shade: 0xA8582E) }   // fungi
-        cv.set(8, 8, 0xFF6B6B); cv.set(14, 8, 0xFFD45E)   // two tiny flowers
-        cv.outline(0.7)
+        // The slab: a stone shelf wedged into the window's side, lighter on top, dark underneath.
+        for x in 1..<24 { cv.rect(x, 3, 1, 4, x % 7 == 0 ? 0x6E6B65 : 0x8E8B83); cv.set(x, 6, 0xB8B6AE); cv.set(x, 3, 0x5E5B55) }
+        cv.rect(0, 3, 1, 4, 0x5E5B55); cv.rect(24, 4, 1, 2, 0x6E6B65)
+        // Moss over the top, spilling down the front.
+        for x in 1..<24 where r.next() < 0.85 { cv.set(x, 7, r.next() < 0.5 ? 0x5DBB46 : 0x7DBE52); if r.next() < 0.35 { cv.set(x, 8, 0x9BE36A) }; if r.next() < 0.2 { cv.set(x, 5, 0x4F8A3A) } }
+        // Bracket fungi underneath, a fern at the end, two tiny flowers.
+        for x in [5, 13, 20] { cv.blob(Double(x), 2.2, 2.6, 1.4, base: 0xD9855A, light: 0xF2B48A, shade: 0xA8582E) }
+        cv.line(22, 7, 24, 9, 0x4F8A3A); cv.set(23, 9, 0x8BD66A); cv.set(21, 8, 0x8BD66A)
+        cv.set(9, 9, 0xFF6B6B); cv.set(16, 9, 0xFFD45E)
+        cv.outline(0.65)
         return cv.image
     }
 

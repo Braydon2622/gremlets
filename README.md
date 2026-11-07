@@ -39,7 +39,8 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.
 
-> 🎥 _Demo GIF coming soon (recorded on a real desktop)._
+> 🎥 `gremlet demo` plays a 44-second scripted Claude session on your front window and saves it as a video and a
+> looping GIF in Movies › Gremlets, so a demo is one command away.
 
 ![The 50 Gremlets](Species/lineup.png)
 

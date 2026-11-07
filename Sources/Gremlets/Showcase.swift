@@ -62,6 +62,7 @@ final class Showcase {
             }))
         }
         send(0, "start")
+        steps.append((0.6, { [weak self] in self?.world.hurryClaudeWorker(project: "Gremlets") }))
         var t = 6.0   // the Gremlet needs a moment to get to the window
         for n in 0..<30 {
             send(t, "tool", ["tool": n % 9 == 4 ? "Read" : "Edit"])

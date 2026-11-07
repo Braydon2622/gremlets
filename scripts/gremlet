@@ -16,7 +16,8 @@
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet season winter|spring|summer|autumn|auto   preview a season for ten minutes (trees, village, islands)
 #   gremlet night on|off|auto    preview night (lanterns, fireflies, spirits) for ten minutes
-#   gremlet timelapse            stitch the daily village postcards into a video (Movies/Gremlets)
+#   gremlet timelapse [project]  stitch the daily village postcards into a video, or one tree's days into a GIF
+#   gremlet forest               every project's tree on one hillside (Pictures/Gremlets), copied
 #   gremlet card [project]       save a card of a project's bonsai with its story (Pictures/Gremlets) and copy it
 #   gremlet demo [seconds]       play a scripted Claude session on your front window and record it, plus a GIF (Movies/Gremlets)
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
@@ -56,7 +57,8 @@ case "${1:-}" in
   snapshot) call snapshot; echo; echo 'Caption idea: "My desktop village so far. Every building is a Claude Code session, every plant grew from a finished task."' ;;
   season)  call "season?name=${2:-auto}"; echo ;;
   night)   call "night?on=${2:-auto}"; echo ;;
-  timelapse) curl -s -m 60 -X POST -H 'X-Gremlets: 1' "${URL}/timelapse"; echo ;;
+  timelapse) curl -s -m 120 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/timelapse"; echo ;;
+  forest)  call forest; echo; echo 'Caption idea: "Every project I have worked on with Claude Code, as a tree. The big ones are the ones I kept coming back to."' ;;
   card)    curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "project=${2:-}" "${URL}/card"; echo
            echo 'Caption idea: "This bonsai is my project. A branch per Claude Code session, a leaf per file edit, a flower per task, fruit when the tests pass."' ;;
   demo)
@@ -83,6 +85,6 @@ except Exception: print("")')"
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

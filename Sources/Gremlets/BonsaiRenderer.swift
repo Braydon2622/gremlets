@@ -360,12 +360,12 @@ final class BonsaiRenderer {
             case .planted(let project):
                 moveBurst.insert(project)
             case .sprouted(let project, let branch):
-                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), branch < p.layout.limbs.count,
+                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), carrier(for: p) == nil, branch < p.layout.limbs.count,
                       let root = p.layout.limbs[branch].points.first, let (si, pt) = local(p.base + root * p.scale) else { continue }
                 overlay.burst([Effects.dust, Effects.leaf, Effects.sparkle], si: si, at: pt, count: 6, dx: -20...20, dy: 4...30, duration: 0.8)
                 if let l = trees[project]?.layer { boing(l) }
             case .grew(let project, let part, let branch):
-                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }),
+                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), carrier(for: p) == nil,
                       let pad = p.layout.pads.first(where: { $0.branch == branch }) ?? p.layout.pads.last,
                       let (si, pt) = local(p.base + pad.center * p.scale) else { continue }
                 switch part {
@@ -376,7 +376,7 @@ final class BonsaiRenderer {
             case .moved(let project, _):
                 moveBurst.insert(project)
             case .milestone(let project, let text):
-                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }),
+                guard let p = world.bonsaiPlacements.first(where: { $0.project == project }), carrier(for: p) == nil,
                       let (si, pt) = local(p.base + Vec2(0, p.layout.bounds.maxY * p.scale * 0.6)) else { continue }
                 overlay.burst([Effects.star, Effects.sparkle, Effects.heart, Effects.petal], si: si, at: pt, count: 18,
                               dx: -p.layout.bounds.w * p.scale * 0.5...p.layout.bounds.w * p.scale * 0.5, dy: -20...80, duration: 1.8, stagger: 0.04)

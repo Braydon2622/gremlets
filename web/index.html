@@ -20,10 +20,12 @@
     <button id="home" class="btn" hidden title="Send visiting Gremlets back to your Mac">Send home</button>
     <button id="rain" class="btn ghost icon" title="A rain cloud drifts by" aria-label="Make it rain">🌧</button>
     <button id="boss" class="btn ghost icon" title="Summon the Grumble King (then drive a Gremlet and press X to fight)" aria-label="Summon a boss">👑</button>
+    <button id="watch" class="btn ghost" title="Watch a simulated Claude session grow the project bonsai" aria-label="Watch a Claude session"><span class="narrow">▶</span><span class="wide">▶ Watch a Claude session</span></button>
     <button id="link" class="btn ghost" title="Link another screen so Gremlets can walk between them">🔗 <span class="wide">Link a screen</span></button>
     <button id="party" class="btn ghost" title="Swap in a random group" aria-label="Shuffle"><span class="narrow">🔀</span><span class="wide">Shuffle</span></button>
     <button id="add" class="btn">+<span class="wide"> Add</span></button>
   </header>
+  <div id="session" hidden aria-live="polite"><span></span></div>
 
   <div id="picker" hidden>
     <div class="sheet" role="dialog" aria-label="Choose a Gremlet">

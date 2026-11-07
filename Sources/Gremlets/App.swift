@@ -895,7 +895,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "timelapse":
             TimeLapse.saveToday(world: world, species: species)
+            if let project = query["project"].map(Self.decoded), !project.isEmpty {
+                guard let url = TimeLapse.treeGIF(project: project) else { return (404, #"{"ok":false,"error":"no daily pictures of that tree yet"}"#) }
+                return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+            }
             guard let url = TimeLapse.build() else { return (404, #"{"ok":false,"error":"no daily postcards yet"}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "forest":
+            guard let url = ForestPoster.make(world: world, species: species) else { return (404, #"{"ok":false,"error":"no trees yet"}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "card":
             let name = Self.decoded(query["project"] ?? "")
@@ -1195,6 +1202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "pair": pairPhone()
             case "journal": openJournal()
             case "demo": playDemo()
+            case "forest": saveForest()
             case "card":
                 let name = Self.decoded(q["project"] ?? "")
                 if let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name],
@@ -1321,6 +1329,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
         action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
         action("Play a Claude Session Demo", #selector(playDemo), tip: "A scripted 40-second Claude session on your front window: the tree takes root, edits build, helpers arrive, a storm then a rainbow, the house moves to the village. Nothing is kept. 'gremlet demo' records it too.")
+        action("Save Forest Poster", #selector(saveForest), tip: "Every project's tree together on one hillside, with names and numbers. Saved to Pictures › Gremlets and copied.")
         action("Save Village Time-lapse", #selector(saveTimelapse), tip: "A postcard of the village is saved once a day (Pictures › Gremlets › Daily). This stitches them into a short video in Movies › Gremlets.")
         action("Save Village Snapshot", #selector(saveSnapshot), tip: "Saves a picture of your village and its Claude stats to Pictures › Gremlets and copies it, ready to paste into a post.")
         action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
@@ -1380,6 +1389,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Query values arrive raw from the control server.
     static func decoded(_ raw: String) -> String {
         raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? raw
+    }
+
+    @objc private func saveForest() {
+        guard let url = ForestPoster.make(world: world, species: species) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @objc private func saveTimelapse() {

@@ -113,4 +113,14 @@ extension World {
         defer { claudeEvents.removeAll() }
         return claudeEvents
     }
+
+    /// A lift for the Gremlet on its way to a Claude window, so it arrives in a couple of seconds instead of
+    /// crossing the whole desktop first. The demo uses it; a real session lets it walk.
+    public func hurryClaudeWorker(project: String) {
+        guard let c = creatures.first(where: { $0.job?.kind == .claude && $0.job?.label == project && $0.job?.phase == .travel }),
+              let j = c.job, let sp = standPoint(j, workerID: c.id) else { return }
+        let floor = screen(containingX: sp.x, y: sp.y)?.minY ?? (sp.y - 90)
+        c.pos = Vec2(sp.x + (c.pos.x < sp.x ? -70 : 70), max(sp.y - 90, floor))
+        startFloat(c, to: sp)
+    }
 }

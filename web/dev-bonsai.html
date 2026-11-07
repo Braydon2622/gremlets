@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gremlets bonsai preview</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #292e3d; color: #fff; font: 600 13px system-ui, sans-serif; }
+    h1 { font-size: 16px; margin: 0 0 6px; }
+    h1 + p { margin: 0 0 14px; opacity: 0.7; font-weight: 500; }
+    .grid { display: grid; grid-template-columns: repeat(7, 300px); gap: 6px; width: max-content; }
+    .cell { background: #30364a; border-radius: 8px; padding: 6px 6px 4px; }
+    .cell canvas, .isle canvas { display: block; image-rendering: pixelated; }
+    .lbl { font-size: 11px; opacity: 0.75; margin-top: 4px; white-space: nowrap; }
+    .isles { display: flex; flex-wrap: wrap; gap: 12px; }
+    .isle { background: #30364a; border-radius: 8px; padding: 6px; }
+    .isle.night { background: #1d2347; }
+  </style>
+</head>
+<body>
+  <!-- Dev tool: the same contact sheet the Mac app's `Gremlets --render-art` writes (ArtPreview.swift), drawn by the web port. -->
+  <h1>Project bonsai · six species × five growth stages, then autumn and winter at full growth</h1>
+  <p>Rows: pine, maple, cherry, juniper, wisteria, olive. Columns 1–5: 0 → 8 → 40 → 150 → 500 edits (1 → 12 sessions); column 6 is autumn, 7 is winter. Odd columns are drawn as at night; each column is six days older (moss on the pot, lichen on old bark, deadwood on an old juniper). The form cycles through upright, informal, windswept and cascade.</p>
+  <div id="bonsai" class="grid"></div>
+  <h1 style="margin-top: 24px">Floating islands · nine biomes, day and night</h1>
+  <p>Body (terrain with a ragged underside and things hanging off it) plus decor (tufts, flowers, the landmark at the right-hand end), as drawn under the habitat's ledges.</p>
+  <div id="islands" class="isles"></div>
+
+  <script type="module">
+    import { Bonsai, layoutBonsai, renderBonsai, SPECIES, FORMS, FORM_NAMES } from './js/bonsai.js';
+    import { IslandArt, BIOMES } from './js/islands.js';
+
+    const PX = 3;                                   // screen pixels per art pixel, like the habitat on a desktop
+    const stages = [[0, 1, 0, 0], [8, 2, 1, 0], [40, 4, 4, 1], [150, 7, 9, 3], [500, 12, 16, 7]];
+    const bW = 300, bH = 210;
+    const grid = document.getElementById('bonsai');
+    SPECIES.forEach((sp, row) => {
+      for (let col = 0; col < 7; col++) {
+        const [edits, sessions, blooms, fruit] = stages[Math.min(col, stages.length - 1)];
+        const b = new Bonsai('preview-' + sp, 0);
+        b.species = sp;
+        b.form = FORMS[(row + col) % FORMS.length];
+        for (let n = 0; n < sessions; n++) b.startSession('s' + n, 0);
+        for (let n = 0; n < edits; n++) b.branches[n % b.branches.length].edits += 1;
+        for (let n = 0; n < blooms; n++) b.branches[n % b.branches.length].blooms += 1;
+        for (let n = 0; n < fruit; n++) b.branches[n % b.branches.length].fruit += 1;
+        const L = layoutBonsai(b);
+        const month = col === 5 ? 10 : col === 6 ? 1 : 6, night = col % 2 === 1, age = col * 6;
+        const fit = Math.min(1, (bW - 20) / L.bounds.w, (bH - 40) / L.bounds.h);
+        const { canvas, anchor } = renderBonsai(b, L, fit, month, night, age);
+        const cv = document.createElement('canvas');
+        cv.width = bW; cv.height = bH;
+        const g = cv.getContext('2d');
+        g.imageSmoothingEnabled = false;
+        g.fillStyle = night ? '#1d2347' : '#3a4056'; g.fillRect(0, 0, bW, bH);
+        g.fillStyle = '#4b5068'; g.fillRect(10, bH - 30, bW - 20, 4);
+        const img = canvas.toCanvas(), w = canvas.w * PX, h = canvas.h * PX, ox = bW / 2, oy = bH - 30;
+        g.drawImage(img, Math.round(ox - anchor.x * w), Math.round(oy - (1 - anchor.y) * h), w, h);
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.appendChild(cv);
+        const lbl = document.createElement('div');
+        lbl.className = 'lbl';
+        lbl.textContent = `${sp} · ${FORM_NAMES[b.form]} · ${edits} edits, ${sessions} session${sessions === 1 ? '' : 's'}` + (col === 5 ? ' · autumn' : col === 6 ? ' · winter' : '') + ` · ${canvas.w}×${canvas.h} px`;
+        cell.appendChild(lbl);
+        grid.appendChild(cell);
+      }
+    });
+
+    const isles = document.getElementById('islands');
+    BIOMES.forEach((b, n) => {
+      for (const night of [false, true]) {
+        const seed = n * 37 + 5, w = 59;
+        const body = IslandArt.body(b, w, seed), decor = IslandArt.decor(b, w, seed, night);
+        const cv = document.createElement('canvas');
+        cv.width = w * PX + 12; cv.height = (decor.h + body.h) * PX + 12;
+        const g = cv.getContext('2d');
+        g.imageSmoothingEnabled = false;
+        const x = 6, top = 6 + decor.h * PX;
+        g.drawImage(decor.toCanvas(), x, top - decor.h * PX, w * PX, decor.h * PX);
+        g.drawImage(body.toCanvas(), x, top, w * PX, body.h * PX);
+        const cell = document.createElement('div');
+        cell.className = 'isle' + (night ? ' night' : '');
+        cell.appendChild(cv);
+        const lbl = document.createElement('div');
+        lbl.className = 'lbl';
+        lbl.textContent = `${b}${night ? ' · night' : ''}`;
+        cell.appendChild(lbl);
+        isles.appendChild(cell);
+      }
+    });
+  </script>
+</body>
+</html>

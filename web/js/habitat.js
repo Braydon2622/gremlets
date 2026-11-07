@@ -8,6 +8,9 @@ import { FX, Particles } from './effects.js';
 import { Link } from './link.js';
 import { Garden } from './garden.js';
 import { Bridge } from './bridge.js';
+import { IslandArt, Biome, ledgeBiome, ledgeSeed } from './islands.js';
+import { Bonsai, layoutBonsai, renderBonsai, MAX_BRANCHES } from './bonsai.js';
+import { hex } from './pixelart.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -43,6 +46,7 @@ let index = [];
 const hour = new Date().getHours();
 const night = hour >= 20 || hour < 6;
 const dusk = !night && (hour >= 18 || hour < 7);
+const MONTH = Math.min(12, Math.max(1, +params.get('month') || new Date().getMonth() + 1));   // ?month=1 previews a season
 
 // ---------------------------------------------------------------- layout & scenery
 
@@ -61,6 +65,7 @@ function layout() {
   GROUND = PX * 9;
   TOP = showcase ? PX * 10 : 64;
   platforms = makePlatforms();
+  placeBonsai();
   applyDoor();
   scenery = drawScenery();
 }
@@ -69,14 +74,15 @@ function layout() {
 function applyDoor() {
   door = bridge?.linked && bridge.peerOnline ? bridge.side : null;
   const x = door === 'left' ? -DOOR : 0, w = W + (door ? DOOR : 0);
-  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], platforms.filter((p) => !p.broken));
+  if (bonsai && isleGone()) placeBonsai();
+  // The ledges and the bonsai's foliage pads are the "windows": the engine makes their top edges one-way platforms.
+  world.setEnvironment([{ x, y: GROUND, w, h: H - GROUND - TOP }], [...platforms.filter((p) => !p.broken), ...bonsaiPlatforms()]);
 }
 
-/** Floating ledges to climb (the web stand-in for app windows). Spaced so every species can jump between them. */
+/** Floating ledges to climb (the web stand-in for app windows), each a biome island. Spaced so every species can jump between them. */
 function makePlatforms() {
   const usable = H - GROUND - TOP - 70;
   const rows = showcase ? 1 : Math.max(1, Math.min(4, Math.floor(usable / 140)));
-  const kinds = ['shelf', 'moss', 'cloud'];
   const out = [];
   let id = 1;
   for (let r = 1; r <= rows; r++) {
@@ -87,7 +93,8 @@ function makePlatforms() {
       const slot = perRow > 1 ? (i === 0 ? 0.08 : 0.58) : 0.08;
       const shift = (r % 2 === 0 ? 0.24 : 0) * W;
       const x = Math.round(Math.min(W - w - 12, slot * W + shift) / PX) * PX;
-      out.push({ id: id++, x, y: y - PX * 4, w, h: PX * 4, kind: kinds[(r + i) % kinds.length] });
+      out.push({ id, x, y: y - PX * 4, w, h: PX * 4, seed: ledgeSeed(id), biome: ledgeBiome(id, MONTH) });
+      id++;
     }
   }
   return out;
@@ -145,30 +152,29 @@ function drawScenery() {
   return cv;
 }
 
-function drawPlatform(g, p) {
-  const top = H - (p.y + p.h), x = p.x, w = p.w;
-  if (p.kind === 'shelf') {
-    g.fillStyle = '#4a2e1a'; g.fillRect(x - PX, top - PX, w + PX * 2, p.h + PX * 2);
-    g.fillStyle = '#b98552'; g.fillRect(x, top, w, p.h);
-    g.fillStyle = '#d9a673'; g.fillRect(x, top, w, PX);
-    g.fillStyle = '#8a5a34'; g.fillRect(x, top + p.h - PX, w, PX);
-    for (const bx of [x + PX * 4, x + w - PX * 7]) {          // brackets
-      g.fillStyle = '#4a2e1a';
-      for (let k = 0; k < 5; k++) g.fillRect(bx, top + p.h + k * PX, PX * (5 - k), PX);
-      g.fillStyle = '#c8c0b0'; g.fillRect(bx + PX, top + PX * 2, PX, PX);
-    }
-  } else if (p.kind === 'moss') {
-    g.fillStyle = '#3a4048'; g.fillRect(x - PX, top - PX, w + PX * 2, p.h + PX * 3);
-    g.fillStyle = '#9aa0a6'; g.fillRect(x, top, w, p.h + PX);
-    g.fillStyle = '#7a8088'; g.fillRect(x, top + p.h, w, PX);
-    g.fillStyle = '#6cbf59'; g.fillRect(x - PX, top - PX, w + PX * 2, PX * 2);
-    g.fillStyle = '#4f9a44';
-    for (let mx = x + PX * 2; mx < x + w - PX; mx += PX * 6) g.fillRect(mx, top + PX, PX, PX * (1 + ((mx / PX) % 3)));
-    g.fillStyle = '#ff9ec4'; g.fillRect(x + PX * 5, top - PX * 2, PX, PX);
-  } else {
-    const cy = top + p.h / 2;
-    for (let cx = x + PX * 3; cx < x + w - PX * 2; cx += PX * 6) pixelDisc(g, cx, cy, PX * 4, night ? '#c8d0ec' : '#ffffff', night ? '#9aa4cc' : '#dfe8f4');
+const islandArt = new Map();     // `${biome}-${widthPx}-${seed}-${night}` → { body, decor } 1:1 canvases
+
+function islandImages(p) {
+  const wpx = Math.max(8, Math.round(p.w / PX)), key = `${p.biome}-${wpx}-${p.seed}-${night}`;
+  let a = islandArt.get(key);
+  if (!a) {
+    a = { body: IslandArt.body(p.biome, wpx, p.seed).toCanvas(), decor: IslandArt.decor(p.biome, wpx, p.seed, night).toCanvas() };
+    islandArt.set(key, a);
   }
+  return a;
+}
+
+/** A floating biome island. The body's top row is the platform's walking surface (so the geometry Gremlets stand on is
+ *  unchanged); the terrain hangs below it and the decor grows above. The landmark stands at the outer end, nearest the
+ *  screen edge, so islands on the left are mirrored. */
+function drawPlatform(g, p) {
+  const top = H - (p.y + p.h), a = islandImages(p), flip = p.x + p.w / 2 < W / 2;
+  g.save();
+  g.translate(flip ? p.x + p.w : p.x, 0);
+  if (flip) g.scale(-1, 1);
+  g.drawImage(a.decor, 0, top - a.decor.height * PX, a.decor.width * PX, a.decor.height * PX);
+  g.drawImage(a.body, 0, top, a.body.width * PX, a.body.height * PX);
+  g.restore();
 }
 
 function pixelDisc(g, cx, cy, r, fill, shade) {
@@ -350,6 +356,8 @@ function frame(now) {
   updateTravellers(dt, now / 1000);
   updateBoss(dt);
   updateDebris(dt);
+  updateSession(now / 1000);
+  updateMinions(now / 1000);
   respawnPlatforms(now / 1000);
   for (const c of world.creatures) {
     if (c.activity !== 'sleep') continue;
@@ -386,6 +394,7 @@ function draw() {
     const s = toScreen(v.spot.boxX, v.spot.y);
     v.garden.draw(ctx, s.x, s.y, PX);
   }
+  drawBonsai(performance.now() / 1000);   // behind the Gremlets, so the ones on its pads stand in front
   for (const c of world.creatures) {
     const a = art.get(c.id);
     if (!a) continue;
@@ -400,6 +409,7 @@ function draw() {
     ctx.drawImage(a.image, r.x, r.y, r.w, r.h, -w / 2, -h, w, h);
     ctx.restore();
   }
+  drawMinions(performance.now() / 1000);
   particles.draw(ctx, toScreen, PX);
 }
 
@@ -850,7 +860,8 @@ let boss = null;
 let crownHolder = null;          // creature id wearing the crown (beat the boss)
 let shakeUntil = 0;
 const now_ = () => performance.now() / 1000;
-const CHIPS = { shelf: ['#b98552', '#8a5a34', '#d9a673'], moss: ['#9aa0a6', '#6cbf59', '#7a8088'], cloud: ['#ffffff', '#dfe8f4', '#c8d0ec'] };
+/** Pickaxe chips in the island's own colours: its turf, soil and stone. */
+function chipColors(p) { const pal = Biome.palette(p.biome); return [pal.top, pal.soil, pal.stone].map(hex); }
 
 function chips(x, y, colors, n, spread = 1) {
   for (let i = 0; i < n; i++) {
@@ -900,7 +911,7 @@ function swing() {
     hit = true;
     p.dmg = (p.dmg || 0) + 1;
     const at = Math.max(p.x + PX * 2, Math.min(p.x + p.w - PX * 2, tip.x));
-    chips(at, p.y + p.h, CHIPS[p.kind], 6);
+    chips(at, p.y + p.h, chipColors(p), 6);
     if (p.dmg >= 4) breakPlatform(p);
   } else if (!hit && c.isGrounded && c.ground < 0) {
     chips(tip.x, GROUND, night ? ['#4a3a32', '#3c5a3a'] : ['#a5774f', '#7cc46a', '#8a5f3e'], 4, 0.6);   // just dirt
@@ -910,7 +921,7 @@ function swing() {
 
 function breakPlatform(p) {
   p.broken = true; p.respawnAt = now_() + 25;
-  for (let x = p.x; x < p.x + p.w; x += PX * 6) chips(x, p.y + p.h * 0.5, CHIPS[p.kind], 3, 0.8);
+  for (let x = p.x; x < p.x + p.w; x += PX * 6) chips(x, p.y + p.h * 0.5, chipColors(p), 3, 0.8);
   applyDoor(); scenery = drawScenery();
   shakeUntil = now_() + 0.18;
   const c = byId(driven);
@@ -1210,6 +1221,208 @@ function drawAdventure(t) {
   ctx.restore();
 }
 
+// ---------------------------------------------------------------- the project bonsai: a scripted Claude session grows it
+// Same record, layout and art as the Mac app (web/js/bonsai.js). "▶ Watch a Claude session" plays a ~40 s script: a
+// branch sprouts, ~30 file edits each add a leaf, two subagents hop in beside the tree, tests pass (a golden fruit),
+// the task is done (a blossom). The tree stays between sessions and is saved, so it sprawls over visits.
+
+const PROJECT = 'gremlets-web';
+const BONSAI_KEY = 'gremlets.bonsai';
+const SESSION_EDITS = 30;
+let bonsai = null;               // { tree, layout, base, scale, S, isle, art, key, planted, boingAt }
+let session = null;              // the script playing now: { t0, steps, step, edits }
+const minions = [];              // tiny subagent Gremlets hopping beside the tree: { art, dx, facing, phase, t0, leaveAt }
+
+function loadBonsai() {
+  try { const t = Bonsai.fromJSON(JSON.parse(localStorage.getItem(BONSAI_KEY) || 'null')); return t ? { tree: t, planted: -9 } : null; }
+  catch { return null; }
+}
+function saveBonsai() { if (bonsai) try { localStorage.setItem(BONSAI_KEY, JSON.stringify(bonsai.tree)); } catch { /* private mode */ } }
+const isleGone = () => bonsai.isle == null || !platforms.some((p) => p.id === bonsai.isle && !p.broken);
+
+/** Roots the tree on the widest island (pot centred on its top surface), scaled to the headroom above it. Layout points
+ *  map to screen pixels at `S` = scale × PX / 3: the Mac shows the art at three pixels per art pixel; phones use PX = 2. */
+function placeBonsai() {
+  if (!bonsai) return;
+  const isle = platforms.filter((p) => !p.broken).sort((a, b) => b.w - a.w)[0];
+  const L = layoutBonsai(bonsai.tree);
+  const base = isle ? V(isle.x + isle.w / 2, isle.y + isle.h) : V(W / 2, GROUND);
+  const headroom = H - TOP - base.y - 12;
+  const fit = Math.min(1, headroom / Math.max(1, (L.bounds.y + L.bounds.h) * PX / 3), (W - 16) / Math.max(1, L.bounds.w * PX / 3));
+  const scale = Math.round(Math.max(0.4, fit) * 20) / 20;
+  Object.assign(bonsai, { layout: L, base, scale, S: scale * PX / 3, isle: isle ? isle.id : null, key: null });
+}
+
+/** The foliage pads as one-way platforms, in the rect form `setEnvironment` takes (same rule as the Mac: pads at least
+ *  17 px in radius, the first sixteen). Ids are stable per branch and twig, so a Gremlet rides a pad that grows. */
+function bonsaiPlatforms() {
+  if (!bonsai) return [];
+  const { layout: L, base, S } = bonsai, out = [], seen = {};
+  L.pads.forEach((pad, n) => {
+    const k = seen[pad.branch] = (seen[pad.branch] ?? -1) + 1;
+    if (pad.rx * S < 17 || n >= 16) return;
+    const y = base.y + (pad.center.y + pad.ry * 0.8) * S;
+    const x0 = base.x + (pad.center.x - pad.rx * 0.7) * S, x1 = base.x + (pad.center.x + pad.rx * 0.7) * S;
+    out.push({ id: 1000 + (pad.branch < 0 ? MAX_BRANCHES : pad.branch) * 4 + k, x: x0, y: y - PX * 2, w: x1 - x0, h: PX * 2 });
+  });
+  return out;
+}
+
+const treePoint = (p) => V(bonsai.base.x + p.x * bonsai.S, bonsai.base.y + p.y * bonsai.S);
+const padOf = (branch) => bonsai.layout.pads.find((p) => p.branch === branch) ?? bonsai.layout.pads[bonsai.layout.pads.length - 1];
+const mainLimb = (branch) => bonsai.layout.limbs.filter((l) => l.points.length === 3)[branch];
+
+/** The tree grows a leaf, bloom or fruit on the session's branch, with the matching little effect at that pad. */
+function growBonsai(part) {
+  const br = bonsai.tree.grow(part);
+  if (br == null) return;
+  placeBonsai(); applyDoor();
+  const at = treePoint(padOf(br).center);
+  if (part === 'leaf') particles.burst(null, at, { imgs: [FX.leaf, FX.leaf2], count: 2, dx: [-16, 16], dy: [-30, -6], duration: 1.1 });
+  else if (part === 'bloom') particles.burst(null, at, { imgs: [FX.petal, FX.sparkle], count: 5, dx: [-26, 26], dy: [-10, 30], duration: 1.2, stagger: 0.05 });
+  else particles.burst(null, at, { imgs: [FX.star, FX.sparkle, FX.smallStar], count: 7, dx: [-24, 24], dy: [0, 36], duration: 1, stagger: 0.04 });
+  saveBonsai();
+}
+
+function caption(text) {
+  const el = document.getElementById('session');
+  if (!el) return;
+  el.hidden = !text;
+  if (text) el.firstElementChild.textContent = text;
+}
+
+/** "▶ Watch a Claude session": plants the tree if there is none, then plays the script. Another press, another branch. */
+function watchSession() {
+  if (session) return;
+  const t0 = now_();
+  if (!bonsai) {
+    bonsai = { tree: new Bonsai(PROJECT, t0), planted: t0 };
+    placeBonsai(); applyDoor();
+    particles.burst(null, V(bonsai.base.x, bonsai.base.y + 20), { imgs: [FX.leaf, FX.sparkle, FX.dust], count: 8, dx: [-40, 40], dy: [0, 50], duration: 1, stagger: 0.03 });
+  }
+  const tree = bonsai.tree, steps = [];
+  const at = (t, f) => steps.push({ t, f });
+  const helpers = () => { const n = minions.filter((m) => !m.leaveAt).length; return n ? ` · ${n} subagent${n === 1 ? '' : 's'} helping` : ''; };
+  at(0, () => {
+    const sprouted = tree.startSession('web-' + Math.round(t0), t0);
+    placeBonsai(); applyDoor();
+    bonsai.boingAt = now_();
+    const where = sprouted ? treePoint(mainLimb(tree.currentBranch).points[0]) : treePoint(padOf(tree.currentBranch).center);
+    particles.burst(null, where, { imgs: [FX.dust, FX.leaf, FX.sparkle], count: 6, dx: [-20, 20], dy: [4, 30], duration: 0.8 });
+    caption(sprouted ? `🌱 Claude starts a session on ${PROJECT} · a new branch sprouts` : `🌿 Claude starts a session on ${PROJECT} · the tree thickens`);
+    saveBonsai();
+  });
+  let t = 1.4;
+  for (let i = 1; i <= SESSION_EDITS; i++) {
+    if (i === 15) { at(t, () => caption(`Claude is reading the code…${helpers()}`)); t += 2.4; }
+    at(t, () => { growBonsai('leaf'); session.edits++; caption(`Claude is editing files… ${session.edits} edit${session.edits === 1 ? '' : 's'}${helpers()}`); });
+    t += 0.5;
+  }
+  at(3.2, () => summonMinion(-1));
+  at(5.6, () => summonMinion(1));
+  at(19, () => dismissMinion());
+  at(21.5, () => dismissMinion());
+  at(23.5, () => { growBonsai('fruit'); caption(`✓ Tests pass · a golden fruit (${session.edits} edits so far)`); });
+  at(29, () => { growBonsai('bloom'); caption('🌸 Task done · a blossom opens'); });
+  at(34, () => {
+    tree.endSession(); saveBonsai();
+    caption(`Session over · ${tree.edits} edit${tree.edits === 1 ? '' : 's'} and ${tree.branches.length} branch${tree.branches.length === 1 ? '' : 'es'} on the ${tree.species} · press ▶ again for another`);
+  });
+  at(40, () => caption(null));
+  steps.sort((a, b) => a.t - b.t);
+  session = { t0, steps, step: 0, edits: 0 };
+  document.getElementById('watch')?.classList.add('on');
+  updateSession(t0);   // the branch sprouts on the press itself
+}
+
+function updateSession(t) {
+  if (!session) return;
+  const { steps } = session;
+  while (session && session.step < steps.length && t - session.t0 >= steps[session.step].t) steps[session.step++].f();
+  if (session && session.step >= steps.length) { session = null; document.getElementById('watch')?.classList.remove('on'); }
+}
+
+/** A subagent: a half-size copy of one of the Gremlets here, hopping on the island beside the pot. */
+async function summonMinion(side) {
+  if (!bonsai) return;
+  const pool = world.creatures.filter((c) => art.has(c.id));
+  const c = pool[Math.floor(Math.random() * pool.length)];
+  const a = c ? art.get(c.id) : (index.length ? await loadSpecies(index[Math.floor(Math.random() * index.length)].id, PX).catch(() => null) : null);
+  if (!a || !bonsai) return;
+  const isle = platforms.find((p) => p.id === bonsai.isle);
+  const room = isle ? isle.w / 2 - 12 : 60;
+  const dx = side * Math.min(room, bonsai.layout.potWidth * bonsai.S / 2 + 12 + Math.random() * 12);
+  minions.push({ art: a, dx, facing: -side, phase: Math.random() * 6.28, t0: now_(), leaveAt: null });
+  particles.burst(null, V(bonsai.base.x + dx, bonsai.base.y + 14), { imgs: [FX.sparkle, FX.smallStar], count: 5, dx: [-16, 16], dy: [-6, 26], duration: 0.7, stagger: 0.04 });
+}
+function dismissMinion() {
+  const m = minions.find((m) => !m.leaveAt);
+  if (!m || !bonsai) return;
+  m.leaveAt = now_();
+  particles.burst(null, V(bonsai.base.x + m.dx, bonsai.base.y + 14), { imgs: [FX.sparkle, FX.smallStar], count: 5, dx: [-16, 16], dy: [-6, 26], duration: 0.7, stagger: 0.04 });
+}
+function updateMinions(t) {
+  for (let i = minions.length - 1; i >= 0; i--) if (!bonsai || (minions[i].leaveAt && t > minions[i].leaveAt + 0.4)) minions.splice(i, 1);
+}
+
+function drawMinions(t) {
+  if (!bonsai) return;
+  for (const m of minions) {
+    const a = m.art, age = t - m.t0;
+    const k = m.leaveAt ? Math.max(0, 1 - (t - m.leaveAt) / 0.4) : Math.min(1, age / 0.4);   // pop in, shrink away
+    const hop = Math.max(0, Math.sin(age * 5.5 + m.phase)) * 9;
+    const f = a.species.frame(hop > 1 ? 'jump' : 'idle', age), r = a.rects[f];
+    if (!r) continue;
+    const sc = PX / 2 * k, w = r.w * sc, h = r.h * sc;
+    const x = bonsai.base.x + m.dx + Math.sin(age * 1.3 + m.phase) * 8, g = toScreen(x, bonsai.base.y), s = toScreen(x, bonsai.base.y + hop);
+    ctx.fillStyle = night ? 'rgba(0,0,20,0.28)' : 'rgba(60,40,20,0.16)';
+    ctx.beginPath(); ctx.ellipse(g.x, g.y - 1, Math.max(1, w * 0.26), PX * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    ctx.translate(Math.round(s.x), Math.round(s.y));
+    if (m.facing < 0) ctx.scale(-1, 1);
+    ctx.drawImage(a.image, r.x, r.y, r.w, r.h, -w / 2, -h, w, h);
+    ctx.restore();
+  }
+}
+
+const keyframe = (vals, u) => { const n = vals.length - 1, f = Math.max(0, Math.min(n, u * n)), i = Math.min(n - 1, Math.floor(f)); return vals[i] + (vals[i + 1] - vals[i]) * (f - i); };
+
+/** The tree's image at 1 art pixel, remade only when the record, season or scale changes (like the Mac's layer cache). */
+function bonsaiArt() {
+  const tree = bonsai.tree, age = tree.ageDays(Date.now() / 1000);
+  const key = [tree.edits, tree.blooms, tree.fruit, tree.branches.length, tree.sessions, MONTH, night, bonsai.scale, Math.floor(age)].join('|');
+  if (bonsai.key !== key) {
+    const r = renderBonsai(tree, bonsai.layout, bonsai.scale, MONTH, night, age);
+    bonsai.art = { img: r.canvas.toCanvas(), anchor: r.anchor, w: r.canvas.w, h: r.canvas.h };
+    bonsai.key = key;
+  }
+  return bonsai.art;
+}
+
+function drawBonsai(t) {
+  if (!bonsai) return;
+  const a = bonsaiArt(), s = toScreen(bonsai.base.x, bonsai.base.y), wpx = a.w * PX, hpx = a.h * PX;
+  const pop = keyframe([0.1, 1.12, 0.96, 1], (t - bonsai.planted) / 0.6);                 // pops in when planted
+  const boing = bonsai.boingAt ? keyframe([1, 0.94, 1.04, 0.99, 1], (t - bonsai.boingAt) / 0.5) : 1;   // springs when a branch sprouts
+  ctx.save();
+  ctx.translate(Math.round(s.x), Math.round(s.y));
+  ctx.scale(pop, pop * boing);
+  ctx.drawImage(a.img, -Math.round(a.anchor.x * wpx), -Math.round((1 - a.anchor.y) * hpx), wpx, hpx);
+  ctx.restore();
+  // The project's name tag hangs under the pot.
+  const fs = PX > 2 ? 10 : 9;
+  ctx.save();
+  ctx.font = `800 ${fs}px ui-rounded, "SF Pro Rounded", system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw = Math.round(Math.min(bonsai.layout.potWidth * bonsai.S + 30, ctx.measureText(PROJECT).width + 12)), th = fs + 6;
+  const tx = Math.round(s.x - tw / 2), ty = Math.round(s.y + bonsai.layout.potHeight * bonsai.S + 3);
+  ctx.fillStyle = 'rgba(26,23,20,0.72)';
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(tx, ty, tw, th, 4); ctx.fill(); } else ctx.fillRect(tx, ty, tw, th);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(PROJECT, Math.round(s.x), ty + th / 2 + 0.5, tw - 8);
+  ctx.restore();
+}
+
 // ---------------------------------------------------------------- link sheet
 
 function updateRoomUI() {
@@ -1351,6 +1564,11 @@ async function start() {
       updateRoomUI();
     }
     wirePad();
+    // The project bonsai: a saved tree takes root again (?fresh starts over); ▶ plays a Claude session on it.
+    bonsai = params.has('fresh') ? null : loadBonsai();
+    if (bonsai) { placeBonsai(); applyDoor(); }
+    document.getElementById('watch')?.addEventListener('click', watchSession);
+    if (params.has('watch')) setTimeout(watchSession, 1500);
     document.getElementById('rain')?.addEventListener('click', () => summonCloud());
     document.getElementById('boss')?.addEventListener('click', () => {
       if (boss) return;
@@ -1377,7 +1595,7 @@ async function start() {
       updateLinkUI();
     }
   }
-  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; } };
+  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, watchSession, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; }, get bonsai() { return bonsai; }, get session() { return session; } };
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 

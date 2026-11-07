@@ -202,6 +202,32 @@ body.showcase #bar, body.showcase #hint { display: none; }
 
 #boss.on { background: #ffe3d6; border-color: #ff7a4d; }
 
+/* ---------- project bonsai: "▶ Watch a Claude session" and its caption under the bar ---------- */
+#watch.on { background: #e6f4df; border-color: #5aa54e; }
+#session {
+  position: fixed;
+  top: calc(max(10px, env(safe-area-inset-top)) + 62px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100vw - 32px);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.9);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  pointer-events: none;
+  z-index: 4;
+}
+#session[hidden] { display: none; }
+#session span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#session::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #5aa54e; animation: pulse 1.3s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+/* The long label only when the bar has room for it; otherwise just the play glyph. */
+@media (max-width: 839px) { #watch .wide { display: none; } #watch .narrow { display: inline; } }
+
 /* ---------- small phones: keep the toolbar and hint inside the screen ---------- */
 @media (max-width: 560px) {
   #hint { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 32px); border-radius: 14px; }
@@ -210,4 +236,8 @@ body.showcase #bar, body.showcase #hint { display: none; }
   #bar { gap: 4px; padding-right: 6px; }
   #bar .btn { padding-left: 8px; padding-right: 8px; }
   #bar:has(.chip-link:not([hidden])) .logo { display: none; }
+}
+/* The narrowest phones (320 px): six icon buttons only fit without the wordmark. */
+@media (max-width: 359px) {
+  #bar .logo { display: none; }
 }

@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var overlay: OverlayController!
     private var statusItem: NSStatusItem!
     private var defaultStatusImage: NSImage?
+    private var lastIconSwap: CFTimeInterval = 0
     private var timer: Timer?
     private var currentRate: Double = 0
     private var lastTick = CACurrentMediaTime()
@@ -1116,12 +1117,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // The menu bar says what the Claude sessions need, when the focus timer isn't using it.
         let jobs = world.creatures.compactMap { $0.job }.filter { $0.kind == .claude && $0.phase != .leaving }
         let needs = jobs.filter(\.needsYou).count
-        let claudeLabel: String? = jobs.isEmpty ? nil : needs > 0 ? "\(needs) need\(needs == 1 ? "s" : "") you" : "\(jobs.count) growing"
+        // Kept short: a crowded menu bar (a notch, a recording indicator) hides the widest item first. One session is
+        // told by the tree icon alone; words only when Claude needs you or several sessions run.
+        let claudeLabel: String? = jobs.isEmpty ? nil : needs > 0 ? (needs == 1 ? "needs you" : "\(needs) need you") : (jobs.count > 1 ? "\(jobs.count) growing" : nil)
         let title = focus.label ?? claudeLabel
         // While a tree grows on a terminal it is the menu bar icon too, filling out as the session goes.
-        let liveTree = world.bonsaiPlacements.first { $0.slot < 0 }.flatMap { world.bonsaiBook[$0.project] }
-        let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month) } ?? defaultStatusImage
-        if statusItem.button?.image !== wantIcon { statusItem.button?.image = wantIcon }
+        // (Swapped at most every couple of seconds: the status bar re-lays out on every image change, and a burst of
+        // edits during a recording once made the item disappear until the next title change.)
+        let tickNow = CACurrentMediaTime()
+        if tickNow - lastIconSwap > 2.5 {
+            let liveTree = world.bonsaiPlacements.first { $0.slot < 0 }.flatMap { world.bonsaiBook[$0.project] }
+            let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month) } ?? defaultStatusImage
+            if statusItem.button?.image !== wantIcon { statusItem.button?.image = wantIcon; lastIconSwap = tickNow }
+        }
         if title != lastTitle {
             statusItem.button?.title = title.map { " " + $0 } ?? ""
             statusItem.button?.imagePosition = .imageLeading

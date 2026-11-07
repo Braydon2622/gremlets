@@ -6,7 +6,8 @@ enum MenuTreeIcon {
     private static var cache: (key: String, image: NSImage)?
 
     static func image(_ t: Bonsai, month: Int) -> NSImage {
-        let key = "\(t.project)|\(t.edits)|\(t.blooms)|\(t.fruit)|\(t.branches.count)|\(month)"
+        // Redrawn every few edits, not every one.
+        let key = "\(t.project)|\(t.edits / 4)|\(t.blooms)|\(t.fruit)|\(t.branches.count)|\(month)"
         if let c = cache, c.key == key { return c.image }
         let layout = BonsaiGeometry.layout(t)
         let bare = BonsaiArt.isWinter(month) && t.species.deciduous

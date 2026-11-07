@@ -5,9 +5,10 @@ import GremletsCore
 enum MenuTreeIcon {
     private static var cache: (key: String, image: NSImage)?
 
-    static func image(_ t: Bonsai, month: Int) -> NSImage {
+    /// `waiting`: Claude needs your OK, so a little lantern glows beside the tree (words would not fit a crowded bar).
+    static func image(_ t: Bonsai, month: Int, waiting: Bool = false) -> NSImage {
         // Redrawn every few edits, not every one.
-        let key = "\(t.project)|\(t.edits / 4)|\(t.blooms)|\(t.fruit)|\(t.branches.count)|\(month)"
+        let key = "\(t.project)|\(t.edits / 4)|\(t.blooms)|\(t.fruit)|\(t.branches.count)|\(month)|\(waiting)"
         if let c = cache, c.key == key { return c.image }
         let layout = BonsaiGeometry.layout(t)
         let bare = BonsaiArt.isWinter(month) && t.species.deciduous
@@ -43,6 +44,10 @@ enum MenuTreeIcon {
                     ctx.setFillColor(CGColor(red: 1, green: 0.78, blue: 0.3, alpha: 1))
                     for pad in layout.pads.suffix(min(3, t.fruit)) { let c = P(pad.center); ctx.fillEllipse(in: CGRect(x: c.x + 1, y: c.y - 1.6, width: 2, height: 2)) }
                 }
+            }
+            if waiting {
+                ctx.setFillColor(CGColor(red: 1, green: 0.62, blue: 0.2, alpha: 1)); ctx.fillEllipse(in: CGRect(x: 14.5, y: 11.5, width: 5.5, height: 5.5))
+                ctx.setFillColor(CGColor(red: 1, green: 0.93, blue: 0.6, alpha: 1)); ctx.fillEllipse(in: CGRect(x: 16, y: 13, width: 2.5, height: 2.5))
             }
             return true
         }

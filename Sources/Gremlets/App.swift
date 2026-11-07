@@ -1119,7 +1119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let needs = jobs.filter(\.needsYou).count
         // Kept short: a crowded menu bar (a notch, a recording indicator) hides the widest item first. One session is
         // told by the tree icon alone; words only when Claude needs you or several sessions run.
-        let claudeLabel: String? = jobs.isEmpty ? nil : needs > 0 ? (needs == 1 ? "needs you" : "\(needs) need you") : (jobs.count > 1 ? "\(jobs.count) growing" : nil)
+        let claudeLabel: String? = jobs.count > 1 ? (needs > 0 ? "\(needs) need\(needs == 1 ? "s" : "") you" : "\(jobs.count) growing") : nil
         let title = focus.label ?? claudeLabel
         // While a tree grows on a terminal it is the menu bar icon too, filling out as the session goes.
         // (Swapped at most every couple of seconds: the status bar re-lays out on every image change, and a burst of
@@ -1127,7 +1127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let tickNow = CACurrentMediaTime()
         if tickNow - lastIconSwap > 2.5 {
             let liveTree = world.bonsaiPlacements.first { $0.slot < 0 }.flatMap { world.bonsaiBook[$0.project] }
-            let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month) } ?? defaultStatusImage
+            let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month, waiting: needs > 0) } ?? defaultStatusImage
             if statusItem.button?.image !== wantIcon { statusItem.button?.image = wantIcon; lastIconSwap = tickNow }
         }
         if title != lastTitle {

@@ -7,6 +7,9 @@ import GremletsCore
 /// (only titles need it), so no permission prompt is needed for this feature.
 enum WindowTracker {
     static let ownPID = Int(ProcessInfo.processInfo.processIdentifier)
+    /// Whether the system screenshot tool (⌘⇧4 / ⌘⇧5 crosshair, toolbar or thumbnail) was on screen at the last snapshot.
+    /// Only the window's owner name is read, which needs no permission.
+    static var screenshotToolVisible = false
 
     /// Normal app windows, front-most first, in global y-up (Cocoa) coordinates.
     static func snapshot() -> [WindowInfo] {
@@ -17,6 +20,7 @@ enum WindowTracker {
         let primaryHeight = Double(primary.frame.height)
         var out: [WindowInfo] = []
         out.reserveCapacity(list.count)
+        screenshotToolVisible = list.contains { ($0[kCGWindowOwnerName as String] as? String) == "screencaptureui" }
         for w in list {
             guard (w[kCGWindowLayer as String] as? Int) == 0,
                   (w[kCGWindowOwnerPID as String] as? Int) != ownPID,

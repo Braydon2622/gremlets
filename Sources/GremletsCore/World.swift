@@ -79,6 +79,10 @@ public final class World {
     var nextSummitAt = 900.0
     var nextExpeditionAt = 0.0
     var expeditionEvents: [ExpeditionEvent] = []
+    /// Boosts and reactions to the Mac (see Teamwork.swift).
+    var teamEvents: [TeamEvent] = []
+    var nextBoostAt = 180.0
+    var lastPose = -100.0
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
     public internal(set) var ferry: Ferry?
     var nextFerryAt: Double?
@@ -321,6 +325,8 @@ public final class World {
         updateChests(dt)
         updateFlags()
         updateExpeditions(dt)
+        updateBoosts()
+        updateSigns()
         updateFerry(dt)
         updateMerchant(dt)
         updateBonsai(dt)
@@ -461,7 +467,8 @@ public final class World {
             }
             if c.activity == .run { endTag(c) }
             endSocial(c)
-            if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) } else { Brain.decide(c, in: self) }
+            if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
+            else if c.boost != nil || c.helping != nil { boostDecide(c) } else { Brain.decide(c, in: self) }
         }
     }
 
@@ -506,7 +513,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1
@@ -755,7 +762,7 @@ public final class World {
 
     func canUseDoor(_ c: Creature) -> Bool {
         c.job == nil && c.expedition == nil && c.stair == nil && c.rail == nil && c.building == nil && c.play == nil
-            && c.groveTask == nil && c.homeUntil == nil && !c.isAsleep
+            && c.groveTask == nil && c.homeUntil == nil && !c.isAsleep && c.boost == nil && c.helping == nil
     }
 
     /// Gremlets that have walked (or flown) out through the doorway; the platform layer hands them to the other screen.

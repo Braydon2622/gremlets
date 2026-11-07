@@ -24,6 +24,7 @@ final class SpectacleRenderer {
     private var chestLayers: [Int: (layer: CALayer, key: String)] = [:]
     private var flagLayers: [Int: CALayer] = [:]
     private var stackLayers: [Int: (layer: CALayer, n: Int)] = [:]
+    private var signLayers: [Int: (layer: CALayer, sign: HeldSign)] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
@@ -818,6 +819,23 @@ final class SpectacleRenderer {
                 stackLayers[c.id] = e
             }
         }
+        // Signs held up over heads (battery low, no signal), bobbing a little.
+        var holders = Set<Int>()
+        for c in world.creatures {
+            guard let s = c.sign, let (si, pt) = local(c.pos + Vec2(0, c.size.y - 4)) else { continue }
+            holders.insert(c.id)
+            var e = signLayers[c.id] ?? {
+                let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1
+                let img = SignArt.image(s); l.contents = img; l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                popIn(l)
+                return (l, s)
+            }()
+            if e.sign != s { let img = SignArt.image(s); e.layer.contents = img; e.sign = s }
+            attach(e.layer, si)
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: (pt.y + sin(CACurrentMediaTime() * 3 + Double(c.id)) * 2).rounded())
+            signLayers[c.id] = e
+        }
+        for (id, e) in signLayers where !holders.contains(id) { fade(e.layer, to: 0, remove: true); signLayers[id] = nil }
         for (id, l) in pulleyLayers where !riders.contains(id) { l.removeFromSuperlayer(); pulleyLayers[id] = nil }
         for (id, e) in stackLayers where !climbers.contains(id) { fade(e.layer, to: 0, remove: true); stackLayers[id] = nil }
         // Chests: on their perch, or over a carrier's head (with a little bob).
@@ -865,6 +883,39 @@ final class SpectacleRenderer {
             flagLayers[f.id] = l
         }
         for (id, l) in flagLayers where !flagsAlive.contains(id) { fade(l, to: 0, remove: true); flagLayers[id] = nil }
+    }
+
+    func handle(_ events: [TeamEvent]) {
+        func at(_ id: Int, _ up: Double = 1) -> (Int, CGPoint)? {
+            guard let c = world.creatures.first(where: { $0.id == id }) else { return nil }
+            return local(c.pos + Vec2(0, c.size.y * up))
+        }
+        for e in events {
+            switch e {
+            case .boostStarted(let climber, let helper):
+                overlay.showBubble(["Give me a boost?", "Little help?", "Lift me up?"].randomElement()!, on: climber, seconds: 2.2)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.overlay.showBubble(["On it!", "I got you.", "Hop on!"].randomElement()!, on: helper, seconds: 2) }
+            case .heave(let climber, let helper):
+                overlay.showBubble("Hup!", on: helper, seconds: 1.2)
+                if let (si, pt) = at(climber, 0.2) { overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 6, dx: -24...24, dy: -6...20, duration: 0.6) }
+            case .boostDone(let climber, let helper):
+                if let (si, pt) = at(climber) { overlay.burst([Effects.heart, Effects.sparkle], si: si, at: pt, count: 5, dx: -20...20, dy: 10...40, duration: 1.0) }
+                overlay.showBubble(["Thanks!", "Made it! Thank you!", "Teamwork!"].randomElement()!, on: climber, seconds: 2.2)
+                _ = helper
+            case .boostFailed:
+                break
+            case .posed(let ids):
+                for id in ids {
+                    if let (si, pt) = at(id, 1.1) { overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 3, dx: -20...20, dy: 4...24, duration: 0.7) }
+                }
+                if let first = ids.randomElement() { overlay.showBubble(["Cheese!", "Get my good side!", "📸 ✌️", "Ready!"].randomElement()!, on: first, seconds: 2.2) }
+            case .signUp(let id, let s):
+                overlay.showBubble(s == .battery ? "Battery's getting low! 🔋" : "No internet… 📡", on: id, seconds: 3)
+            case .signDown(let id, let s, let cheer):
+                if cheer { overlay.showBubble(s == .battery ? "Ahh, power! ⚡" : "We're back online!", on: id, seconds: 2.4) }
+                if cheer, let (si, pt) = at(id) { overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 6, dx: -24...24, dy: 10...40, duration: 0.9) }
+            }
+        }
     }
 
     func handle(_ events: [ExpeditionEvent]) {

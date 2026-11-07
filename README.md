@@ -50,6 +50,11 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
   (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
   on your desktop, in a card and in the web habitat.
+- **They help each other, and notice your Mac.** A window just too high to jump? A friend walks to its foot, braces,
+  and heaves the climber up off its head ("Hup!"). Press ⌘⇧4 and everyone strikes a pose before you take the shot.
+  Battery low, one holds up a little battery sign (and cheers when you plug in); the internet drops, one holds up a
+  "no signal" sign until it's back. No permissions: only the screenshot tool's window name, the battery level and
+  the network state are read. (`gremlet boost`, `gremlet react screenshot|battery|offline|online`.)
 - **Walk off the Mac onto your iPad.** Link another screen (an iPad, a phone, a friend's laptop running the web
   habitat; the Gremlets menu shows a QR code) and put it against one edge of your Mac. A Gremlet that wanders to that
   edge walks straight off the Mac and in from the opposite edge of the other screen, keeping its stride and speed
@@ -62,7 +67,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 125 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 127 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.

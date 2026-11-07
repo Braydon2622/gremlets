@@ -76,6 +76,12 @@ public final class Creature {
     var doorChoice = false
     var doorForced = false
     var arrivedAt = -100.0
+    /// A boost: the climber's plan, or (for the helper) the climber it's lifting.
+    public internal(set) var boost: Boost?
+    public internal(set) var helping: Int?
+    /// A little sign held over its head (battery low, no signal) and until when.
+    public internal(set) var sign: HeldSign?
+    var signUntil = 0.0
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?
     var grappleTime = 0.0

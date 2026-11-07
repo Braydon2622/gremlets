@@ -812,3 +812,40 @@ extension TerrainArt {
         return cv.image
     }
 }
+
+/// Little signs a Gremlet holds up over its head (see Teamwork.swift).
+enum SignArt {
+    static func image(_ s: HeldSign) -> CGImage {
+        var cv = PixelCanvas(15, 17)
+        // Board on a stick.
+        cv.vspan(7, 0, 6, 0x6B4428)
+        cv.rect(0, 6, 15, 11, 0x8A5A35)
+        cv.rect(1, 7, 13, 9, 0xF1E4C8)
+        switch s {
+        case .battery:
+            // A battery with one red bar left.
+            cv.rect(3, 9, 8, 5, 0x3A3A3A); cv.rect(11, 10, 1, 3, 0x3A3A3A)
+            cv.rect(4, 10, 6, 3, 0xF1E4C8)
+            cv.rect(4, 10, 2, 3, 0xE8574A)
+        case .noSignal:
+            // Wi-Fi arcs, crossed out.
+            for (r, c) in [(5.0, 0x9AA3AE), (3.4, 0x9AA3AE), (1.8, 0x9AA3AE)] as [(Double, UInt32)] {
+                for a in stride(from: 0.75, through: 2.4, by: 0.08) {
+                    cv.set(Int((7 + cos(a) * r).rounded()), Int((8 + sin(a) * r).rounded()), c)
+                }
+            }
+            cv.set(7, 8, 0x9AA3AE)
+            cv.line(3, 14, 11, 8, 0xE8574A)
+        }
+        cv.outline(0.7)
+        return cv.image
+    }
+
+    /// The flash of a camera: a soft white burst.
+    static let flash: CGImage = {
+        var cv = PixelCanvas(9, 9)
+        cv.blob(4.5, 4.5, 4.3, 4.3, base: 0xFFFFFF)
+        for i in 0..<9 { cv.set(4, i, 0xFFFFFF); cv.set(i, 4, 0xFFFFFF) }
+        return cv.image
+    }()
+}

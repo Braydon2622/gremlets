@@ -1,4 +1,5 @@
 import AppKit
+import Network
 import Carbon.HIToolbox
 import ServiceManagement
 import GremletsCore
@@ -54,6 +55,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let focusLog = FocusLogStore()
     private let phone = PhoneLink()
     private let bridge = ScreenBridge()
+    /// Watching the Mac: battery, the network, the screenshot tool.
+    private let netMonitor = NWPathMonitor()
+    private var online: Bool?
+    private var batteryLowShown = false
+    private var lastBatteryCheck: CFTimeInterval = 0
+    private var screenshotWasVisible = false
     private var lastDoorCheck: CFTimeInterval = 0
     private let icons = DesktopIcons()
     private let controls = AppControls()
@@ -196,6 +203,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(world.drainBuildEvents())
         overlay.fx.handle(world.drainTerrainEvents())
         overlay.fx.handle(world.drainExpeditionEvents())
+        overlay.fx.handle(world.drainTeamEvents())
+        watchTheMac()
         // The doorway to a linked screen: open while the other screen is around; whoever walks through it goes over.
         let doorNow = CACurrentMediaTime()
         if doorNow - lastDoorCheck > 5 { lastDoorCheck = doorNow; updateDoor() }
@@ -841,6 +850,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bridge.onWalk = { [weak self] w in self?.arriveThroughBridge(w) }
         bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
         bridge.start()
+        netMonitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let now = path.status == .satisfied
+                if let was = self.online, was != now { self.world.machineSignal(now ? .online : .offline); self.schedule(rate: 60) }
+                self.online = now
+            }
+        }
+        netMonitor.start(queue: DispatchQueue(label: "gremlets.net"))
         if phone.isPaired { phone.start() }
         server.start()
         control = server
@@ -1014,6 +1032,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true,"url":"\#(bridge.inviteURL ?? "")","side":"\#(side)"}"#)
         case "unlink":
             bridge.unlink(); updateDoor(); rebuildMenu()
+            return (200, #"{"ok":true}"#)
+        case "boost":
+            guard world.startBoostWithAnyone() else { return (409, #"{"ok":false,"error":"no pair free near a window just out of jumping reach"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "react":
+            // Demo the reactions to the Mac without waiting for them: screenshot, battery, plugged, offline, online.
+            let sig: MachineSignal?
+            switch query["name"] ?? "" {
+            case "screenshot": sig = .screenshot
+            case "battery": sig = .batteryLow(percent: 9)
+            case "plugged": sig = .pluggedIn
+            case "offline": sig = .offline
+            case "online": sig = .online
+            default: sig = nil
+            }
+            guard let sig else { return (400, #"{"ok":false,"error":"name must be screenshot, battery, plugged, offline or online"}"#) }
+            world.machineSignal(sig)
+            schedule(rate: 60)
             return (200, #"{"ok":true}"#)
         case "cross":
             guard world.door != nil else { return (409, #"{"ok":false,"error":"no doorway: link another screen first (gremlet link) and open the link there"}"#) }
@@ -1382,6 +1419,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         phone.pair()
         if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/pair") { NSWorkspace.shared.open(url) }
         rebuildMenu()
+    }
+
+    // MARK: Watching the Mac
+
+    /// Cheap checks each tick: the screenshot tool appearing (pose!), and every half minute the battery.
+    private func watchTheMac() {
+        let shot = WindowTracker.screenshotToolVisible
+        if shot && !screenshotWasVisible { world.machineSignal(.screenshot); schedule(rate: 60) }
+        screenshotWasVisible = shot
+        let now = CACurrentMediaTime()
+        guard now - lastBatteryCheck > 30 else { return }
+        lastBatteryCheck = now
+        guard let b = SystemSignals.battery() else { return }
+        if !b.charging && b.percent <= 15 && !batteryLowShown {
+            batteryLowShown = true
+            world.machineSignal(.batteryLow(percent: b.percent))
+        } else if b.charging && batteryLowShown {
+            batteryLowShown = false
+            world.machineSignal(.pluggedIn)
+        } else if b.percent > 20 {
+            batteryLowShown = false
+        }
     }
 
     // MARK: Screen link (the doorway)

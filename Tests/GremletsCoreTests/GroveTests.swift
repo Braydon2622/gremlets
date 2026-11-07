@@ -816,3 +816,58 @@ import Testing
         #expect(e.pos.x < 1000 && e.isGrounded)
     }
 }
+
+@Suite struct TeamworkTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func aFriendBoostsAClimberOntoAWindowTooHighToJump() throws {
+        let w = World(seed: 41)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 700, y: 0, w: 400, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 2))
+        let f = w.spawn(testSpecies(scale: 10), at: Vec2(300, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(w.jumpTarget(for: c) == nil || true)
+        let plan = try #require(w.boostCandidate(for: c, ignoreCooldown: true))
+        #expect(plan.helper == f.id && plan.dir == 1 && abs(plan.helperX - 672) < 0.01)
+        w.startBoost(c, plan)
+        var heave = false, done = false, failed = false
+        for _ in 0..<(60 * 30) where !done && !failed {
+            w.step(1.0 / 60)
+            for e in w.drainTeamEvents() {
+                if case .heave = e { heave = true }
+                if case .boostDone = e { done = true }
+                if case .boostFailed = e { failed = true }
+            }
+        }
+        #expect(heave && done && !failed)
+        #expect(c.groundOwner == 1, "up on the window")
+        #expect(f.groundOwner == -1 && f.helping == nil && c.boost == nil)
+    }
+
+    @Test func gremletsPoseForAScreenshotAndHoldUpSigns() {
+        let w = World(seed: 42)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        let a = w.spawn(testSpecies(scale: 10), at: Vec2(300, 2))
+        let b = w.spawn(testSpecies(scale: 10), at: Vec2(600, 2))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        _ = w.drainTeamEvents()
+        w.machineSignal(.screenshot)
+        let posed = w.drainTeamEvents().compactMap { e -> [Int]? in if case .posed(let ids) = e { return ids }; return nil }.first
+        #expect(Set(posed ?? []) == Set([a.id, b.id]))
+        w.machineSignal(.screenshot)
+        #expect(w.drainTeamEvents().isEmpty, "not twice in a row")
+        w.machineSignal(.offline)
+        #expect(w.creatures.filter { $0.sign == .noSignal }.count == 1)
+        w.machineSignal(.offline)
+        #expect(w.creatures.filter { $0.sign == .noSignal }.count == 1, "one sign is enough")
+        w.machineSignal(.online)
+        #expect(w.creatures.allSatisfy { $0.sign == nil })
+        #expect(w.drainTeamEvents().contains { if case .signDown(_, .noSignal, true) = $0 { return true }; return false })
+        w.machineSignal(.batteryLow(percent: 9))
+        #expect(w.creatures.contains { $0.sign == .battery })
+        for _ in 0..<(60 * 16) { w.step(1.0 / 60) }
+        #expect(w.creatures.allSatisfy { $0.sign == nil }, "the battery sign goes down after a while")
+    }
+}

@@ -1,4 +1,5 @@
 import AppKit
+import IOKit.ps
 import Carbon.HIToolbox
 import CoreAudio
 import CoreMediaIO
@@ -87,6 +88,19 @@ enum SystemSignals {
     }
 
     // MARK: Idle & power
+
+    /// The internal battery: percent and whether it's on wall power (nil on a Mac without a battery).
+    static func battery() -> (percent: Int, charging: Bool)? {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return nil }
+        for ps in list {
+            guard let d = IOPSGetPowerSourceDescription(info, ps)?.takeUnretainedValue() as? [String: Any],
+                  d[kIOPSTypeKey] as? String == kIOPSInternalBatteryType,
+                  let cur = d[kIOPSCurrentCapacityKey] as? Int, let max = d[kIOPSMaxCapacityKey] as? Int, max > 0 else { continue }
+            return (cur * 100 / max, d[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue)
+        }
+        return nil
+    }
 
     /// Seconds since the last keyboard, mouse or trackpad event, from any app.
     static func idleSeconds() -> Double {

@@ -8,16 +8,15 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 
 **What it is now:** a desktop AI companion whose world is grown by your work with Claude Code.
 
-- **Every project grows a bonsai.** While a Claude Code session runs, its project's tree is rooted on that terminal
-  window: a new branch per session, a leaf per file edit, a flower per finished task, golden fruit when tests pass.
-  Species and style come from the project's name; maples turn in autumn, cherries blossom in spring, the deciduous
-  ones stand bare under snow. Between sessions the trees rest on bracket shelves up the side of the screen. Gremlets
-  sit in the foliage and nap there after dark. Click a tree for its story. While a session runs the growing tree is
+- **Every project grows a bonsai.** While a Claude Code session runs, its project's tree grows out of the moss on that
+  terminal window: a classic cloud-pad bonsai (a curving, tapering trunk, roots flaring at its foot, flat pads of
+  foliage in an uneven triangle) that gets bigger and fuller with every session, flowers with finished tasks and
+  fruits when tests pass. Species and style come from the project's name; maples turn in autumn, cherries blossom in
+  spring, the deciduous ones stand bare under snow. Gremlets sit in the pads and nap there after dark. Click a tree for its story. While a session runs the growing tree is
   also the menu bar icon, and a lantern hangs from it whenever Claude is waiting for your OK.
 - **The terminal comes alive while Claude works.** Ivy creeps along its top edge, mossy ledges grow out of its side
-  every few edits (platforms the Gremlets use), each edit lays a block of a little house beside it (a timber cottage,
-  an igloo, an adobe, a mossy temple, a mushroom house, a crystal spire or a lighthouse on a cloud, depending on the
-  island), subagents arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow.
+  every few edits (platforms the Gremlets use), subagents arrive as tiny helpers, a failed command brings rain, a
+  passing test run a rainbow.
   When Claude compacts its context, the tree lets a few leaves go.
 - **A plant in the corner, a different one every so often.** One small plant at a time stands in the bottom-left
   corner, and every 20 to 40 minutes another takes its place: a trampoline mushroom to bounce on, a lantern flower to
@@ -41,14 +40,14 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   (`gremlet chest`, `gremlet expedition`.)
 - **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
   ferry, wind that sweeps leaves along the floor, a kite on a free afternoon, shy night spirits.
-- **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
+- **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on nature shelves beside your
   windows, a garden journal (today, your streak, every tree's story, two weeks of Claude work, your recent sessions
-  minute by minute), a morning recap, a daily postcard and a time-lapse of your village, and a 44-second scripted demo
+  minute by minute), a morning recap, a daily postcard and a time-lapse, and a 44-second scripted demo
   you can record with one command.
 - **Pictures of your work, ready to post:** `gremlet recap` (a session as a card: the tree before and after, the
   numbers, a bar per minute; one is saved automatically when a session with real work ends), `gremlet card <project>`,
   `gremlet forest` (every project's tree on one hillside), `gremlet wrapped` (a month as a poster), `gremlet snapshot`
-  (the village) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
+  (a postcard of their world) and `gremlet timelapse [project]`. Everything is drawn from the same records, so a tree looks the same
   on your desktop, in a card and in the web habitat.
 - **Claude talks to the Gremlets.** With the MCP server (`scripts/install-claude-extras`), Claude Code can make
   the Gremlet on its project say something, celebrate when something lands, lay out its plan as a row of planks on
@@ -59,19 +58,20 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   front window (Screen Recording; on-device text recognition, positions only), save highlight GIFs of treasure runs
   and boosts to Movies › Gremlets › Highlights (Screen Recording). Gremlets never move, resize or focus your windows
   on their own.
-- **Your codebase, as a castle.** While Claude works on a project, its code stands as a little castle on top of the
-  terminal window: a tower per top-level folder (taller with more files, bricks in the colours of its languages),
-  the root files as the keep, a flag in the main language. Every edit Claude makes lands a block on that folder's
-  tower, and the Gremlets climb the towers. Read from `git ls-files` on your Mac; nothing leaves it.
+- **A hut beside Claude's terminal.** A mossy branch grows out of the terminal window's top corner and a little woven
+  acorn hut hangs from it on a vine, its window glowing while Claude works. It hangs outside the window, swings when
+  you drag the terminal, and a vine links it to the hanging house so the Gremlets visit.
 - **Their home hangs under the notch.** A little house with a mossy roof hangs from the menu bar beside the notch (the
-  middle of the menu bar on other Macs), its window glowing while Claude works, a hammock beside it. When Claude goes
-  quiet, or it's late, a Gremlet finds its way up across your windows and naps in the hammock or goes inside (smoke
-  curls from the chimney). It tucks itself away whenever a window is in that space.
+  middle of the menu bar on other Macs), with a porch, a swing, a mailbox and a hammock. Its roof follows the seasons,
+  it grows a balcony, a loft and a rooftop garden as your Claude sessions add up, and its lights stay on until the
+  last one turns in. When Claude goes quiet, or it's late, a Gremlet finds its way up across your windows and naps in
+  the hammock or goes inside (smoke curls from the chimney); in the morning they drift down on a leaf. It tucks
+  itself away whenever a window is in that space.
 - **Give one a ride.** Hold ⌃⌥ and a cloud appears under your pointer: the nearest Gremlet hops on and rides
   wherever you move it. Let go to drop it onto a window.
 - **Their day follows Claude.** While Claude works, the Gremlets plant and tend moss and water the plants; a couple
   of minutes after it stops, they head home or settle on a platform and rest.
-- **A page for your village.** `gremlet village-page [folder]` writes a small read-only web page of your village as
+- **A page for their world.** `gremlet village-page [folder]` writes a small read-only web page of their world as
   it is now (the postcard, the counts behind it, the Gremlets who live there, a share preview for X) to drop on any
   static host. Counts and Gremlet names only: no project names or anything from your sessions.
 - **Weather where you are (opt-in, menu → Weather).** Type your city once (no location permission; Open-Meteo, no
@@ -201,17 +201,14 @@ source scripts/gremlet-shell-hook.zsh   # zsh: a Gremlet waves (or keels over) w
 ```
 
 **Gardening.** While you're at your Mac, a Gremlet now and then takes up gardening. Usually it hangs a shelf on the
-side of a nearby window, or on the wall (the screen's edge) when no window has room, and gets up there on a balloon, in a
-soap bubble, holding a giant dandelion puff, or bounced up by a mushroom that pops out of the ground; it comes back down
-under an umbrella or a big leaf. Every platform is different: a wooden plank, a mossy stone ledge, a living leaf that sways,
-a cloud that bobs, a bracket fungus, a limb of a whole tree that grows up beside the window (a leaning trunk with
-roots and a knot hole, limbs spreading out away from the window, leaf clusters that turn with the season, trailing
-vines, a rope swing, a bird's nest; every tree a little different), a swing held up by
-balloons, a treehouse porch with a little cabin up in that tree, a flying carpet that ripples and drifts, the basket of a hot-air
-balloon that drifts beside the window with its burner flickering, or (for floor gardens) the mossy shell of a giant
-garden snail that crawls slowly along the bottom of the screen, eyestalks wiggling. Moving platforms carry their
-gardener along. Click a platform and it reacts: the cloud rains on the plants, the leaf rustles, the balloon's burner
-roars, the snail pulls its eyes in, the treehouse chimney puffs smoke. Birds drop by to perch on the end now and then. One Gremlet per shelf; window shelves ride along when you move the window and don't care if another window
+side of a nearby window, or on the wall (the screen's edge) when no window has room, and floats up there holding a giant dandelion
+puff, or gets bounced up by a mushroom that pops out of the ground; it drifts back down under a big leaf. Every platform
+is something from the forest, and moss creeps out along it while it's in use: a wooden plank, a mossy stone ledge, a
+living leaf that sways, a bracket fungus, or (on the screen's sides only) the limb of a whole tree that grows up
+there, an oak, pine, maple, birch, cherry or willow, each turning its own colour in autumn, or a treehouse porch with a
+little cabin up in it; or (for floor gardens) the mossy shell of a giant garden snail that crawls slowly along the
+bottom of the screen, eyestalks wiggling. Moving platforms carry their gardener along. Click a platform and it reacts:
+the leaf rustles, the snail pulls its eyes in, the treehouse chimney puffs smoke. Birds drop by to perch on the end now and then. One Gremlet per shelf; window shelves ride along when you move the window and don't care if another window
 covers it. Sometimes it gardens right on the floor instead. On the shelf
 sits a window box with three spots. The Gremlet plants a seed in each, waters whichever plant is getting dry (the soil
 darkens when it's wet), shoos off aphids and pulls weeds, and the plants grow through five stages: seed, sprout, young

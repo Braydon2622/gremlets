@@ -1359,6 +1359,7 @@ final class OverlayController {
                 if islandStyles.contains(j.shelfStyle) && st.biome == nil { st.biome = Biome.pick(j.shelfStyle, seed: seed, month: world.month) }
                 if st.shelf == nil || st.shelfPx != px || st.screen != si {
                     st.shelf?.removeFromSuperlayer()
+                    if st.screen != si { st.moss?.removeFromSuperlayer(); st.moss = nil; st.mossKey = "" }   // regrows on the new screen
                     let l = pixelLayer(si, anchor: CGPoint(x: 0, y: 1))
                     if let b = st.biome {
                         setImage(l, IslandArt.body(b, widthPx: px, seed: seed))
@@ -1446,7 +1447,7 @@ final class OverlayController {
                     let lx = side > 0 ? s.maxX - 12 : s.minX + 12
                     st.lantern?.position = CGPoint(x: (lx - o.x).rounded(), y: (s.y - o.y - 9).rounded())
                 } else if let l = st.lantern { l.removeFromSuperlayer(); st.lantern = nil }
-            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil; st.extra?.removeFromSuperlayer(); st.extra = nil; st.decor?.removeFromSuperlayer(); st.decor = nil; st.decorKey = "" }
+            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil; st.extra?.removeFromSuperlayer(); st.extra = nil; st.decor?.removeFromSuperlayer(); st.decor = nil; st.decorKey = ""; st.moss?.removeFromSuperlayer(); st.moss = nil; st.mossKey = "" }
             // No shelf (working on the floor): the building goes up on the ground beside it.
             if shelf == nil { updateBuild(&st, c, j, ground: ref.y, x: ref.x - j.propSide * 90, si: si, origin: o) }
 

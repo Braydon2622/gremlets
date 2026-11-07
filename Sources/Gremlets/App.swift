@@ -57,6 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let bridge = ScreenBridge()
     private let sense = ScreenSense()
     private var compactPreviewUntil: CFTimeInterval = 0
+    /// Gremlets visiting from a friend's Mac (creature id → their home Mac's id).
+    private var guests: [Int: String] = [:]
     private var liftKeysSince: CFTimeInterval?
     private lazy var weatherService = WeatherService(world: world)
     /// Watching the Mac: battery, the network, the screenshot tool.
@@ -296,7 +298,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let isFull = WindowTracker.fullScreenSpace || CACurrentMediaTime() < compactPreviewUntil
         // The hanging house: under the notch normally; in the top-right corner while an app is full screen.
         world.notchHome = isFull ? Self.cornerHome() : Self.notchHome()
-        if isFull != world.compact { world.compact = isFull; schedule(rate: 60) }
         // (Below the notch band, where a full-screen app's content starts.)
         let screens = isFull ? NSScreen.screens.map { s -> Rect in
             let top: Double
@@ -304,6 +305,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return Rect(x: s.frame.minX, y: s.frame.minY, w: s.frame.width, h: s.frame.height - top)
         } : WindowTracker.screens()
         world.setEnvironment(screens: screens, windowsFrontToBack: wins)
+        // Switched only after the screens are in place, so the floats in and out of full screen aim at the real
+        // floor and the real perches.
+        if isFull != world.compact { world.compact = isFull; schedule(rate: 60) }
     }
 
     // MARK: Roster
@@ -332,7 +336,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func saveRoster() {
-        UserDefaults.standard.set(world.creatures.map(\.species.id), forKey: rosterKey)
+        // A friend's visiting Gremlets aren't yours to keep: they stay out of the saved roster.
+        UserDefaults.standard.set(world.creatures.filter { guests[$0.id] == nil }.map(\.species.id), forKey: rosterKey)
     }
 
     // MARK: Menu bar
@@ -1237,6 +1242,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = WrappedPoster.make(m, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "plant":
+            world.rotateGroveNow()
+            schedule(rate: 60)
+            let k = world.grove.featured.flatMap { $0 >= 0 ? world.grove.plants[$0].kind.rawValue : nil } ?? "none"
+            return (200, #"{"ok":true,"plant":"\#(k)"}"#)
+        case "compact":
+            // Preview full-screen mode for 30 seconds (it follows the real full-screen state after that).
+            compactPreviewUntil = query["off"] == nil ? CACurrentMediaTime() + 30 : 0
+            refreshEnvironment()
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"compact":\#(world.compact)}"#)
+        case "notch":
+            guard world.notchHomeShowing else { return (409, #"{"ok":false,"error":"a window is in the space under the notch, so the home is tucked away"}"#) }
+            guard world.startNotchTrip() else { return (409, #"{"ok":false,"error":"nobody can find a way up right now (it needs windows reaching up toward the top of the screen)"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "village-page":
             // A static page of the village to put online (default: ~/Pictures/Gremlets/Village Page).
             let raw = query["dir"].map(Self.decoded) ?? ""
@@ -1848,12 +1869,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let usable = max(1, main.h - 80)
         let y = ((c.pos.y - main.minY) / usable).clamped(0, 1)
         let air = !c.isGrounded
-        bridge.cross(["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air])
+        // Ours carry our id; a visitor carries its own home's, so it's recognised there as coming home.
+        let owner = guests.removeValue(forKey: c.id) ?? bridge.owner
+        bridge.cross(["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air, "owner": owner])
+        let wasGuest = owner != bridge.owner
         let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
         overlay.sparkle(at: Vec2(edgeX, c.pos.y + c.size.y * 0.5))
         world.endJob(c.id)
         world.remove(c.id)
-        bridge.away = bridge.away + [c.species.id]
+        if !wasGuest { bridge.away = bridge.away + [c.species.id] }
         saveRoster()
         overlay.render()
         rebuildMenu()
@@ -1896,8 +1920,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// A Gremlet comes in from the other screen, through the doorway, keeping its stride.
     private func arriveThroughBridge(_ w: ScreenBridge.Walk) {
         guard let sp = species[w.species], let main = WindowTracker.screens().first else { return }
-        let cameHome = bridge.away.contains(w.species)
-        bridge.away = bridge.away.filter { $0 != w.species }
+        // Ours coming home (by our id, or for the web habitat which doesn't tag, by the away list), or a visitor.
+        let cameHome = w.owner.map { $0 == bridge.owner } ?? bridge.away.contains(w.species)
+        if cameHome { bridge.away = bridge.away.filter { $0 != w.species } }
         if world.door == nil { updateDoor() }
         guard let c = world.arriveThroughDoor(sp.info, yFrac: w.y, vx: w.vx, vy: w.vy, airborne: w.air) else { return }
         // Home from a trip with a postcard for the mailbox.
@@ -1905,7 +1930,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             world.mailWaiting = true
             world.postcard = (bridge.peerIsMac ? "a friend's Mac" : "your iPad", w.species)
         }
-        // (or a visitor arriving from a friend's Mac).
+        // (or a visitor arriving from a friend's Mac: a guest, sent home with its own tag when it leaves).
+        if let o = w.owner, o != bridge.owner { guests[c.id] = o }
         if bridge.peerIsMac {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }

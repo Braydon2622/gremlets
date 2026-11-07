@@ -83,6 +83,8 @@ struct VineClimb: Sendable {
 
 extension World {
     static let mossPadOwnerBase = -462_000
+    /// Moss bridges between windows (their own range, clear of the pads).
+    static let mossBridgeOwnerBase = -468_000
     public static func isMossPadOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= mossPadOwnerBase && o > mossPadOwnerBase - 2_900 }
 
     // MARK: Vines (derived from the moss and the windows)
@@ -156,7 +158,7 @@ extension World {
             let lo = side < 0 ? v.x - 8 : v.x + 8 - MossPad.width
             return Surface(ownerID: World.mossPadOwnerBase - p.id, kind: .plant, y: y, minX: lo, maxX: lo + MossPad.width)
         } + mossBridges.enumerated().map { n, b in
-            Surface(ownerID: World.mossPadOwnerBase - 2800 - n, kind: .plant, y: b.y, minX: b.minX, maxX: b.maxX)
+            Surface(ownerID: World.mossBridgeOwnerBase - n, kind: .plant, y: b.y, minX: b.minX, maxX: b.maxX)
         }
         setSurfacesDirty()
     }
@@ -200,7 +202,7 @@ extension World {
             }
         }
         // Water the moss on this window top (they notice when it's getting dry, and go to it far more often).
-        if mossMinutes >= 10, s.kind == .windowTop, let w = windows[s.ownerID] {
+        if mossMinutes >= 10 || mossCare < 0.6, s.kind == .windowTop, let w = windows[s.ownerID] {
             let x = (c.pos.x + c.facing * rng.range(20, 90)).clamped(s.minX + 16, s.maxX - 16)
             add("waterMoss", 0.4 + (1 - mossCare) * 4) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }

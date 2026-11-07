@@ -12,7 +12,13 @@ import GremletsCore
 ///   { v: 1, type: "visitor", from, to, kind: "ferry", y, riders: [species] }   // the sky ferry sails across
 ///   { v: 1, type: "hello", from, side, reply? }     // a screen is open (the other one shows "linked")
 final class ScreenBridge {
-    struct Walk { let species: String; let y: Double; let vx: Double; let vy: Double; let air: Bool }
+    struct Walk { let species: String; let y: Double; let vx: Double; let vy: Double; let air: Bool; let owner: String? }
+    /// This Mac's lasting id, carried by its Gremlets when they travel, so a friend's Mac knows they're visitors and
+    /// sends them home, and this Mac knows its own when they come back.
+    let owner: String = {
+        if let o = UserDefaults.standard.string(forKey: "bridge.owner") { return o }
+        let o = ScreenBridge.randomCode(10); UserDefaults.standard.set(o, forKey: "bridge.owner"); return o
+    }()
 
     static let relay = PhoneLink.relay
     private let roomKey = "bridge.room", sideKey = "bridge.side", awayKey = "bridge.away", habitatKey = "bridge.habitat"
@@ -150,7 +156,8 @@ final class ScreenBridge {
                 // Notes are addressed to the edge they arrive through, which is our doorway.
                 guard note["to"] as? String == self.side, let species = note["species"] as? String, species.count < 40 else { return }
                 func num(_ k: String) -> Double { (note[k] as? NSNumber)?.doubleValue ?? 0 }
-                self.onWalk(Walk(species: species, y: num("y"), vx: num("vx"), vy: num("vy"), air: (note["air"] as? Bool) ?? false))
+                self.onWalk(Walk(species: species, y: num("y"), vx: num("vx"), vy: num("vy"), air: (note["air"] as? Bool) ?? false,
+                                 owner: (note["owner"] as? String).map { String($0.prefix(24)) }))
                 self.onStatus()
             case "visitor":
                 guard note["to"] as? String == self.side, note["kind"] as? String == "ferry" else { return }

@@ -188,19 +188,23 @@ enum GroveArt {
                 cv.set(x, Int(jy - gap + H * 0.06), 0xFFFFF0)
             }
         case .wishwillow:
-            // Trunk, two branches (the ledges), drooping strands with glowing star-fruit.
+            // A weeping willow: a trunk with two branches (the ledges), a rounded crown of leafy clumps, and long
+            // green strands draping down from it, a few glowing wish-blossoms among them.
             let trunkW = W * 0.12
             cv.rect(Int(cx - trunkW / 2), 0, Int(trunkW), Int(H * 0.8), 0x7A5232)
             cv.rect(Int(cx - trunkW / 2), 0, max(1, Int(trunkW * 0.35)), Int(H * 0.8), 0x5A3A22)
             cv.line(cx, H * 0.5, cx - W * 0.44, H * 0.55, 0x7A5232, width: 2)
             cv.line(cx, H * 0.72, cx + W * 0.42, H * 0.78, 0x7A5232, width: 2)
-            cv.blob(cx, H * 0.84, W * 0.48, H * 0.17, base: 0x4FA98C, light: 0x8ED9BC, shade: 0x2F7A66)
+            let leaf: UInt32 = 0x7CBF52, leafL: UInt32 = 0xA9DC7A, leafD: UInt32 = 0x4E8A36
+            for (dx, dy, rx, ry) in [(0.0, 0.86, 0.3, 0.12), (-0.24, 0.8, 0.24, 0.11), (0.24, 0.8, 0.24, 0.11), (-0.1, 0.92, 0.2, 0.08), (0.14, 0.93, 0.18, 0.07)] {
+                cv.blob(cx + W * dx, H * dy, W * rx, H * ry, base: leaf, light: leafL, shade: leafD)
+            }
             var sr = ArtRNG(s: 31)
-            for _ in 0..<(6 + p.level * 3) {
-                let x = sr.range(W * 0.06, W * 0.94)
-                let top = H * sr.range(0.72, 0.9), len = H * sr.range(0.18, 0.42)
-                for y in Int(top - len)..<Int(top) { cv.set(Int(x + sin(Double(y) / 4)), y, 0x5DB89A) }
-                if sr.next() < 0.35 { cv.blob(x, top - len, 1.4, 1.4, base: night ? 0xFFF3A0 : 0xF5E27A) }
+            for _ in 0..<(8 + p.level * 3) {
+                let x = sr.range(W * 0.08, W * 0.92)
+                let top = H * sr.range(0.74, 0.86), len = H * sr.range(0.2, 0.46)
+                for y in Int(top - len)..<Int(top) { cv.set(Int(x + sin(Double(y) / 5) * 0.8), y, (y / 2) % 2 == 0 ? leaf : leafD) }
+                if sr.next() < 0.3 { cv.blob(x, top - len, 1.2, 1.2, base: night ? 0xFFF3A0 : 0xFFE9A8) }
             }
             cv.outline()
         }

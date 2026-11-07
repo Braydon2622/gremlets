@@ -148,6 +148,8 @@ extension World {
     /// Keeps the vine between the hanging house and the terminal's hut in place (only when the hut hangs below the
     /// house and not too far across).
     func updateHomeLine() {
+        // Never pulled away from under someone riding it: it settles once they're off.
+        if let h = homeLine, creatures.contains(where: { $0.zip?.zipline == h.id }) { return }
         guard let n = notchHome, notchHomeShowing, !compact, let pod = podPlacements.first else { homeLine = nil; return }
         let top = Vec2(n.porch.maxX - 6, n.porch.y + Zipline.hang)
         let bottom = Vec2(pod.side > 0 ? pod.branch.maxX - 10 : pod.branch.minX + 10, pod.branch.y + Zipline.hang)

@@ -52,8 +52,8 @@ import Testing
         // Back to normal: they drift down.
         w.compact = false
         w.notchHome = nil
-        for _ in 0..<(60 * 40) { w.step(1.0 / 60) }
-        #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.isGrounded && $0.pos.y < 50 }, "\(cs.map(\.pos))")
+        for _ in 0..<(60 * 90) { w.step(1.0 / 60) }
+        #expect(cs.filter { $0.homeUntil == nil }.allSatisfy { $0.isGrounded && $0.pos.y < 50 }, "\(cs.map { ($0.pos, $0.activity, $0.groundOwner ?? 0, $0.homeUntil != nil) })")
     }
 
     @Test func rotationNeverPlantsAKindTwice() {

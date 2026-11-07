@@ -166,7 +166,8 @@ function homeLayout() {
 }
 
 function homePlatforms() {
-  if (showcase || H < 420) return [];
+  // Only where there's room beside the branches (a narrow phone screen has none).
+  if (showcase || H < 420 || W < 600) return [];
   const L = homeLayout();
   return [
     { id: 9001, x: L.hx - 2, y: L.porchY - PX * 2, w: 70, h: PX * 2, home: true },
@@ -203,7 +204,7 @@ function hammockArt(wpx) {
 }
 
 function drawHome(g) {
-  if (showcase || H < 420) return;
+  if (showcase || H < 420 || W < 600) return;
   const L = homeLayout(), top = H - L.topY;
   const house = houseArt(), hm = hammockArt(20);
   const houseTop = H - L.porchY - house.height * PX;
@@ -1095,7 +1096,8 @@ let crownHolder = null;          // creature id wearing the crown (beat the boss
 let shakeUntil = 0;
 const now_ = () => performance.now() / 1000;
 /** Pickaxe chips in the island's own colours: its turf, soil and stone. */
-function chipColors(p) { const pal = Biome.palette(p.biome); return [pal.top, pal.soil, pal.stone].map(hex); }
+// Bark and moss chips from the branches (they used to be biome islands).
+function chipColors() { return ['#6b4428', '#8a5a35', '#5e9e46']; }
 
 function chips(x, y, colors, n, spread = 1) {
   for (let i = 0; i < n; i++) {

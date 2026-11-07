@@ -530,7 +530,7 @@ extension World {
     func arriveAtGrove(_ c: Creature) {
         guard let t = c.groveTask else { return }
         c.groveTask = nil
-        lastCornerUse = now
+        switch t { case .bounce, .campfire, .dare, .pop, .snack: lastCornerUse = now; default: break }   // playing with the corner plant
         switch t {
         case .snack(let i):
             guard i < grove.plants.count, grove.plants[i].berries > 0 else { return }

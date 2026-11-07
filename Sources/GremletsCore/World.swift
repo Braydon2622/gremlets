@@ -85,7 +85,7 @@ public final class World {
     /// Overgrowth: minutes of Claude work the moss has soaked up. It grows a minute per minute while Claude works,
     /// and slowly recedes (a minute per six) while nothing is running. The platform layer saves it and draws it.
     public var mossMinutes = 0.0
-    /// How well looked after the moss is (0...1). It dries out over half an hour unless the Gremlets water, tend and
+    /// How well looked after the moss is (0...1). It dries out over forty minutes unless the Gremlets water, tend and
     /// trim it; well-kept moss grows, neglected moss turns dry and brown and slowly shrinks back.
     public var mossCare = 1.0
     /// How much each window-side strand has grown since it was last pruned (points).
@@ -413,7 +413,8 @@ public final class World {
         // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
         mossCare = max(0, mossCare - dt / 2400)
         let growth = working ? dt * workClockScale / 45 : dt / 180
-        mossMinutes = (mossMinutes + (mossThirsty ? -dt / 400 : growth * (0.4 + mossCare))).clamped(0, World.mossMax)
+        // Thirsty moss shrinks back, but never below a little base for the Gremlets to bring back to life.
+        mossMinutes = mossThirsty ? max(min(mossMinutes, 15), mossMinutes - dt / 400) : min(World.mossMax, mossMinutes + growth * (0.4 + mossCare))
         updateFerry(dt)
         updateLift(dt)
         updateMerchant(dt)
@@ -438,6 +439,20 @@ public final class World {
                 if let n = c.homeHouse, n >= 0 { groveEvents.append(.leftHome(n, by: c.id)) }
                 let fromHangingHouse = c.homeHouse == -1
                 c.homeHouse = nil
+                // Out of the hanging house's door onto its porch, wherever the house hangs now (it moves to the
+                // top-right corner and back with full screen).
+                if fromHangingHouse {
+                    if notchHomeShowing, let n = notchHome, let door = notchDoorX {
+                        c.pos = Vec2(door, n.porch.y)
+                        c.groundOwner = World.notchPorchOwner
+                        c.vel = .zero
+                    } else if let scr = screen(containingX: c.pos.x, y: c.pos.y) ?? screens.first {
+                        // The house is tucked away (a window in front of it): down under a leaf instead of falling.
+                        c.homeUntil = nil
+                        startFloat(c, to: Vec2(c.pos.x.clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)
+                        return
+                    }
+                }
                 // Morning: down from the hanging house under a leaf, once it's properly awake.
                 if fromHangingHouse && !isNight { c.driftDown = true }
                 if c.mining { finishDig(c) }
@@ -561,7 +576,8 @@ public final class World {
             // A grove errand that ran out of time (or got interrupted) is over: never leave it hanging.
             if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
             if c.mossTask == nil { c.carrying = nil }
-            if c.driftDown, c.job == nil, !compact, let scr = screen(containingX: c.pos.x, y: c.pos.y) ?? screens.first {
+            if c.driftDown && (c.job != nil || compact || !c.isGrounded) { c.driftDown = false }   // the moment's passed
+            if c.driftDown, let scr = screen(containingX: c.pos.x, y: c.pos.y) ?? screens.first {
                 c.driftDown = false
                 startFloat(c, to: Vec2((c.pos.x + c.facing * 60).clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)
                 return

@@ -638,7 +638,8 @@ extension World {
 
     func updateFloat(_ c: Creature, _ dt: Double) {
         // Follow the shelf if its window moved during the ride.
-        if let j = c.job, j.phase == .travel, let sp = standPoint(j, workerID: c.id) { c.floatTarget = sp }
+        // (Not in full screen: the shelf is put away then, and the float is to a corner perch.)
+        if !compact, let j = c.job, j.phase == .travel, let sp = standPoint(j, workerID: c.id) { c.floatTarget = sp }
         guard var target = c.floatTarget else { c.set(.airborne); return }
         c.timer -= dt
         let above = target + Vec2(0, 30)

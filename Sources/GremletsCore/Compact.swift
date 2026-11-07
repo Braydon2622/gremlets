@@ -24,8 +24,15 @@ extension World {
             if c.climb != nil { c.climb = nil; if c.activity == .float { c.set(.airborne) } }
             if c.activity == .fly || c.activity == .float { c.set(.airborne) }
             endSocial(c)
-            // Off up to the corners in a little while (one after another).
-            if c.isGrounded && !c.isAsleep { c.set(.idle, duration: rng.range(0.3, 3)) }
+            c.driftDown = false
+            if World.isNotchOwner(c.groundOwner) {
+                // On the porch, swing or hammock as the house moves to the corner: float over to it.
+                c.groundOwner = nil
+                Brain.decideCompact(c, in: self)
+            } else if c.isGrounded && !c.isAsleep {
+                // Off up to the corners in a little while (one after another).
+                c.set(.idle, duration: rng.range(0.3, 3))
+            }
         }
         setSurfacesDirty()
     }
@@ -35,6 +42,7 @@ extension World {
         guard let scr = screens.first else { return }
         for c in creatures where World.isNotchOwner(c.groundOwner) || (c.activity == .float && c.floatTarget != nil) {
             if c.homeUntil != nil { continue }   // still asleep inside: it'll come out on the porch
+            c.driftDown = false
             startFloat(c, to: Vec2((c.pos.x + rng.range(-80, 80)).clamped(scr.minX + 40, scr.maxX - 40), scr.minY), ride: .leaf)
         }
     }

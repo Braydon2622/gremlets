@@ -1619,7 +1619,7 @@ final class OverlayController {
             return
         }
         guard let si = layerScreen[c.id] else { return }
-        let style = c.ride == .bounce ? Ride.balloon : c.ride
+        let style = c.ride == .bounce || c.ride == .balloon ? Ride.seed : c.ride
         if let existing = balloons[c.id], existing.name != style.rawValue {
             existing.removeFromSuperlayer(); balloons[c.id] = nil
         }
@@ -1668,9 +1668,12 @@ final class OverlayController {
             p = CGPoint(x: (c.pos.x - o.x).rounded(), y: (c.pos.y - o.y + c.size.y * 0.42).rounded())
         } else {
             p = CGPoint(x: (c.pos.x - o.x + c.facing * c.size.x * 0.06).rounded(), y: (c.pos.y - o.y + c.size.y * 0.72).rounded())
-            // Umbrellas and leaves sway a little on the way down.
+            // Umbrellas and leaves sway a little on the way down; the maple seed's wings whirl round.
             if style == .umbrella || style == .leaf {
                 b.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(sin(CACurrentMediaTime() * 2.4) * 0.12)))
+            } else if style == .seed {
+                let spin = cos(CACurrentMediaTime() * 15 + Double(c.id))
+                b.setAffineTransform(CGAffineTransform(scaleX: CGFloat(abs(spin) < 0.18 ? (spin < 0 ? -0.18 : 0.18) : spin), y: 1))
             }
         }
         if b.superlayer !== screens[si].root { b.removeFromSuperlayer(); screens[si].root.addSublayer(b) }

@@ -44,10 +44,12 @@ public enum MossEvent: Equatable, Sendable {
     case padBuilt(Int, by: Int)
     case padLost(Vec2)
     case climbing(by: Int)
+    /// Trimmed back where it was getting thick (a puff of clippings at that spot).
+    case trimmed(Vec2, by: Int)
 }
 
 struct MossTask: Sendable {
-    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int) }
+    enum Kind: Sendable { case climb(vine: String, to: Double), buildPad(vine: String, height: Double), plant(window: Int, offset: Double), tend(patch: Int), trim(window: Int, offset: Double) }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -133,6 +135,11 @@ extension World {
         if s.ownerID >= 0, let p = mossPatches.filter({ $0.windowID == s.ownerID && $0.size < 1 && clock - $0.lastTended > 60 })
             .min(by: { abs(patchX($0) - c.pos.x) < abs(patchX($1) - c.pos.x) }), s.supports(x: patchX(p)) {
             add("tendMoss", 0.8) { self.startMossTask(c, .tend(patch: p.id), walkTo: self.patchX(p)) }
+        }
+        // Keep it tidy: once the moss is thick, trim the carpet back near an end of this window top.
+        if mossMinutes > 170, s.kind == .windowTop, let w = windows[s.ownerID] {
+            let x = (c.pos.x < s.minX + s.width / 2 ? s.minX + 26 : s.maxX - 26).clamped(s.minX + 10, s.maxX - 10)
+            add("trimMoss", 0.35 + (mossMinutes - 170) / 120) { self.startMossTask(c, .trim(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }
         // Plant a new tuft on this window top.
         if s.kind == .windowTop, let w = windows[s.ownerID], mossPatches.filter({ $0.windowID == s.ownerID }).count < 4 {
@@ -230,6 +237,19 @@ extension World {
             }
             mossPatches[i].size = min(1, mossPatches[i].size + 0.2)
             mossPatches[i].lastTended = clock
+            c.mossTask = nil
+            c.set(.idle, duration: 0.6)
+        case .trim(let wid, let offset):
+            guard let w = windows[wid], s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
+            let x = w.minX + offset
+            if !t.acting {
+                if abs(c.pos.x - x) > 6 { c.targetX = x; c.set(.walk, duration: 20); return }
+                t.acting = true; c.mossTask = t
+                c.workPose = "crouch"; c.set(.work, duration: 2.6)
+                return
+            }
+            mossMinutes = max(0, mossMinutes - 8)
+            mossEvents.append(.trimmed(Vec2(x, s.y), by: c.id))
             c.mossTask = nil
             c.set(.idle, duration: 0.6)
         case .climb(let key, let to):

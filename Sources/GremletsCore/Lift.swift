@@ -39,7 +39,7 @@ extension World {
     /// The nearest free Gremlet hops up toward the cloud.
     func callLiftRider() {
         guard var l = lift else { return }
-        let free = creatures.filter { $0.job == nil && $0.expedition == nil && $0.play == nil && !$0.isAsleep && $0.activity != .dragged && $0.homeUntil == nil }
+        let free = creatures.filter { isFree($0) && $0.groveTask == nil && $0.snowmanTask == nil && $0.activity != .dragged && $0.activity != .float && $0.groundOwner != World.ferryOwner }
         guard let c = free.min(by: { ($0.pos - l.at).length < ($1.pos - l.at).length }), (c.pos - l.at).length < 900 else { return }
         l.rider = c.id
         lift = l

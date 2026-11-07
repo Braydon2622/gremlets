@@ -43,4 +43,31 @@ import Testing
         }
         #expect(w.kite == nil && w.ferry == nil && w.chests.isEmpty)
     }
+
+    @Test func rotationNeverPlantsAKindTwice() {
+        let w = World(seed: 113)
+        w.rotateGrove = true
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        for _ in 0..<6 { w.rotateGroveNow(); w.step(1.0 / 60) }
+        for _ in 0..<40 { w.feedGrove() }
+        let kinds = w.grove.plants.map(\.kind)
+        #expect(Set(kinds).count == kinds.count, "\(kinds)")
+    }
+
+    @Test func fullScreenNeverLeavesAGroveTaskStuck() {
+        let w = World(seed: 114)
+        w.maxHobbies = 0
+        w.rotateGrove = true; w.villageOn = false
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        let cs = [60.0, 120, 1300].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 0)) }
+        w.compact = true
+        for _ in 0..<(60 * 240) {
+            w.step(1.0 / 60)
+            // Anyone with a grove errand is on its way to it (not standing about with it forever).
+            for c in cs where c.groveTask != nil { #expect([.walk, .airborne, .crouch, .land].contains(c.activity), "\(c.activity)") }
+        }
+    }
 }
+

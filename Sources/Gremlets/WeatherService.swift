@@ -41,7 +41,8 @@ final class WeatherService {
         URLSession.shared.dataTask(with: c.url!) { [weak self] data, _, err in
             let parsed = data.flatMap { Self.parse($0, place: p.name) }
             DispatchQueue.main.async {
-                guard let self else { return }
+                // Switched off (or moved city) while this was on its way: drop it.
+                guard let self, self.place == p else { return }
                 if let w = parsed {
                     self.current = w; self.lastError = nil
                     self.world.setWeather(w)

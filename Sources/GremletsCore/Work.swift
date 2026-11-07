@@ -27,7 +27,8 @@ public enum ShelfStyle: String, CaseIterable, Sendable {
 
     /// Relative chance of each (the snail is chosen separately, for gardens on the floor).
     var weight: Double {
-        switch self { case .plank: return 1.4; case .branch, .leaf, .basket, .treehouse: return 1.2; case .snail: return 0; default: return 1.0 }
+        // The hot-air basket and the flying carpet are retired (they didn't feel like part of the forest).
+        switch self { case .plank: return 1.4; case .branch, .leaf, .treehouse: return 1.2; case .snail, .basket, .carpet: return 0; default: return 1.0 }
     }
 
     /// Side-to-side drift (points) at time t.
@@ -59,11 +60,14 @@ public enum ShelfStyle: String, CaseIterable, Sendable {
 public enum Ride: String, CaseIterable, Sendable {
     /// Floating rides (the platform layer draws the prop over its head).
     case balloon, bubble, dandelion, umbrella, leaf
+    /// A maple seed's two wings spinning overhead like a little helicopter.
+    case seed
     /// A mushroom pops up from the ground and bounces it up onto the shelf.
     case bounce
 
-    static let up: [Ride] = [.balloon, .bubble, .dandelion, .bounce]
-    static let down: [Ride] = [.balloon, .umbrella, .leaf, .dandelion]
+    // All from nature: no party balloons or umbrellas.
+    static let up: [Ride] = [.seed, .bubble, .dandelion, .bounce]
+    static let down: [Ride] = [.seed, .leaf, .leaf, .dandelion]
 }
 
 public final class Job {
@@ -91,7 +95,7 @@ public final class Job {
     var lastShelfY: Double?
     /// How many times you've clicked the platform (the platform layer plays a reaction each time).
     public internal(set) var platformPokes = 0
-    var rideUp: Ride = .balloon
+    var rideUp: Ride = .seed
     /// The bouncy mushroom (where and when), for the platform layer to draw.
     public internal(set) var bounceAt: Double?
     public internal(set) var bounceSpot: Vec2?
@@ -552,7 +556,7 @@ extension World {
             c.set(.fly, duration: 10)
             emit(.tookOff(c.id))
         } else {
-            startFloat(c, to: target, ride: [Ride.balloon, .bubble, .dandelion][Int(rng.next() % 3)])
+            startFloat(c, to: target, ride: [Ride.seed, .bubble, .dandelion][Int(rng.next() % 3)])
         }
     }
 
@@ -613,7 +617,7 @@ extension World {
     // MARK: Simulation
 
     /// Balloon ride: rises a little, drifts over, then settles down onto the target. Ignores platforms on the way.
-    func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .balloon) {
+    func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .seed) {
         endSocial(c)
         c.ride = ride
         c.floatTarget = target
@@ -741,7 +745,7 @@ extension World {
                 let launchX = sp.x.clamped(support.minX + 30, support.maxX - 30)
                 if abs(launchX - c.pos.x) > 8 {
                     c.facing = launchX > c.pos.x ? 1 : -1
-                    if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { j.rideUp = .balloon }
+                    if !move(c, dt, speed: c.species.walkSpeed * 1.3, on: support, ledgeTurnChance: 1) { j.rideUp = .seed }
                     else if c.activity != .walk { c.set(.walk, duration: 9999) }
                     return true
                 }
@@ -764,7 +768,7 @@ extension World {
                 c.set(.fly, duration: 10)
                 emit(.tookOff(c.id))
             } else {
-                startFloat(c, to: sp, ride: j.rideUp == .bounce ? .balloon : j.rideUp)
+                startFloat(c, to: sp, ride: j.rideUp == .bounce ? .seed : j.rideUp)
             }
             return true
         }

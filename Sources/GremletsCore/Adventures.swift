@@ -85,7 +85,7 @@ extension World {
     /// Brings the ferry in from off-screen toward a high window.
     @discardableResult
     public func callFerry() -> Bool {
-        guard ferry == nil, let f = groveFloor, let dock = ferryDock(excluding: nil) else { return false }
+        guard ferry == nil, !compact, let f = groveFloor, let dock = ferryDock(excluding: nil) else { return false }
         let fromLeft = rng.chance(0.5)
         let start = Vec2(fromLeft ? f.minX - 160 : f.maxX + 160, dock.y + 120)
         ferry = Ferry(pos: start, facing: fromLeft ? 1 : -1, target: dock, prev: start)
@@ -109,7 +109,7 @@ extension World {
     /// They hop off at its first stop (or ride on, if they like it up there).
     @discardableResult
     public func ferryArrivesThroughDoor(riders: [SpeciesInfo], yFrac: Double) -> [Creature] {
-        guard ferry == nil, let d = door, let main = screens.first else { return [] }
+        guard ferry == nil, !compact, let d = door, let main = screens.first else { return [] }
         let dock = ferryDock(excluding: nil) ?? Vec2(d > 0 ? main.maxX - 260 : main.minX + 260, main.minY + main.h * 0.45)
         let start = Vec2(d > 0 ? main.maxX + Ferry.deckWidth : main.minX - Ferry.deckWidth,
                          (main.minY + yFrac.clamped(0, 1) * max(1, main.h - 80)).clamped(main.minY + 120, main.maxY - 120))
@@ -210,7 +210,12 @@ extension World {
         case .leaving:
             let d = fe.target - fe.pos
             if d.length < 4 {
-                if fe.viaDoor, let main = screens.first {
+                if fe.viaDoor, door == nil {
+                    // The other screen closed while it was sailing out: everyone hops off here instead.
+                    for c in creatures where c.groundOwner == World.ferryOwner {
+                        c.groundOwner = nil; c.vel = Vec2(-fe.facing * 140, 300); c.set(.airborne, duration: 5)
+                    }
+                } else if fe.viaDoor, let main = screens.first {
                     let riders = creatures.filter { $0.groundOwner == World.ferryOwner }
                     let names = riders.map(\.species.id)
                     for c in riders { remove(c.id) }

@@ -431,8 +431,10 @@ import Testing
             if let j = c.job { styles.insert(j.shelfStyle); rides.insert(j.rideUp) }
             w.remove(c.id)
         }
-        #expect(styles == Set(ShelfStyle.allCases.filter { $0 != .snail }))   // the snail is for floor gardens
+        // The snail is for floor gardens; the hot-air basket and flying carpet are retired.
+        #expect(styles == Set(ShelfStyle.allCases.filter { ![.snail, .basket, .carpet].contains($0) }))
         #expect(rides == Set(Ride.up))
+        #expect(!rides.contains(.balloon) && !rides.contains(.umbrella), "only rides from nature")
     }
 
     @Test func noRoomBesideAnyWindowMeansAShelfOnTheWall() {

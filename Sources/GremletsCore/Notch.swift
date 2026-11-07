@@ -83,7 +83,7 @@ extension World {
     /// `gremlet notch`: someone goes up for a nap now.
     @discardableResult
     public func startNotchTrip() -> Bool {
-        guard notchHomeShowing else { return false }
+        guard notchHomeShowing, !compact else { return false }
         nextNotchTripAt = 0
         for c in creatures.shuffled(using: &rng) where c.expedition == nil && c.job == nil && c.isGrounded && !World.isNotchOwner(c.groundOwner) {
             if startExpedition(c, .notch) { return true }

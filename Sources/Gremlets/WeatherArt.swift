@@ -132,8 +132,8 @@ enum ClimateArt {
     }()
 }
 
-/// The codebase castle (see Castle.swift): a tower per top-level folder, bricks in the colours of the languages
-/// inside, the keep with its door in the middle, a flag in the project's main language on the tallest tower.
+/// The codebase castle (see Castle.swift): a small storybook castle. Cream stone towers with pointed roofs in the
+/// colour of each folder's main language, the keep in the middle with an arched door, a flat lookout and a flag.
 enum CastleArt {
     static func color(_ lang: String) -> UInt32 {
         switch lang {
@@ -148,81 +148,68 @@ enum CastleArt {
         case "c": return 0x7F8DA3
         case "html": return 0xDE6A45
         case "css": return 0x9670CF
-        case "docs": return 0xD8D0BE
+        case "docs": return 0x8FB8A8
         case "data": return 0x7DBB76
-        case "shell": return 0x6E7F68
+        case "shell": return 0x6E9F68
         case "sol": return 0x8E8CAE
         case "media": return 0xDB8FAE
-        default: return 0xA9A296
+        default: return 0x9DB3C9
         }
     }
 
     /// The whole castle at art scale (3 points per pixel before the placement's scale).
     static func image(_ c: Castle) -> CGImage {
         let px = { (v: Double) in max(1, Int((v / 3).rounded())) }
-        let w = max(4, px(c.totalWidth)), h = px(c.tallest) + 7
+        let w = max(4, px(c.totalWidth)), h = px(c.tallest) + 2
         var cv = PixelCanvas(w, h)
-        let stone: UInt32 = 0x8E877B, mortar: UInt32 = 0x5E584F
-        var mainMix: [String: Int] = [:]
-        for t in c.towers { for (k, v) in t.mix { mainMix[k, default: 0] += v } }
-        let main = mainMix.filter { $0.key != "docs" && $0.key != "data" && $0.key != "media" }.max { $0.value < $1.value }?.key ?? "other"
-
-        // Brick fill for a column of the castle, coloured from a tower's language mix.
-        func bricks(_ x0: Int, _ x1: Int, _ y1: Int, _ t: CastleTower, seed: UInt64) {
-            var r = ArtRNG(s: seed)
-            let total = max(1, t.mix.values.reduce(0, +))
-            let langs = t.mix.sorted { $0.key < $1.key }
-            for row in stride(from: 0, to: y1, by: 2) {
-                let stagger = (row / 2) % 2 == 0 ? 0 : 2
-                var x = x0 - stagger
-                while x <= x1 {
-                    var roll = Int(r.next() * Double(total)), col = stone
-                    for (k, n) in langs { roll -= n; if roll < 0 { col = color(k); break } }
-                    // Most bricks stone, the language colour showing through on many of them.
-                    if r.next() < 0.35 { col = stone }
-                    for xx in max(x0, x)...min(x1, x + 2) { cv.set(xx, row, col); if row + 1 < y1 { cv.set(xx, row + 1, col) } }
-                    if x + 3 <= x1, x + 3 >= x0 { cv.set(x + 3, row, mortar); if row + 1 < y1 { cv.set(x + 3, row + 1, mortar) } }
-                    x += 4
-                }
-                if row % 2 == 0 && row > 0 { for xx in x0...x1 where r.next() < 0.1 { cv.set(xx, row, PixelCanvas.darken(stone, 0.85)) } }
-            }
+        let stone: UInt32 = 0xEFE6D2, stoneLight: UInt32 = 0xFBF5E8, stoneShade: UInt32 = 0xD3C6AA, line: UInt32 = 0xE0D4BA
+        func roofColour(_ t: CastleTower) -> UInt32 {
+            let main = t.mix.filter { !["docs", "data", "media"].contains($0.key) }.max { $0.value < $1.value }?.key ?? t.mainLanguage
+            return color(main)
         }
-
-        // Curtain walls between towers.
+        // Low curtain walls joining the towers.
         for i in c.towers.indices.dropLast() {
-            let a = px(c.minX(i) + c.width(i)), b = px(c.minX(i + 1)) - 1
-            guard b >= a else { continue }
-            let wh = px(min(c.height(i), c.height(i + 1)) * 0.45)
-            bricks(a, b, wh, CastleTower(name: "", files: 1, mix: ["other": 1]), seed: UInt64(i * 31 + 7))
-            for x in stride(from: a, through: b, by: 2) { cv.set(x, wh, stone) }   // merlons
+            let a = px(c.minX(i) + c.width(i)) - 1, b = px(c.minX(i + 1))
+            let wh = px(min(c.height(i), c.height(i + 1)) * 0.42)
+            cv.rect(a, 0, b - a + 1, wh, stoneShade)
+            for x in stride(from: a, through: b, by: 2) { cv.set(x, wh, stoneShade) }
         }
-        // Towers.
-        var tallest = 0, tallestX = 0
         for (i, t) in c.towers.enumerated() {
-            let x0 = px(c.minX(i)), x1 = x0 + px(c.width(i)) - 1, th = px(c.height(i))
-            bricks(x0, x1, th, t, seed: UInt64(t.name.unicodeScalars.reduce(5381) { ($0 &* 33 &+ Int($1.value)) & 0xFFFFFF }))
-            // Crenellations, a cap line, an arrow slit or two.
-            cv.hspan(x0 - 1, x1 + 1, th, stone)
-            for x in stride(from: x0 - 1, through: x1 + 1, by: 2) { cv.set(x, th + 1, stone) }
+            let x0 = px(c.minX(i)), tw = px(c.width(i)), x1 = x0 + tw - 1, th = px(c.height(i))
+            // Smooth stone: lit on the left, shaded on the right, a few faint courses.
+            for y in 0..<th { for x in x0...x1 {
+                cv.set(x, y, x == x0 ? stoneLight : (x >= x1 - 1 ? stoneShade : (y % 4 == 3 && (x + y / 4) % 3 != 0 ? line : stone)))
+            } }
             let mid = (x0 + x1) / 2
-            for y in stride(from: th - 5, to: 6, by: -9) { cv.set(mid, y, 0x2A2420); cv.set(mid, y - 1, 0x2A2420) }
             if t.isKeep {
-                // The door, arched, with a step.
-                cv.rect(mid - 1, 0, 3, 4, 0x4A2E1C); cv.set(mid, 4, 0x4A2E1C); cv.set(mid + 1, 2, 0xC9A35A)
+                // Arched door, two windows, a flat lookout with crenellations and a flag.
+                cv.rect(mid - 1, 0, 3, 4, 0x6B4428); cv.set(mid, 4, 0x6B4428); cv.set(mid + 1, 2, 0xE8C060)
+                for wx in [x0 + 2, x1 - 2] where th > 9 { cv.set(wx, th - 4, 0x5B4A6E); cv.set(wx, th - 5, 0x5B4A6E) }
+                for x in stride(from: x0, through: x1, by: 2) { cv.set(x, th, stone); cv.set(x, th + 1, stoneShade) }
+                cv.vspan(mid, th, th + 3, 0x6B4428)
+                let flag = roofColour(t)
+                cv.rect(mid + 1, th + 2, 3, 2, flag); cv.set(mid + 4, th + 3, flag)
+            } else {
+                // A round window, then a pointed roof in the folder's colour.
+                if th > 7 { cv.set(mid, th - 4, 0x5B4A6E); cv.set(mid, th - 3, 0x5B4A6E) }
+                let roof = roofColour(t), roofDark = PixelCanvas.darken(roof, 0.75)
+                let rh = px(Castle.roofHeight)
+                for k in 0..<rh {
+                    let half = Double(tw + 2) / 2 * (1 - Double(k) / Double(rh))
+                    let lo = Int((Double(x0 + x1) / 2 - half).rounded()), hi = Int((Double(x0 + x1) / 2 + half).rounded())
+                    guard hi >= lo else { continue }
+                    for x in lo...hi { cv.set(x, th + k, x <= mid ? roof : roofDark) }
+                }
+                cv.set(mid, th + rh, roofDark)
             }
-            if th > tallest { tallest = th; tallestX = mid }
         }
-        // The flag on the tallest tower, in the project's main language.
-        cv.vspan(tallestX, tallest + 1, tallest + 6, 0x5E3B22)
-        let flag = color(main)
-        cv.rect(tallestX + 1, tallest + 4, 3, 2, flag); cv.set(tallestX + 4, tallest + 5, flag)
-        // Ivy creeping up the foot of the walls.
+        // Moss tufts at the foot (the castle grows out of the window's moss too).
         var r = ArtRNG(s: UInt64(w * 977 + h))
-        for x in 0..<w where r.next() < 0.22 {
-            let len = Int(r.range(1, 4.9))
-            for y in 0..<len where cv.get(x, y) != nil { cv.set(x, y, y == len - 1 ? 0x8BD66A : 0x4E8B3A) }
+        for x in 0..<w where cv.get(x, 0) != nil && r.next() < 0.45 {
+            cv.set(x, 0, r.next() < 0.5 ? 0x5E9E46 : 0x8BD66A)
+            if r.next() < 0.3 { cv.set(x, 1, 0x8BD66A) }
         }
-        cv.outline(0.6)
+        cv.outline(0.62)
         return cv.image
     }
 }

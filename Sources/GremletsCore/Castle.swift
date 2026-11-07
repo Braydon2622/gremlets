@@ -1,9 +1,9 @@
 import Foundation
 
 /// The codebase castle: the project Claude is working on, built as a little castle on top of its terminal window.
-/// Each top-level folder is a tower (taller with more files, its bricks coloured by the languages inside), the files
-/// at the root make the keep in the middle, and every edit Claude makes lands as a new block on that folder's tower.
-/// The tower tops are platforms: the Gremlets climb your codebase.
+/// The three biggest top-level folders are towers (taller with more files, a pointed roof in the colour of their main
+/// language), the files at the root make the keep in the middle, and every edit Claude makes adds a little height to
+/// that folder's tower. The keep's flat top is a lookout the Gremlets climb up to.
 ///
 /// The app reads the file list itself (git ls-files, on your Mac); only folder names and file extensions are used,
 /// and nothing about it is drawn as text or leaves the Mac.
@@ -29,8 +29,9 @@ public struct Castle: Codable, Equatable, Sendable {
     /// Left to right: the biggest folders toward the middle, the keep in the centre.
     public var towers: [CastleTower]
 
-    public static let maxTowers = 6
-    public static let towerWidth = 24.0, keepWidth = 36.0, gap = 9.0
+    /// A small, tidy castle: the keep and the three biggest folders.
+    public static let maxTowers = 3
+    public static let towerWidth = 18.0, keepWidth = 30.0, gap = 6.0
 
     /// A language for a file extension (what colours its bricks).
     public static func language(_ ext: String) -> String {
@@ -85,8 +86,9 @@ public struct Castle: Codable, Equatable, Sendable {
     /// Height of a tower in points (before scaling): taller with more files and more edits.
     public func height(_ i: Int) -> Double {
         let t = towers[i]
-        let base = t.isKeep ? 30.0 : 22.0
-        return min(150, base + log2(Double(t.files) + 1) * 13 + Double(min(t.edits, 24)) * 1.5)
+        // Roofs add their own height on top (see CastleArt); the walls stay short and stout.
+        let base = t.isKeep ? 26.0 : 18.0
+        return min(84, base + log2(Double(t.files) + 1) * 7 + Double(min(t.edits, 20)))
     }
 
     public func width(_ i: Int) -> Double { towers[i].isKeep ? Castle.keepWidth : Castle.towerWidth }
@@ -97,7 +99,10 @@ public struct Castle: Codable, Equatable, Sendable {
     /// Left edge of tower i, from the castle's left edge (points, before scaling).
     public func minX(_ i: Int) -> Double { (0..<i).reduce(0) { $0 + width($1) + Castle.gap } }
 
-    public var tallest: Double { towers.indices.map(height).max() ?? 0 }
+    /// The roof on top of every tower (points, before scaling).
+    public static let roofHeight = 21.0
+    public var tallest: Double { towers.indices.map { height($0) + (towers[$0].isKeep ? Castle.flagHeight : Castle.roofHeight) }.max() ?? 0 }
+    public static let flagHeight = 12.0
 }
 
 public struct CastlePlacement: Sendable {
@@ -156,7 +161,8 @@ extension World {
         guard headroom > 40, hi - lo > width else { return nil }
         let x0 = treeOnLeft ? hi - width : lo
         let place = CastlePlacement(project: c.project, origin: Vec2(x0, w.maxY), scale: scale, windowID: wid)
-        let tops = c.towers.indices.map { i in
+        // The keep's flat, crenellated top is the lookout (the other towers wear pointed roofs).
+        let tops = c.towers.indices.filter { c.towers[$0].isKeep }.map { i in
             Surface(ownerID: World.castleOwnerBase - (k * 10 + i), kind: .shelf, y: w.maxY + c.height(i) * scale,
                     minX: x0 + c.minX(i) * scale + 1, maxX: x0 + (c.minX(i) + c.width(i)) * scale - 1)
         }

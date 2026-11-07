@@ -804,6 +804,8 @@ function updateFerry(dt, t) {
     if (f.dir > 0 ? f.x < -ferryHalf() : f.x > W + ferryHalf()) {
       const through = f.dir > 0 ? 'left' : 'right';
       if (door === through) bridge.cross({ type: 'visitor', kind: 'ferry', y: clamp01((f.y - GROUND) / usableH()), riders: f.pass.map((p) => p.species) });
+      // The Mac went away while it sailed out: its passengers stay on this screen after all.
+      else for (const p of f.pass) addGremlet(p.species, V(f.dir > 0 ? ferryHalf() : W - ferryHalf(), GROUND));
       ferry = null;
       saveRoster(); updateCount();
       return;

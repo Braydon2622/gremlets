@@ -49,15 +49,10 @@ enum BonsaiArt {
             cv.line(x0, y0, x1, y1, col, width: max(1, width))
         }
 
-        // Pot, with a ribbon for each round number reached.
-        drawPot(&cv, style: b.pot, potW: layout.potWidth * k, potH: layout.potHeight * k, origin: px(.zero), ageDays: ageDays, winter: winter)
+        // No pot: the tree grows straight out of a mound of moss on the window's edge, a little flower in the moss for
+        // each round number reached.
         let (ox, oy) = px(.zero)
-        let ribbons = min(5, b.milestones.count)
-        for n in 0..<ribbons {
-            let x = Int(ox - layout.potWidth * k / 2) + 3 + n * 3, y = Int(oy) - Int(layout.potHeight * k) + 2
-            let col: UInt32 = [0xE8574A, 0xFFD45E, 0x5FB8FF, 0xB98CFF, 0xFFFFFF][n]
-            cv.rect(x, y, 2, 3, col); cv.set(x, y - 1, col)
-        }
+        drawMossMound(&cv, width: layout.potWidth * k * 1.7, origin: (ox, oy), seed: b.seed, flowers: min(5, b.milestones.count), night: night, winter: winter)
 
         // Trunk (behind the limbs), tapering, with a lit side and a shaded side.
         var trunkPixels: [(Int, Int)] = []
@@ -159,6 +154,33 @@ enum BonsaiArt {
         }
     }
 
+    /// A soft mound of moss the tree rises from: lumpy, lit on top, a few speckles, clover and tiny flowers.
+    private static func drawMossMound(_ cv: inout PixelCanvas, width: Double, origin: (Double, Double), seed: UInt64, flowers: Int, night: Bool, winter: Bool) {
+        let (ox, oy) = origin
+        let w = max(8.0, width), half = w / 2
+        var r = ArtRNG(s: seed &* 131 &+ 7)
+        let deep: UInt32 = 0x3E7A34, mid: UInt32 = 0x5E9E46, light: UInt32 = 0x8BD66A, pale: UInt32 = 0xB6E28A
+        // Overlapping lumps, highest in the middle, so the trunk stands in the thick of it.
+        var x = ox - half
+        while x < ox + half {
+            let t = 1 - abs(x - ox) / half
+            let rad = r.range(1.8, 2.8) + t * 1.4
+            cv.blob(x, oy + 0.6 + t * 1.6, rad, 1.4 + t * 1.6, base: mid, light: light, shade: deep)
+            x += rad * r.range(0.8, 1.1)
+        }
+        for xx in Int(ox - half)...Int(ox + half) {
+            if r.next() < 0.16, let top = (Int(oy)..<Int(oy) + 6).last(where: { cv.solid(xx, $0) }) { cv.set(xx, top, r.next() < 0.5 ? pale : light) }
+        }
+        // Tiny flowers (one for each milestone) and, after dark, a glowing mushroom.
+        let cols: [UInt32] = [0xFF8FB1, 0xFFE45C, 0x8FD3FF, 0xB98CFF, 0xFFFFFF]
+        for n in 0..<flowers {
+            let fx = Int(ox - half + 2 + Double(n) * max(2, (w - 4) / Double(max(1, flowers)))) + (n % 2)
+            if let top = (Int(oy)..<Int(oy) + 7).last(where: { cv.solid(fx, $0) }) { cv.set(fx, top + 1, cols[n]); cv.set(fx, top, 0x3E7A34) }
+        }
+        if night { let mx = Int(ox + half * 0.6); cv.set(mx, Int(oy) + 1, 0xEBDDC3); cv.set(mx, Int(oy) + 2, 0x5FE8FF); cv.set(mx - 1, Int(oy) + 2, 0x5FE8FF) }
+        if winter { for xx in Int(ox - half)...Int(ox + half) where xx % 3 != 0 { if let top = (Int(oy)..<Int(oy) + 6).last(where: { cv.solid(xx, $0) }) { cv.set(xx, top, 0xFFFFFF) } } }
+    }
+
     private static func drawPot(_ cv: inout PixelCanvas, style: Int, potW: Double, potH: Double, origin: (Double, Double), ageDays: Double, winter: Bool) {
         let (ox, oy) = origin
         let w = max(6, Int(potW)), hgt = max(4, Int(style == 2 ? potH * 0.6 : potH))
@@ -191,17 +213,16 @@ enum BonsaiArt {
         if winter { for x in x0..<(x0 + w) where x % 3 != 0 { cv.set(x, y0 + hgt, 0xFFFFFF) } }
     }
 
-    /// A little pot with a sprig, carried overhead to the window.
+    /// A tuft of moss with a sprig in it, carried overhead to the window.
     static let carriedPot: CGImage = Effects.pixels([
         "...g...",
         "..ggg..",
         "...k...",
-        "bbbbbbb",
-        ".bbbbb.",
-        ".bbbbb.",
-        "..bbb..",
-        "..bbb..",
-    ], ["g": 0x6CC04A, "k": 0x4A3424, "b": 0x3F6FA8])
+        ".LmLmL.",
+        "mmLmmLm",
+        "mdmmdmm",
+        ".ddmdd.",
+    ], ["g": 0x6CC04A, "k": 0x6B4428, "m": 0x5E9E46, "L": 0x8BD66A, "d": 0x3E7A34])
 
     /// A nest of twigs with two small birds, for a tree whose session has run an hour.
     static let nest: CGImage = Effects.pixels([

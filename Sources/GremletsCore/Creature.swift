@@ -130,7 +130,7 @@ public final class Creature {
     /// No new hobby before this (world clock): a breather after finishing one.
     var hobbyRestUntil = 0.0
     /// What it's floating with (balloon, bubble, dandelion, umbrella, leaf), for the platform layer to draw.
-    public internal(set) var ride: Ride = .balloon
+    public internal(set) var ride: Ride = .seed
     /// Where a balloon ride is headed.
     var floatTarget: Vec2?
     /// Dozing next to its project because you stepped away.

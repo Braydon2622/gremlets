@@ -8,7 +8,7 @@ extension World {
 
     /// Puts away whatever was going on in the middle of the screen.
     func enterCompact() {
-        kite = nil
+        if kite != nil { endKite() }
         merchant = nil
         if let fe = ferry {
             for c in creatures where c.groundOwner == World.ferryOwner { c.groundOwner = nil; c.set(.airborne) }

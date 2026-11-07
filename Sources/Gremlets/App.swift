@@ -57,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let bridge = ScreenBridge()
     private let sense = ScreenSense()
     private var compactPreviewUntil: CFTimeInterval = 0
+    private var liftKeysSince: CFTimeInterval?
     private lazy var weatherService = WeatherService(world: world)
     /// Watching the Mac: battery, the network, the screenshot tool.
     private let netMonitor = NWPathMonitor()
@@ -169,7 +170,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.cursor = Vec2(Double(NSEvent.mouseLocation.x), Double(NSEvent.mouseLocation.y))
         // The cursor elevator: while ⌃⌥ (and nothing else) is held with no button down, a cloud rides under the pointer.
         let mods = NSEvent.modifierFlags.intersection([.control, .option, .command, .shift])
-        let lifting = mods == [.control, .option] && NSEvent.pressedMouseButtons == 0 && !paused && !manuallyHidden
+        // Held for half a second first, so a quick ⌃⌥ shortcut (like ⌃⌥G) doesn't launch anyone.
+        let held = mods == [.control, .option] && NSEvent.pressedMouseButtons == 0 && !paused && !manuallyHidden
+        if held { if liftKeysSince == nil { liftKeysSince = now } } else { liftKeysSince = nil }
+        let lifting = held && now - (liftKeysSince ?? now) >= 0.5
         if lifting || world.lift != nil { world.setLift(lifting ? world.cursor : nil); schedule(rate: 60) }
         world.step(dt)
         let events = world.drainEvents()
@@ -1217,9 +1221,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Build (or rebuild) the codebase castle for a folder; it shows while that project's Claude session is live.
             let dir = (Self.decoded(query["dir"] ?? "") as NSString).expandingTildeInPath
             guard dir.hasPrefix("/") else { return (400, #"{"ok":false,"error":"dir must be a folder path"}"#) }
-            let project = (dir as NSString).lastPathComponent
-            CastleScanner.scan(project: project, root: dir) { [weak self] c in self?.world.setCastle(c); self?.schedule(rate: 60) }
-            if let a = query["edit"] { world.castleEdit(project: project, area: Self.decoded(a)); schedule(rate: 60) }
+            // Keyed exactly like the Claude hook's sessions (cleaned, at most 40 characters), so it finds its tree.
+            let folder = (dir as NSString).lastPathComponent
+            let project = String((SpeechText.clean(folder) ?? folder).prefix(40))
+            let edit = query["edit"].map(Self.decoded)
+            CastleScanner.scan(project: project, root: dir) { [weak self] c in
+                self?.world.setCastle(c)
+                if let e = edit { self?.world.castleEdit(project: project, area: e) }
+                self?.schedule(rate: 60)
+            }
             let live = world.bonsaiPlacements.contains { $0.project == project && $0.windowID != nil }
             return (200, #"{"ok":true,"project":"\#(project)","live":\#(live)}"#)
         case "plant":
@@ -1234,7 +1244,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             schedule(rate: 60)
             return (200, #"{"ok":true,"compact":\#(world.compact)}"#)
         case "notch":
-            guard world.notchHome != nil else { return (409, #"{"ok":false,"error":"this screen has no notch"}"#) }
             guard world.notchHomeShowing else { return (409, #"{"ok":false,"error":"a window is in the space under the notch, so the home is tucked away"}"#) }
             guard world.startNotchTrip() else { return (409, #"{"ok":false,"error":"nobody can find a way up right now (it needs windows reaching up toward the top of the screen)"}"#) }
             schedule(rate: 60)

@@ -1052,6 +1052,12 @@ final class SpectacleRenderer {
                 if let (si, pt) = local(p) { overlay.burst([Effects.leaf, Effects.dust], si: si, at: pt, count: 6, dx: -20...20, dy: -60 ... -10, duration: 0.8) }
             case .climbing:
                 break
+            case .trimmed(let p, let by):
+                // Snip snip: clippings tumble off the edge.
+                if let (si, pt) = local(p) {
+                    overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: CGPoint(x: pt.x, y: pt.y + 6), count: 7, dx: -30...30, dy: -50 ... 10, duration: 0.9, stagger: 0.04)
+                }
+                if Int.random(in: 0..<3) == 0 { overlay.showBubble(["Snip snip!", "Tidy.", "Just a trim."].randomElement()!, on: by, seconds: 1.6) }
             }
         }
     }
@@ -1251,7 +1257,7 @@ final class SpectacleRenderer {
         if m >= 10 {
             // Window tops: carpets creeping in from both ends.
             let reach = ((m - 10) / 90).clamped(0, 1)       // fraction of each half covered
-            let density = ((m - 10) / 200).clamped(0, 1)
+            let density = ((m - 10) / 140).clamped(0, 1)
             for s in world.surfaces where s.kind == .windowTop && s.width >= 40 {
                 let half = s.width / 2 * max(0.12, reach)
                 let px = max(4, Int(half / artScale / 4) * 4)

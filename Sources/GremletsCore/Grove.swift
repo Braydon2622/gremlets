@@ -176,9 +176,9 @@ public final class Grove: Codable {
     @discardableResult
     func fillPlots() -> [Int] {
         var added: [Int] = []
-        while plants.count < unlockedPlots {
-            let k = Grove.order[plants.count]
-            plants.append(GrovePlant(kind: k, x: Grove.slots[plants.count]))
+        // (The corner rotation may already have planted some of them; never plant a kind twice.)
+        while plants.count < unlockedPlots, let k = Grove.order.first(where: { k in !plants.contains { $0.kind == k } }) {
+            plants.append(GrovePlant(kind: k, x: Grove.slots[min(plants.count, Grove.slots.count - 1)]))
             added.append(plants.count - 1)
         }
         return added

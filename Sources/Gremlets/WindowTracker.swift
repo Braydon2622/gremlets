@@ -20,9 +20,13 @@ enum WindowTracker {
         if now - lastFullScreenCheck < 0.5 { return cachedFullScreen }
         lastFullScreenCheck = now
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        // Only the main screen counts (its backdrop starts at the top-left of the primary display and spans it).
+        let mainWidth = Double(NSScreen.screens.first?.frame.width ?? 0)
         cachedFullScreen = list.contains { w in
-            (w[kCGWindowOwnerName as String] as? String) == "Dock"
-                && ((w[kCGWindowName as String] as? String) == "Fullscreen Backdrop" || (w[kCGWindowLayer as String] as? Int) == -2147483622)
+            guard (w[kCGWindowOwnerName as String] as? String) == "Dock",
+                  (w[kCGWindowName as String] as? String) == "Fullscreen Backdrop" || (w[kCGWindowLayer as String] as? Int) == -2147483622,
+                  let b = w[kCGWindowBounds as String] as? [String: Double] else { return false }
+            return abs((b["X"] ?? -1)) < 1 && abs((b["Y"] ?? -1)) < 1 && abs((b["Width"] ?? 0) - mainWidth) < 2
         }
         return cachedFullScreen
     }

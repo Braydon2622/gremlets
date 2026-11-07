@@ -541,20 +541,14 @@ enum PropArt {
     /// Things to float with (held over the head) and the bouncy mushroom.
     static func ride(_ r: Ride, _ id: Int) -> CGImage {
         switch r {
-        case .balloon, .bounce: return balloon(id)
+        case .balloon, .bounce, .seed: return mapleSeed
+        case .umbrella: return ClimateArt.leafUmbrella
         case .bubble: return image(grid([".", "."], [:]))
         case .dandelion:
             return image(grid([
                 "..w.w.w..", ".w.www.w.", "w.wwWww.w", ".wwWWWww.", "wwWWyWWww", ".wwWWWww.", "w.wwWww.w", ".w.www.w.", "..w.w.w..",
                 "....g....", "....g....", "....g....", "....g....",
             ], ["w": 0xFFFFFF, "W": 0xEDEDED, "y": 0xC9B79C, "g": 0x6CC04A]))
-        case .umbrella:
-            let c: [(UInt32, UInt32)] = [(0xFF6F7E, 0xD8455A), (0x6FB8F0, 0x3F8CC9), (0xFFD84A, 0xE0A92E), (0xA98BEA, 0x7A5FC9)]
-            let (a, b) = c[id % c.count]
-            return image(grid([
-                "......a......", "...aabbbaa...", ".aabbbbbbbaa.", "abbbbbbbbbbba", "a.a.a.a.a.a.a",
-                "......k......", "......k......", "......k......", "......k......", ".....kk......",
-            ], ["a": a, "b": b, "k": 0x4A3424]))
         case .leaf:
             return image(grid([
                 "....gggg.....", "..gggGgggg...", ".ggGggGggggg.", "gggggGgggGggg", ".gGggggGggg..", "....GG.......",
@@ -562,6 +556,25 @@ enum PropArt {
             ], ["g": 0x8FD67A, "G": 0x3E8E3A]))
         }
     }
+
+    /// A pair of maple-seed wings joined at the seeds, held over the head by a little stem (spun by the renderer).
+    static let mapleSeed: CGImage = {
+        var cv = PixelCanvas(19, 9)
+        let wing: UInt32 = 0xD9A25E, wingLight: UInt32 = 0xF0C987, vein: UInt32 = 0xA8743E, seed: UInt32 = 0x8A5A35
+        for (dir, x0) in [(-1.0, 9.0), (1.0, 9.0)] {
+            for k in 0..<9 {
+                let x = Int(x0 + dir * Double(k + 1))
+                let lift = Int((Double(k) * 0.35).rounded())
+                let thick = k < 2 ? 2 : (k < 7 ? 3 : 2)
+                for y in 0..<thick { cv.set(x, 5 + lift - y + 1, y == 0 ? wingLight : wing) }
+                if k % 3 == 1 { cv.set(x, 5 + lift, vein) }
+            }
+        }
+        cv.blob(9, 5, 2.2, 1.7, base: seed, light: 0xB07A47)
+        cv.vspan(9, 0, 3, 0x6B8A3A)
+        cv.outline(0.7)
+        return cv.image
+    }()
 
     static let springMushroom = image(grid([
         "...rrrrrr...", ".rrWrrrrWrr.", "rrrrrWrrrrrr", "rWrrrrrrrWrr", "wwwwwwwwwwww", "....wwww....", "....wwww....", "...wwwwww...",

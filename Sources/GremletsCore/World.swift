@@ -384,7 +384,9 @@ public final class World {
         checkHammock()
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
         if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
-        mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
+        // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
+        // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
+        mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : dt / 300)).clamped(0, World.mossMax)
         updateFerry(dt)
         updateLift(dt)
         updateMerchant(dt)
@@ -526,6 +528,8 @@ public final class World {
             }
             if c.activity == .run { endTag(c) }
             endSocial(c)
+            // A grove errand that ran out of time (or got interrupted) is over: never leave it hanging.
+            if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
             if compact { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }
@@ -576,7 +580,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || compact {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || (compact && c.groveTask == nil) {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1

@@ -243,7 +243,7 @@ enum BuildArt {
 
     static func size(_ b: Biome) -> (cols: Int, rows: Int) { let r = blueprint(b); return (r.map(\.count).max() ?? 0, r.count) }
 
-    static func image(_ b: Biome, blocks: Int, night: Bool) -> CGImage? {
+    static func image(_ b: Biome, blocks: Int, night: Bool, overgrowth: Int = 0, seed: UInt64 = 1) -> CGImage? {
         let cs = cells(b)
         let n = min(blocks, cs.count)
         guard n > 0 else { return nil }
@@ -254,8 +254,65 @@ enum BuildArt {
             draw(&cv, cell.2, x: cell.0 * block, y: cell.1 * block, b: b, lit: done && night, i: i)
         }
         cv.outline(0.7)
+        if overgrowth > 0 { overgrow(&cv, stage: overgrowth, seed: seed) }
         return cv.image
     }
+
+    /// Nature slowly takes the building back: moss creeping over walls, ivy climbing from the ground, flowers on the
+    /// roof, and after a week a sapling sprouting from the top. Stage 1...4.
+    static func overgrow(_ cv: inout PixelCanvas, stage: Int, seed: UInt64) {
+        var r = ArtRNG(s: seed &+ 404)
+        let w = cv.w, h = cv.h
+        func solid(_ x: Int, _ y: Int) -> Bool { cv.get(x, y) != nil }
+        // Moss clumps on edges and roof tops.
+        for _ in 0..<(w * h / 10 * stage) {
+            let x = Int(r.range(0, Double(w))), y = Int(r.range(0, Double(h)))
+            guard solid(x, y), !solid(x, y + 1) || !solid(x - 1, y) || !solid(x + 1, y) else { continue }
+            let c: UInt32 = r.next() < 0.5 ? 0x5E9E46 : 0x7DBE52
+            cv.set(x, y, c)
+            if solid(x + 1, y) { cv.set(x + 1, y, 0x4F8A3A) }
+            if solid(x, y - 1) && r.next() < 0.5 { cv.set(x, y - 1, 0x4F8A3A) }
+        }
+        // Ivy climbing from the ground, with leaves either side.
+        if stage >= 2 {
+            for _ in 0..<(stage * 2) {
+                var x = Int(r.range(0, Double(w)))
+                let height = Int(r.range(4, Double(h) * (0.3 + 0.17 * Double(stage))))
+                for y in 0..<height {
+                    if solid(x, y) { cv.set(x, y, 0x3E7A34) }
+                    if y % 2 == 0 {
+                        let side = (y / 2) % 2 == 0 ? -1 : 1
+                        if solid(x + side, y) { cv.set(x + side, y, 0x7DBE52) }
+                    }
+                    if r.next() < 0.25 { x += r.next() < 0.5 ? -1 : 1 }
+                }
+            }
+        }
+        // Flowers along the roofline (they sit just above it).
+        if stage >= 3 {
+            for x in 1..<(w - 1) where r.next() < 0.3 {
+                var top = h - 1
+                while top > 0 && !solid(x, top) { top -= 1 }
+                guard top > 0, top + 1 < h else { continue }
+                let petal: UInt32 = [0xFF8FB1, 0xFFE45C, 0xFFFFFF, 0xB98CFF][Int(r.range(0, 3.99))]
+                cv.set(x, top + 1, petal)
+                if r.next() < 0.5 { cv.set(x, top, 0x5E9E46) }
+            }
+        }
+        // A sapling growing out of the roof.
+        if stage >= 4 {
+            let x = w / 2 + Int(r.range(-4, 4))
+            var top = h - 1
+            while top > 0 && !solid(x, top) { top -= 1 }
+            if top > 0 && top + 5 < h {
+                cv.rect(x, top + 1, 1, 3, 0x6B4428)
+                cv.blob(Double(x) + 0.5, Double(top + 5), 3.2, 2.2, base: 0x5E9E46, light: 0x8BD66A, shade: 0x3E7A34)
+            }
+        }
+    }
+
+    /// How overgrown a house is after this many hours.
+    static func overgrowthStage(hours: Double) -> Int { hours < 6 ? 0 : hours < 24 ? 1 : hours < 72 ? 2 : hours < 168 ? 3 : 4 }
 
     /// Where (in art pixels, from the bottom-left) the most recent block went, for the "pop" effect.
     static func lastCell(_ b: Biome, blocks: Int) -> (x: Int, y: Int)? {
@@ -365,4 +422,46 @@ enum WeatherArt {
     ], ["y": 0xFFC845, "Y": 0xFFF3A0])
     static let block = Effects.pixels(["wwww", "wddw", "wwww"], ["w": 0xC98B4A, "d": 0xA9743F])
     static let scroll = Effects.pixels(["kwwwk", ".www.", ".www.", "kwwwk"], ["k": 0xC98B4A, "w": 0xFFF6DA])
+}
+
+/// Little extras with a storybook feel.
+enum StoryArt {
+    /// A big leaf held overhead, for gliding down from high places.
+    static let gliderLeaf: CGImage = {
+        var cv = PixelCanvas(16, 7)
+        cv.blob(8, 4, 7.6, 2.6, base: 0x6CC04A, light: 0xA6E36E, shade: 0x3F8A3A)
+        cv.line(1, 4, 15, 4, 0x3E7A34)
+        cv.rect(8, 0, 1, 3, 0x6B4428)
+        cv.outline(0.7)
+        return cv.image
+    }()
+
+    /// A shy night spirit: a round glowing seed with two leaf ears (original design).
+    static func spirit(frame: Int) -> CGImage {
+        Effects.pixels(frame % 2 == 0 ? [
+            "l....l",
+            ".l..l.",
+            ".gggg.",
+            "gGkGkg",
+            "gGGGGg",
+            ".gggg.",
+        ] : [
+            ".l..l.",
+            ".l..l.",
+            ".gggg.",
+            "gGkGkg",
+            "gGGGGg",
+            ".gggg.",
+        ], ["l": 0x8FD67A, "g": 0xCFF5C0, "G": 0xEFFFE8, "k": 0x3A5A3A])
+    }
+
+    /// A little cooking pot for the campfire.
+    static let pot = Effects.pixels([
+        ".kkkkk.",
+        "kpppppk",
+        "kpppppk",
+        ".kkkkk.",
+        "..f.f..",
+        ".fFfFf.",
+    ], ["k": 0x3A3A44, "p": 0x5A5A68, "f": 0xFF9A3A, "F": 0xFFE45C])
 }

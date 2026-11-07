@@ -301,3 +301,36 @@ import Testing
         #expect(j.weather == .clear, "weather passes")
     }
 }
+
+@Suite struct StorybookTests {
+    @Test func leafGliderFloatsDownSlowlyAndLands() {
+        let w = World(seed: 21)
+        w.maxHobbies = 0
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 9, frame: Rect(x: 600, y: 300, w: 300, h: 300))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 620))
+        for _ in 0..<600 where !(c.isGrounded && c.groundOwner == 9) { w.step(1.0 / 60) }
+        #expect(w.glideTarget(for: c) != nil)
+        w.startGlide(c, direction: 1)
+        var steps = 0, sawFloat = false
+        while !(c.isGrounded) && steps < 60 * 30 {
+            w.step(1.0 / 60); steps += 1
+            if c.gliding && c.vel.y > -90 && c.pos.y < 590 { sawFloat = true }
+            #expect(c.pos.x.isFinite && c.pos.y.isFinite)
+        }
+        #expect(sawFloat, "floated gently rather than dropping")
+        #expect(c.isGrounded && !c.gliding)
+        #expect(Double(steps) / 60 > 2, "took a while to come down (\(Double(steps) / 60)s)")
+    }
+
+    @Test func gustTurnsGremletsIntoTheWind() {
+        let w = World(seed: 22)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [])
+        let cs = (0..<4).map { w.spawn(testSpecies(scale: 10), at: Vec2(300 + Double($0) * 200, 0)) }
+        for _ in 0..<30 { w.step(1.0 / 60) }
+        for c in cs { c.set(.idle, duration: 5) }
+        w.gust(direction: 1)
+        #expect(cs.allSatisfy { $0.facing == -1 })
+    }
+}

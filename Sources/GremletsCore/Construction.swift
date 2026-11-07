@@ -38,6 +38,8 @@ public struct House: Codable, Equatable, Sendable {
     public var project: String?
     /// When it was built (e.g. "Nov 6"), and how many files Claude edited.
     public var day: String?
+    /// When it was built (seconds since 1970): houses slowly get overgrown with moss, ivy and flowers.
+    public var builtAt: Double?
 }
 
 public enum BuildEvent: Equatable, Sendable {
@@ -199,7 +201,7 @@ extension World {
     /// A Claude building moves to the village. Finds a free spot along the bottom of the main screen, away from the
     /// grove plants and the other houses; the oldest house makes way when there's no room.
     @discardableResult
-    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil) -> Int? {
+    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil) -> Int? {
         guard let f = groveFloor, blocks > 0 else { return nil }
         func free(_ x: Double) -> Bool {
             let px = f.minX + x * f.w
@@ -215,11 +217,46 @@ extension World {
         for k in 0..<40 { let u = 0.03 + Double(k / 2) * 0.024; spots.append(k % 2 == 0 ? u : 1 - u) }
         if grove.village.count >= Grove.maxHouses { grove.village.removeFirst() }
         guard let x = spots.first(where: free) else { return nil }
-        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day))
+        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day, builtAt: builtAt))
         for o in creatures where o.homeHouse != nil { o.homeUntil = clock }   // house numbers may shift: everyone wakes
         rebuildGroveSurfaces(); setSurfacesDirty()
         groveEvents.append(.houseAdded(grove.village.count - 1))
         return grove.village.count - 1
+    }
+
+    // MARK: Leaf glider
+
+    /// From high up (a window top), a lower place a good way off to float down to.
+    func glideTarget(for c: Creature) -> Double? {
+        guard c.isGrounded, c.job == nil, let f = groveFloor, c.pos.y > f.minY + 220,
+              let s = supportingSurface(for: c), s.kind == .windowTop || s.kind == .windowLedge else { return nil }
+        // Step off whichever end is nearer.
+        let leftGap = c.pos.x - s.minX, rightGap = s.maxX - c.pos.x
+        return leftGap < rightGap ? -1 : 1
+    }
+
+    func startGlide(_ c: Creature, direction: Double) {
+        c.facing = direction
+        c.gliding = true
+        c.groundOwner = nil
+        c.vel = Vec2(direction * 150, 220)
+        c.set(.airborne, duration: 9)
+    }
+
+    /// A gust of wind along the bottom of the screen: everyone on the floor turns into it, the light ones get nudged.
+    public func gust(direction: Double) {
+        guard let f = groveFloor else { return }
+        for c in creatures where c.isGrounded && c.job == nil && abs(c.pos.y - f.minY) < 200 && [.idle, .walk].contains(c.activity) {
+            c.facing = -direction
+            if c.species.flies || rng.chance(0.25) {
+                c.groundOwner = nil
+                c.vel = Vec2(direction * rng.range(120, 220), rng.range(180, 300))
+                c.set(.airborne, duration: 5)
+            } else {
+                c.idleVariant = "look"
+                c.set(.idle, duration: rng.range(1.5, 3))
+            }
+        }
     }
 
     public func drainBuildEvents() -> [BuildEvent] {

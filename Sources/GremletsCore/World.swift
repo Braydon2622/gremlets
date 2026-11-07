@@ -273,6 +273,7 @@ public final class World {
 
     private func update(_ c: Creature, _ dt: Double) {
         c.animTime += dt * c.animSpeed
+        if c.gliding && c.activity != .airborne { c.gliding = false }
         // Asleep inside a village house: rest up, and come back out when it's time (or when there's work to do).
         if let until = c.homeUntil {
             if c.job != nil || clock >= until || spectacle != nil {
@@ -456,7 +457,13 @@ public final class World {
     private func integrateAirborne(_ c: Creature, _ dt: Double) {
         if updateGrapple(c, dt) { return }
         let prev = c.pos
-        c.vel.y = max(c.vel.y - gravity * dt, -maxFallSpeed)
+        if c.gliding {
+            // Floating on a leaf: gentle sink, a little sway, steady drift.
+            c.vel.y = max(c.vel.y - gravity * 0.1 * dt, -60 + sin(clock * 3 + Double(c.id)) * 25)
+            c.vel.x = c.facing * 150
+        } else {
+            c.vel.y = max(c.vel.y - gravity * dt, -maxFallSpeed)
+        }
         var next = prev + c.vel * dt
 
         // Walls and ceiling of the screen we're on (crossing onto another monitor is allowed).
@@ -478,6 +485,7 @@ public final class World {
                 .max { $0.y < $1.y }
             if let s = landing {
                 let impact = -c.vel.y
+                c.gliding = false
                 if groveBounce(c, on: s, impact: impact) { return }
                 next.y = s.y
                 c.pos = next

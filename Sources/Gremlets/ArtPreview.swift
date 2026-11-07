@@ -43,6 +43,23 @@ enum ArtPreview {
             }
         }
         write(ctx3.makeImage()!, dir.appendingPathComponent("builds.png"))
+        // Overgrowth stages 0...4 for a few biomes.
+        let ctx4 = CGContext(data: nil, width: bw * 5, height: bh * 3, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx4.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctx4.fill(CGRect(x: 0, y: 0, width: bw * 5, height: bh * 3))
+        ctx4.interpolationQuality = .none
+        for (r, b) in [Biome.meadow, .desert, .snow].enumerated() {
+            for st in 0...4 {
+                guard let img = BuildArt.image(b, blocks: 99, night: false, overgrowth: st, seed: 3) else { continue }
+                ctx4.draw(img, in: CGRect(x: st * bw + 10, y: (2 - r) * bh + 10, width: img.width * 3, height: img.height * 3))
+            }
+        }
+        write(ctx4.makeImage()!, dir.appendingPathComponent("overgrowth.png"))
+        let sp = [StoryArt.spirit(frame: 0), StoryArt.gliderLeaf, StoryArt.pot]
+        let ctx5 = CGContext(data: nil, width: 300, height: 80, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx5.setFillColor(CGColor(red: 0.1, green: 0.12, blue: 0.2, alpha: 1)); ctx5.fill(CGRect(x: 0, y: 0, width: 300, height: 80)); ctx5.interpolationQuality = .none
+        for (k, im) in sp.enumerated() { ctx5.draw(im, in: CGRect(x: 10 + k * 95, y: 10, width: im.width * 4, height: im.height * 4)) }
+        write(ctx5.makeImage()!, dir.appendingPathComponent("story.png"))
         // Grove plants, levels 1...5.
         let g = Grove()
         var plants: [GrovePlant] = []

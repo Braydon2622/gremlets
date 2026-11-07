@@ -61,8 +61,18 @@ final class SpectacleRenderer {
 
     // MARK: Frame
 
+    private var gliders: [Int: CALayer] = [:]
+    private var spirits: [(layer: CALayer, home: CGPoint, si: Int, born: CFTimeInterval, phase: Double)] = []
+    private var nextSpirit = 0.0
+    private var nextGust = CACurrentMediaTime() + Double.random(in: 120...240)
+    private var pot: CALayer?
+
     func render() {
         renderGrove()
+        renderGliders()
+        renderSpirits()
+        renderWind()
+        renderCampfire()
         renderVillage()
         renderBridges()
         renderRopes()
@@ -235,6 +245,120 @@ final class SpectacleRenderer {
         l.add(a, forKey: "pop")
     }
 
+    // MARK: Storybook touches
+
+    /// A big leaf held overhead while gliding.
+    private func renderGliders() {
+        var alive = Set<Int>()
+        for c in world.creatures where c.gliding {
+            guard let (si, pt) = local(c.pos + Vec2(0, c.size.y + 4)) else { continue }
+            alive.insert(c.id)
+            let l = gliders[c.id] ?? { let l = pixelLayer(); l.contents = StoryArt.gliderLeaf; l.bounds = CGRect(x: 0, y: 0, width: 48, height: 21); l.zPosition = 25; popIn(l); return l }()
+            attach(l, si)
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            l.transform = CATransform3DMakeRotation(CGFloat(sin(CACurrentMediaTime() * 3 + Double(c.id)) * 0.12), 0, 0, 1)
+            gliders[c.id] = l
+        }
+        for (id, l) in gliders where !alive.contains(id) { l.removeFromSuperlayer(); gliders[id] = nil }
+    }
+
+    /// Shy little night spirits drift around the grove and the village after dark, and hide when a Gremlet comes close.
+    private func renderSpirits() {
+        let now = CACurrentMediaTime()
+        guard let floor = world.groveFloor else { return }
+        if world.isNight && spirits.count < 6 && now >= nextSpirit {
+            nextSpirit = now + Double.random(in: 4...10)
+            var spots: [Vec2] = world.grove.plants.indices.map { world.grove.base($0, floor: floor) + Vec2(0, world.grove.size($0).y * 0.5) }
+            spots += world.grove.village.map { Vec2(floor.minX + $0.x * floor.w, floor.minY + $0.h * 0.6) }
+            if let home = spots.randomElement(), let (si, pt) = local(home + Vec2(Double.random(in: -60...60), Double.random(in: 0...50))) {
+                let l = pixelLayer()
+                l.contents = StoryArt.spirit(frame: 0)
+                l.bounds = CGRect(x: 0, y: 0, width: 18, height: 18)
+                l.zPosition = 22
+                l.shadowColor = NSColor(red: 0.8, green: 1, blue: 0.7, alpha: 1).cgColor; l.shadowRadius = 6; l.shadowOpacity = 0.9; l.shadowOffset = .zero
+                l.opacity = 0
+                attach(l, si)
+                spirits.append((l, pt, si, now, Double.random(in: 0...6)))
+            }
+        }
+        var keep: [(layer: CALayer, home: CGPoint, si: Int, born: CFTimeInterval, phase: Double)] = []
+        for s in spirits {
+            let age = now - s.born
+            let o = screens.indices.contains(s.si) ? screens[s.si].frame.origin : .zero
+            let p = CGPoint(x: s.home.x + CGFloat(sin(age * 0.7 + s.phase) * 24), y: s.home.y + CGFloat(sin(age * 1.3 + s.phase) * 10))
+            let world0 = Vec2(Double(p.x + o.x), Double(p.y + o.y))
+            let shy = world.creatures.contains { $0.homeUntil == nil && ($0.pos + Vec2(0, $0.size.y / 2) - world0).length < 90 }
+            let life = 18.0
+            var alpha = min(1, age / 1.5) * min(1, (life - age) / 1.5)
+            if shy || !world.isNight { alpha = 0 }
+            s.layer.opacity = Float(max(0, alpha)) * 0.95
+            s.layer.position = p
+            s.layer.contents = StoryArt.spirit(frame: Int(age * 3) % 2)
+            if age < life && !(shy && age > 2) { keep.append(s) } else { s.layer.removeFromSuperlayer() }
+        }
+        spirits = keep
+    }
+
+    /// Every few minutes a gentle gust of wind sweeps along the bottom of the screen.
+    private func renderWind() {
+        let now = CACurrentMediaTime()
+        guard now >= nextGust, let floor = world.groveFloor, let (si, _) = local(Vec2(floor.minX + 10, floor.minY + 10)) else { return }
+        nextGust = now + Double.random(in: 180...420)
+        let dir: Double = Bool.random() ? 1 : -1
+        world.gust(direction: dir)
+        let size = screens[si].frame.size
+        let images = world.month >= 9 && world.month <= 11 ? [Effects.leaf, Effects.leaf2] : [Effects.leaf, Effects.petal, Effects.leaf2]
+        for i in 0..<22 {
+            let l = CALayer()
+            l.contents = images[i % images.count]
+            l.magnificationFilter = .nearest
+            l.bounds = CGRect(x: 0, y: 0, width: 15, height: 15)
+            l.zPosition = 24
+            attach(l, si)
+            let y = CGFloat.random(in: 20...260) + (floor.minY - screens[si].frame.minY)
+            let x0: CGFloat = dir > 0 ? -30 : size.width + 30, x1: CGFloat = dir > 0 ? size.width + 30 : -30
+            let move = CAKeyframeAnimation(keyPath: "position")
+            move.values = (0...6).map { k in
+                let t = CGFloat(k) / 6
+                let wob: CGFloat = CGFloat(sin(Double(t) * 9.0 + Double(i)) * 26.0)
+                return NSValue(point: CGPoint(x: x0 + (x1 - x0) * t, y: y + wob))
+            }
+            let spin = CABasicAnimation(keyPath: "transform.rotation.z"); spin.toValue = Double.random(in: 4...9) * dir
+            let g = CAAnimationGroup(); g.animations = [move, spin]
+            g.duration = Double.random(in: 3.2...4.6)
+            g.beginTime = CACurrentMediaTime() + Double(i) * 0.09
+            g.fillMode = .both; g.isRemovedOnCompletion = false
+            CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
+            l.add(g, forKey: "gust")
+            CATransaction.commit()
+        }
+        // The plants lean into it.
+        for (_, p) in plants {
+            let lean = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+            lean.values = [0, -0.12 * dir, -0.05 * dir, -0.1 * dir, 0]
+            lean.duration = 3
+            p.layer.add(lean, forKey: "lean")
+        }
+    }
+
+    /// A pot bubbling by the lanternbloom while Gremlets sit around the campfire.
+    private func renderCampfire() {
+        guard let floor = world.groveFloor, let i = world.grove.plant(of: .lanternbloom),
+              world.creatures.contains(where: { $0.campfire }) else {
+            if let p = pot { p.removeFromSuperlayer(); pot = nil }
+            return
+        }
+        let b = world.grove.base(i, floor: floor), sz = world.grove.size(i)
+        guard let (si, pt) = local(b + Vec2(sz.x * 0.8, 0)) else { return }
+        let p = pot ?? { let l = pixelLayer(); l.contents = StoryArt.pot; l.anchorPoint = CGPoint(x: 0.5, y: 0); l.bounds = CGRect(x: 0, y: 0, width: 21, height: 18); l.zPosition = -1; popIn(l); return l }()
+        attach(p, si)
+        p.position = pt
+        pot = p
+        if Int(CACurrentMediaTime() * 10) % 9 == 0 {
+            overlay.burst([Effects.steam], si: si, at: CGPoint(x: pt.x, y: pt.y + 18), count: 1, dx: -6...6, dy: 20...40, duration: 1.6)
+        }
+    }
+
     // MARK: Village, bridges, ropes
 
     private func renderVillage() {
@@ -242,7 +366,8 @@ final class SpectacleRenderer {
         let night = world.isNight
         for (n, h) in world.grove.village.enumerated() {
             guard let b = Biome(rawValue: h.biome), let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY)) else { continue }
-            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)"
+            let stage = BuildArt.overgrowthStage(hours: h.builtAt.map { (Date().timeIntervalSince1970 - $0) / 3600 } ?? 0)
+            let key = "\(h.biome)-\(h.blocks)-\(night)-\(si)-\(stage)"
             var entry = houses[n] ?? {
                 let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = -4
                 // A strip of its biome's ground under it, so each house sits in its own little patch of world.
@@ -251,7 +376,7 @@ final class SpectacleRenderer {
                 return (l, g, "")
             }()
             attach(entry.layer, si); attach(entry.ground, si)
-            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night) {
+            if entry.key != key, let img = BuildArt.image(b, blocks: h.blocks, night: night, overgrowth: stage, seed: UInt64(n * 31 + 7)) {
                 entry.layer.contents = img
                 entry.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
                 let gw = Int(h.w / 3) + 8

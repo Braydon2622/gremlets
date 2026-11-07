@@ -1512,7 +1512,8 @@ final class OverlayController {
                     let (cols, rows) = BuildArt.size(biome)
                     let day = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none)
                     world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks,
-                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project, day: day)
+                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project, day: day,
+                                   builtAt: Date().timeIntervalSince1970)
                     st.lastBlocks = 0
                 }
                 fadeOut(b, 0.8); st.build = nil; st.buildKey = ""

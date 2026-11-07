@@ -44,6 +44,7 @@ struct Brain {
         if world.spectacle == nil, c.job == nil {
             if world.bridgeCandidate(for: c) != nil { add("bridge", 0.7) { world.startBridge(c) } }
             if let a = world.grappleTarget(for: c) { add("grapple", 0.3 * (0.3 + e)) { world.startGrapple(c, to: a) } }
+            if let d = world.glideTarget(for: c) { add("glide", 0.45) { world.startGlide(c, direction: d) } }
         }
 
         // --- Solo

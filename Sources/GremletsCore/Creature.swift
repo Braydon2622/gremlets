@@ -55,7 +55,9 @@ public final class Creature {
     /// Holding a sunberry (eaten later, or thrown at a boss).
     public internal(set) var heldBerry = false
     /// Sitting by the lanternbloom after dark.
-    var campfire = false
+    public internal(set) var campfire = false
+    /// Floating down from somewhere high on a big leaf.
+    public internal(set) var gliding = false
     /// Two-Gremlet play (toss, catch, high five) in progress.
     var play: PlayState?
     /// Building a bridge (its id) and when the next block goes down.

@@ -85,6 +85,10 @@ public final class Creature {
     var mossTask: MossTask?
     /// Something carried overhead on the way to a job: "sprout" (a tuft of moss to plant), "can" (the watering can).
     public internal(set) var carrying: String?
+    /// Carrying a lantern home after a Claude session ended (until then).
+    var lanternUntil: Double?
+    /// Off home after a session (the next decision takes it there).
+    var headingHome = false
     /// Just woke up in the hanging house on a morning: floats down under a leaf next.
     var driftDown = false
     /// Mowing the moss along a window top (clippings fly behind it).

@@ -68,6 +68,7 @@ enum Scrapbook {
         if let n = d.dandelions, n > 0 { out.append("Blew \(plural(n, "dandelion clock", "dandelion clocks")); the seeds flew off to grow more moss.") }
         if let n = d.boxed, n > 0 { out.append("Put \(plural(n, "daisy", "daisies")) in the window box at home.") }
         if let n = d.tufts, n > 0 { out.append("Planted \(plural(n, "tuft", "tufts")) of moss.") }
+        for a in d.anniversaries ?? [] { out.append("\(a). A flower crown all day.") }
         if let n = d.fireflies, n > 0 { out.append("Caught \(plural(n, "firefly", "fireflies")) after dark, and let \(n == 1 ? "it" : "them") go.") }
         return out
     }

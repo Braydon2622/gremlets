@@ -12,6 +12,8 @@ final class DayLog {
         /// The garden that day, for the scrapbook (optional so older logs still decode): things picked from the moss,
         /// fireflies caught, tufts of moss planted, daisies put in the house's window box.
         var daisies: Int?, mushrooms: Int?, berries: Int?, dandelions: Int?, fireflies: Int?, tufts: Int?, boxed: Int?
+        /// Anniversaries that day ("Kindlet: 30 days together").
+        var anniversaries: [String]?
     }
     private let key = "daylog.v1"
     private(set) var days: [String: Day] = [:]

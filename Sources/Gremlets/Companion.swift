@@ -59,6 +59,11 @@ final class BondStore {
     func addSpot(_ id: String, _ place: String, seconds: Double) { records[id, default: Record()].spots[place, default: 0] += seconds }
     func favouriteSpot(_ id: String) -> String? { records[id]?.spots.max { $0.value < $1.value }?.key }
     func daysTogether(_ id: String) -> Int { records[id]?.days ?? 0 }
+    /// Today is a milestone day together (every 30 days, and a year), counted once you've been around today.
+    func isAnniversary(_ id: String) -> Bool {
+        guard let r = records[id], r.days > 0, r.lastDay == BondStore.today else { return false }
+        return r.days % 30 == 0 || r.days == 365
+    }
 
     func save() {
         if let data = try? JSONEncoder().encode(records) { UserDefaults.standard.set(data, forKey: key) }

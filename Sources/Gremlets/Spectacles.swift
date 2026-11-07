@@ -22,6 +22,9 @@ final class SpectacleRenderer {
     private var fireflyLayers: [Int: CALayer] = [:]
     private var moodLayers: [Int: (layer: CALayer, mood: String)] = [:]
     private var nextSeasonDrift = 0.0
+    private var propLayers: [Int: (layer: CALayer, what: String)] = [:]
+    private var seedlingLayers: [String: CALayer] = [:]
+    private var topStructureLayers: [Int: (art: CALayer, ropes: CAShapeLayer, key: String)] = [:]
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -114,12 +117,15 @@ final class SpectacleRenderer {
         renderMoss()
         renderFireflies()
         renderMoods()
+        renderHeldProps()
+        renderSeedlings()
         renderSeason()
         renderWeather()
         renderPods()
         renderNotch()
         renderCornerBranch()
         renderCornerStumps()
+        renderTopStructures()
         renderLift()
         renderCarried()
         renderPlans()
@@ -1056,6 +1062,20 @@ final class SpectacleRenderer {
                 overlay.showBubble("Every step done! ✓", on: w, seconds: 3)
             case .contextFilling(let w, let pct):
                 overlay.showBubble("My pack's \(pct)% full… Claude may compact soon", on: w, seconds: 5)
+            case .unpacked(let w):
+                // Out of the rucksack it all comes (a little puff of leaves and notes), and it's light again.
+                if let c = world.creatures.first(where: { $0.id == w }), let (si, pt) = local(c.pos + Vec2(-c.facing * c.size.x * 0.28, c.species.headTop * 0.5)) {
+                    overlay.burst([Effects.leaf, Effects.leaf2, ToolPropArt.image("list")!, Effects.sparkle], si: si, at: pt, count: 8, dx: -40...40, dy: 6...40, duration: 1.0, stagger: 0.06)
+                }
+                overlay.showBubble(["Ahh, lighter!", "Unpacked. Much better.", "*stretch*"].randomElement()!, on: w, seconds: 2.4)
+            case .knocked(let w):
+                // Tap tap on the glass: two small rings where it's standing.
+                if let c = world.creatures.first(where: { $0.id == w }), let (si, pt) = local(c.pos + Vec2(c.facing * c.size.x * 0.4, 6)) {
+                    for k in 0..<2 { overlay.burst([Effects.sparkle], si: si, at: pt, count: 1, dx: -2...2, dy: 0...4, duration: 0.5, delay: Double(k) * 0.35) }
+                }
+                overlay.showBubble("tap tap… Claude's still waiting for you", on: w, seconds: 3.5)
+            case .goodbye(let w):
+                overlay.showBubble(["Bye for now!", "Good session. Off home!", "See you next time."].randomElement()!, on: w, seconds: 2.5)
             }
         }
     }
@@ -1157,6 +1177,9 @@ final class SpectacleRenderer {
             case .caughtFirefly(let p, let by):
                 if let (si, pt) = local(p) { overlay.burst([Effects.sparkle], si: si, at: pt, count: 4, dx: -12...12, dy: 4...26, duration: 0.9, stagger: 0.08) }
                 overlay.showBubble(["Got one!", "So glowy…", "Off you go, little light."].randomElement()!, on: by, seconds: 1.8)
+            case .poofed(let from, let to):
+                if let (si, pt) = local(from + Vec2(0, 20)) { overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: pt, count: 5, dx: -20...20, dy: -10...20, duration: 0.6) }
+                if let (si, pt) = local(to + Vec2(0, 16)) { overlay.burst([Effects.sparkle, Effects.leaf], si: si, at: pt, count: 4, dx: -14...14, dy: 0...20, duration: 0.6) }
             case .missedFirefly(let by):
                 if Int.random(in: 0..<3) == 0 { overlay.showBubble(["Almost!", "Hee!", "Come back!"].randomElement()!, on: by, seconds: 1.2) }
             case .boxed(let p, let by):
@@ -1444,17 +1467,10 @@ final class SpectacleRenderer {
             place("s\(sp.id)", si, at: CGPoint(x: pt.x.rounded(), y: pt.y - 1 * artScale), anchor: CGPoint(x: 0.5, y: 0),
                   rotate: (windowSway[sp.windowID] ?? 0) * 0.5, imageKey: "\(sp.stage)-\(night)") { SproutArt.image(sp.kind, stage: sp.stage, night: night) }
         }
-        // Screens: moss under the menu bar on a long day, and along the bottom of the screen (just above the Dock),
-        // creeping in from both corners as the moss grows.
+        // Screens: moss along the bottom of the screen (just above the Dock), creeping in from both corners as the
+        // moss grows.
         for (i, scr) in world.screens.enumerated() {
-            if m >= 150 {
-                let frac = ((m - 150) / 150).clamped(0.15, 1)
-                let fpx = max(8, Int(scr.w * frac / artScale / 8) * 8)
-                if let (si, pt) = local(Vec2(scr.minX + (scr.w - scr.w * frac) / 2, scr.maxY)) {
-                    place("top\(i)", si, at: pt, anchor: CGPoint(x: 0, y: 0), imageKey: "\(fpx)-\(night)-\(world.mossThirsty)") { MossArt.carpet(lengthPx: fpx, density: frac, seed: UInt64(i + 40), night: night, dry: world.mossThirsty) }
-                    mossLayers["top\(i)"]?.layer.setAffineTransform(CGAffineTransform(scaleX: 1, y: -1))   // hanging from the menu bar
-                }
-            }
+            // (No moss hanging from the menu bar: it wasn't growing on anything.)
             for (k, span) in world.floorMoss(i).enumerated() {
                 let fpx = max(8, Int((span.hi - span.lo) / artScale / 4) * 4)
                 let density = ((m - 15) / 200).clamped(0.35, 1)
@@ -2065,6 +2081,51 @@ extension SpectacleRenderer {
         renderCarried()
     }
 
+    /// The nest hut and the leaf swing hanging on vines from the top of the screen (out of full screen).
+    fileprivate func renderTopStructures() {
+        var alive = Set<Int>()
+        let lit = world.houseLightsOn
+        for (s, kind) in world.topStructures {
+            guard let (si, pt) = local(Vec2(s.minX, s.y)) else { continue }
+            alive.insert(s.ownerID)
+            var e = topStructureLayers[s.ownerID] ?? {
+                let art = pixelLayer(); art.anchorPoint = .zero; art.zPosition = 1.16
+                let ropes = CAShapeLayer(); ropes.strokeColor = NSColor(red: 0.33, green: 0.58, blue: 0.27, alpha: 1).cgColor
+                ropes.lineWidth = 2; ropes.fillColor = nil; ropes.zPosition = 1.15; ropes.actions = ["path": NSNull()]
+                popIn(art)
+                return (art, ropes, "")
+            }()
+            attach(e.art, si); attach(e.ropes, si)
+            let key = kind == .nestHut ? "nest\(lit)" : "leaf"
+            if e.key != key {
+                let img = kind == .nestHut ? TopStructureArt.nestHut(lit: lit) : TopStructureArt.leafSwing
+                e.art.contents = img
+                e.art.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+                e.key = key
+            }
+            let k = CGFloat(artScale)
+            let top = CGFloat(world.screens.first?.maxY ?? s.y + 200) - screens[si].frame.origin.y + 2
+            let path = CGMutablePath()
+            switch kind {
+            case .nestHut:
+                // The porch starts at the hut's left edge; the hut hangs from two vines tied to its roof.
+                let x0 = pt.x - 2 * k
+                e.art.position = CGPoint(x: x0.rounded(), y: (pt.y - 2 * k).rounded())
+                let roofY = pt.y - 2 * k + 24 * k
+                for dx in [CGFloat(5), 17] { path.move(to: CGPoint(x: x0 + dx * k, y: roofY)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? -4 : 4), y: top)) }
+                // And a vine down to the porch's far end.
+                path.move(to: CGPoint(x: x0 + 35 * k, y: pt.y + 6 * k)); path.addLine(to: CGPoint(x: x0 + 35 * k + 6, y: top))
+            case .leafSwing:
+                let x0 = pt.x - 4
+                e.art.position = CGPoint(x: x0.rounded(), y: (pt.y - 3 * k).rounded())
+                for dx in [CGFloat(2), 31] { path.move(to: CGPoint(x: x0 + dx * k, y: pt.y + 3 * k)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? 8 : -8), y: top)) }
+            }
+            e.ropes.path = path
+            topStructureLayers[s.ownerID] = e
+        }
+        for (id, e) in topStructureLayers where !alive.contains(id) { fade(e.art, to: 0, remove: true); e.ropes.removeFromSuperlayer(); topStructureLayers[id] = nil }
+    }
+
     /// The mossy stumps in the bottom corners (only out when the top corners are full).
     fileprivate func renderCornerStumps() {
         let stumps = world.cornerStumps
@@ -2092,6 +2153,66 @@ extension SpectacleRenderer {
             l.setAffineTransform(CGAffineTransform(scaleX: fromRight ? -1 : 1, y: 1))
             l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
         }
+    }
+
+    /// After each step of Claude's, the little thing it held up for it (a book, a magnifier, a telescope, a trowel, a
+    /// clover for the tests, a list); and an anniversary's flower crown.
+    fileprivate func renderHeldProps() {
+        var alive = Set<Int>()
+        for c in world.creatures where c.homeUntil == nil {
+            let crown = world.crowned.contains(c.id)
+            let held = world.heldProp(c)
+            guard held != nil || crown, let what = held ?? (crown ? "crown" : nil) else { continue }
+            // A crown sits on its head; a prop is held up in front.
+            guard let (si, pt) = local(c.pos + (what == "crown" ? Vec2(0, c.species.headTop - 3) : Vec2(c.facing * c.size.x * 0.32, c.species.headTop * 0.62))) else { continue }
+            alive.insert(c.id)
+            var e = propLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.12; popIn(l); return (l, "") }()
+            attach(e.layer, si)
+            if e.what != what, let img = what == "crown" ? ToolPropArt.crown : ToolPropArt.image(what) {
+                e.layer.contents = img
+                let k = what == "crown" ? 2.0 : 2.0
+                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * k, height: Double(img.height) * k)
+                if e.what != "" { boing(e.layer, amount: 0.2) }
+                e.what = what
+            }
+            e.layer.setAffineTransform(CGAffineTransform(scaleX: c.facing < 0 ? -1 : 1, y: 1))
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            propLayers[c.id] = e
+        }
+        for (id, e) in propLayers where !alive.contains(id) { fade(e.layer, to: 0, remove: true); propLayers[id] = nil }
+    }
+
+    /// One seedling helper per subagent Claude has out: they hop off along the window's top edge and back (carrying a
+    /// leaf on the way back), until each one's part is done.
+    fileprivate func renderSeedlings() {
+        var alive = Set<String>()
+        let t = CACurrentMediaTime()
+        for c in world.creatures {
+            guard let j = c.job, j.kind == .claude, j.phase == .working, j.helpers > 0, let wid = j.windowID,
+                  let top = world.surfaces.filter({ $0.ownerID == wid && $0.kind == .windowTop && $0.supports(x: c.pos.x) }).first else { continue }
+            for k in 0..<j.helpers {
+                let key = "\(c.id)-\(k)"
+                alive.insert(key)
+                let toRight = k % 2 == 0
+                let end = toRight ? top.maxX - 14 : top.minX + 14
+                let span = (end - c.pos.x) * (0.55 + 0.4 * Double((k / 2) % 2))
+                let phase = t * (0.18 + 0.03 * Double(k)) + Double(k) * 1.7
+                let f = 0.5 - 0.5 * cos(phase * 2 * .pi)
+                let x = c.pos.x + (toRight ? 20 : -20) + span * f
+                let goingBack = sin(phase * 2 * .pi) < 0
+                guard let (si, pt) = local(Vec2(x, top.y)) else { continue }
+                let l = seedlingLayers[key] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.11; popIn(l); return l }()
+                attach(l, si)
+                let frame = Int(t * 6 + Double(k)) % 2
+                l.contents = ToolPropArt.seedling(frame: frame, leaf: goingBack)
+                l.bounds = CGRect(x: 0, y: 0, width: 7 * 2.0, height: 9 * 2.0)
+                let dir: CGFloat = (goingBack ? -1 : 1) * (toRight ? 1 : -1)
+                l.setAffineTransform(CGAffineTransform(scaleX: dir, y: 1))
+                l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 1)
+                seedlingLayers[key] = l
+            }
+        }
+        for (k, l) in seedlingLayers where !alive.contains(k) { fade(l, to: 0, remove: true); seedlingLayers[k] = nil }
     }
 
     /// The seasons, on their own: now and then a cherry petal (spring), an autumn leaf, or a snowflake (winter) lets
@@ -2265,7 +2386,7 @@ extension SpectacleRenderer {
             attach(e.layer, si)
             if e.what != what {
                 let picked = MossSprout.Kind(rawValue: what)
-                let img = what == "can" ? PropArt.wateringCan : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
+                let img = what == "can" ? PropArt.wateringCan : what == "lantern" ? PropArt.lantern : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
                 let k = picked == nil ? 3 : 2
                 e.layer.contents = img
                 e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * k, height: img.height * k)

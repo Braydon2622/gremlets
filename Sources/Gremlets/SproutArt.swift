@@ -111,3 +111,79 @@ enum MoodArt {
         return img
     }
 }
+
+/// Little things a Gremlet holds up while Claude works (and other small companions' bits).
+enum ToolPropArt {
+    private static var cache: [String: CGImage] = [:]
+
+    static func image(_ name: String) -> CGImage? {
+        if let c = cache[name] { return c }
+        var cv: PixelCanvas
+        switch name {
+        case "book":
+            cv = PixelCanvas(7, 5)
+            cv.rect(0, 0, 3, 5, 0xC0503C); cv.rect(4, 0, 3, 5, 0xC0503C)
+            cv.rect(1, 1, 2, 4, 0xF6EFDF); cv.rect(4, 1, 2, 4, 0xF6EFDF); cv.vspan(3, 0, 4, 0x8A2E22)
+            cv.hspan(1, 2, 3, 0xB8AA8C); cv.hspan(4, 5, 3, 0xB8AA8C); cv.hspan(1, 2, 2, 0xB8AA8C)
+        case "magnifier":
+            cv = PixelCanvas(6, 6)
+            cv.blob(3.5, 3.6, 2.2, 2.2, base: 0x9FD8F0, light: 0xDFF4FF); cv.set(1, 1, 0x8A5A35); cv.set(0, 0, 0x6B4428)
+            for (x, y) in [(2, 5), (3, 5), (4, 5), (5, 4), (5, 3), (5, 2), (1, 4), (1, 3), (2, 2)] { if cv.get(x, y) == nil { cv.set(x, y, 0xB8B6AE) } }
+        case "telescope":
+            cv = PixelCanvas(8, 5)
+            for x in 0..<7 { cv.set(x, 1 + x / 3, x < 3 ? 0xB07A44 : 0xD9A066); cv.set(x, 2 + x / 3, x < 3 ? 0x8A5A35 : 0xB07A44) }
+            cv.set(7, 3, 0x9FD8F0); cv.set(7, 4, 0x9FD8F0); cv.set(2, 0, 0x6B4428)
+        case "trowel":
+            cv = PixelCanvas(4, 8)
+            cv.rect(1, 0, 2, 3, 0x8A5A35); cv.set(1, 3, 0x6B4428); cv.set(2, 3, 0x6B4428)
+            cv.rect(0, 4, 4, 3, 0xB8C2CC); cv.rect(1, 7, 2, 1, 0xB8C2CC); cv.set(1, 5, 0xE4ECF2)
+        case "clover":
+            cv = PixelCanvas(5, 6)
+            cv.vspan(2, 0, 2, 0x4F9A3E)
+            for (x, y) in [(1, 3), (3, 3), (1, 5), (3, 5)] { cv.set(x, y, 0x6CC04A); cv.set(x + (x < 2 ? -1 : 1), y, 0x8BD66A) }
+            cv.set(2, 4, 0x4F9A3E)
+        case "list":
+            cv = PixelCanvas(5, 7)
+            cv.rect(0, 0, 5, 7, 0xF6EFDF); cv.hspan(0, 4, 6, 0xC9A15A); cv.hspan(0, 4, 0, 0xC9A15A)
+            for y in [4, 2] { cv.set(1, y, 0x6CC04A); cv.hspan(2, 3, y, 0x8A7458) }
+        case "lantern":
+            return PropArt.lantern
+        default:
+            return nil
+        }
+        cv.outline(0.6)
+        let img = cv.image
+        cache[name] = img
+        return img
+    }
+
+    /// A seedling helper (one per subagent), two hopping frames, holding a leaf on the way back if `leaf`.
+    static func seedling(frame: Int, leaf: Bool) -> CGImage {
+        let key = "seed\(frame)\(leaf)"
+        if let c = cache[key] { return c }
+        var cv = PixelCanvas(7, 9)
+        let body: UInt32 = 0x8BD66A, shade: UInt32 = 0x5E9E46
+        let lift = frame == 1 ? 1 : 0
+        cv.blob(3, 2.6 + Double(lift), 2.4, 2.2, base: body, light: 0xB0E37A, shade: shade)
+        cv.set(2, 3 + lift, 0x2B2620); cv.set(4, 3 + lift, 0x2B2620)
+        cv.set(3, 5 + lift, shade); cv.set(2, 6 + lift, 0x7CCF56); cv.set(4, 6 + lift, 0x7CCF56); cv.set(1, 6 + lift, 0x7CCF56)
+        if frame == 0 { cv.set(1, 0, shade); cv.set(5, 0, shade) } else { cv.set(2, 0, shade); cv.set(4, 0, shade) }
+        if leaf { cv.set(5, 6 + lift, 0x4F9A3E); cv.set(6, 7 + lift, 0x6CC04A); cv.set(5, 7 + lift, 0x6CC04A); cv.set(6, 8 + lift > 8 ? 8 : 8, 0x8BD66A) }
+        cv.outline(0.6)
+        let img = cv.image
+        cache[key] = img
+        return img
+    }
+
+    /// A flower crown for an anniversary (9 × 3 px).
+    static let crown: CGImage = {
+        var cv = PixelCanvas(9, 3)
+        for x in 0..<9 { cv.set(x, 0, x % 2 == 0 ? 0x5E9E46 : 0x6CC04A) }
+        for (x, c) in [(0, 0xFF8FB1), (2, 0xFFE45C), (4, 0xFFFFFF), (6, 0xB98CFF), (8, 0xFF8FB1)] as [(Int, UInt32)] { cv.set(x, 1, c); cv.set(x, 2, c) }
+        cv.set(4, 1, 0xFFE45C)
+        let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
+        cv.outline(0.6)
+        for i in white { cv.px[i] = 0xFFFFFF }
+        return cv.image
+    }()
+}

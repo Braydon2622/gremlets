@@ -38,6 +38,8 @@ public enum SproutEvent: Equatable, Sendable {
     /// Caught a firefly (it glows in their hands a moment, then they let it go).
     case caughtFirefly(Vec2, by: Int)
     case missedFirefly(by: Int)
+    /// Full screen: popped straight from one place up to a corner perch (leaves where it was, a sparkle where it lands).
+    case poofed(from: Vec2, to: Vec2)
 }
 
 extension World {

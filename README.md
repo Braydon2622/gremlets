@@ -105,7 +105,16 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   mentions what went into today's page.
 - **Say hello.** Double-click a Gremlet: it turns and waves, and tells you its name, how long you've been together
   and its favourite spot (the one where it spends the most time).
-- **Top-corner hangouts.** Mossy branches in the top-left and top-right corners where they rest when Claude is
+- **Acting out Claude's work.** For a few seconds after each step it holds up what Claude used: a book (reading a
+  file), a magnifier (searching), a little telescope (the web), a trowel (editing), a four-leaf clover (tests,
+  fingers crossed), a list (the plan). Its rucksack fills as Claude's context does and gets unpacked when Claude
+  compacts. Seedling helpers hop along the window top while subagents work and come back with a leaf. The plan is a
+  row of mossy stepping stones that light up step by step. After three minutes waiting on you it taps the glass
+  (at most every four minutes). When the session ends it waves and carries a lantern home.
+- **Anniversaries.** Every thirty days together (and at a year) a Gremlet wears a flower crown all day, and the
+  scrapbook remembers it.
+- **Top-corner hangouts.** A woven nest hut (top left) and a big leaf swing (top right) hang on vines from the top
+  of the screen, with a mossy branch below each, where they rest when Claude is
   quiet; they hop out of the pointer's way there and clicks always go through to your app.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
   every window's top edge, strands hang down window sides, and after a long day the

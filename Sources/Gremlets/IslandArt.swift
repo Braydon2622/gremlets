@@ -868,19 +868,21 @@ enum SignArt {
 
 /// Claude's plan as a plank bridge, and the pack a worker carries as Claude's context fills up.
 enum PlanArt {
-    /// `total` planks in a row, the first `done` solid wood, the rest dashed outlines still to lay.
+    /// `total` mossy stepping stones in a row along the window top: done ones solid and lit with a soft glow, the rest
+    /// faint outlines still to step on.
     static func bridge(total: Int, done: Int) -> CGImage {
         let n = max(1, total), pw = 5, gap = 1
         var cv = PixelCanvas(n * (pw + gap), 4)
         for k in 0..<n {
             let x = k * (pw + gap)
             if k < done {
-                cv.rect(x, 0, pw, 3, 0xC98B4A); cv.hspan(x, x + pw - 1, 2, k % 3 == 1 ? 0x6CC04A : 0xE0A866); cv.hspan(x, x + pw - 1, 0, 0x8A5A35)
-                cv.set(x + 1, 1, 0x6B4428); cv.set(x + pw - 2, 1, 0x6B4428)
-                if k % 2 == 0 { cv.set(x + 2, 2, 0x8BD66A) }
+                // A rounded stone with moss on top and a glowing speck.
+                cv.hspan(x + 1, x + pw - 2, 0, 0x6E6A60); cv.hspan(x, x + pw - 1, 1, 0x9C978A); cv.hspan(x, x + pw - 1, 2, 0xB8B3A6)
+                cv.hspan(x + 1, x + pw - 2, 3, k % 2 == 0 ? 0x6CC04A : 0x8BD66A)
+                cv.set(x + 2, 2, 0xF7FF9C)
             } else {
-                for xx in x..<(x + pw) where (xx - x) % 2 == 0 { cv.set(xx, 2, 0xF1E4C8); cv.set(xx, 0, 0xF1E4C8) }
-                cv.set(x, 1, 0xF1E4C8); cv.set(x + pw - 1, 1, 0xF1E4C8)
+                for xx in (x + 1)..<(x + pw - 1) where (xx - x) % 2 == 1 { cv.set(xx, 2, 0xD9D2C5) }
+                cv.set(x, 1, 0xD9D2C5); cv.set(x + pw - 1, 1, 0xD9D2C5)
             }
         }
         return cv.image

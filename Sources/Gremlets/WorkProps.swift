@@ -248,17 +248,17 @@ enum PropArt {
     static let shootingStar = image(grid(["....w", "..wWw", "wwW.."], ["w": 0xFFFFFF, "W": 0xFFF6B0]))
     static let rainbow: CGImage = {
         let colors: [UInt32] = [0xFF6F7E, 0xFFB35C, 0xFFE066, 0x8FD6A2, 0x6FB8F0, 0xA98BEA]
-        let w = 30, h = 11
+        // Tall enough for the whole arc (it used to be 11 rows for a 15-row arc, which flattened the top off).
+        let w = 30, h = w / 2 + 1
         var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
         for (band, col) in colors.enumerated() {
             let r = Double(w) / 2 - Double(band)
-            for x in 0..<w {
-                let dx = Double(x) - Double(w - 1) / 2
-                guard abs(dx) <= r else { continue }
-                let y = Int((r * r - dx * dx).squareRoot().rounded())
-                let row = h - 1 - min(h - 1, y)
-                g[row][x] = col
-            }
+            // Every pixel within the band's ring, so the arc has no gaps at its steep sides.
+            for row in 0..<h { for x in 0..<w {
+                let dx = Double(x) - Double(w - 1) / 2, dy = Double(h - 1 - row)
+                let d = (dx * dx + dy * dy).squareRoot()
+                if d <= r && d > r - 1 && g[row][x] == nil { g[row][x] = col }
+            } }
         }
         return image(g)
     }()

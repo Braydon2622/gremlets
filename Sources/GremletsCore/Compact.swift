@@ -155,9 +155,22 @@ extension Brain {
                 let near = Vec2(cur.x.clamped(p.minX, p.maxX), p.y + 20)
                 return (near - cur).length < World.shyClear ? 5 : 0
             }
-            let p = perches.min { crowd($0) + shy($0) < crowd($1) + shy($1) }!
+            // Its own side of the screen first (nobody crosses the middle of a full-screen app).
+            let mid = world.screens.first.map { $0.minX + $0.w / 2 } ?? 0
+            func side(_ p: Surface) -> Double { ((p.minX + p.maxX) / 2 < mid) == (c.pos.x < mid) ? 0 : 0.6 }
+            let p = perches.min { crowd($0) + shy($0) + side($0) < crowd($1) + shy($1) + side($1) }!
             let x = (p.minX + p.width * world.rng.range(0.2, 0.8))
-            world.startFloat(c, to: Vec2(x, p.y), ride: .dandelion)
+            // Close by, it floats up; from further off it pops straight there (a puff of leaves where it was), so
+            // nobody drifts slowly up across the middle of the screen.
+            if (Vec2(x, p.y) - c.pos).length < 220 {
+                world.startFloat(c, to: Vec2(x, p.y), ride: .dandelion)
+            } else {
+                world.sproutEvents.append(.poofed(from: c.pos, to: Vec2(x, p.y)))
+                c.pos = Vec2(x, p.y); c.vel = .zero; c.floatTarget = nil
+                c.groundOwner = p.ownerID
+                c.idleVariant = "look"
+                c.set(.idle, duration: world.rng.range(1, 3))
+            }
             return
         }
         add("idle", 2.0) { c.idleVariant = world.rng.chance(0.5) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(4, 10)) }

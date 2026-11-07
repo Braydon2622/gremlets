@@ -50,13 +50,25 @@ extension World {
     public var cornerBranches: [Surface] {
         if compact { return Array(compactBranchTiers().prefix(compactTiers)) }
         guard topCornerPerches, let scr = screens.first else { return [] }
-        // Out of full screen: mossy branches in both top corners to hang out on (two on the left, one on the right),
-        // a little lower than in full screen so they sit below a browser's tabs and toolbar.
+        // Out of full screen: a mossy branch low in each top corner (the nest hut and the leaf swing hang above them).
         let o = World.cornerBranchOwner
-        return [Surface(ownerID: o, kind: .plant, y: scr.maxY - 120, minX: scr.minX, maxX: scr.minX + 130),
-                Surface(ownerID: o - 2, kind: .plant, y: scr.maxY - 130, minX: scr.maxX - 124, maxX: scr.maxX),
-                Surface(ownerID: o - 1, kind: .plant, y: scr.maxY - 205, minX: scr.minX, maxX: scr.minX + 100)]
+        return [Surface(ownerID: o - 1, kind: .plant, y: scr.maxY - 215, minX: scr.minX, maxX: scr.minX + 100),
+                Surface(ownerID: o - 2, kind: .plant, y: scr.maxY - 210, minX: scr.maxX - 110, maxX: scr.maxX)]
     }
+
+    public enum TopStructure: Sendable { case nestHut, leafSwing }
+
+    /// Out of full screen: little places hanging on vines from the top of the screen: a woven nest hut with a porch in
+    /// the top-left corner, a big leaf swing in the top-right. Their porch / leaf is where the Gremlets stand.
+    public var topStructures: [(surface: Surface, kind: TopStructure)] {
+        guard !compact, topCornerPerches, let scr = screens.first else { return [] }
+        let o = World.cornerBranchOwner
+        return [(Surface(ownerID: o - 3, kind: .plant, y: scr.maxY - 132, minX: scr.minX + 22, maxX: scr.minX + 128), .nestHut),
+                (Surface(ownerID: o - 4, kind: .plant, y: scr.maxY - 126, minX: scr.maxX - 142, maxX: scr.maxX - 42), .leafSwing)]
+    }
+
+    /// Everything to perch on up in the top corners (branches and the hanging places).
+    var topCornerSpots: [Surface] { cornerBranches + topStructures.map(\.surface) }
 
     /// Out of full screen: up to a corner branch for a rest now and then (more often while Claude is quiet), and back
     /// down on a leaf after a while.
@@ -73,7 +85,7 @@ extension World {
             return
         }
         guard clock >= nextCornerTripAt else { return }
-        let free = cornerBranches.filter { p in creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count < max(1, Int(p.width / 34)) }
+        let free = topCornerSpots.filter { p in creatures.filter { $0.groundOwner == p.ownerID || ($0.floatTarget.map { abs($0.y - p.y) < 4 && p.supports(x: $0.x) } ?? false) }.count < max(1, Int(p.width / 34)) }
         guard let p = free.min(by: { abs(($0.minX + $0.maxX) / 2 - c.pos.x) < abs(($1.minX + $1.maxX) / 2 - c.pos.x) }) else { return }
         add("cornerPerch", claudeResting ? 1.0 : 0.3) {
             self.nextCornerTripAt = self.clock + self.rng.range(20, 60)
@@ -130,11 +142,11 @@ extension World {
     }
 
     var notchSurfaces: [Surface] {
-        guard let n = notchHome, notchHomeShowing else { return cornerBranches + cornerStumps }
+        guard let n = notchHome, notchHomeShowing else { return topCornerSpots + cornerStumps }
         return [Surface(ownerID: World.notchPorchOwner, kind: .plant, y: n.porch.y, minX: n.porch.minX, maxX: n.porch.maxX),
                 Surface(ownerID: World.notchHammockOwner, kind: .plant, y: n.hammock.y, minX: n.hammock.minX, maxX: n.hammock.maxX),
                 Surface(ownerID: World.notchSwingOwner, kind: .plant, y: n.swing.y, minX: n.swing.minX, maxX: n.swing.maxX)]
-            + cornerBranches + cornerStumps
+            + topCornerSpots + cornerStumps
     }
 
     /// Who's napping in the hammock.

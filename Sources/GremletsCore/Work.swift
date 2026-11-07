@@ -127,6 +127,11 @@ public final class Job {
     public internal(set) var helpers = 0
     /// The last thing Claude did, for the Gremlet's pose and the hover description.
     public internal(set) var lastTool: ClaudeTool?
+    /// The Claude Code tool's own name ("Read", "Grep", "WebSearch"…; "Test" for a test run), for the prop it holds.
+    public internal(set) var lastToolName = ""
+    /// When Claude started waiting on you, and when its Gremlet last knocked on the glass about it.
+    var needsYouSince: Double?
+    var lastKnock = -1e9
     /// Claude buddy: the project name, whether Claude is waiting on you, and when Claude last used a tool.
     public internal(set) var label: String?
     public internal(set) var needsYou = false

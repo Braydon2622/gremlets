@@ -222,6 +222,8 @@ public final class World {
     public private(set) var surfaces: [Surface] = []
     public private(set) var creatures: [Creature] = []
     public var cursor: Vec2?
+    /// Wearing a flower crown today (an anniversary; set by the app).
+    public var crowned: Set<Int> = []
     /// Full screen: when each Gremlet last skittered away from the pointer.
     var spookedAt: [Int: Double] = [:]
     /// Gremlets dropping to one spot, falling through anything on the way (see shyFromCursor).
@@ -454,6 +456,7 @@ public final class World {
         updatePlay(dt); updateKite(dt)
         updateSpectacle(dt)
         updateSessionWeather()
+        updateClaudeCompanions()
     }
 
     private func update(_ c: Creature, _ dt: Double) {
@@ -616,6 +619,7 @@ public final class World {
                 startFloat(c, to: Vec2((c.pos.x + c.facing * 60).clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)
                 return
             }
+            if headHome(c) { return }
             if compact { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }

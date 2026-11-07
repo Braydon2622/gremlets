@@ -1000,8 +1000,8 @@ final class OverlayController {
                 }
                 let a = CAKeyframeAnimation(keyPath: "transform.scale.y"); a.values = [1, 1.06, 0.98, 1]; a.duration = 0.25
                 l.add(a, forKey: "thunk")
-            case .look(let id):
-                if let c = creature(id) { spawnEffect(ClaudeIcons.lantern, above: c, drift: 10 * c.facing) }
+            case .look:
+                break   // it holds up a book or a magnifier instead (see heldProp)
             case .run(let id):
                 if let c = creature(id) { spawnEffect(Effects.steam, above: c, drift: 6); spawnEffect(Effects.steam, above: c, drift: -8, delay: 0.2) }
             case .web(let id):
@@ -1019,8 +1019,14 @@ final class OverlayController {
                 }
             case .plan(let id):
                 if let c = creature(id) { spawnEffect(ClaudeIcons.flag, above: c, drift: 0) }
-            case .helperJoined, .helperLeft, .weather:
-                break   // drawn by updateBuild
+            case .helperLeft(let id, _):
+                // A seedling helper comes back with its leaf: its part is done.
+                if let c = creature(id), let (si, p) = localPoint(c, dy: c.size.y * 0.5) {
+                    burst([Effects.leaf, Effects.sparkle], si: si, at: p, count: 4, dx: -18...18, dy: 6...28, duration: 0.8)
+                    showBubble(["A helper's back!", "Thanks, little one.", "One part done."].randomElement()!, on: id, seconds: 2)
+                }
+            case .helperJoined, .weather:
+                break   // seedlings drawn by renderSeedlings; weather by updateBuild
             }
         }
     }

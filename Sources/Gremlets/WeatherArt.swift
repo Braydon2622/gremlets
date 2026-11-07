@@ -293,3 +293,55 @@ enum PodArt {
     }()
 }
 
+
+/// The little places hanging from the top of the screen in its corners (out of full screen).
+enum TopStructureArt {
+    /// A woven nest hut with a leaf roof, a round door and window, on a twig porch that runs out to the right
+    /// (36 × 28 px; the porch top, where Gremlets stand, is 2 px up from the bottom). The window glows when `lit`.
+    static func nestHut(lit: Bool) -> CGImage {
+        var cv = PixelCanvas(36, 28)
+        // The twig porch.
+        for x in 0..<36 { cv.set(x, 0, x % 4 == 1 ? 0x553620 : 0x6B4428); cv.set(x, 1, x % 5 == 2 ? 0xA9743F : 0x8A5A35) }
+        for x in [6, 14, 33] { cv.vspan(x, 0, 1, 0x553620) }
+        // The woven nest body.
+        cv.blob(11, 10.5, 10, 8.6, base: 0xC9A15A, light: 0xE0BE78, shade: 0x9C7840)
+        for y in stride(from: 4, through: 17, by: 3) { for x in 2...20 where cv.solid(x, y) && (x + y) % 4 != 0 { cv.set(x, y, 0xA88445) } }
+        for x in stride(from: 3, through: 19, by: 4) { for y in 3...17 where cv.solid(x, y) && y % 2 == 0 { cv.set(x, y, 0xB8924E) } }
+        // Leaf roof.
+        cv.blob(11, 19.5, 12, 4.6, base: 0x6CC04A, light: 0x9BDB6E, shade: 0x3E8E3A)
+        for x in stride(from: 0, through: 22, by: 3) { cv.set(x, 16, 0x5E9E46); cv.set(x + 1, 15, 0x4C8A3A) }
+        cv.vspan(11, 24, 26, 0x6B4428); cv.set(12, 26, 0x8BD66A); cv.set(13, 27, 0x6CC04A)
+        // Round door and window.
+        cv.blob(8, 6.6, 3.0, 3.6, base: 0x4A3020, light: 0x5E3B22)
+        cv.set(10, 6, 0xE0B04A)
+        cv.blob(16, 11, 1.8, 1.8, base: lit ? 0xFFD36B : 0x3B4660, light: lit ? 0xFFF0B8 : 0x56627E)
+        // Flowers along the porch, a tiny lantern hanging at its end.
+        for (x, c) in [(23, 0xFF8FB1), (25, 0xFFE45C), (28, 0xFFFFFF)] as [(Int, UInt32)] { cv.set(x, 2, 0x5E9E46); cv.set(x, 3, c) }
+        cv.vspan(35, 2, 6, 0x6B4428); cv.set(34, 7, 0x6B4428); cv.rect(33, 3, 2, 3, lit ? 0xFFC845 : 0xC9A15A); cv.set(33, 4, lit ? 0xFFF0B8 : 0xE0BE78)
+        let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
+        cv.outline(0.62)
+        for i in white { cv.px[i] = 0xFFFFFF }
+        return cv.image
+    }
+
+    /// A big leaf, gently cupped, with its midrib and a curl of stem (34 × 10 px; the leaf's middle, where Gremlets
+    /// stand, is 3 px up from the bottom).
+    static let leafSwing: CGImage = {
+        var cv = PixelCanvas(34, 10)
+        let leaf: UInt32 = 0x7CC24E, light: UInt32 = 0xB0E37A, dark: UInt32 = 0x4A8E36, rib: UInt32 = 0x3E7A34
+        for x in 1..<33 {
+            let t = Double(x - 1) / 31
+            let cup = Int((pow(abs(t - 0.5) * 2, 2) * 4).rounded())   // ends curl up
+            let thick = 3 + Int((sin(t * .pi) * 2).rounded())
+            for y in 0..<thick { cv.set(x, 1 + cup + y, y == thick - 1 ? light : (y == 0 ? dark : leaf)) }
+            cv.set(x, 1 + cup + max(0, thick / 2 - 1), rib)
+        }
+        // Veins.
+        for x in stride(from: 5, to: 30, by: 4) { cv.set(x, 2 + Int((pow(abs(Double(x - 1) / 31 - 0.5) * 2, 2) * 4).rounded()), dark) }
+        // The stem curling off the right end, a dewdrop and two flowers.
+        cv.set(33, 6, rib); cv.set(33, 7, rib); cv.set(32, 8, rib); cv.set(31, 9, rib)
+        cv.set(12, 4, 0xDFF4FF); cv.set(20, 5, 0xFF8FB1); cv.set(22, 5, 0xFFE45C)
+        cv.outline(0.62)
+        return cv.image
+    }()
+}

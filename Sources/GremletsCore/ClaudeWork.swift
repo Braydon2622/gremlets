@@ -40,9 +40,11 @@ public enum ClaudeWorkEvent: Equatable, Sendable {
 
 extension World {
     /// Claude used a tool in the session this Gremlet is helping with.
-    public func claudeTool(workerID: Int, _ tool: ClaudeTool) {
+    public func claudeTool(workerID: Int, _ tool: ClaudeTool, name: String = "") {
         guard let c = creature(id: workerID), let j = c.job, j.phase != .leaving else { return }
         j.lastTool = tool
+        j.lastToolName = name
+        j.needsYouSince = nil
         j.lastToolTime = clock
         j.needsYou = false
         j.beats += 1
@@ -114,6 +116,9 @@ extension World {
         guard let c = creature(id: workerID), let j = c.job else { return }
         c.workPose = "crouch"; j.poseTimer = 4
         if let label = j.label, bonsaiPlacements.contains(where: { $0.project == label }) { bonsaiEvents.append(.shed(label)) }
+        // The rucksack's emptied: light again.
+        if j.contextPct != nil { j.contextPct = min(j.contextPct ?? 0, 8) }
+        planEvents.append(.unpacked(worker: c.id))
     }
 
     public func drainClaudeEvents() -> [ClaudeWorkEvent] {
@@ -157,6 +162,12 @@ public enum ClaudePlanEvent: Equatable, Sendable {
     case stepDone(worker: Int, step: Int)
     case planComplete(worker: Int)
     case contextFilling(worker: Int, pct: Int)
+    /// Claude compacted: the Gremlet unpacks its rucksack (it goes light again) and stretches.
+    case unpacked(worker: Int)
+    /// Claude has been waiting on you a while: a soft tap tap on the window glass.
+    case knocked(worker: Int)
+    /// The session ended: a wave goodbye, and home with a lantern.
+    case goodbye(worker: Int)
 }
 
 extension World {
@@ -224,5 +235,73 @@ extension World {
         if j.needsYou { return .waiting }
         let quiet = clock - j.lastToolTime
         return quiet > 4 && quiet < 150 ? .thinking : nil
+    }
+}
+
+
+// MARK: Acting out Claude's work: props, a knock, a goodbye
+
+extension World {
+    /// What it holds up for a few seconds after a step of Claude's: a book (reading a file), a magnifying glass
+    /// (searching), a little telescope (the web), a trowel (editing), a four-leaf clover (tests: fingers crossed),
+    /// a list (updating the plan).
+    public func heldProp(_ c: Creature) -> String? {
+        guard let j = c.job, j.kind == .claude, j.phase == .working, !j.needsYou, clock - j.lastToolTime < 3.5 else { return nil }
+        switch j.lastToolName {
+        case "Read", "NotebookRead": return "book"
+        case "Grep", "Glob", "LS": return "magnifier"
+        case "WebFetch", "WebSearch": return "telescope"
+        case "Edit", "Write", "MultiEdit", "NotebookEdit": return "trowel"
+        case "Test": return "clover"
+        case "TodoWrite": return "list"
+        default: return j.lastToolName.hasPrefix("mcp__") ? "telescope" : nil
+        }
+    }
+
+    /// Once a second: a Gremlet whose Claude has waited on you for three minutes taps on the glass (at most every four
+    /// minutes); a lantern carried home is put away once it's there (or after a while).
+    func updateClaudeCompanions() {
+        for c in creatures {
+            if let until = c.lanternUntil, clock > until || World.isNotchOwner(c.groundOwner) || c.homeUntil != nil {
+                c.lanternUntil = nil
+                if c.carrying == "lantern" { c.carrying = nil }
+            }
+            guard let j = c.job, j.kind == .claude, j.phase == .working else { continue }
+            if !j.needsYou { j.needsYouSince = nil; continue }
+            let since = j.needsYouSince ?? clock
+            j.needsYouSince = since
+            if clock - since > 180, clock - j.lastKnock > 240, c.isGrounded, c.activity != .dragged {
+                j.lastKnock = clock
+                planEvents.append(.knocked(worker: c.id))
+                c.set(.special, duration: min(0.9, c.animationLength(for: .special)))
+            }
+        }
+    }
+
+    /// The session ended: it waves goodbye, picks up a lantern and heads home (the hanging house, or the nest hut in
+    /// the top-left corner).
+    public func claudeGoodbye(workerID: Int) {
+        guard let c = creature(id: workerID) else { return }
+        planEvents.append(.goodbye(worker: c.id))
+        c.carrying = "lantern"
+        c.lanternUntil = clock + 90
+        c.headingHome = true
+        if c.isGrounded {
+            if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }
+            c.set(.wave, duration: 1.6)
+        }
+    }
+
+    /// The next decision after the goodbye wave: off home.
+    func headHome(_ c: Creature) -> Bool {
+        guard c.headingHome else { return false }
+        c.headingHome = false
+        guard !compact, c.job == nil || c.job?.phase == .leaving else { return false }
+        if notchHomeShowing, startExpedition(c, .notch) { return true }
+        if let nest = topStructures.first?.surface {
+            startFloat(c, to: Vec2((nest.minX + nest.maxX) / 2, nest.y), ride: .dandelion)
+            return true
+        }
+        return false
     }
 }

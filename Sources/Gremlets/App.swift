@@ -349,13 +349,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setUpMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let sp = species["kindlet"] ?? species.values.first, let frame = sp.frames.first {
-            let img = NSImage(cgImage: frame, size: NSSize(width: 20, height: 20))
-            statusItem.button?.image = img
-            defaultStatusImage = img
-        } else {
-            statusItem.button?.title = "G"
-        }
+        let img = MenuLogo.image(.idle)
+        statusItem.button?.image = img
+        defaultStatusImage = img
         statusItem.button?.toolTip = "Gremlets"
         rebuildMenu()
     }
@@ -1426,6 +1422,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
             if Int(CACurrentMediaTime()) % 300 == 0 { bonds.save() }
         }
+        // Anniversaries: a flower crown all day, and a line in the scrapbook.
+        if Int(CACurrentMediaTime()) % 20 == 0 {
+            let crowned = Set(world.creatures.filter { bonds.isAnniversary($0.species.id) }.map(\.id))
+            for c in world.creatures where crowned.contains(c.id) && !world.crowned.contains(c.id) {
+                let line = "\(c.species.name): \(bonds.daysTogether(c.species.id)) days together"
+                if !(dayLog[Date()].anniversaries ?? []).contains(line) {
+                    dayLog.add { $0.anniversaries = ($0.anniversaries ?? []) + [line] }
+                    overlay.showBubble("It's our \(bonds.daysTogether(c.species.id))th day together! 🌸", on: c.id, seconds: 6)
+                }
+            }
+            world.crowned = crowned
+        }
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
         if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
@@ -1474,13 +1482,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // told by the tree icon alone; words only when Claude needs you or several sessions run.
         let claudeLabel: String? = jobs.count > 1 ? (needs > 0 ? "\(needs) need\(needs == 1 ? "s" : "") you" : "\(jobs.count) growing") : nil
         let title = focus.label ?? claudeLabel
-        // While a tree grows on a terminal it is the menu bar icon too, filling out as the session goes.
+        // The logo shows how Claude's doing at a glance.
         // (Swapped at most every couple of seconds: the status bar re-lays out on every image change, and a burst of
         // edits during a recording once made the item disappear until the next title change.)
         let tickNow = CACurrentMediaTime()
         if tickNow - lastIconSwap > 2.5 {
-            let liveTree = world.bonsaiPlacements.first { $0.slot < 0 }.flatMap { world.bonsaiBook[$0.project] }
-            let wantIcon = liveTree.map { MenuTreeIcon.image($0, month: world.month, waiting: needs > 0) } ?? defaultStatusImage
+            // The logo: a third leaf on its sprout while Claude works, a lantern while Claude waits for you.
+            let working = jobs.contains { $0.phase == .working && world.time - $0.lastToolTime < 90 }
+            let wantIcon = MenuLogo.image(needs > 0 ? .waiting : working ? .working : .idle)
             if statusItem.button?.image !== wantIcon { statusItem.button?.image = wantIcon; lastIconSwap = tickNow }
         }
         if title != lastTitle {

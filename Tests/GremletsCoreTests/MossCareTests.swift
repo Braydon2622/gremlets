@@ -245,7 +245,7 @@ import Testing
         w.topCornerPerches = true
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         let cs = (0..<4).map { w.spawn(testSpecies(scale: 10), at: Vec2(200 + Double($0) * 300, 0)) }
-        #expect(w.cornerBranches.count == 3)
+        #expect(w.topCornerSpots.count == 4, "two branches, the nest hut and the leaf swing")
         var up = false
         for _ in 0..<(60 * 600) {
             w.step(1.0 / 60)
@@ -279,5 +279,70 @@ import Testing
         _ = w.startJob(windowID: 1, craft: .garden, prefer: c.id)
         #expect(w.claudeMood(c) == nil)
         #expect(w.placeName(of: c) == "the top of Claude's window")
+    }
+}
+
+@Suite struct ClaudeActingTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    func working() throws -> (World, Creature) {
+        let w = World(seed: 201)
+        w.maxHobbies = 0
+        w.gardenInMoss = true
+        w.topCornerPerches = true
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 300, y: 100, w: 800, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 0))
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        _ = try #require(w.startJob(windowID: 1, craft: .garden, prefer: c.id))
+        for _ in 0..<(60 * 40) where c.job?.phase != .working { w.step(1.0 / 60) }
+        return (w, c)
+    }
+
+    @Test func itHoldsUpWhatClaudeIsUsing() throws {
+        let (w, c) = try working()
+        for (tool, prop) in [("Read", "book"), ("Grep", "magnifier"), ("WebSearch", "telescope"), ("Edit", "trowel"), ("Test", "clover"), ("TodoWrite", "list")] {
+            w.claudeTool(workerID: c.id, ClaudeTool.from(tool == "Test" ? "Bash" : tool), name: tool)
+            w.step(1.0 / 60)
+            #expect(w.heldProp(c) == prop, "\(tool)")
+        }
+        for _ in 0..<(60 * 5) { w.step(1.0 / 60) }
+        #expect(w.heldProp(c) == nil, "put away after a few seconds")
+    }
+
+    @Test func compactingEmptiesThePack() throws {
+        let (w, c) = try working()
+        w.claudeContext(workerID: c.id, pct: 90)
+        #expect(c.job?.contextPct == 90)
+        _ = w.drainPlanEvents()
+        w.claudeCompact(workerID: c.id)
+        #expect((c.job?.contextPct ?? 99) <= 8)
+        #expect(w.drainPlanEvents().contains(.unpacked(worker: c.id)))
+    }
+
+    @Test func aGentleKnockAfterThreeMinutesWaiting() throws {
+        let (w, c) = try working()
+        w.jobNeedsAttention(c.id)
+        _ = w.drainPlanEvents()
+        var knocks = 0
+        for _ in 0..<(20 * 60 * 8) {
+            w.step(1.0 / 20)
+            knocks += w.drainPlanEvents().filter { $0 == .knocked(worker: c.id) }.count
+        }
+        #expect(knocks == 2, "at three minutes and seven, not more (\(knocks))")
+    }
+
+    @Test func atTheEndItWavesAndCarriesALanternHome() throws {
+        let (w, c) = try working()
+        w.endJob(c.id)
+        w.claudeGoodbye(workerID: c.id)
+        #expect(c.carrying == "lantern")
+        var home = false
+        for _ in 0..<(60 * 80) {
+            w.step(1.0 / 60)
+            if c.isGrounded, let o = c.groundOwner, World.isCornerSpot(o) || World.isHouseOwner(o) { home = true; break }
+        }
+        #expect(home, "made it to the nest hut (\(c.pos))")
+        for _ in 0..<5 { w.step(1.0 / 60) }
+        #expect(c.carrying == nil, "lantern put away at home")
     }
 }

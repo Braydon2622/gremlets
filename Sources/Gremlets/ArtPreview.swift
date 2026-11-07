@@ -37,6 +37,35 @@ enum ArtPreview {
         ctxS.interpolationQuality = .none
         ctxS.draw(st, in: CGRect(x: 20, y: 20, width: st.width * 8, height: st.height * 8))
         write(ctxS.makeImage()!, dir.appendingPathComponent("stump.png"))
+        // Both rainbows, whole.
+        let rb = [PropArt.rainbow, WeatherArt.rainbow]
+        let ctxR = CGContext(data: nil, width: 40 * 8 * 2 + 60, height: 21 * 8 + 40, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxR.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxR.fill(CGRect(x: 0, y: 0, width: ctxR.width, height: ctxR.height))
+        ctxR.interpolationQuality = .none
+        for (k, img) in rb.enumerated() { ctxR.draw(img, in: CGRect(x: 20 + k * (40 * 8 + 20), y: 20, width: img.width * 8, height: img.height * 8)) }
+        write(ctxR.makeImage()!, dir.appendingPathComponent("rainbows.png"))
+        // The hanging places in the top corners.
+        let tops = [TopStructureArt.nestHut(lit: false), TopStructureArt.nestHut(lit: true), TopStructureArt.leafSwing]
+        let ctxTop = CGContext(data: nil, width: 36 * 6 * 3 + 80, height: 28 * 6 + 40, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxTop.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxTop.fill(CGRect(x: 0, y: 0, width: ctxTop.width, height: ctxTop.height))
+        ctxTop.interpolationQuality = .none
+        for (k, img) in tops.enumerated() { ctxTop.draw(img, in: CGRect(x: 20 + k * (36 * 6 + 20), y: 20, width: img.width * 6, height: img.height * 6)) }
+        // The menu bar logo, idle / working / waiting, on a light and a dark bar.
+        let ctxL = CGContext(data: nil, width: 3 * 22 * 4 + 80, height: 2 * 18 * 4 + 60, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxL.setFillColor(CGColor(red: 0.93, green: 0.93, blue: 0.94, alpha: 1)); ctxL.fill(CGRect(x: 0, y: 0, width: ctxL.width, height: ctxL.height / 2))
+        ctxL.setFillColor(CGColor(red: 0.16, green: 0.16, blue: 0.18, alpha: 1)); ctxL.fill(CGRect(x: 0, y: ctxL.height / 2, width: ctxL.width, height: ctxL.height / 2))
+        ctxL.interpolationQuality = .none
+        for (k, st) in [MenuLogo.State.idle, .working, .waiting].enumerated() {
+            var r = CGRect(x: 0, y: 0, width: 22, height: 18)
+            if let cg = MenuLogo.image(st).cgImage(forProposedRect: &r, context: nil, hints: nil) {
+                for row in 0..<2 { ctxL.draw(cg, in: CGRect(x: 20 + k * (22 * 4 + 20), y: 15 + row * (ctxL.height / 2), width: 22 * 4, height: 18 * 4)) }
+            }
+        }
+        write(ctxL.makeImage()!, dir.appendingPathComponent("menulogo.png"))
+        write(ctxTop.makeImage()!, dir.appendingPathComponent("topcorners.png"))
         // Sprouts: each kind at each stage, day then night.
         let ctxP = CGContext(data: nil, width: 4 * 3 * 9 * 6 + 40, height: 2 * 11 * 6 + 40, bitsPerComponent: 8, bytesPerRow: 0,
                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!

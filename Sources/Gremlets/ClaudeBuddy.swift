@@ -80,7 +80,7 @@ final class ClaudeBuddy {
             // Claude used a tool: the Gremlet beside its window acts it out (an edit places a block, and so on).
             if var s = sessions[session], let c = worker(s.creatureID) {
                 let tool = ClaudeTool.from(q["tool"] ?? "")
-                world.claudeTool(workerID: c.id, tool)
+                world.claudeTool(workerID: c.id, tool, name: q["kind"] == "test" ? "Test" : (q["tool"] ?? ""))
                 if q["kind"] == "test" { world.claudeTestsPassed(workerID: c.id) }
                 if let t = q["todos"].flatMap(Int.init), let d = q["done"].flatMap(Int.init) { world.claudePlan(workerID: c.id, total: t, done: d) }
                 sessionLog.tool(session, edit: tool == .build, failed: false, test: q["kind"] == "test")
@@ -97,7 +97,10 @@ final class ClaudeBuddy {
         case "compact":
             if let s = sessions[session] { world.claudeCompact(workerID: s.creatureID) }
         case "end":
-            if let s = sessions.removeValue(forKey: session) { world.endJob(s.creatureID); world.bonsaiEnd(project: s.project) }
+            if let s = sessions.removeValue(forKey: session) {
+                world.endJob(s.creatureID); world.bonsaiEnd(project: s.project)
+                world.claudeGoodbye(workerID: s.creatureID)
+            }
             close(session)
         default:
             return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool, toolfail, helperdone or compact"}"#)

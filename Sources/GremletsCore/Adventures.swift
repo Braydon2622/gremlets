@@ -55,7 +55,7 @@ extension World {
 
     /// Opens the mine once the grove has at least three plots.
     func openMineIfReady() {
-        guard mineIndex == nil, grove.plants.count >= 3 else { return }
+        guard villageOn, mineIndex == nil, grove.plants.count >= 3 else { return }
         addHouse(biome: "mine", blocks: 1, size: Vec2(120, 66), project: nil, day: nil, builtAt: Date().timeIntervalSince1970)
     }
 
@@ -153,7 +153,7 @@ extension World {
         // On a schedule (no dice rolls here, so the rest of the world's randomness is undisturbed): every 9-13 minutes.
         if ferry == nil {
             if nextFerryAt == nil { nextFerryAt = clock + 600 }
-            if let t = nextFerryAt, clock > t, eventsAllowed, !calm, userActive {
+            if let t = nextFerryAt, clock > t, eventsAllowed, !calm, userActive, !compact {
                 nextFerryAt = clock + 540 + (sin(clock) + 1) * 120
                 callFerry()
             }

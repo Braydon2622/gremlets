@@ -12,6 +12,23 @@ enum WindowTracker {
     static var screenshotToolVisible = false
 
     /// Normal app windows, front-most first, in global y-up (Cocoa) coordinates.
+    /// Whether the current Space is a full-screen app's: the Dock puts a black backdrop behind the full-screen app
+    /// (it isn't there otherwise). Reading its name needs Screen Recording, so its window level identifies it too.
+    /// Checked at most twice a second.
+    static var fullScreenSpace: Bool {
+        let now = CACurrentMediaTime()
+        if now - lastFullScreenCheck < 0.5 { return cachedFullScreen }
+        lastFullScreenCheck = now
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        cachedFullScreen = list.contains { w in
+            (w[kCGWindowOwnerName as String] as? String) == "Dock"
+                && ((w[kCGWindowName as String] as? String) == "Fullscreen Backdrop" || (w[kCGWindowLayer as String] as? Int) == -2147483622)
+        }
+        return cachedFullScreen
+    }
+    private static var lastFullScreenCheck: CFTimeInterval = 0
+    private static var cachedFullScreen = false
+
     static func snapshot() -> [WindowInfo] {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
                 as? [[String: Any]],
@@ -21,6 +38,7 @@ enum WindowTracker {
         var out: [WindowInfo] = []
         out.reserveCapacity(list.count)
         screenshotToolVisible = list.contains { ($0[kCGWindowOwnerName as String] as? String) == "screencaptureui" }
+
         for w in list {
             guard (w[kCGWindowLayer as String] as? Int) == 0,
                   (w[kCGWindowOwnerPID as String] as? Int) != ownPID,

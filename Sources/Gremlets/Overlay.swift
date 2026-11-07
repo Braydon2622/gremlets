@@ -265,10 +265,16 @@ final class OverlayController {
             }
         }
         for id in shadows.keys where !alive.contains(id) { shadows[id]?.removeFromSuperlayer(); shadows[id] = nil }
-        fx.render()
-        bonsaiFX.render()
+        if world.compact != compactShown { compactShown = world.compact; applyCompact() }
+        if world.compact {
+            // Full screen: only the Gremlets, the corner plant and the lift; everything else waits, hidden.
+            fx.renderCompact()
+        } else {
+            fx.render()
+            bonsaiFX.render()
+        }
         updateBubbles(alive: alive)
-        updateProps()
+        if !world.compact { updateProps() }
         updateHover()
         updateIconPlay()
         for id in layers.keys where !alive.contains(id) {
@@ -276,6 +282,26 @@ final class OverlayController {
             layers[id] = nil; shownFrame[id] = nil; layerScreen[id] = nil
         }
         CATransaction.commit()
+    }
+
+    private var compactShown = false
+    private var compactHidden: [CALayer] = []
+
+    /// Entering full screen hides every decoration on every screen (trees, moss, castles, props, the village...);
+    /// leaving brings them back exactly as they were.
+    private func applyCompact() {
+        if compactShown {
+            let keep = Set((Array(layers.values) + Array(shadows.values) + bubbles.values.map(\.layer) + fx.compactKeep).map { ObjectIdentifier($0) })
+            for s in screens {
+                for l in s.root.sublayers ?? [] where !keep.contains(ObjectIdentifier(l)) && !l.isHidden {
+                    l.isHidden = true
+                    compactHidden.append(l)
+                }
+            }
+        } else {
+            for l in compactHidden { l.isHidden = false }
+            compactHidden.removeAll()
+        }
     }
 
     /// A soft shadow on whatever is below a Gremlet: grounds it on the desktop, and shows where it'll land.
@@ -1493,8 +1519,8 @@ final class OverlayController {
                 if let biome = st.lastBiome, st.lastBlocks >= 4 {
                     let day = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none)
                     let fit = BuildArt.fit(biome)
-                    world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks, size: fit.size, project: st.project, day: day,
-                                   builtAt: Date().timeIntervalSince1970, roof: fit.roof)
+                    if world.villageOn { world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks, size: fit.size, project: st.project, day: day,
+                                   builtAt: Date().timeIntervalSince1970, roof: fit.roof) }
                     st.lastBlocks = 0
                 }
                 fadeOut(b, 0.8); st.build = nil; st.buildKey = ""

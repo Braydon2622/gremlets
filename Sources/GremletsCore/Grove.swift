@@ -110,8 +110,11 @@ public final class Grove: Codable {
     var todayKey: String?
     var todayTasks = 0
     var festivalDone = false
+    /// The one plant out at the moment (the app shows a single, smaller plant in the bottom-left corner and swaps it
+    /// for another every so often). nil: every plant shows (on its bracket up the left edge).
+    public internal(set) var featured: Int?
 
-    enum CodingKeys: String, CodingKey { case plants, tasks, village, digCharges, gems, todayKey, todayTasks, festivalDone }
+    enum CodingKeys: String, CodingKey { case plants, tasks, village, digCharges, gems, todayKey, todayTasks, festivalDone, featured }
     public required init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         plants = try c.decodeIfPresent([GrovePlant].self, forKey: .plants) ?? []
@@ -122,6 +125,7 @@ public final class Grove: Codable {
         todayKey = try c.decodeIfPresent(String.self, forKey: .todayKey)
         todayTasks = try c.decodeIfPresent(Int.self, forKey: .todayTasks) ?? 0
         festivalDone = try c.decodeIfPresent(Bool.self, forKey: .festivalDone) ?? false
+        featured = try c.decodeIfPresent(Int.self, forKey: .featured)
     }
 
     public static let maxPlots = 5
@@ -159,7 +163,7 @@ public final class Grove: Codable {
 
     /// How far a plant's bracket reaches out from the wall (points).
     public func bracketReach(_ i: Int) -> Double? {
-        guard Grove.shelf(plants[i].kind) != nil else { return nil }
+        guard featured == nil, Grove.shelf(plants[i].kind) != nil else { return nil }
         return 40 + size(i).x + 18
     }
 
@@ -187,6 +191,8 @@ public final class Grove: Codable {
     /// Where a plot sits: on its bracket up the left edge, or (the skyvine) on the floor.
     public func base(_ i: Int, floor: Rect) -> Vec2 {
         let k = plants[i].kind
+        // One plant at a time: on the floor, tucked into the bottom-left corner.
+        if featured != nil { return Vec2(floor.minX + (k == .skyvine ? 34 : 24 + size(i).x / 2), floor.minY) }
         if let h = Grove.shelf(k) {
             // Never above the top of a short screen.
             let y = floor.minY + min(h, max(120, floor.h - size(i).y - 80))
@@ -197,7 +203,20 @@ public final class Grove: Codable {
 
     /// Size of the drawn plant (points). The platform layer draws it centered on `base` x, sitting on the floor.
     public func size(_ i: Int) -> Vec2 {
-        let p = plants[i], s = p.scale
+        let p = plants[i]
+        // The corner plant is kept small (and the skyvine short), so it never gets in the way.
+        if featured != nil {
+            let s = p.scale * 0.6
+            switch p.kind {
+            case .skyvine: return Vec2(64, min(190, 90 + 34 * Double(p.level - 1)))
+            case .bouncecap: return Vec2(54 * s, 46 * s)
+            case .lanternbloom: return Vec2(34 * s, 56 * s)
+            case .sunberry: return Vec2(52 * s, 30 * s)
+            case .snapjaw: return Vec2(40 * s, 44 * s)
+            case .wishwillow: return Vec2(90 * s, 96 * s)
+            }
+        }
+        let s = p.scale
         switch p.kind {
         case .bouncecap: return Vec2(54 * s, 46 * s)
         case .skyvine: return Vec2(84, 96 + 124 * Double(p.level - 1))
@@ -209,9 +228,9 @@ public final class Grove: Codable {
     }
 
     /// Platforms the grove offers on a screen floor.
-    public func ledges(floor: Rect) -> [GroveLedge] {
+    public func ledges(floor: Rect, roofs: Bool = true) -> [GroveLedge] {
         var out: [GroveLedge] = []
-        for i in plants.indices {
+        for i in plants.indices where featured == nil || featured == i {
             let b = base(i, floor: floor), sz = size(i), p = plants[i]
             // The bracket's plank, either side of the pot.
             if let reach = bracketReach(i) {
@@ -237,7 +256,7 @@ public final class Grove: Codable {
             }
         }
         // Village roofs (plot = -1 - house index): the ridge, the dome, the terrace, wherever the picture has a spot.
-        for (n, h) in village.enumerated() where h.biome != "item:spring" && h.biome != "item:lamps" {
+        for (n, h) in village.enumerated() where roofs && h.biome != "item:spring" && h.biome != "item:lamps" {
             if let ry = h.roofY, ry <= 0 { continue }   // a house with nowhere to stand (a spire)
             let x = floor.minX + h.x * floor.w
             let hw = h.roofHalfW ?? h.w * 0.3
@@ -279,18 +298,21 @@ extension World {
     /// Grove platforms as surfaces (recomputed whenever the grove or screens change).
     func rebuildGroveSurfaces() {
         guard let f = groveFloor else { groveSurfaces = []; groveLedges = []; return }
-        groveLedges = grove.ledges(floor: f)
+        groveLedges = grove.ledges(floor: f, roofs: villageOn)
         groveSurfaces = groveLedges.enumerated().map { n, l in
             Surface(ownerID: World.groveOwner(n), kind: .plant, y: l.y, minX: l.minX, maxX: l.maxX)
         }
         // The grove plants are what the Gremlets go and water.
-        gardenSpots = grove.plants.indices.map { grove.base($0, floor: f).x }
+        gardenSpots = grove.plants.indices.filter { grove.featured == nil || grove.featured == $0 }.map { grove.base($0, floor: f).x }
     }
 
     /// Replaces the grove (loaded from disk) and plants anything already unlocked.
     public func loadGrove(_ g: Grove) {
         grove = g
+        if let f = grove.featured, grove.plants.indices.contains(f), grove.plants[f].kind == .sunberry { grove.featured = nil }
+        let featuredKind = grove.featured.flatMap { grove.plants.indices.contains($0) ? grove.plants[$0].kind : nil }
         grove.plants.removeAll { $0.kind == .sunberry }
+        grove.featured = featuredKind.flatMap { grove.plant(of: $0) }
         // Older villages grew in from the left corner, where the garden lives now: move those houses to the right.
         let displaced = grove.village.filter { $0.x < 0.36 }
         if !displaced.isEmpty {
@@ -337,7 +359,8 @@ extension World {
 
     /// The snapjaw at work, and the garden spots the Gremlets water. Called every tick.
     func updateGrove(_ dt: Double) {
-        guard let f = groveFloor, let i = grove.plant(of: .snapjaw) else { return }
+        if rotateGrove { rotateGroveIfDue() }
+        guard let f = groveFloor, let i = shownPlant(.snapjaw) else { return }
         let b = grove.base(i, floor: f), sz = grove.size(i)
         // Fireflies after dark: each one it catches is a spark for the whole grove.
         if isNight && rng.chance(dt / 40) {
@@ -392,7 +415,7 @@ extension World {
 
     /// Wishwillow: one wish a day from level 3. Call once a minute or so.
     public func checkWishwillow(day: Int) {
-        guard let i = grove.plant(of: .wishwillow), grove.plants[i].level >= 3, grove.plants[i].lastWishDay != day else { return }
+        guard let i = shownPlant(.wishwillow), grove.plants[i].level >= 3, grove.plants[i].lastWishDay != day else { return }
         grove.plants[i].lastWishDay = day
         makeWish()
         groveEvents.append(.wish(i))
@@ -403,26 +426,44 @@ extension World {
         guard let f = groveFloor, c.job == nil, !grove.plants.isEmpty else { return }
         // Only Gremlets on (or near) the main screen's floor go to the grove.
         guard abs(c.pos.y - f.minY) < 4, c.pos.x >= f.minX, c.pos.x <= f.maxX else { return }
-        if let i = grove.plant(of: .sunberry), grove.plants[i].berries > 0, c.energy < 0.8 {
+        if let i = shownPlant(.sunberry), grove.plants[i].berries > 0, c.energy < 0.8 {
             add("snack", 0.9 * (1.2 - c.energy)) { self.startGroveVisit(c, plot: i, task: .snack) }
         }
-        if let i = grove.plant(of: .bouncecap) {
+        if let i = shownPlant(.bouncecap) {
             add("bounce", 0.5 * (0.3 + c.energy)) { self.startGroveVisit(c, plot: i, task: .bounce) }
         }
+        // Dare the snapjaw: stroll right past its mouth (it snaps, they leap).
+        if let i = shownPlant(.snapjaw), let f = groveFloor {
+            let b = grove.base(i, floor: f), sz = grove.size(i)
+            add("dare", 0.45) {
+                let side: Double = c.pos.x < b.x ? 1 : -1
+                c.targetX = (b.x + side * (sz.x * 0.8 + 16)).clamped(f.minX + 14, f.maxX - 14)
+                c.groveTask = .dare(i)
+                c.set(.walk, duration: 14)
+            }
+        }
+        // Climb the skyvine's leaves, or sit up in the willow's branches.
+        for k in [GroveKind.skyvine, .wishwillow] {
+            guard let i = shownPlant(k), let leaf = groveLedges.enumerated().filter({ $0.element.plot == i }).min(by: { $0.element.y < $1.element.y }) else { continue }
+            let l = leaf.element, mid = (l.minX + l.maxX) / 2
+            guard l.y - c.pos.y < maxJumpHeight * c.species.jumpPower * 0.9, abs(mid - c.pos.x) < 360 else { continue }
+            add(k == .skyvine ? "climbSkyvine" : "sitInWillow", 0.6) { self.launch(c, velocity: self.ballistic(from: c.pos, toX: mid, y: l.y, apexExtra: 30)) }
+        }
         // Bedtime (or just tired): walk home to a house in the village and sleep inside.
-        if let m = mineIndex, !creatures.contains(where: { $0.mining }) {
+        if villageOn, let m = mineIndex, !creatures.contains(where: { $0.mining }) {
             add("dig", grove.digCharges > 0 ? 1.3 : 0.12) { self.startDig(c); _ = m }
         }
         let sleepingIn = creatures.filter { $0.homeHouse != nil }.count
-        if !grove.village.isEmpty, isNight || c.energy < 0.35 || claudeResting, sleepingIn < grove.village.count * 2 {
+        if villageOn, !grove.village.isEmpty, isNight || c.energy < 0.35 || claudeResting, sleepingIn < grove.village.count * 2 {
             // Its own house if it has one, otherwise any house (not the mine or the village amenities).
             let homes = grove.village.indices.filter { !grove.village[$0].biome.hasPrefix("item:") && grove.village[$0].biome != "mine" }
             if let n = grove.village.firstIndex(where: { $0.owner == c.species.id }) ?? (homes.isEmpty ? nil : homes[Int(rng.next() % UInt64(homes.count))]) {
                 add("goHome", isNight ? 1.3 : 0.8) { self.startHomeVisit(c, house: n) }
             }
         }
-        if isNight, let i = grove.plant(of: .lanternbloom) {
-            add("campfire", 1.1) { self.startGroveVisit(c, plot: i, task: .campfire) }
+        if let i = shownPlant(.lanternbloom) {
+            // Warm up by the lantern flower (a proper campfire after dark).
+            add("campfire", isNight ? 1.1 : 0.4) { self.startGroveVisit(c, plot: i, task: .campfire) }
         }
     }
 
@@ -479,6 +520,12 @@ extension World {
             c.homeHouse = n
             c.set(.sleep, duration: 9999)
             groveEvents.append(.wentHome(n, by: c.id))
+        case .dare(let i):
+            // Made it past (or got snapped at on the way): a little cheer.
+            if let f = groveFloor, grove.plants.indices.contains(i) { c.facing = grove.base(i, floor: f).x > c.pos.x ? 1 : -1 }
+            c.set(.react, duration: c.animationLength(for: .react))
+        case .hangingHome:
+            goInsideHangingHome(c)
         case .campfire(let i):
             if let f = groveFloor { c.facing = grove.base(i, floor: f).x > c.pos.x ? 1 : -1 }
             c.idleVariant = "idle"
@@ -489,7 +536,35 @@ extension World {
 }
 
 /// Where a Gremlet is headed in the grove.
-enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int) }
+enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int), dare(Int), hangingHome }
+
+extension World {
+    /// A plant of this kind that's out right now (with one plant at a time, only the featured one is).
+    func shownPlant(_ k: GroveKind) -> Int? {
+        if let f = grove.featured { return grove.plants.indices.contains(f) && grove.plants[f].kind == k ? f : nil }
+        return grove.plant(of: k)
+    }
+
+    /// One plant at a time: every 20 to 40 minutes a different one takes the corner (planted fresh if it's new).
+    func rotateGroveIfDue() {
+        if grove.featured != nil && nextGroveRotation == 0 { nextGroveRotation = clock + rng.range(1200, 2400); return }
+        guard clock >= nextGroveRotation else { return }
+        nextGroveRotation = clock + rng.range(1200, 2400)
+        let pool: [GroveKind] = [.bouncecap, .lanternbloom, .skyvine, .snapjaw, .wishwillow]
+        let current = grove.featured.flatMap { grove.plants.indices.contains($0) ? grove.plants[$0].kind : nil }
+        let options = pool.filter { $0 != current }
+        let k = options[Int(rng.next() % UInt64(options.count))]
+        let i: Int
+        if let found = grove.plant(of: k) { i = found } else { grove.plants.append(GrovePlant(kind: k, x: 0.16)); i = grove.plants.count - 1 }
+        grove.featured = i
+        rebuildGroveSurfaces()
+        setSurfacesDirty()
+        groveEvents.append(.planted(i))
+    }
+
+    /// `gremlet plant`: swap the corner plant now.
+    public func rotateGroveNow() { nextGroveRotation = 0; if grove.featured == nil { rotateGroveIfDue() } else { nextGroveRotation = clock; rotateGroveIfDue() } }
+}
 
 extension World {
     func startHomeVisit(_ c: Creature, house n: Int) {

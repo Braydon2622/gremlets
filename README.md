@@ -17,15 +17,14 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **The terminal comes alive while Claude works.** Ivy creeps along its top edge, mossy ledges grow out of its side
   every few edits (platforms the Gremlets use), each edit lays a block of a little house beside it (a timber cottage,
   an igloo, an adobe, a mossy temple, a mushroom house, a crystal spire or a lighthouse on a cloud, depending on the
-  island), subagents arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow. When the
-  session ends the house moves down to a village along the bottom of the screen, the Gremlets finish it, claim it and
-  sleep in it; smoke curls from the chimney, moss and ivy creep over it with the weeks.
+  island), subagents arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow.
   When Claude compacts its context, the tree lets a few leaves go.
-- **A garden that grows from tasks.** Six useful plants in a corner of the screen grow a level at a time as Claude
-  tasks finish: a berry bush, a trampoline mushroom, a lantern flower the Gremlets gather around at night, a beanstalk
-  ladder up the wall, a snapping plant that catches fireflies, a wishing willow. A mine opens once the garden is
-  established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
-  a hot spring, a windmill and a flower arch.
+- **A plant in the corner, a different one every so often.** One small plant at a time stands in the bottom-left
+  corner, and every 20 to 40 minutes another takes its place: a trampoline mushroom to bounce on, a lantern flower to
+  warm up by, a beanstalk to climb, a snapping plant to dare, a wishing willow to sit in. Each grows a level at a time
+  as Claude tasks finish (`gremlet plant` swaps it now).
+- **Full screen stays out of your way.** When an app goes full screen, the Gremlets tidy into the two bottom corners
+  and everything else is put away until you leave full screen (`gremlet fullscreen` previews it).
 - **They reshape the desktop, Terraria style.** A window out of jumping reach gets a staircase of wooden blocks laid
   up to its edge, one block at a time: it turns round, pulls the block behind it up into its arms (you see each one
   arc up onto the stack it carries), turns back and sets it down ahead, so the staircase travels up with it; at the
@@ -35,8 +34,8 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   (`gremlet stairs`, `gremlet cart`.)
 - **Expeditions.** Now and then a treasure chest turns up somewhere hard to reach (the top of a tall window, a high
   ledge). A Gremlet that spots it plans a route from wherever it stands, across every trick above, and sets off: up a
-  staircase, over a bridge, hook up to the next window, chest over its head, zip or glide back down, home to the
-  village to open it (a gem for the merchant). When a landing goes wrong it plans again from where it ended up. Every
+  staircase, over a bridge, hook up to the next window, chest over its head, zip or glide back down to the floor
+  to open it (a gem inside). When a landing goes wrong it plans again from where it ended up. Every
   so often one climbs to the highest point on the desktop just to plant its flag there. The route depends entirely on
   where your windows happen to be, and the plan flashes as a dotted line across the screen when it sets out.
   (`gremlet chest`, `gremlet expedition`.)
@@ -64,9 +63,10 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   terminal window: a tower per top-level folder (taller with more files, bricks in the colours of its languages),
   the root files as the keep, a flag in the main language. Every edit Claude makes lands a block on that folder's
   tower, and the Gremlets climb the towers. Read from `git ls-files` on your Mac; nothing leaves it.
-- **A home under the notch.** On notched MacBooks a little house hangs below the menu bar beside the notch, its
-  window glowing while Claude works, with a hammock under the notch. When Claude goes quiet a Gremlet finds its way
-  up across your windows for a nap. It tucks itself away whenever a window is in that space.
+- **Their home hangs under the notch.** A little house with a mossy roof hangs from the menu bar beside the notch (the
+  middle of the menu bar on other Macs), its window glowing while Claude works, a hammock beside it. When Claude goes
+  quiet, or it's late, a Gremlet finds its way up across your windows and naps in the hammock or goes inside (smoke
+  curls from the chimney). It tucks itself away whenever a window is in that space.
 - **Give one a ride.** Hold ⌃⌥ and a cloud appears under your pointer: the nearest Gremlet hops on and rides
   wherever you move it. Let go to drop it onto a window.
 - **Their day follows Claude.** While Claude works, the Gremlets plant and tend moss and water the plants; a couple
@@ -80,11 +80,10 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   leaf over their heads and keep the kites in; when the snow is deep they roll a snow-Gremlet together, which melts
   when the snow goes. `gremlet weather rain|storm|snow|wind` previews it for two minutes.
 - **Moss takes over.** The longer Claude works, the more the desktop grows over: moss creeps in from the ends of
-  every window's top edge, strands hang down window sides, vines climb the screen's edges, and after a long day the
+  every window's top edge, strands hang down window sides, and after a long day the
   carpets meet, flower and sprout mushrooms (glowing at night) and moss fringes the menu bar and the floor. It
-  recedes slowly when Claude is idle. The Gremlets plant and water tufts of it along window tops, climb the vines
-  (up a window's strand onto its top, up the screen's edge), and weave mossy platforms into the edge vines.
-  The village keeps one home: each finished session's house replaces the last. A Claude tab dragged out into its own window takes its tree and ivy with it
+  recedes slowly when Claude is idle. The Gremlets plant and water tufts of it along window tops and climb a window's
+  strand up onto its top. A Claude tab dragged out into its own window takes its tree and ivy with it
   (macOS asks once to let Gremlets read which Terminal window holds the tab). (`gremlet moss [minutes]` to preview.)
 - **They help each other, and notice your Mac.** A window just too high to jump? A friend walks to its foot, braces,
   and heaves the climber up off its head ("Hup!"). Press ⌘⇧4 and everyone strikes a pose before you take the shot.

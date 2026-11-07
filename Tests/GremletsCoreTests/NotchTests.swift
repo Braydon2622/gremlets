@@ -23,7 +23,8 @@ import Testing
         var napped = false
         for _ in 0..<(60 * 150) where !napped {
             w.step(1.0 / 60)
-            napped = c.groundOwner == World.notchHammockOwner && c.activity == .sleep
+            // In the hammock, or curled up inside the house.
+            napped = (c.groundOwner == World.notchHammockOwner && c.activity == .sleep) || (c.homeHouse == -1 && c.homeUntil != nil)
         }
         #expect(napped, "asleep in the hammock (at \(c.pos), \(c.activity), on \(String(describing: c.groundOwner)))")
     }

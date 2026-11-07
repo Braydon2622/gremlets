@@ -56,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let phone = PhoneLink()
     private let bridge = ScreenBridge()
     private let sense = ScreenSense()
+    private var compactPreviewUntil: CFTimeInterval = 0
     private lazy var weatherService = WeatherService(world: world)
     /// Watching the Mac: battery, the network, the screenshot tool.
     private let netMonitor = NWPathMonitor()
@@ -94,6 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ note: Notification) {
         world.dayFollowsClaude = true
+        // The tidy desktop: no village or road on the floor, no vines up the screen's sides, one small corner plant.
+        world.villageOn = false
+        world.edgeVines = false
+        world.rotateGrove = true
         species = SpriteLibrary.loadAll()
         guard !species.isEmpty else {
             let alert = NSAlert()
@@ -278,7 +283,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Real controls in the front app (address bars, search fields, buttons), if you've turned it on.
         extra += controls.surfaces(now: CACurrentMediaTime())
         if !extra.isEmpty || !world.iconSurfaces.isEmpty { world.iconSurfaces = extra }
-        world.setEnvironment(screens: WindowTracker.screens(), windowsFrontToBack: wins)
+        // Full screen (an app filling the whole main screen, menu bar and all): everything keeps to the corners, and
+        // the floor is the true bottom of the screen (the Dock is tucked away).
+        let isFull = WindowTracker.fullScreenSpace || CACurrentMediaTime() < compactPreviewUntil
+        if isFull != world.compact { world.compact = isFull; schedule(rate: 60) }
+        // (Below the notch band, where a full-screen app's content starts.)
+        let screens = isFull ? NSScreen.screens.map { s -> Rect in
+            let top: Double
+            if #available(macOS 12, *) { top = Double(s.safeAreaInsets.top) } else { top = 0 }
+            return Rect(x: s.frame.minX, y: s.frame.minY, w: s.frame.width, h: s.frame.height - top)
+        } : WindowTracker.screens()
+        world.setEnvironment(screens: screens, windowsFrontToBack: wins)
     }
 
     // MARK: Roster
@@ -1207,6 +1222,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let a = query["edit"] { world.castleEdit(project: project, area: Self.decoded(a)); schedule(rate: 60) }
             let live = world.bonsaiPlacements.contains { $0.project == project && $0.windowID != nil }
             return (200, #"{"ok":true,"project":"\#(project)","live":\#(live)}"#)
+        case "plant":
+            world.rotateGroveNow()
+            schedule(rate: 60)
+            let k = world.grove.featured.map { world.grove.plants[$0].kind.rawValue } ?? "none"
+            return (200, #"{"ok":true,"plant":"\#(k)"}"#)
+        case "compact":
+            // Preview full-screen mode for 30 seconds (it follows the real full-screen state after that).
+            compactPreviewUntil = query["off"] == nil ? CACurrentMediaTime() + 30 : 0
+            refreshEnvironment()
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"compact":\#(world.compact)}"#)
         case "notch":
             guard world.notchHome != nil else { return (409, #"{"ok":false,"error":"this screen has no notch"}"#) }
             guard world.notchHomeShowing else { return (409, #"{"ok":false,"error":"a window is in the space under the notch, so the home is tucked away"}"#) }
@@ -1620,11 +1646,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// The built-in screen's notch (MacBooks from 2021 on): its left and right edges and the bottom of the menu bar.
     static func notchHome() -> NotchHome? {
-        guard #available(macOS 12, *), let s = NSScreen.screens.first, s.safeAreaInsets.top > 0,
-              let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea else { return nil }
-        let lo = s.frame.minX + l.maxX, hi = s.frame.minX + r.minX
-        guard hi - lo > 60, hi - lo < 400 else { return nil }
-        return NotchHome(minX: lo, maxX: hi, menuBottom: s.visibleFrame.maxY)
+        guard let s = NSScreen.screens.first else { return nil }
+        if #available(macOS 12, *), s.safeAreaInsets.top > 0, let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea {
+            let lo = s.frame.minX + l.maxX, hi = s.frame.minX + r.minX
+            if hi - lo > 60, hi - lo < 400 { return NotchHome(minX: lo, maxX: hi, menuBottom: s.visibleFrame.maxY) }
+        }
+        // No notch: the house hangs from the middle of the menu bar instead.
+        return NotchHome(minX: s.frame.midX - 95, maxX: s.frame.midX + 95, menuBottom: s.visibleFrame.maxY)
     }
 
     @objc private func askWeatherCity() {

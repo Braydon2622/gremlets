@@ -232,7 +232,7 @@ enum NotchArt {
     /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
     /// window glows (Claude is working, or it's night).
     static func house(lit: Bool) -> CGImage {
-        // 46 + 22 pt wide, 38 pt tall + roof: in art pixels (3 pt each).
+        // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each).
         let w = 23, h = 17
         var cv = PixelCanvas(w, h)
         let plank: UInt32 = 0xB07A47, plankDark: UInt32 = 0x8A5A35, plankLight: UInt32 = 0xC99460
@@ -245,6 +245,10 @@ enum NotchArt {
         // Roof: a mossy gable overhanging both sides.
         for k in 0..<6 { cv.hspan(-1 + k, 15 - k, 10 + k, k < 2 ? 0x6E4428 : 0x5E9E46) }
         for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 11, 0x8BD66A); cv.set(x + 1, 12, 0x3E7A34) }
+        // A stone chimney poking out of the roof, and a flower box under the window.
+        cv.rect(11, 12, 2, 5, 0x8E877B); cv.hspan(11, 12, 16, 0x5E584F)
+        cv.hspan(2, 7, 3, 0x6E4428)
+        for (x, col) in [(2, 0xFF8FB1), (4, 0xFFE45C), (6, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, 4, col); cv.set(x + 1, 4, 0x5E9E46) }
         // Round window and the door.
         let glass: UInt32 = lit ? 0xFFD36B : 0x3B4660, glow: UInt32 = lit ? 0xFFF0B8 : 0x56627E
         cv.blob(4.5, 6.5, 2.1, 2.1, base: glass, light: glow)

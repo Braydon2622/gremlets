@@ -107,6 +107,12 @@ enum ArtPreview {
         }
         ctxW.draw(ClimateArt.leafUmbrella, in: CGRect(x: 460, y: 100, width: 25 * 7, height: 15 * 7))
         ctxW.draw(ClimateArt.splash, in: CGRect(x: 660, y: 140, width: 7 * 10, height: 4 * 10))
+        for (i, lit) in [false, true].enumerated() {
+            let h = NotchArt.house(lit: lit)
+            ctxW.draw(h, in: CGRect(x: 120 + i * 190, y: 20, width: h.width * 6, height: h.height * 6))
+        }
+        let hm = NotchArt.hammock(widthPx: 20)
+        ctxW.draw(hm, in: CGRect(x: 520, y: 40, width: hm.width * 6, height: hm.height * 6))
         write(ctxW.makeImage()!, dir.appendingPathComponent("weather.png"))
         // The codebase castle of the folder this runs in (and a small sample), at 1x and 2x.
         let git = Process(); git.executableURL = URL(fileURLWithPath: "/usr/bin/git"); git.arguments = ["ls-files"]

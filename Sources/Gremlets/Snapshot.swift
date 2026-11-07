@@ -59,12 +59,24 @@ enum VillageSnapshot {
             ctx.draw(img, in: CGRect(x: centerX - width / 2, y: groundY, width: width, height: height))
         }
         // Grove plants
-        for i in world.grove.plants.indices {
+        for i in world.grove.plants.indices where world.grove.featured == nil || world.grove.featured == i {
             let p = world.grove.plants[i], sz = world.grove.size(i)
             draw(GroveArt.image(p, size: sz, night: night), centerX: X(p.x), width: sz.x * k, height: sz.y * k)
         }
+        // The hanging house with its hammock, up top (the village on the ground is retired on the desktop).
+        if !world.villageOn {
+            let house = NotchArt.house(lit: night), hm = NotchArt.hammock(widthPx: 20)
+            let hx = Double(W) * 0.62, hy = Double(H) - 40 - Double(house.height) * 3
+            ctx.setStrokeColor(CGColor(red: 0.54, green: 0.42, blue: 0.29, alpha: 1)); ctx.setLineWidth(2)
+            for x in [hx + 6, hx + 40] { ctx.move(to: CGPoint(x: x, y: hy + 48)); ctx.addLine(to: CGPoint(x: x, y: Double(H))) }
+            let mx = hx + 46 + 70
+            for x in [mx - 30, mx + 30] { ctx.move(to: CGPoint(x: x, y: hy + 14)); ctx.addLine(to: CGPoint(x: x + (x < mx ? -6 : 6), y: Double(H))) }
+            ctx.strokePath()
+            ctx.draw(house, in: CGRect(x: hx, y: hy, width: Double(house.width) * 3, height: Double(house.height) * 3))
+            ctx.draw(hm, in: CGRect(x: mx - 30, y: hy + 6, width: Double(hm.width) * 3, height: Double(hm.height) * 3))
+        }
         // Village
-        for (n, h) in world.grove.village.enumerated() {
+        for (n, h) in world.grove.village.enumerated() where world.villageOn {
             let cx = X(h.x)
             if h.biome == "mine" {
                 let img = AdventureArt.mine(night: night)
@@ -110,7 +122,7 @@ enum VillageSnapshot {
         let gems = g.gems.values.reduce(0, +)
         let trees = world.bonsaiBook.trees.count
         let allEdits = edits + world.bonsaiBook.trees.reduce(0) { $0 + $1.edits }
-        let stats = [(g.tasks, "Claude task"), (trees, "project tree"), (houses, "building"), (allEdits, "file edit"), (gems, "gem")]
+        let stats = [(g.tasks, "Claude task"), (trees, "project tree"), (world.villageOn ? houses : 0, "building"), (allEdits, "file edit"), (gems, "gem")]
             .filter { $0.0 > 0 }.map { "\($0.0) \($0.1)\($0.0 == 1 ? "" : "s")" }
         let ns = NSGraphicsContext(cgContext: ctx, flipped: false)
         NSGraphicsContext.saveGraphicsState()

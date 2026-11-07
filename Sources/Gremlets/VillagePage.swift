@@ -13,7 +13,7 @@ enum VillagePage {
         let g = world.grove
         let homes = g.village.filter { Biome(rawValue: $0.biome) != nil }
         let edits = homes.reduce(0) { $0 + $1.blocks } + world.bonsaiBook.trees.reduce(0) { $0 + $1.edits }
-        return Stats(tasks: g.tasks, trees: world.bonsaiBook.trees.count, buildings: homes.count, edits: edits,
+        return Stats(tasks: g.tasks, trees: world.bonsaiBook.trees.count, buildings: world.villageOn ? homes.count : 0, edits: edits,
                      gems: g.gems.values.reduce(0, +), mossMinutes: Int(world.mossMinutes),
                      sessions: world.bonsaiBook.trees.reduce(0) { $0 + $1.sessions })
     }
@@ -108,8 +108,8 @@ enum VillagePage {
         <body>
         <main>
           <h1>My Gremlets village</h1>
-          <p class="lede">Gremlets are little spirits that live on my Mac's desktop. Every time Claude Code works on one of my projects, they build: a block for each file edit, a branch for each session, a house when a project grows up. This is what they've made so far.</p>
-          <img class="postcard" src="village.png" alt="A pixel-art village: houses, a grove, project bonsai trees on brackets and the Gremlets out front" width="1600" height="660">
+          <p class="lede">Gremlets are little spirits that live on my Mac's desktop. Every time Claude Code works on one of my projects, they build: a block on the project's castle for each file edit, a branch on its tree for each session, and they garden the moss while it works. This is what they've made so far.</p>
+          <img class="postcard" src="village.png" alt="A pixel-art scene: a little house and hammock hanging from the top, a plant in the corner, project bonsai trees on brackets and the Gremlets out front" width="1600" height="660">
           <div class="tiles">
             \(tiles.joined(separator: "\n    "))
           </div>

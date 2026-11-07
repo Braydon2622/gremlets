@@ -16,6 +16,8 @@
 #   gremlet ferry cross          the ferry makes one stop and sails through the doorway to the linked screen
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet castle [folder] [edit <subfolder>]  build that project's codebase castle on its Claude terminal (default: here)
+#   gremlet fullscreen [off]     preview how they tidy into the corners when an app is full screen (30 s)
+#   gremlet plant                swap the corner plant for another one now
 #   gremlet notch                someone climbs up to the home under the notch for a nap in the hammock
 #   gremlet village-page [folder] a read-only web page of your village to put online (counts only, no project names)
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
@@ -72,7 +74,7 @@ case "${1:-}" in
   ferry)   if [ "${2:-}" = "cross" ]; then call "ferry?cross=1"; echo; else call ferry >/dev/null; fi ;;
   merchant) call merchant >/dev/null ;;
   kite)    call kite; echo ;;
-  stairs|cart|chest|expedition|unlink|cross|boost|notch) call "$1"; echo ;;
+  stairs|cart|chest|expedition|unlink|cross|boost|notch|plant) call "$1"; echo ;;
   react)   call "react?name=${2:-screenshot}"; echo ;;
   moss)    case "${2:-}" in
              climb|pad|plant) call "moss?do=$2" ;;
@@ -84,6 +86,7 @@ case "${1:-}" in
            if [ -n "$area" ]; then curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=$(cd "$dir" && pwd)" --data-urlencode "edit=$area" "${URL}/castle"
            else curl -s -m 5 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=$(cd "$dir" && pwd)" "${URL}/castle"; fi; echo ;;
   village-page) curl -s -m 20 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "dir=${2:-}" "${URL}/village-page"; echo ;;
+  fullscreen) if [ "${2:-}" = "off" ]; then call "compact?off=1"; else call compact; fi; echo ;;
   weather) case "${2:-}" in
              "") call weather ;;
              snowman) call "weather?do=snowman" ;;

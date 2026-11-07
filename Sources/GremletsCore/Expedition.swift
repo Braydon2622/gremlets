@@ -548,7 +548,7 @@ extension World {
     }
 
     func updateChests(_ dt: Double) {
-        if chests.isEmpty, clock >= nextChestAt, userActive, eventsAllowed, !calm, spectacle == nil { spawnChest() }
+        if chests.isEmpty, clock >= nextChestAt, userActive, eventsAllowed, !calm, !compact, spectacle == nil { spawnChest() }
         guard !chests.isEmpty else { return }
         var i = 0
         while i < chests.count {

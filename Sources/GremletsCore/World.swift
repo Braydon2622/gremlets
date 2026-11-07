@@ -44,7 +44,7 @@ public final class World {
     /// You're at your Mac (recent keyboard/mouse input). Hobbies only start, and only make progress, while you are.
     public var userActive = true
     /// At most this many Gremlets on a hobby at once.
-    public var maxHobbies = 2
+    public var maxHobbies = 1
     /// Tops of visible desktop icons (set by the platform layer when icon play is on). Owner ids at or below
     /// `iconOwnerBase`.
     public var iconSurfaces: [Surface] = []
@@ -99,6 +99,14 @@ public final class World {
     public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
     /// Claude has been quiet for a couple of minutes: time to wind down.
     public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    /// The app's tidier desktop: no village or road on the floor, no vines up the screen's sides, and one small plant
+    /// at a time in the corner (the engine's own tests run with the older, fuller world).
+    public var villageOn = true
+    public var edgeVines = true
+    public var rotateGrove = false
+    var nextGroveRotation = 0.0
+    /// An app is full screen: everything keeps to the bottom corners, and the rest is put away (see Compact.swift).
+    public var compact = false { didSet { if compact && !oldValue { enterCompact() } } }
     /// The cloud under the pointer while ⌃⌥ is held (see Lift.swift).
     public internal(set) var lift: CursorLift?
     /// The home under the notch (nil on screens without one); see Notch.swift.
@@ -398,7 +406,7 @@ public final class World {
         if let until = c.homeUntil {
             if c.job != nil || clock >= until || spectacle != nil {
                 c.homeUntil = nil
-                if let n = c.homeHouse { groveEvents.append(.leftHome(n, by: c.id)) }
+                if let n = c.homeHouse, n >= 0 { groveEvents.append(.leftHome(n, by: c.id)) }
                 c.homeHouse = nil
                 if c.mining { finishDig(c) }
                 c.set(.wake, duration: c.animationLength(for: .wake))
@@ -462,7 +470,7 @@ public final class World {
         c.groundOwner = support.ownerID
 
         c.timer -= dt
-        if let job = c.job, updateJob(c, job, dt, on: support) { return }
+        if let job = c.job, !compact, updateJob(c, job, dt, on: support) { return }
         if c.building != nil, c.job == nil, updateBuilding(c, dt, on: support) { return }
         if c.stair != nil, c.job == nil, updateStairBuilding(c, dt, on: support) { return }
         if c.rail != nil, c.job == nil, updateRailLaying(c, dt, on: support) { return }
@@ -518,7 +526,8 @@ public final class World {
             }
             if c.activity == .run { endTag(c) }
             endSocial(c)
-            if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
+            if compact { Brain.decideCompact(c, in: self) }
+            else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }
             else if c.snowmanTask != nil { snowmanDecide(c) }
             else if ridingThroughDoor(c) { c.idleVariant = "look"; c.facing = door ?? c.facing; c.set(.idle, duration: rng.range(2, 4)) }
@@ -567,7 +576,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil {
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || compact {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1
@@ -794,6 +803,11 @@ public final class World {
                 if abs(s.maxX - lo) < 1 && s.minX < lo { lo = s.minX; changed = true }
                 if abs(s.minX - hi) < 1 && s.maxX > hi { hi = s.maxX; changed = true }
             }
+        }
+        // Full screen: a Gremlet in a bottom corner stays in it.
+        if compact, let scr = screen(containingX: c.pos.x, y: y), abs(y - scr.minY) < 4 {
+            if c.pos.x <= scr.minX + World.cornerZone + 1 { hi = min(hi, scr.minX + World.cornerZone) }
+            else if c.pos.x >= scr.maxX - World.cornerZone - 1 { lo = max(lo, scr.maxX - World.cornerZone) }
         }
         // The doorway to the other screen, for a Gremlet that has decided to go through.
         if let d = door, let main = screens.first, y < main.maxY, c.doorChoice {

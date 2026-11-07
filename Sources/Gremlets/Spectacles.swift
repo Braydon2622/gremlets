@@ -13,6 +13,7 @@ final class SpectacleRenderer {
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
     private var castleLayers: [String: (layer: CALayer, key: String)] = [:]
     private var liftLayer: CALayer?
+    private var nextChimneyPuff: CFTimeInterval = 0
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
@@ -120,7 +121,13 @@ final class SpectacleRenderer {
     private func renderGrove() {
         guard let floor = world.groveFloor else { return }
         let now = CACurrentMediaTime()
-        for i in world.grove.plants.indices {
+        let featured = world.grove.featured
+        // One plant at a time: put away any other that was showing.
+        for (i, pl) in plants where featured != nil && i != featured {
+            fade(pl.layer, to: 0, remove: true); pl.glow?.removeFromSuperlayer(); plants[i] = nil
+            if let b = brackets[i] { b.layer.removeFromSuperlayer(); brackets[i] = nil }
+        }
+        for i in world.grove.plants.indices where featured == nil || featured == i {
             let p = world.grove.plants[i]
             let base = world.grove.base(i, floor: floor), sz = world.grove.size(i)
             guard let (si, pt) = local(base) else { continue }
@@ -427,7 +434,7 @@ final class SpectacleRenderer {
 
     /// A pot bubbling by the lanternbloom while Gremlets sit around the campfire.
     private func renderCampfire() {
-        guard let floor = world.groveFloor, let i = world.grove.plant(of: .lanternbloom),
+        guard let floor = world.groveFloor, let i = world.grove.plant(of: .lanternbloom), world.grove.featured == nil || world.grove.featured == i,
               world.creatures.contains(where: { $0.campfire }) else {
             if let p = pot { p.removeFromSuperlayer(); pot = nil }
             return
@@ -448,7 +455,7 @@ final class SpectacleRenderer {
     private var pathLayer: (layer: CALayer, key: String)?
 
     private func renderVillage() {
-        guard let floor = world.groveFloor else { return }
+        guard world.villageOn, let floor = world.groveFloor else { return }
         // The path runs from the first house to the last.
         let xs = world.grove.village.map { floor.minX + $0.x * floor.w }
         if let lo = xs.min(), let hi = xs.max(), hi - lo > 40, let (si, pt) = local(Vec2(lo - 40, floor.minY)) {
@@ -1866,6 +1873,11 @@ extension SpectacleRenderer {
         for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
         l.ropes.path = path
         notchLayers = l
+        // Someone's inside: smoke curls from the chimney (and z's drift from the window at night).
+        if !world.insideHangingHome.isEmpty, CACurrentMediaTime() >= nextChimneyPuff {
+            nextChimneyPuff = CACurrentMediaTime() + 1.4
+            overlay.burst([Effects.dust], si: si, at: CGPoint(x: base.x + 36, y: base.y - 3 + 17 * 3 + 4), count: 1, dx: -4...8, dy: 26...40, duration: 2.2)
+        }
     }
 }
 
@@ -1887,6 +1899,23 @@ extension SpectacleRenderer {
         attach(c, si)
         c.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() + 3)
         liftLayer = c
+    }
+}
+
+// MARK: Full screen (see Compact.swift): only the corner plant and the lift stay out
+
+extension SpectacleRenderer {
+    /// Layers that stay visible in full screen.
+    var compactKeep: [CALayer] {
+        var out: [CALayer] = plants.values.flatMap { [$0.layer] + ($0.glow.map { [$0] } ?? []) }
+        if let l = liftLayer { out.append(l) }
+        return out
+    }
+
+    /// Full screen: just the corner plant and the lift.
+    func renderCompact() {
+        renderGrove()
+        renderLift()
     }
 }
 

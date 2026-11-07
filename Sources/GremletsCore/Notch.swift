@@ -48,18 +48,32 @@ extension World {
         creatures.first { $0.groundOwner == World.notchHammockOwner && $0.isAsleep }
     }
 
-    /// Once Claude has gone quiet, now and then someone heads up to the hammock for a nap.
+    /// Where the door is (on the porch).
+    public var notchDoorX: Double? { notchHome.map { $0.houseMinX + 33 } }
+
+    /// Who's inside the hanging house.
+    public var insideHangingHome: [Creature] { creatures.filter { $0.homeHouse == -1 && $0.homeUntil != nil } }
+
+    /// Home time (Claude has gone quiet, it's late, or it's tired): someone heads up to the hanging house, to nap
+    /// in the hammock or curl up inside.
     func notchChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard notchHomeShowing, claudeResting, clock >= nextNotchTripAt, c.expedition == nil, c.job == nil, c.isGrounded,
+        guard notchHomeShowing, claudeResting || isNight || c.energy < 0.35, !compact, clock >= nextNotchTripAt, c.expedition == nil, c.job == nil, c.isGrounded,
               !creatures.contains(where: { if case .notch? = $0.expedition?.goal { return true }; return World.isNotchOwner($0.groundOwner) && $0 !== c }) else { return }
         if World.isNotchOwner(c.groundOwner) { return }
         add("notchNap", 1.4) { if !self.startExpedition(c, .notch) { self.nextNotchTripAt = self.clock + 120 } }
     }
 
-    /// Arrived under the notch: into the hammock for a long nap (hopping across from the porch if it landed there).
+    /// Arrived at the hanging house: into the hammock if it's free (and it fancies it), otherwise in through the door.
     func settleInHammock(_ c: Creature) {
         guard let n = notchHome else { return }
-        nextNotchTripAt = clock + rng.range(600, 1200)
+        nextNotchTripAt = clock + rng.range(300, 700)
+        let hammockFree = hammockNapper == nil && hammockSleeper == nil
+        if !hammockFree || rng.chance(0.45), let door = notchDoorX, c.groundOwner == World.notchPorchOwner {
+            c.targetX = door; c.facing = door > c.pos.x ? 1 : -1
+            c.groveTask = .hangingHome
+            c.set(.walk, duration: 10)
+            return
+        }
         hammockNapper = (c.id, clock, false)
         if c.groundOwner != World.notchHammockOwner {
             launch(c, velocity: ballistic(from: c.pos, toX: (n.hammock.minX + n.hammock.maxX) / 2, y: n.hammock.y, apexExtra: 24))
@@ -91,4 +105,13 @@ extension World {
             hammockNapper = nil
         }
     }
+
+    /// In through the door: out of sight for a while (smoke curls from the chimney), then back out onto the porch.
+    func goInsideHangingHome(_ c: Creature) {
+        guard notchHomeShowing else { return }
+        c.homeHouse = -1
+        c.homeUntil = clock + rng.range(isNight ? 120 : 50, isNight ? 300 : 150)
+        c.set(.sleep, duration: 9999)
+    }
 }
+

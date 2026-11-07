@@ -87,7 +87,7 @@ extension World {
     func updateMerchant(_ dt: Double) {
         if merchant == nil {
             if nextMerchantAt == nil { nextMerchantAt = clock + 1500 }
-            if let t = nextMerchantAt, clock > t, nextPurchase != nil, eventsAllowed, !calm, userActive {
+            if let t = nextMerchantAt, clock > t, nextPurchase != nil, eventsAllowed, !calm, userActive, villageOn, !compact {
                 nextMerchantAt = clock + 1500
                 callMerchant()
             }
@@ -133,7 +133,7 @@ extension World {
 
     /// Village amenities in the brain: a drink at the well, a soak in the hot spring.
     func villageChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard let f = groveFloor, abs(c.pos.y - f.minY) < 4, c.job == nil else { return }
+        guard villageOn, let f = groveFloor, abs(c.pos.y - f.minY) < 4, c.job == nil else { return }
         if let n = grove.village.firstIndex(where: { $0.biome == VillageItem.well.houseKey }), c.energy < 0.85 {
             add("drink", 0.7) { self.startAmenity(c, house: n, kind: .drink) }
         }

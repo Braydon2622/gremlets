@@ -71,7 +71,7 @@ extension World {
     func rebuildVines() {
         let m = mossMinutes
         var out: [MossVine] = []
-        if m >= 40 {
+        if m >= 40 && edgeVines {
             for (i, scr) in screens.enumerated() {
                 let h = min(scr.h * 0.9, (m - 40) * 4)
                 for side in [-1.0, 1.0] {

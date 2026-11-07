@@ -92,7 +92,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
-        world.nurserySide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 1
+        let storedSide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0
+        world.nurserySide = storedSide == 0 ? 1 : storedSide
         world.loadBonsai(UserDefaults.standard.data(forKey: bonsaiKey).flatMap(BonsaiBook.decode) ?? BonsaiBook())
         setUpAccess()
         restoreRoster()
@@ -1027,6 +1028,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
         if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
+        // Unless you've chosen a side, the nursery hangs on whichever screen edge has fewer desktop icons.
+        if (UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 0) == 0, icons.enabled, let main = NSScreen.screens.first {
+            let f = main.frame
+            let left = icons.visible.filter { $0.rect.midX < f.minX + 190 }.count, right = icons.visible.filter { $0.rect.midX > f.maxX - 190 }.count
+            let side: Double = left < right ? -1 : 1
+            if side != world.nurserySide { world.nurserySide = side }
+        }
         // Once: what's new in this version, from whoever's out.
         if !UserDefaults.standard.bool(forKey: "tour.grownWorld"), Int(CACurrentMediaTime() - launchTime) > 25, world.userActive, !presence.isHidden, let id = world.say() {
             UserDefaults.standard.set(true, forKey: "tour.grownWorld")

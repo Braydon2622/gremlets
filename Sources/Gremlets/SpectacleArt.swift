@@ -133,19 +133,22 @@ enum GroveArt {
             cv.outline(night ? 0.8 : 0.55)
             cv.rect(Int(cx + W * 0.1) - 1, Int(H * 0.53), 2, 2, night ? 0xFFFFFF : 0xFFE9B0)
         case .skyvine:
-            // A twisting stalk with a leaf at every platform, and a bud at the top.
+            // A beanstalk up the wall: the stalk hugs the screen's edge, broad leaves reach out into the room (each
+            // one a rung of the ladder), tendrils curl off it, a bud at the top.
+            let stalkX = 4.0
             for y in 0..<h {
-                let x = cx + sin(Double(y) / 9) * 2.4
-                cv.rect(Int(x) - 1, y, 3, 1, 0x3F8A3A)
-                cv.set(Int(x) - 1, y, 0x2D6A2C)
+                let x = stalkX + sin(Double(y) / 9) * 1.4
+                cv.rect(Int(x), y, 3, 1, 0x3F8A3A)
+                cv.set(Int(x), y, 0x2D6A2C)
+                if y % 17 == 8 { cv.line(x + 3, Double(y), x + 7, Double(y) + 3, 0x6CC04A); cv.set(Int(x) + 8, y + 2, 0x6CC04A) }   // tendrils
             }
-            let leaves = max(1, Int((size.y - 40) / 62))
+            let leaves = max(1, Int((size.y - 36) / 64))
             for n in 0..<leaves {
-                let y = (52 + Double(n) * 62) / artScale
-                let side: Double = n % 2 == 0 ? -1 : 1
-                cv.blob(cx + side * 20 / artScale * 1.0, y - 1.5, 24 / artScale + 1, 3.2, base: 0x6CC04A, light: 0xA6E36E, shade: 0x3F8A3A)
+                let y = (56 + Double(n) * 64) / artScale
+                cv.blob(stalkX + 11, y - 1.6, 11.5, 3.0, base: 0x6CC04A, light: 0xA6E36E, shade: 0x3F8A3A)
+                cv.line(stalkX + 1, y - 1, stalkX + 21, y - 2, 0x3F8A3A)   // the midrib
             }
-            cv.blob(cx, H - 4, 5, 4, base: 0xF7B2D3, light: 0xFFE0EF, shade: 0xC9709C)
+            cv.blob(stalkX + 1, H - 4, 4.5, 3.6, base: 0xF7B2D3, light: 0xFFE0EF, shade: 0xC9709C)
             cv.outline()
         case .snapjaw:
             let open = variant == 0
@@ -203,63 +206,9 @@ enum GroveArt {
     }
 }
 
-/// The Stormwyrm: an original storm-cloud serpent. A horned cloud head with lightning eyes and a body of thunderheads.
-enum BossArt {
-    static let dark: UInt32 = 0x2E3A5C, mid: UInt32 = 0x50648F, light: UInt32 = 0x8FA6D6, rim: UInt32 = 0xC9D8FF
-    static let eye: UInt32 = 0xFFE45C, spark: UInt32 = 0x9FF0FF
 
-    static func head(open: Bool, hurt: Bool) -> CGImage {
-        var cv = PixelCanvas(50, 42)
-        let (b, l, s) = hurt ? (0xE8EEFF as UInt32, 0xFFFFFF as UInt32, 0xB8C6EE as UInt32) : (mid, light, dark)
-        // A mane of storm clouds behind the head.
-        for (x, y, r) in [(10.0, 27.0, 9.0), (18, 33, 8), (7, 16, 8), (14, 8, 7), (27, 36, 6)] { cv.blob(x, y, r, r * 0.9, base: s, light: b) }
-        // Skull and long snout.
-        cv.blob(26, 22, 15, 12, base: b, light: l, shade: s)
-        cv.blob(39, 18, 10, open ? 5 : 7, base: b, light: l, shade: s)
-        if open { cv.blob(39, 11, 9, 4.5, base: s, light: b) }
-        // Horns: forked lightning.
-        cv.line(21, 32, 15, 41, rim, width: 2); cv.line(15, 41, 19, 39, rim)
-        cv.line(30, 33, 32, 41, rim, width: 2); cv.line(32, 41, 36, 37, rim)
-        cv.outline(0.5)
-        // Glowing eye with a bright pupil, a cheek ridge, and teeth + a crackling mouth glow when open.
-        cv.rect(31, 23, 5, 4, eye); cv.rect(33, 24, 2, 2, 0xFFFFFF)
-        cv.line(22, 17, 34, 15, s)
-        if open {
-            cv.rect(32, 12, 13, 3, spark)
-            for x in stride(from: 32, to: 47, by: 3) { cv.set(x, 15, 0xFFFFFF); cv.set(x + 1, 10, 0xFFFFFF) }
-        }
-        cv.set(47, 19, s); cv.set(48, 19, s)
-        return cv.image
-    }
-
-    static func body(_ i: Int, hurt: Bool) -> CGImage {
-        let r = Spectacle.radius(i) / artScale
-        let size = Int(r * 2.4 + 4)
-        var cv = PixelCanvas(size, size)
-        let c = Double(size) / 2
-        let (b, l, s) = hurt ? (0xE8EEFF as UInt32, 0xFFFFFF as UInt32, 0xB8C6EE as UInt32) : (mid, light, dark)
-        // A thunderhead: a dark round belly with billowing puffs on top.
-        cv.blob(c, c - r * 0.1, r, r * 0.78, base: b, light: l, shade: s)
-        cv.blob(c - r * 0.5, c + r * 0.35, r * 0.55, r * 0.5, base: b, light: l, shade: b)
-        cv.blob(c + r * 0.35, c + r * 0.5, r * 0.6, r * 0.5, base: l, light: rim, shade: b)
-        cv.outline(0.45)
-        // Every other puff has a flicker of static inside.
-        if i % 2 == 1 {
-            cv.line(c - r * 0.45, c - r * 0.15, c - r * 0.05, c + r * 0.2, spark)
-            cv.line(c - r * 0.05, c + r * 0.2, c + r * 0.3, c - r * 0.2, spark)
-        }
-        return cv.image
-    }
-
-    static let berry: CGImage = {
-        var cv = PixelCanvas(5, 5); cv.blob(2.5, 2.5, 2.4, 2.4, base: 0xF2683C, light: 0xFFD45E, shade: 0xB23A2A); return cv.image
-    }()
-    static let pebble: CGImage = {
-        var cv = PixelCanvas(4, 4); cv.blob(2, 2, 1.9, 1.6, base: 0x9C9488, light: 0xC9C2B4, shade: 0x6B655C); return cv.image
-    }()
-    static let seedBall: CGImage = {
-        var cv = PixelCanvas(5, 5); cv.blob(2.5, 2.5, 2.3, 2.3, base: 0xE2B45A, light: 0xFFE7A6, shade: 0x9C6E2A); return cv.image
-    }()
+/// Small sprites shared by the sky and the games.
+enum SkyArt {
     static let shard: CGImage = Effects.pixels([
         "..w..",
         ".wYw.",
@@ -267,4 +216,7 @@ enum BossArt {
         ".wYw.",
         "..w..",
     ], ["w": 0xFFFFFF, "Y": 0xFFE45C])
+    static let seedBall: CGImage = {
+        var cv = PixelCanvas(5, 5); cv.blob(2.5, 2.5, 2.3, 2.3, base: 0xE2B45A, light: 0xFFE7A6, shade: 0x9C6E2A); return cv.image
+    }()
 }

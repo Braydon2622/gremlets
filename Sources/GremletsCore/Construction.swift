@@ -202,23 +202,27 @@ extension World {
 
     /// A Claude building moves to the village. Finds a free spot along the bottom of the main screen, away from the
     /// grove plants and the other houses; the oldest house makes way when there's no room.
-    @discardableResult
-    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil) -> Int? {
-        guard let f = groveFloor, blocks > 0 else { return nil }
+    /// A free spot on the floor for something `width` wide: from the right corner inward (the garden has the left
+    /// corner), clear of the grove plants and the other houses.
+    func villageSpot(forWidth width: Double) -> Double? {
+        guard let f = groveFloor else { return nil }
         func free(_ x: Double) -> Bool {
             let px = f.minX + x * f.w
             for i in grove.plants.indices {
                 let b = grove.base(i, floor: f), sz = grove.size(i)
-                if abs(px - b.x) < sz.x / 2 + size.x / 2 + 16 { return false }
+                if abs(px - b.x) < sz.x / 2 + width / 2 + 16 { return false }
             }
-            for h in grove.village where abs(px - (f.minX + h.x * f.w)) < (h.w + size.x) / 2 + 20 { return false }
+            for h in grove.village where abs(px - (f.minX + h.x * f.w)) < (h.w + width) / 2 + 20 { return false }
             return true
         }
-        // Spots from the edges inward, so the village grows out from both sides.
-        var spots: [Double] = []
-        for k in 0..<40 { let u = 0.03 + Double(k / 2) * 0.024; spots.append(k % 2 == 0 ? u : 1 - u) }
+        return (0..<26).map { 0.965 - Double($0) * 0.024 }.first(where: free)
+    }
+
+    @discardableResult
+    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil, builtAt: Double? = nil) -> Int? {
+        guard groveFloor != nil, blocks > 0 else { return nil }
         if grove.village.count >= Grove.maxHouses { grove.village.removeFirst() }
-        guard let x = spots.first(where: free) else { return nil }
+        guard let x = villageSpot(forWidth: size.x) else { return nil }
         grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day, builtAt: builtAt))
         for o in creatures where o.homeHouse != nil { o.homeUntil = clock }   // house numbers may shift: everyone wakes
         rebuildGroveSurfaces(); setSurfacesDirty()

@@ -67,6 +67,16 @@ public final class World {
     var nextFerryAt: Double?
     /// The traveling merchant (when it's in the village).
     public internal(set) var merchant: Merchant?
+    /// Every project's bonsai, the live Claude sessions growing them, and where the trees and terminal ledges are.
+    public internal(set) var bonsaiBook = BonsaiBook()
+    var liveBonsai: [String: LiveBonsai] = [:]
+    var bonsaiEvents: [BonsaiEvent] = []
+    public internal(set) var bonsaiPlacements: [BonsaiPlacement] = []
+    public internal(set) var terminalLedges: [TerminalLedge] = []
+    var attachedSurfaces: [Surface] = []
+    /// Platforms that belong to a window (tree pads, terminal ledges) and ride along with it.
+    var attachedOwnerWindow: [Int: Int] = [:]
+    var _nurserySide = 1.0
     var nextMerchantAt: Double?
     var merchantEvents: [MerchantEvent] = []
     var adventureEvents: [AdventureEvent] = []
@@ -122,8 +132,10 @@ public final class World {
         var newWindows: [Int: Rect] = [:]
         for w in windowsFrontToBack { newWindows[w.id] = w.frame }
         for c in creatures where c.isGrounded {
-            // Window tops only; shelves carry their own riders (carryRiders).
-            guard let owner = c.groundOwner, owner >= 0, let old = windows[owner], let new = newWindows[owner] else { continue }
+            // Window tops, and the platforms attached to windows (tree pads, terminal ledges); shelves carry their
+            // own riders (carryRiders).
+            guard let owner = c.groundOwner, owner >= 0 || attachedOwnerWindow[owner] != nil,
+                  let wid = owner >= 0 ? owner : attachedOwnerWindow[owner], let old = windows[wid], let new = newWindows[wid] else { continue }
             let d = Vec2(new.minX - old.minX, new.maxY - old.maxY)
             c.pos += d
             // Anyone standing on this creature's head comes along for the ride.
@@ -135,10 +147,11 @@ public final class World {
         builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
         validateBridges()
         rebuildGroveSurfaces()
+        rebuildAttached()
         setSurfacesDirty()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + attachedSurfaces }
 
     // MARK: Creatures
 
@@ -272,6 +285,8 @@ public final class World {
         carryRiders()
         updateFerry(dt)
         updateMerchant(dt)
+        updateBonsai(dt)
+        updateGrove(dt)
         // Lower creatures first so a carrier has moved before the friend standing on its head.
         for c in creatures.sorted(by: { $0.pos.y < $1.pos.y }) { update(c, dt) }
         resolveBumps()

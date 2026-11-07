@@ -34,7 +34,7 @@ enum Biome: String, CaseIterable {
         case .crystal:    return (0x7BA889, 0xA9D3B2, 0x6E6A78, 0x524E5C, 0x5D5870, 0x423E52, 0xD58CFF)
         case .cherry:     return (0x7CCB6A, 0xF7B6D2, 0x8A5A35, 0x6B4428, 0x7D7A74, 0x5A5752, 0xFF9EC7)
         case .autumn:     return (0xD98A3A, 0xF2B45C, 0x7A5232, 0x5C3D24, 0x7D7A74, 0x5A5752, 0xF2C94C)
-        case .sky:        return (0x6CC04A, 0x9BE36A, 0xF5FAFF, 0xDCE9F5, 0xC6D6EA, 0xA9BCD6, 0xFFE45C)
+        case .sky:        return (0x6CC04A, 0x9BE36A, 0x8A5A35, 0x6B4428, 0xA9BCD6, 0x7E93B3, 0xFFE45C)
         }
     }
 }
@@ -61,10 +61,7 @@ enum IslandArt {
             for d in 0..<bottom[x] {
                 let y = top - d
                 var c: UInt32
-                if b == .sky {
-                    // A cloud with a thin turf lid.
-                    c = d == 0 ? pal.topLight : d == 1 ? pal.top : (d > bottom[x] - 3 ? pal.stoneDark : (d % 3 == 0 && x % 5 == 2 ? pal.stone : pal.soil))
-                } else if d == 0 {
+                if d == 0 {
                     c = (x + Int(seed)) % 7 == 0 ? pal.topLight : pal.top
                 } else if d == 1 {
                     c = b == .snow || b == .desert ? pal.top : (x % 3 == 0 ? pal.top : pal.soil)   // grass roots into the dirt
@@ -94,10 +91,24 @@ enum IslandArt {
                 case .glowshroom: c = k == len - 1 ? 0x6FF2FF : 0x3B5A8A                   // glowing tendrils
                 case .crystal: c = k == len - 1 ? 0xE6B8FF : 0xA06BD6                      // hanging crystals
                 case .desert: c = 0xB98E4E                                                 // trickling sand
-                case .sky: c = k == len - 1 ? 0xBFE6FF : 0xDCE9F5                          // drizzle
+                case .sky: continue                                                        // clouds instead (below)
                 }
                 cv.set(x, y0 - k, c)
             }
+        }
+        // A sky island floats on a wreath of cloud hugging its underside.
+        if b == .sky {
+            var cr = ArtRNG(s: seed &+ 21)
+            var x = 1.0
+            while x < Double(w) - 1 {
+                let ix = Int(x)
+                let under = Double(top - bottom[min(w - 1, max(0, ix))])
+                let rad = cr.range(2.4, 4.2)
+                cv.blob(x, under + 0.5, rad, rad * 0.7, base: 0xF5FAFF, light: 0xFFFFFF, shade: 0xC6D6EA)
+                x += rad * 1.3
+            }
+            cv.blob(-1, Double(top - bottom[0]) + 3, 3.5, 2.5, base: 0xF5FAFF, light: 0xFFFFFF, shade: 0xC6D6EA)
+            cv.blob(Double(w), Double(top - bottom[w - 1]) + 3, 3.5, 2.5, base: 0xF5FAFF, light: 0xFFFFFF, shade: 0xC6D6EA)
         }
         return cv.image
     }

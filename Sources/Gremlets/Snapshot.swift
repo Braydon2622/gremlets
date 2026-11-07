@@ -69,6 +69,18 @@ enum VillageSnapshot {
                 }
             }
         }
+        // The project bonsai, on their nursery brackets up the right-hand side.
+        let now = Date().timeIntervalSince1970
+        for (k, t) in world.bonsaiBook.trees.sorted(by: { $0.lastSeen > $1.lastSeen }).prefix(4).enumerated() {
+            let layout = BonsaiGeometry.layout(t)
+            let bx = Double(W) - 150, by = groundY + 60 + Double(k) * 110
+            let br = BonsaiArt.bracket(widthPx: 46, hanging: k % 2 == 1)
+            ctx.draw(br, in: CGRect(x: bx - 69, y: by - 36, width: Double(br.width) * 3, height: Double(br.height) * 3))
+            let fit = min(0.55, 100 / max(1, layout.bounds.h))
+            let (img, anchor) = BonsaiArt.image(t, layout: layout, scale: fit, month: world.month, night: night, ageDays: t.ageDays(now: now))
+            let wpx = Double(img.width) * 3, hpx = Double(img.height) * 3
+            ctx.draw(img, in: CGRect(x: bx - anchor.x * wpx, y: by - anchor.y * hpx, width: wpx, height: hpx))
+        }
         // Your Gremlets, out front.
         let out = Array(Set(world.creatures.map(\.species.id))).sorted().prefix(10)
         for (i, id) in out.enumerated() {
@@ -82,7 +94,8 @@ enum VillageSnapshot {
         let edits = g.village.filter { Biome(rawValue: $0.biome) != nil }.reduce(0) { $0 + $1.blocks }
         let houses = g.village.filter { Biome(rawValue: $0.biome) != nil }.count
         let gems = g.gems.values.reduce(0, +)
-        var stats = ["\(g.tasks) Claude task\(g.tasks == 1 ? "" : "s")", "\(houses) building\(houses == 1 ? "" : "s")", "\(edits) file edits"]
+        let trees = world.bonsaiBook.trees.count
+        var stats = ["\(g.tasks) Claude task\(g.tasks == 1 ? "" : "s")", "\(trees) project tree\(trees == 1 ? "" : "s")", "\(houses) building\(houses == 1 ? "" : "s")", "\(edits + world.bonsaiBook.trees.reduce(0) { $0 + $1.edits }) file edits"]
         if gems > 0 { stats.append("\(gems) gem\(gems == 1 ? "" : "s")") }
         let ns = NSGraphicsContext(cgContext: ctx, flipped: false)
         NSGraphicsContext.saveGraphicsState()

@@ -27,7 +27,7 @@ public struct PlayBall: Sendable {
 extension World {
 
     func playChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard c.job == nil, c.play == nil, spectacle?.isBoss != true else { return }
+        guard c.job == nil, c.play == nil else { return }
         let friends = nearbyFriends(of: c, range: 520).filter {
             $0.play == nil && $0.job == nil && [.idle, .walk, .follow].contains($0.activity) && $0.groveTask == nil
         }

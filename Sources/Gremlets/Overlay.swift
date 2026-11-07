@@ -50,8 +50,10 @@ final class OverlayController {
     let world: World
     let species: [String: LoadedSpecies]
     private var screens: [Screen] = []
-    /// The grove and the special events (boss, meteors, festivals) are drawn by their own renderer.
+    /// The grove and the little events (meteors, festivals) are drawn by their own renderer.
     private(set) var fx: SpectacleRenderer!
+    /// The project bonsai, the ivy and ledges on Claude's windows, and the nursery.
+    private(set) var bonsaiFX: BonsaiRenderer!
     struct ScreenRef { let frame: CGRect; let root: CALayer; let scale: CGFloat }
     var screenRefs: [ScreenRef] { screens.map { ScreenRef(frame: $0.frame, root: $0.root, scale: $0.panel.backingScaleFactor) } }
     func screenIndexFor(_ p: Vec2) -> Int { screenIndex(for: p) }
@@ -65,7 +67,6 @@ final class OverlayController {
     /// Hobby / Claude-buddy props per worker (creature id): the creation and the ladder.
     private var props: [Int: PropState] = [:]
     private var balloons: [Int: CALayer] = [:]
-    let keepsakes = KeepsakeStore()
     /// Double-clicking a Gremlet (the app opens a chat with it).
     var onDoubleClick: (Int) -> Void = { _ in }
     func creatureID(at p: CGPoint) -> Int? { world.creature(at: Vec2(Double(p.x), Double(p.y)))?.id }
@@ -80,7 +81,6 @@ final class OverlayController {
     /// Called when the seed book or today's harvest changes (the menu shows them).
     var onGardenChange: () -> Void = {}
     private var nextButterfly: [Int: Double] = [:]
-    private var keepsakeLayers: [CALayer] = []
     private struct PropState {
         var screen: Int
         var anchorX: Double = 0
@@ -172,6 +172,7 @@ final class OverlayController {
         self.world = world
         self.species = species
         fx = SpectacleRenderer(overlay: self, world: world)
+        bonsaiFX = BonsaiRenderer(overlay: self, world: world)
         rebuildScreens()
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.mouseMoved() }
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved], handler: handler) { monitors.append(g) }
@@ -197,29 +198,9 @@ final class OverlayController {
         for (_, l) in shadows { l.removeFromSuperlayer() }
         shadows.removeAll()
         fx?.rebuild()
-        refreshKeepsakes()
+        bonsaiFX?.rebuild()
     }
 
-    /// Draws the keepsake garden along the floor of the main screen, behind everything else.
-    func refreshKeepsakes() {
-        for l in keepsakeLayers { l.removeFromSuperlayer() }
-        keepsakeLayers.removeAll()
-        guard let main = NSScreen.screens.first, !screens.isEmpty else { return }
-        let floorY = main.visibleFrame.minY - main.frame.minY
-        for item in keepsakes.items {
-            guard let img = PropArt.keepsakeImage(item.kind, golden: item.variant == 1) else { continue }
-            let l = pixelLayer(0, anchor: CGPoint(x: 0.5, y: 0))
-            setImage(l, img)
-            l.position = CGPoint(x: (item.x * main.frame.width).rounded(), y: floorY)
-            screens[0].root.insertSublayer(l, at: 0)
-            keepsakeLayers.append(l)
-        }
-        world.gardenSpots = keepsakes.items.filter { PropArt.keepsakeImage($0.kind) != nil }.map { main.frame.minX + $0.x * main.frame.width }
-    }
-
-    var keepsakeCount: Int { keepsakes.items.count }
-
-    func clearKeepsakes() { keepsakes.clear(); refreshKeepsakes() }
 
     private func screenIndex(for p: Vec2) -> Int {
         screens.firstIndex { $0.frame.contains(CGPoint(x: p.x, y: p.y)) }
@@ -283,6 +264,7 @@ final class OverlayController {
         }
         for id in shadows.keys where !alive.contains(id) { shadows[id]?.removeFromSuperlayer(); shadows[id] = nil }
         fx.render()
+        bonsaiFX.render()
         updateBubbles(alive: alive)
         updateProps()
         updateHover()
@@ -1192,13 +1174,9 @@ final class OverlayController {
 
     /// Plants grown on the phone go in the seed book and get planted in the garden here.
     func receiveHarvest(_ plants: [Plant], nearX x: Double) {
-        guard !plants.isEmpty, let main = NSScreen.screens.first else { return }
-        for (i, p) in plants.enumerated() {
-            seedBook.record(p)
-            keepsakes.add(kind: p.kind.rawValue, x: (x - main.frame.minX) / main.frame.width - 0.04 * Double(i), variant: p.golden ? 1 : 0)
-        }
-        refreshKeepsakes()
-        for l in keepsakeLayers.suffix(plants.count) { popIn(l) }
+        guard !plants.isEmpty else { return }
+        for p in plants { seedBook.record(p) }
+        world.groveHarvestBonus()
         onGardenChange()
     }
 
@@ -1529,16 +1507,9 @@ final class OverlayController {
             if now >= st.lingerUntil! || st.item.superlayer == nil {
                 fadeOut(st.item, 0.8)
                 props[id] = nil
-                // The harvest gets planted in the garden along the bottom of the screen.
-                if !st.harvest.isEmpty, let main = NSScreen.screens.first {
-                    let x = (st.anchorX - main.frame.minX) / main.frame.width
-                    for (i, p) in st.harvest.enumerated() {
-                        keepsakes.add(kind: p.kind.rawValue, x: x + Double(i - 1) * (p.kind.isGiant ? 0 : 0.03), variant: p.golden ? 1 : 0)
-                    }
-                    refreshKeepsakes()
-                    for l in keepsakeLayers.suffix(st.harvest.count) { popIn(l) }
-                    onGardenChange()
-                }
+                // The harvest has already gone where it means something: flowers on the project's bonsai for a
+                // Claude session, sparks for the grove otherwise.
+                if !st.harvest.isEmpty { onGardenChange() }
             } else {
                 props[id] = st
             }
@@ -1768,7 +1739,7 @@ final class OverlayController {
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
         let hot = world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil
-            || world.bossContains(p) || fx.plant(at: p) != nil || fx.house(at: p) != nil
+            || fx.plant(at: p) != nil || fx.house(at: p) != nil || bonsaiFX.hit(at: p) != nil
         setClickThrough(hot ? screenIndex(for: p) : nil)
     }
 
@@ -1790,7 +1761,9 @@ final class OverlayController {
 
     func mouseDown(at p: CGPoint, time: Double) {
         guard !paused else { return }
-        if world.creature(at: vec(p)) == nil, world.hitBoss(at: vec(p)) { return }
+        if world.creature(at: vec(p)) == nil, propOwner(at: vec(p)) == nil, platformOwner(at: vec(p)) == nil, let b = bonsaiFX.hit(at: vec(p)) {
+            bonsaiFX.describe(b); return
+        }
         if world.creature(at: vec(p)) == nil, propOwner(at: vec(p)) == nil, platformOwner(at: vec(p)) == nil, let i = fx.plant(at: vec(p)) {
             fx.describePlant(i); return
         }

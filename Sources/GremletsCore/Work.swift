@@ -292,6 +292,9 @@ extension World {
             g.plants[i]?.bug = false
         }
         j.garden.lastAction = .harvest
+        // The harvest means something: flowers on the project's bonsai for a Claude job, sparks for the grove otherwise.
+        let bloomed = j.garden.planted.filter { $0.growth >= 1 }.count
+        if j.kind == .claude, let p = j.label { bonsaiGrow(project: p, .bloom, count: bloomed) } else if bloomed > 0 { groveHarvestBonus() }
         j.beats += 1
         j.phase = .finished
         j.finishedAt = clock

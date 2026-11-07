@@ -634,43 +634,8 @@ enum PropArt {
         return h >= 19 || h < 6
     }
 
-    // MARK: Keepsakes (the garden along the bottom of the screen)
-
-    /// Older keepsakes (before plant kinds) were plain flowers.
-    static func keepsakeImage(_ kind: String, golden: Bool = false) -> CGImage? {
-        if let k = PlantKind(rawValue: kind) { return keepsake(k, golden: golden) }
-        if kind == "flower" { return keepsake(.tulip) }
-        return nil
-    }
 }
 
-/// Finished flowers get planted along the bottom of the main screen, and paintings lean there too. Kept between
-/// launches (UserDefaults), at most a dozen; the oldest makes room for the newest.
-final class KeepsakeStore {
-    struct Item: Codable { var kind: String; var x: Double; var variant: Int }
-    private let key = "keepsakes.v1"
-    private(set) var items: [Item] = []
-    static let limit = 24
-
-    init() {
-        if let d = UserDefaults.standard.data(forKey: key), let v = try? JSONDecoder().decode([Item].self, from: d) { items = v }
-    }
-
-    /// `x` is 0...1 across the main screen. Nudged so keepsakes don't stack on top of each other.
-    func add(kind: String, x: Double, variant: Int) {
-        var x = x.clamped(0.03, 0.97)
-        for _ in 0..<20 where items.contains(where: { abs($0.x - x) < 0.025 }) { x = (x + 0.03).truncatingRemainder(dividingBy: 0.94) + 0.03 }
-        items.append(Item(kind: kind, x: x, variant: variant))
-        if items.count > Self.limit { items.removeFirst(items.count - Self.limit) }
-        save()
-    }
-
-    func clear() { items.removeAll(); save() }
-
-    private func save() { if let d = try? JSONEncoder().encode(items) { UserDefaults.standard.set(d, forKey: key) } }
-}
-
-/// Which plants you've grown (the seed book) and how many were harvested each day (UserDefaults).
 final class SeedBook {
     private let key = "seedbook.v1", dayKey = "harvests.v1"
     private(set) var counts: [String: Int] = [:]

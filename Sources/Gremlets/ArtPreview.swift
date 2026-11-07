@@ -29,6 +29,42 @@ enum ArtPreview {
             ctx.draw(critter, in: CGRect(x: cx + 40 * scale, y: top, width: critter.width * scale, height: critter.height * scale))
         }
         write(ctx.makeImage()!, dir.appendingPathComponent("islands.png"))
+        // Bonsai: every species, from a seedling to a venerable tree, plus autumn and winter at full growth.
+        let stages: [(edits: Int, sessions: Int, blooms: Int, fruit: Int)] = [(0, 1, 0, 0), (8, 2, 1, 0), (40, 4, 4, 1), (150, 7, 9, 3), (500, 12, 16, 7)]
+        let bW = 390, bH = 270
+        let bcols = stages.count + 2
+        let ctxB = CGContext(data: nil, width: bW * bcols, height: bH * BonsaiSpecies.allCases.count, bitsPerComponent: 8, bytesPerRow: 0,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxB.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxB.fill(CGRect(x: 0, y: 0, width: bW * bcols, height: bH * BonsaiSpecies.allCases.count))
+        ctxB.interpolationQuality = .none
+        for (row, sp) in BonsaiSpecies.allCases.enumerated() {
+            for col in 0..<bcols {
+                let st = stages[min(col, stages.count - 1)]
+                var b = Bonsai(project: "preview-\(sp.rawValue)", now: 0)
+                b.species = sp
+                b.form = BonsaiForm.allCases[(row + col) % BonsaiForm.allCases.count]
+                for n in 0..<st.sessions { _ = b.startSession("s\(n)", now: 0) }
+                for n in 0..<st.edits { b.branches[n % b.branches.count].edits += 1 }
+                for n in 0..<st.blooms { b.branches[n % b.branches.count].blooms += 1 }
+                for n in 0..<st.fruit { b.branches[n % b.branches.count].fruit += 1 }
+                let layout = BonsaiGeometry.layout(b)
+                let month = col == stages.count ? 10 : col == stages.count + 1 ? 1 : 6
+                let fit = min(1, Double(bW - 20) / (layout.bounds.w * 1.0), Double(bH - 40) / (layout.bounds.h * 1.0))
+                let (img, anchor) = BonsaiArt.image(b, layout: layout, scale: fit, month: month, night: col % 2 == 1, ageDays: Double(col) * 6)
+                let wpx = Double(img.width) * artScale, hpx = Double(img.height) * artScale
+                let ox = Double(col * bW + bW / 2), oy = Double((BonsaiSpecies.allCases.count - 1 - row) * bH + 30)
+                ctxB.setFillColor(CGColor(red: 0.3, green: 0.32, blue: 0.4, alpha: 1)); ctxB.fill(CGRect(x: col * bW + 20, y: Int(oy) - 4, width: bW - 40, height: 4))
+                ctxB.draw(img, in: CGRect(x: ox - anchor.x * wpx, y: oy - anchor.y * hpx, width: wpx, height: hpx))
+            }
+        }
+        write(ctxB.makeImage()!, dir.appendingPathComponent("bonsai.png"))
+        // Ivy, ledge, bracket.
+        let ctxI = CGContext(data: nil, width: 900, height: 120, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxI.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxI.fill(CGRect(x: 0, y: 0, width: 900, height: 120)); ctxI.interpolationQuality = .none
+        let ivy = BonsaiArt.ivy(lengthPx: 120, seed: 3); ctxI.draw(ivy, in: CGRect(x: 10, y: 80, width: ivy.width * 3, height: ivy.height * 3))
+        let ledge = BonsaiArt.ledge(index: 0); ctxI.draw(ledge, in: CGRect(x: 10, y: 20, width: ledge.width * 3, height: ledge.height * 3))
+        let br = BonsaiArt.bracket(widthPx: 46, hanging: true); ctxI.draw(br, in: CGRect(x: 120, y: 10, width: br.width * 3, height: br.height * 3))
+        write(ctxI.makeImage()!, dir.appendingPathComponent("terminal.png"))
         // Buildings at 25%, 60% and 100%, day and night, one row per biome.
         let bw = 140, bh = 150
         let ctx3 = CGContext(data: nil, width: bw * 4, height: bh * Biome.allCases.count, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),

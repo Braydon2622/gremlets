@@ -30,12 +30,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         set { UserDefaults.standard.set(newValue, forKey: "reminders") }
     }
     private var lastReminder = Date()
-    /// Big events (boss fights, meteor showers, festivals) on or off.
+    /// Little events (meteor showers, festivals, the ferry, the merchant) on or off.
     private var epicEvents: Bool {
         get { UserDefaults.standard.object(forKey: "events.epic") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "events.epic") }
     }
     private let groveKey = "grove.v1"
+    private let bonsaiKey = "bonsai.v1"
+    private var bonsaiDirty = false
     private var nextReminderIsWater = true
 
     // Ownership: NFT holders keep their Gremlets; everyone else can try any Gremlet in a demo.
@@ -78,6 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.onGardenChange = { [weak self] in self?.rebuildMenu() }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
+        world.nurserySide = UserDefaults.standard.object(forKey: "nursery.side") as? Double ?? 1
+        world.loadBonsai(UserDefaults.standard.data(forKey: bonsaiKey).flatMap(BonsaiBook.decode) ?? BonsaiBook())
         setUpAccess()
         restoreRoster()
         setUpCompanion()
@@ -135,6 +139,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; if case .houseAdded = $0 { return true }; return false }) { saveGrove() }
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
+        let growth = world.drainBonsaiEvents()
+        if !growth.isEmpty { overlay.bonsaiFX.handle(growth); bonsaiDirty = true }
         overlay.fx.handle(world.drainBuildEvents())
         let trades = world.drainMerchantEvents()
         overlay.fx.handle(trades)
@@ -372,6 +378,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(m)
         }
         menu.addItem(groveMenuItem())
+        menu.addItem(bonsaiMenuItem())
         let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on App Controls (needs Accessibility)" : "Stand on App Controls",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
@@ -449,12 +456,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let t = NSMenuItem(title: "Grown today: \(book.today) plant\(book.today == 1 ? "" : "s")", action: nil, keyEquivalent: "")
             t.isEnabled = false
             menu.addItem(t)
-        }
-        if overlay.keepsakeCount > 0 {
-            let g = NSMenuItem(title: "Clear Garden (\(overlay.keepsakeCount))", action: #selector(clearGarden), keyEquivalent: "")
-            g.target = self
-            g.toolTip = "Flowers and paintings your Gremlets finished, along the bottom of the screen."
-            menu.addItem(g)
         }
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
@@ -801,7 +802,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             sendToPhone(item)
             return (200, #"{"ok":true}"#)
         case "event":
-            guard let k = SpectacleKind(rawValue: query["kind"] ?? ""), k != .boss else { return (400, #"{"ok":false,"error":"kind must be meteors or festival"}"#) }
+            guard let k = SpectacleKind(rawValue: query["kind"] ?? "") else { return (400, #"{"ok":false,"error":"kind must be meteors, festival or lanterns"}"#) }
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
@@ -915,6 +916,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rebuildMenu()
     }
 
+    private func saveBonsai() {
+        if let d = world.bonsaiBook.encoded() { UserDefaults.standard.set(d, forKey: bonsaiKey) }
+        bonsaiDirty = false
+    }
+
     private func saveGrove() {
         if let d = world.grove.encoded() { UserDefaults.standard.set(d, forKey: groveKey) }
     }
@@ -922,6 +928,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func housekeeping(elapsed: Double) {
         updatePresence()
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
+        if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
         if Int(CACurrentMediaTime()) % 60 == 0 {
             world.checkWishwillow(day: Int(Date().timeIntervalSinceReferenceDate / 86400))
@@ -1202,6 +1209,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return item
     }
 
+    /// Every project's bonsai: species, sessions, edits, flowers, fruit; and which side the nursery hangs on.
+    private func bonsaiMenuItem() -> NSMenuItem {
+        let trees = world.bonsaiBook.trees.sorted { $0.lastSeen > $1.lastSeen }
+        let item = NSMenuItem(title: "Bonsai · \(trees.count) project\(trees.count == 1 ? "" : "s")", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        func info(_ t: String, tip: String? = nil) { let i = NSMenuItem(title: t, action: nil, keyEquivalent: ""); i.isEnabled = false; i.toolTip = tip; sub.addItem(i) }
+        info("Each project you work on with Claude grows a tree on its terminal: a branch per session, a leaf per edit, a flower per finished task, fruit when tests pass.")
+        if trees.isEmpty { info("No trees yet. Start a Claude Code session and one will take root.") }
+        sub.addItem(.separator())
+        for t in trees.prefix(12) {
+            let live = world.bonsaiPlacements.contains { $0.project == t.project && $0.slot < 0 }
+            var parts = ["\(t.project)  ·  \(t.species.name.lowercased())", "\(t.sessions) session\(t.sessions == 1 ? "" : "s")", "\(t.edits) edit\(t.edits == 1 ? "" : "s")"]
+            if t.blooms > 0 { parts.append("\(t.blooms) ✿") }
+            if t.fruit > 0 { parts.append("\(t.fruit) ●") }
+            info((live ? "● " : "") + parts.joined(separator: "  ·  "), tip: live ? "Growing on its terminal right now" : "Resting in the nursery")
+        }
+        sub.addItem(.separator())
+        let side = NSMenuItem(title: "Nursery on the Right Side", action: #selector(toggleNurserySide), keyEquivalent: "")
+        side.target = self
+        side.state = world.nurserySide > 0 ? .on : .off
+        side.toolTip = "Trees rest on bracket shelves up the side of your main screen between sessions."
+        sub.addItem(side)
+        item.submenu = sub
+        return item
+    }
+
+    @objc private func toggleNurserySide() {
+        world.nurserySide = -world.nurserySide
+        UserDefaults.standard.set(world.nurserySide, forKey: "nursery.side")
+        rebuildMenu()
+    }
+
     @objc private func summonEvent(_ sender: NSMenuItem) {
         let k: SpectacleKind = [.meteors, .festival, .lanterns][max(0, min(2, sender.tag - 1))]
         world.startEvent(k)
@@ -1221,11 +1260,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleControls() {
         controls.enabled.toggle()
         if controls.enabled && !controls.trusted { controls.requestAccess() }
-        rebuildMenu()
-    }
-
-    @objc private func clearGarden() {
-        overlay.clearKeepsakes()
         rebuildMenu()
     }
 

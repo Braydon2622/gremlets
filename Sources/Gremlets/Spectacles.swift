@@ -12,22 +12,14 @@ final class SpectacleRenderer {
     private var plants: [Int: PlantLayer] = [:]
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
-    private var boss: [CALayer] = []
-    private var bossSI = -1
-    private var hpBar: (root: CALayer, fill: CALayer, title: CATextLayer)?
-    private var bolts: [CAShapeLayer] = []
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
     private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
-    private var projectiles: [CALayer] = []
     private var balls: [CALayer] = []
     private var shards: [Int: CALayer] = [:]
-    private var vignette: CALayer?
     private var emitter: CAEmitterLayer?
-    private var headImages: [String: CGImage] = [:]
-    private var bodyImages: [String: CGImage] = [:]
     /// Gremlets flung by a friend spin until they land.
     private(set) var spinning: [Int: CFTimeInterval] = [:]
 
@@ -667,183 +659,10 @@ final class SpectacleRenderer {
 
     private func renderSpectacle() {
         guard let s = world.spectacle else {
-            if !boss.isEmpty { boss.forEach { $0.removeFromSuperlayer() }; boss.removeAll() }
-            bolts.forEach { $0.removeFromSuperlayer() }; bolts.removeAll()
-            projectiles.forEach { $0.isHidden = true }
             for (_, l) in shards { l.removeFromSuperlayer() }; shards.removeAll()
-            hideHP()
-            if let v = vignette { fade(v, to: 0, remove: true); vignette = nil }
             return
         }
-        if s.isBoss { renderBoss(s) }
-        renderProjectiles(s)
         renderShards(s)
-    }
-
-    private func renderBoss(_ s: Spectacle) {
-        let segs = s.segments
-        if segs.isEmpty {
-            boss.forEach { $0.removeFromSuperlayer() }; boss.removeAll()
-        } else {
-            while boss.count < segs.count {
-                let l = pixelLayer()
-                l.zPosition = 60 - Double(boss.count) * 0.1
-                // An electric glow around the whole body.
-                l.shadowColor = NSColor(red: 0.55, green: 0.9, blue: 1, alpha: 1).cgColor
-                l.shadowRadius = 9; l.shadowOpacity = 0.75; l.shadowOffset = .zero
-                boss.append(l)
-            }
-            let hurt = s.hurt > 0.55
-            let open = s.diving || !s.bolts.isEmpty
-            for (i, p) in segs.enumerated().reversed() {
-                guard let (si, pt) = local(p) else { continue }
-                let l = boss[i]
-                attach(l, si)
-                let img: CGImage
-                if i == 0 {
-                    let k = "\(open)-\(hurt)"
-                    img = headImages[k] ?? { let im = BossArt.head(open: open, hurt: hurt); headImages[k] = im; return im }()
-                } else {
-                    let k = "\(i)-\(hurt)"
-                    img = bodyImages[k] ?? { let im = BossArt.body(i, hurt: hurt); bodyImages[k] = im; return im }()
-                }
-                if l.contents == nil || (l.contents as! CGImage) !== img { l.contents = img }
-                let w = Double(img.width) * artScale, h = Double(img.height) * artScale
-                l.bounds = CGRect(x: 0, y: 0, width: w, height: h)
-                // Bob each segment a little out of phase, so the body ripples.
-                let bob = sin(s.age * 3.2 - Double(i) * 0.7) * (i == 0 ? 3 : 9)
-                l.position = CGPoint(x: pt.x.rounded(), y: (pt.y + bob).rounded())
-                var t = CATransform3DIdentity
-                if i == 0 {
-                    t = CATransform3DScale(t, s.facing < 0 ? -1 : 1, 1, 1)
-                    if i + 1 < segs.count {
-                        let d = segs[0] - segs[1]
-                        let ang = atan2(d.y, abs(d.x)) * 0.5
-                        t = CATransform3DRotate(t, s.facing < 0 ? -ang : ang, 0, 0, 1)
-                    }
-                }
-                l.transform = t
-                l.opacity = s.phase == .intro ? Float(min(1, s.age / 1.2)) : 1
-            }
-        }
-        // Dark edges for drama while it's here.
-        if vignette == nil, let floor = world.groveFloor, let (si, _) = local(Vec2(floor.x + floor.w / 2, floor.y + floor.h / 2)) {
-            let v = CAGradientLayer()
-            v.type = .radial
-            v.colors = [NSColor.clear.cgColor, NSColor(red: 0.04, green: 0.06, blue: 0.16, alpha: 0.72).cgColor]
-            v.startPoint = CGPoint(x: 0.5, y: 0.5); v.endPoint = CGPoint(x: 1.05, y: 1.05)
-            v.frame = CGRect(origin: .zero, size: screens[si].frame.size)
-            v.zPosition = -20
-            v.opacity = 0
-            attach(v, si)
-            fade(v, to: 1, remove: false)
-            vignette = v
-        }
-        renderBolts(s)
-        renderHP(s)
-    }
-
-    private func renderBolts(_ s: Spectacle) {
-        while bolts.count < s.bolts.count {
-            let l = CAShapeLayer()
-            l.fillColor = nil
-            l.lineCap = .round; l.lineJoin = .round
-            l.zPosition = 55
-            l.shadowColor = NSColor(red: 0.6, green: 0.95, blue: 1, alpha: 1).cgColor
-            l.shadowRadius = 8; l.shadowOpacity = 1; l.shadowOffset = .zero
-            l.actions = ["path": NSNull(), "lineWidth": NSNull(), "opacity": NSNull(), "strokeColor": NSNull()]
-            bolts.append(l)
-        }
-        for (i, l) in bolts.enumerated() {
-            guard i < s.bolts.count, let (si, top) = local(Vec2(s.bolts[i].x, s.bolts[i].fromY)) else { l.removeFromSuperlayer(); continue }
-            let b = s.bolts[i]
-            attach(l, si)
-            let bottom = top.y - (b.fromY - b.toY)
-            let path = CGMutablePath()
-            path.move(to: top)
-            // Jagged zig-zag, re-rolled every frame so it crackles.
-            let steps = 9
-            for n in 1...steps {
-                let t = CGFloat(n) / CGFloat(steps)
-                let jitter = n == steps ? 0 : CGFloat.random(in: -22...22) * (b.striking ? 1 : 0.4)
-                path.addLine(to: CGPoint(x: top.x + jitter, y: top.y + (bottom - top.y) * t))
-            }
-            l.path = path
-            if b.striking {
-                l.strokeColor = NSColor.white.cgColor
-                l.lineWidth = 6
-                l.opacity = Float.random(in: 0.75...1)
-                l.lineDashPattern = nil
-            } else {
-                l.strokeColor = NSColor(red: 0.6, green: 0.95, blue: 1, alpha: 1).cgColor
-                l.lineWidth = 2
-                l.lineDashPattern = [6, 10]
-                l.opacity = Float(0.25 + 0.5 * abs(sin(b.age * 18)))
-            }
-        }
-        if bolts.count > s.bolts.count {
-            for l in bolts[s.bolts.count...] { l.removeFromSuperlayer() }
-            bolts.removeLast(bolts.count - s.bolts.count)
-        }
-    }
-
-    private func renderHP(_ s: Spectacle) {
-        guard let floor = world.groveFloor, let (si, _) = local(Vec2(floor.x + floor.w / 2, floor.maxY - 10)) else { return }
-        let width: CGFloat = min(520, screens[si].frame.width * 0.45)
-        let bar = hpBar ?? {
-            let root = CALayer()
-            root.bounds = CGRect(x: 0, y: 0, width: width, height: 20)
-            root.backgroundColor = NSColor(red: 0.08, green: 0.1, blue: 0.2, alpha: 0.85).cgColor
-            root.cornerRadius = 10
-            root.borderColor = NSColor(red: 0.6, green: 0.95, blue: 1, alpha: 0.9).cgColor
-            root.borderWidth = 2
-            root.zPosition = 95
-            let fill = CALayer()
-            fill.anchorPoint = .zero
-            fill.frame = CGRect(x: 3, y: 3, width: width - 6, height: 14)
-            fill.cornerRadius = 7
-            fill.backgroundColor = NSColor(red: 0.55, green: 0.85, blue: 1, alpha: 1).cgColor
-            root.addSublayer(fill)
-            let title = CATextLayer()
-            title.string = NSAttributedString(string: "THE STORMWYRM", attributes: [
-                .font: NSFont.systemFont(ofSize: 16, weight: .black), .foregroundColor: NSColor.white,
-                .strokeColor: NSColor(red: 0.1, green: 0.15, blue: 0.35, alpha: 1), .strokeWidth: -4, .kern: 3])
-            title.alignmentMode = .center
-            title.bounds = CGRect(x: 0, y: 0, width: width, height: 24)
-            title.position = CGPoint(x: width / 2, y: 36)
-            title.contentsScale = screens[si].scale
-            root.addSublayer(title)
-            root.opacity = 0
-            attach(root, si)
-            fade(root, to: 1, remove: false)
-            return (root, fill, title)
-        }()
-        hpBar = bar
-        let topInset: CGFloat = screens[si].frame.height - CGFloat(floor.maxY - Double(screens[si].frame.minY))
-        bar.root.position = CGPoint(x: screens[si].frame.width / 2, y: screens[si].frame.height - topInset - 70)
-        CATransaction.begin(); CATransaction.setDisableActions(false); CATransaction.setAnimationDuration(0.25)
-        bar.fill.bounds.size.width = max(0, (width - 6) * s.hpFraction)
-        CATransaction.commit()
-        if s.phase == .outro { hideHP() }
-    }
-
-    private func hideHP() {
-        if let b = hpBar { fade(b.root, to: 0, remove: true); hpBar = nil }
-    }
-
-    private func renderProjectiles(_ s: Spectacle) {
-        while projectiles.count < s.projectiles.count { projectiles.append(pixelLayer()) }
-        for (i, l) in projectiles.enumerated() {
-            guard i < s.projectiles.count, let (si, pt) = local(s.projectiles[i].pos) else { l.isHidden = true; continue }
-            attach(l, si)
-            let img = s.projectiles[i].kind == .berry ? BossArt.berry : BossArt.pebble
-            l.contents = img
-            l.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
-            l.position = pt
-            l.zPosition = 70
-            l.transform = CATransform3DMakeRotation(CGFloat(s.projectiles[i].age * 12), 0, 0, 1)
-            l.isHidden = false
-        }
     }
 
     private func renderShards(_ s: Spectacle) {
@@ -853,7 +672,7 @@ final class SpectacleRenderer {
             guard let (si, pt) = local(sh.pos + Vec2(0, 10)) else { continue }
             let l = shards[sh.id] ?? {
                 let l = pixelLayer()
-                l.contents = BossArt.shard
+                l.contents = SkyArt.shard
                 l.bounds = CGRect(x: 0, y: 0, width: 15, height: 15)
                 l.zPosition = 40
                 l.shadowColor = NSColor.yellow.cgColor; l.shadowRadius = 6; l.shadowOpacity = 0.9; l.shadowOffset = .zero
@@ -874,7 +693,7 @@ final class SpectacleRenderer {
         for (i, l) in balls.enumerated() {
             guard i < world.playBalls.count, let (si, pt) = local(world.playBalls[i].pos) else { l.isHidden = true; continue }
             attach(l, si)
-            l.contents = BossArt.seedBall
+            l.contents = SkyArt.seedBall
             l.bounds = CGRect(x: 0, y: 0, width: 15, height: 15)
             l.position = pt
             l.zPosition = 30
@@ -889,30 +708,6 @@ final class SpectacleRenderer {
             case .started(let k):
                 if k == .festival { startEmitter(petals: true) }
                 if k == .lanterns { releaseLanterns() }
-            case .roar:
-                if let h = world.spectacle?.head, let (si, pt) = local(h) {
-                    overlay.burst([Effects.cloud, Effects.smallStar], si: si, at: pt, count: 6, dx: -90...90, dy: -40...60, duration: 0.9)
-                }
-            case .hit(let p, let dmg, _):
-                if let (si, pt) = local(p) {
-                    overlay.burst([Effects.star, Effects.smallStar, Effects.sparkle], si: si, at: pt, count: Int(dmg) + 2, dx: -50...50, dy: -30...50, duration: 0.7)
-                    floatText("-\(Int(dmg))", si: si, at: CGPoint(x: pt.x + .random(in: -20...20), y: pt.y + 30), color: .systemOrange, size: 18, rise: 40, duration: 0.9)
-                }
-            case .chomp(let i):
-                snapUntil[i] = CACurrentMediaTime() + 0.4
-                if let floor = world.groveFloor, i < world.grove.plants.count {
-                    let top = world.grove.base(i, floor: floor) + Vec2(0, world.grove.size(i).y)
-                    if let (si, pt) = local(top) { floatText("CHOMP!", si: si, at: pt, color: .systemGreen, size: 20, rise: 36, duration: 1.1) }
-                }
-            case .boltWarn:
-                break
-            case .boltStrike(let x, let y):
-                if let (si, pt) = local(Vec2(x, y)) {
-                    flash(si)
-                    overlay.burst([Effects.sparkle, Effects.smallStar, Effects.dust], si: si, at: pt, count: 10, dx: -70...70, dy: 0...60, duration: 0.7)
-                }
-            case .throwBerry:
-                break
             case .shardCollected(let p, _):
                 if let (si, pt) = local(p + Vec2(0, 14)) {
                     overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 6, dx: -26...26, dy: 10...50, duration: 0.9)
@@ -920,9 +715,8 @@ final class SpectacleRenderer {
                 }
             case .meteor(let from, let to):
                 meteor(from, to)
-            case .ended(let k, let won):
+            case .ended:
                 stopEmitter()
-                _ = (k, won)
             }
         }
     }
@@ -947,38 +741,6 @@ final class SpectacleRenderer {
     }
 
     // MARK: Effects
-
-    private func banner(_ k: SpectacleKind) {
-        switch k {
-        case .boss: banner(text: "THE STORMWYRM", sub: "Throw berries! Bounce! Click it!", color: NSColor(red: 0.55, green: 0.85, blue: 1, alpha: 1))
-        case .meteors: banner(text: "METEOR SHOWER", sub: "Catch the falling star shards", color: .systemYellow)
-        case .festival: banner(text: "BLOOM FESTIVAL", sub: "A grove plant reached full bloom!", color: .systemPink)
-        case .lanterns: break
-        }
-    }
-
-    private func banner(text: String, sub: String, color: NSColor) {
-        guard let floor = world.groveFloor, let (si, _) = local(Vec2(floor.x + floor.w / 2, floor.y + floor.h / 2)) else { return }
-        let size = screens[si].frame.size
-        floatText(text, si: si, at: CGPoint(x: size.width / 2, y: size.height * 0.62), color: color, size: 54, rise: 18, duration: 3.4)
-        floatText(sub, si: si, at: CGPoint(x: size.width / 2, y: size.height * 0.62 - 52), color: color, size: 20, rise: 18, duration: 3.4)
-    }
-
-    private func flash(_ si: Int) {
-        guard si < screens.count else { return }
-        let l = CALayer()
-        l.frame = CGRect(origin: .zero, size: screens[si].frame.size)
-        l.backgroundColor = NSColor(red: 0.85, green: 0.97, blue: 1, alpha: 1).cgColor
-        l.zPosition = 80
-        l.opacity = 0
-        screens[si].root.addSublayer(l)
-        let a = CAKeyframeAnimation(keyPath: "opacity")
-        a.values = [0, 0.22, 0.05, 0.14, 0]; a.duration = 0.35
-        a.isRemovedOnCompletion = false; a.fillMode = .forwards
-        CATransaction.begin(); CATransaction.setCompletionBlock { l.removeFromSuperlayer() }
-        l.add(a, forKey: "flash")
-        CATransaction.commit()
-    }
 
     private func meteor(_ from: Vec2, _ to: Vec2) {
         guard let (si, a) = local(from) else { return }

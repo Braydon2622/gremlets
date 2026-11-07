@@ -66,38 +66,6 @@ import Testing
 @Suite struct SpectacleTests {
     let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
 
-    /// A full boss fight with the whole grove out and a busy click-happy user: it always ends, nothing escapes the
-    /// screen, the Gremlets fight back, and a win grows the grove.
-    @Test func bossFightPlaysOutAndCanBeWon() {
-        let w = World(seed: 42)
-        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 200, y: 100, w: 500, h: 380))])
-        w.loadGrove(Grove())
-        for _ in 0..<30 { w.feedGrove() }
-        for i in 0..<6 { var s = testSpecies(scale: 12); s.flies = i == 0; w.spawn(s, at: Vec2(200 + Double(i) * 180, 300)) }
-        let sparksBefore = w.grove.plants[0].sparks
-        #expect(w.startEvent(.boss))
-        var seen: [String: Int] = [:]
-        var frames = 0
-        while w.spectacle != nil && frames < 60 * 120 {
-            frames += 1
-            // You click the boss's head every half second.
-            if frames % 30 == 0, let h = w.spectacle?.head { w.hitBoss(at: h) }
-            w.step(1.0 / 60)
-            _ = w.drainEvents()
-            for e in w.drainSpectacleEvents() { seen["\(e)".split(separator: "(").first.map(String.init) ?? "", default: 0] += 1 }
-            for c in w.creatures {
-                #expect(c.pos.x.isFinite && c.pos.y.isFinite)
-                #expect(c.pos.x >= -1 && c.pos.x <= scr.maxX + 1 && c.pos.y >= -1 && c.pos.y <= scr.maxY + 1)
-            }
-            for s in w.spectacle?.segments ?? [] { #expect(s.x.isFinite && s.y.isFinite) }
-        }
-        print("boss events:", seen.sorted { $0.key < $1.key })
-        #expect(w.spectacle == nil, "the fight ended")
-        #expect(seen["roar", default: 0] > 0 && seen["boltStrike", default: 0] > 0)
-        #expect(seen["throwBerry", default: 0] + seen["chomp", default: 0] > 0, "the grove joined the fight")
-        #expect(w.grove.plants[0].sparks > sparksBefore, "victory (and stardust) grew the grove")
-    }
-
     @Test func meteorShowerWaitsForNightAndDropsShards() {
         let w = World(seed: 3)
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
@@ -121,7 +89,7 @@ import Testing
         let w = World(seed: 5)
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         w.loadGrove(Grove())
-        #expect(w.startEvent(.boss))
+        #expect(w.startEvent(.festival))
         w.focusMode = true
         for _ in 0..<(30 * 20) { w.step(1.0 / 30) }
         #expect(w.spectacle == nil)
@@ -409,7 +377,7 @@ import Testing
         let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         let g = Grove()
-        let data = #"{"plants":[],"tasks":0,"tasksSinceBoss":0,"gems":{"amber":5,"sapphire":2}}"#
+        let data = #"{"plants":[],"tasks":0,"gems":{"amber":5,"sapphire":2}}"#
         w.loadGrove(try #require(Grove.decode(Data(data.utf8))))
         _ = g
         #expect(w.nextPurchase == .lamps)
@@ -429,7 +397,7 @@ import Testing
         let w = World(seed: 42)
         w.maxHobbies = 0
         w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [])
-        let data = #"{"plants":[],"tasks":0,"tasksSinceBoss":0,"gems":{"amber":3,"sapphire":2}}"#
+        let data = #"{"plants":[],"tasks":0,"gems":{"amber":3,"sapphire":2}}"#
         w.loadGrove(try #require(Grove.decode(Data(data.utf8))))
         w.buy(.spring)
         #expect(w.owns(.spring))
@@ -442,5 +410,106 @@ import Testing
             soaked = w.drainMerchantEvents().contains { if case .soak = $0 { return true }; return false }
         }
         #expect(soaked)
+    }
+}
+
+@Suite struct BonsaiTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    @Test func projectsGrowTreesFromTheWork() throws {
+        let w = World(seed: 51)
+        w.maxHobbies = 0
+        let win = WindowInfo(id: 7, frame: Rect(x: 300, y: 200, w: 700, h: 400))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        w.loadBonsai(BonsaiBook())
+        w.bonsaiStart(project: "MyApp", session: "s1", windowID: 7)
+        #expect(w.bonsaiBook["MyApp"]?.branches.count == 1 && w.bonsaiBook["MyApp"]?.sessions == 1)
+        // Another prompt in the same session: no new branch. A new session: a new branch.
+        w.bonsaiStart(project: "MyApp", session: "s1", windowID: 7)
+        #expect(w.bonsaiBook["MyApp"]?.branches.count == 1)
+        w.bonsaiStart(project: "MyApp", session: "s2", windowID: 7)
+        #expect(w.bonsaiBook["MyApp"]?.branches.count == 2)
+        let small = BonsaiGeometry.layout(try #require(w.bonsaiBook["MyApp"])).bounds
+        for _ in 0..<60 { w.bonsaiGrow(project: "MyApp", .leaf) }
+        w.bonsaiGrow(project: "MyApp", .bloom, count: 3)
+        w.bonsaiGrow(project: "MyApp", .fruit)
+        let t = try #require(w.bonsaiBook["MyApp"])
+        #expect(t.edits == 60 && t.blooms == 3 && t.fruit == 1)
+        let big = BonsaiGeometry.layout(t).bounds
+        #expect(big.w > small.w * 1.5 && big.h > small.h, "it sprawls as the work piles up (\(small.w)→\(big.w))")
+        #expect(BonsaiGeometry.layout(t).pads.map(\.center.x) == BonsaiGeometry.layout(t).pads.map(\.center.x), "deterministic")
+        // Rooted on the window, with foliage you can stand on.
+        let live = try #require(w.bonsaiPlacements.first { $0.project == "MyApp" })
+        #expect(live.windowID == 7 && live.slot == -1 && live.base.y == 600)
+        #expect(w.surfaces.contains { World.isBonsaiOwner($0.ownerID) })
+        let events = w.drainBonsaiEvents()
+        #expect(events.contains(.planted("MyApp")) && events.contains(.sprouted("MyApp", branch: 1)))
+        #expect(events.filter { if case .grew("MyApp", "leaf", _) = $0 { return true }; return false }.count == 60)
+    }
+
+    @Test func treesRideTheirWindowThenRestInTheNursery() throws {
+        let w = World(seed: 52)
+        w.maxHobbies = 0
+        var win = WindowInfo(id: 9, frame: Rect(x: 300, y: 150, w: 700, h: 400))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        w.loadBonsai(BonsaiBook())
+        w.bonsaiStart(project: "Gremlets", session: "a", windowID: 9)
+        for _ in 0..<40 { w.bonsaiGrow(project: "Gremlets", .leaf) }
+        let pad = try #require(w.surfaces.first { World.isBonsaiOwner($0.ownerID) })
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2((pad.minX + pad.maxX) / 2, pad.y + 30))
+        for _ in 0..<120 where c.groundOwner != pad.ownerID { w.step(1.0 / 60) }
+        #expect(c.groundOwner == pad.ownerID, "sitting in the tree (on \(String(describing: c.groundOwner)))")
+        let before = c.pos.x
+        win.frame.x += 80
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        #expect(abs(c.pos.x - before - 80) < 0.01, "rode the window with the tree")
+        // Session over: the tree rests on a nursery bracket on the right edge.
+        w.bonsaiEnd(project: "Gremlets")
+        let rest = try #require(w.bonsaiPlacements.first { $0.project == "Gremlets" })
+        #expect(rest.slot == 0 && rest.windowID == nil && rest.base.x > scr.maxX - World.nurseryWidth)
+        #expect(w.surfaces.contains { World.isNurseryOwner($0.ownerID) })
+        w.nurserySide = -1
+        #expect(w.bonsaiPlacements.first { $0.project == "Gremlets" }!.base.x < World.nurseryWidth)
+    }
+
+    @Test func twelveBranchesThenItThickens() {
+        let w = World(seed: 53)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadBonsai(BonsaiBook())
+        for n in 0..<15 { w.bonsaiStart(project: "Big", session: "s\(n)", windowID: nil); w.bonsaiGrow(project: "Big", .leaf, count: n + 1) }
+        let t = w.bonsaiBook["Big"]!
+        #expect(t.branches.count == Bonsai.maxBranches && t.sessions == 15)
+        #expect(t.edits == (1...15).reduce(0, +))
+        #expect(t.stature > 0.6)
+    }
+
+    @Test func bookSurvivesSaveAndLoad() throws {
+        var book = BonsaiBook()
+        var t = Bonsai(project: "DesktopPets", now: 1_000_000)
+        _ = t.startSession("x", now: 1_000_100)
+        t.branches[0].edits = 12; t.branches[0].blooms = 2
+        book.trees.append(t)
+        let data = try #require(book.encoded())
+        let back = try #require(BonsaiBook.decode(data))
+        #expect(back.trees == book.trees)
+        #expect(Bonsai(project: "DesktopPets", now: 5).species == t.species, "the project name decides the species")
+    }
+
+    @Test func mossyLedgesGrowOutOfAClaudeWindow() throws {
+        let w = World(seed: 54)
+        var win = WindowInfo(id: 4, frame: Rect(x: 300, y: 100, w: 600, h: 400))
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 0))
+        for _ in 0..<30 { w.step(1.0 / 30) }
+        let id = try #require(w.startJob(windowID: 4, craft: .garden, prefer: c.id))
+        w.labelJob(workerID: id, "MyApp")
+        for _ in 0..<9 { w.claudeTool(workerID: id, .build) }
+        #expect(w.terminalLedges.count == 2, "a ledge every four edits (\(w.terminalLedges.count))")
+        let ledge = try #require(w.terminalLedges.first)
+        #expect(ledge.windowID == 4 && w.surfaces.contains { $0.ownerID == ledge.surface.ownerID })
+        let x0 = ledge.surface.minX
+        win.frame.x += 50
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
+        #expect(abs((w.terminalLedges.first?.surface.minX ?? 0) - x0 - 50) < 0.01, "ledges move with the window")
     }
 }

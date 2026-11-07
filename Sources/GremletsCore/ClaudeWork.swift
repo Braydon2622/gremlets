@@ -50,6 +50,8 @@ extension World {
         case .build:
             j.failStreak = 0
             j.blocks += 1
+            if let p = j.label { bonsaiGrow(project: p, .leaf) }
+            rebuildAttached()   // a new ledge every few edits
             claudeEvents.append(.placedBlock(worker: c.id, count: j.blocks))
             if c.isGrounded && !c.isDozingAtWork { c.set(.special, duration: min(0.7, c.animationLength(for: .special))) }
         case .look: claudeEvents.append(.look(c.id))
@@ -77,6 +79,7 @@ extension World {
         guard let c = creature(id: workerID), let j = c.job else { return }
         j.failStreak = 0
         setWeather(c, j, .sunny, for: 14)
+        if let p = j.label { bonsaiGrow(project: p, .fruit) }
         if c.isGrounded { startDance(c, duration: 2.5, invite: false) }
     }
 

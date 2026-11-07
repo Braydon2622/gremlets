@@ -52,8 +52,6 @@ public final class Creature {
     var targetX: Double?
     /// Heading to a grove plant to do something there.
     var groveTask: GroveVisit?
-    /// Holding a sunberry (eaten later, or thrown at a boss).
-    public internal(set) var heldBerry = false
     /// Sitting by the lanternbloom after dark.
     public internal(set) var campfire = false
     /// Floating down from somewhere high on a big leaf.
@@ -94,6 +92,7 @@ public final class Creature {
     /// Pokes in quick succession (five in a row while gardening digs up a mystery seed).
     var pokeStreak = 0
     var lastPoke = -10.0
+    var lastSnap = -100.0
     /// Going to water a planted flower at this x.
     var tendX: Double?
     /// Watching a friend work (their id) and until when.

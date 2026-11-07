@@ -7,7 +7,12 @@
 #     "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "Stop":             [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
 #     "Notification":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
-#     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
+#     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "PostToolUse":      [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }],
+#     "SubagentStop":     [{ "hooks": [{ "type": "command", "command": "~/.local/bin/gremlet-claude-hook" }] }]
+#
+# PostToolUse sends only the tool's *name* (Edit, Read, Bash...), never its input or output: an edit places a block on
+# the Gremlet's island, a subagent brings a tiny helper along.
 #   }
 #
 # Never blocks or fails Claude: prints nothing (UserPromptSubmit output would reach Claude), makes one 1-second local
@@ -22,7 +27,8 @@ try:
 except Exception:
     sys.exit(0)
 name = d.get("hook_event_name", "")
-event = {"UserPromptSubmit": "start", "Stop": "done", "Notification": "attention", "SessionEnd": "end"}.get(name)
+event = {"UserPromptSubmit": "start", "Stop": "done", "Notification": "attention", "SessionEnd": "end",
+         "PostToolUse": "tool", "SubagentStop": "helperdone"}.get(name)
 if not event:
     sys.exit(0)
 q = {
@@ -31,6 +37,8 @@ q = {
     "project": os.path.basename((d.get("cwd") or "").rstrip("/")) or "Claude",
     "pid": sys.argv[1],
 }
+if event == "tool":
+    q["tool"] = str(d.get("tool_name", ""))[:60]
 if event == "attention":
     q["kind"] = "permission" if "permission" in (d.get("message") or "").lower() else "waiting"
 print(urllib.parse.urlencode(q))

@@ -142,14 +142,14 @@ final class SpectacleRenderer {
                     }
                 }
             case .planted(let i):
-                label("New plot: \(world.grove.plants[i].kind.name)!", at: i, color: .systemGreen)
+                if let l = plants[i]?.layer { boing(l, amount: 0.2) }
             case .levelUp(let i, let level):
                 let p = world.grove.plants[i], sz = world.grove.size(i)
                 if let (si, pt) = local(world.grove.base(i, floor: floor) + Vec2(0, sz.y * 0.5)) {
                     overlay.burst([Effects.sparkle, Effects.star, Effects.leaf, Effects.petal], si: si, at: pt, count: 16,
                                   dx: -sz.x...sz.x, dy: 20...(sz.y + 60), duration: 1.8, stagger: 0.04)
                 }
-                label("\(p.kind.name) grew to level \(level)!", at: i, color: .systemYellow)
+                _ = (p, level)
                 if let l = plants[i]?.layer { boing(l, amount: 0.25) }
             case .berryPicked(let i, _):
                 if let l = plants[i]?.layer { boing(l, amount: 0.08) }
@@ -157,7 +157,6 @@ final class SpectacleRenderer {
                 squashUntil[i] = CACurrentMediaTime() + 0.18
                 if let l = plants[i]?.layer { boing(l, amount: 0.18) }
             case .wish(let i):
-                label("The wishwillow granted a wish ✦", at: i, color: .systemTeal)
                 if let (si, pt) = local(world.grove.base(i, floor: floor) + Vec2(0, world.grove.size(i).y)) {
                     overlay.burst([Effects.star, Effects.sparkle], si: si, at: pt, count: 10, dx: -60...60, dy: 20...120, duration: 2, stagger: 0.08)
                 }
@@ -440,7 +439,6 @@ final class SpectacleRenderer {
         for e in events {
             switch e {
             case .started(let k):
-                banner(k)
                 if k == .festival { startEmitter(petals: true) }
             case .roar:
                 if let h = world.spectacle?.head, let (si, pt) = local(h) {
@@ -475,15 +473,7 @@ final class SpectacleRenderer {
                 meteor(from, to)
             case .ended(let k, let won):
                 stopEmitter()
-                if k == .boss {
-                    if won {
-                        banner(text: "VICTORY!", sub: "The grove grows stronger ✦", color: .systemYellow)
-                        startEmitter(petals: false)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in self?.stopEmitter() }
-                    } else {
-                        banner(text: "It got away…", sub: "It'll be back. Grow the grove!", color: .systemTeal)
-                    }
-                }
+                _ = (k, won)
             }
         }
     }
@@ -569,17 +559,18 @@ final class SpectacleRenderer {
         guard let floor = world.groveFloor, let (si, _) = local(Vec2(floor.x + floor.w / 2, floor.y + floor.h / 2)) else { return }
         let size = screens[si].frame.size
         let e = CAEmitterLayer()
-        e.emitterPosition = CGPoint(x: size.width / 2, y: size.height + 20)
-        e.emitterSize = CGSize(width: size.width, height: 1)
+        // Only over the grove, low down: a gentle drift, not a takeover.
+        e.emitterPosition = CGPoint(x: size.width / 2, y: 260)
+        e.emitterSize = CGSize(width: size.width * 0.75, height: 1)
         e.emitterShape = .line
         e.zPosition = 85
         let images = petals ? [Effects.petal, Effects.leaf, Effects.sparkle] : [Effects.star, Effects.sparkle, Effects.smallStar]
         e.emitterCells = images.map { img in
             let c = CAEmitterCell()
             c.contents = img
-            c.birthRate = petals ? 6 : 14
-            c.lifetime = 9
-            c.velocity = 70; c.velocityRange = 40
+            c.birthRate = petals ? 1.2 : 3
+            c.lifetime = 7
+            c.velocity = 25; c.velocityRange = 15
             c.emissionLongitude = -.pi / 2; c.emissionRange = 0.5
             c.yAcceleration = -30
             c.spin = 1.2; c.spinRange = 2.5

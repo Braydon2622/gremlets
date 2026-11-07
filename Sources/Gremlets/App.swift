@@ -133,6 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(groveEvents)
         if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; return false }) { saveGrove() }
         overlay.fx.handle(world.drainSpectacleEvents())
+        overlay.handleClaude(world.drainClaudeEvents())
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
@@ -784,7 +785,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             sendToPhone(item)
             return (200, #"{"ok":true}"#)
         case "event":
-            let k = SpectacleKind(rawValue: query["kind"] ?? "boss") ?? .boss
+            guard let k = SpectacleKind(rawValue: query["kind"] ?? ""), k != .boss else { return (400, #"{"ok":false,"error":"kind must be meteors or festival"}"#) }
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
@@ -1147,20 +1148,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         func action(_ t: String, _ sel: Selector, tag: Int = 0, tip: String? = nil) {
             let i = NSMenuItem(title: t, action: sel, keyEquivalent: ""); i.target = self; i.tag = tag; i.toolTip = tip; sub.addItem(i)
         }
-        action("Summon the Stormwyrm", #selector(summonEvent(_:)), tag: 0, tip: "A boss fight! Gremlets throw sunberries, bounce off the bouncecap and the snapjaw bites. Click it to help.")
         action("Start a Meteor Shower", #selector(summonEvent(_:)), tag: 1, tip: "Shooting stars drop star shards. Every shard the Gremlets catch grows the grove.")
         action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
         let epic = NSMenuItem(title: "Surprise Events", action: #selector(toggleEpic), keyEquivalent: "")
         epic.target = self
         epic.state = epicEvents ? .on : .off
-        epic.toolTip = "Bosses show up every so often as Claude tasks pile up, meteor showers on some nights, festivals when a plant maxes out. Never during focus sessions or calls."
+        epic.toolTip = "Quiet little moments: a meteor shower on some nights, a festival when a plant maxes out. Never during focus sessions or calls."
         sub.addItem(epic)
         item.submenu = sub
         return item
     }
 
     @objc private func summonEvent(_ sender: NSMenuItem) {
-        let k: SpectacleKind = [.boss, .meteors, .festival][max(0, min(2, sender.tag))]
+        let k: SpectacleKind = [.meteors, .festival][max(0, min(1, sender.tag - 1))]
         world.startEvent(k)
         schedule(rate: 60)
     }

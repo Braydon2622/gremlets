@@ -112,6 +112,11 @@ public final class Job {
     /// You poked it while it worked: a little burst of progress.
     /// The window box: three plants.
     public let garden = GardenBox()
+    /// Claude buddy: blocks placed so far (one per file Claude edits) and how many subagents are helping right now.
+    public internal(set) var blocks = 0
+    public internal(set) var helpers = 0
+    /// The last thing Claude did, for the Gremlet's pose and the hover description.
+    public internal(set) var lastTool: ClaudeTool?
 
     init(craft: Craft, kind: Kind, windowID: Int?, seed: UInt64, now: Double) {
         self.craft = craft; self.kind = kind; self.windowID = windowID; self.seed = seed; self.started = now

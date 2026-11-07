@@ -57,6 +57,7 @@ public final class World {
     public internal(set) var spectacle: Spectacle?
     var pendingEvents: [SpectacleKind] = []
     var lastSpectacle: Spectacle?
+    var claudeEvents: [ClaudeWorkEvent] = []
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
     var pendingThrows: [(at: Double, from: Int, to: Int)] = []

@@ -11,7 +11,7 @@
 #   gremlet pair                 pair with your phone (opens a QR code to scan)
 #   gremlet send [name]          send a Gremlet through the portal to your phone
 #   gremlet status               what's out and whether a focus timer is running
-#   gremlet boss | meteors | festival   start a grove event right now (a boss fight, a meteor shower, a festival)
+#   gremlet meteors | festival   start a little grove moment now (a meteor shower, a festival)
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -45,7 +45,7 @@ case "${1:-}" in
   send)    curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "name=${2:-}" "${URL}/phone/send"; echo ;;
   wish)    call wish >/dev/null && echo "✨" ;;   # shh
   status)  call status GET; echo ;;
-  boss|meteors|festival) call "event?kind=$1" >/dev/null ;;
+  meteors|festival) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
   run)
     shift

@@ -243,7 +243,6 @@ extension World {
         rebuildGroveSurfaces()
         setSurfacesDirty()
         if !ups.isEmpty, ups.contains(where: { grove.plants[$0].level == 5 }) { requestEvent(.festival) }
-        if grove.tasksSinceBoss >= 12 && rng.chance(0.5) { requestEvent(.boss) }
         return ups
     }
 

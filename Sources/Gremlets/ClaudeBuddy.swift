@@ -60,10 +60,18 @@ final class ClaudeBuddy {
             } else if let id = world.say() {
                 overlay.showBubble(text, on: id, seconds: 12)
             }
+        case "tool":
+            // Claude used a tool: the Gremlet beside its window acts it out (an edit places a block, and so on).
+            if var s = sessions[session], let c = worker(s.creatureID) {
+                world.claudeTool(workerID: c.id, ClaudeTool.from(q["tool"] ?? ""))
+                s.lastEvent = Date(); sessions[session] = s
+            }
+        case "helperdone":
+            if let s = sessions[session] { world.claudeHelperDone(workerID: s.creatureID) }
         case "end":
             if let s = sessions.removeValue(forKey: session) { world.endJob(s.creatureID) }
         default:
-            return (400, #"{"ok":false,"error":"event must be start, done, attention or end"}"#)
+            return (400, #"{"ok":false,"error":"event must be start, done, attention, end, tool or helperdone"}"#)
         }
         return (200, #"{"ok":true}"#)
     }

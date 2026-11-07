@@ -93,6 +93,15 @@ final class OverlayController {
         let item = CALayer()
         var shelf: CALayer?
         var shelfPx = 0
+        /// Floating-island shelves: their biome, the life on top, and when the next critter wanders across.
+        var biome: Biome?
+        var decor: CALayer?
+        var decorKey = ""
+        var nextCritter = 0.0
+        /// Claude buddy: the building going up (one block per edit) and the tiny helpers (one per subagent).
+        var build: CALayer?
+        var buildKey = ""
+        var helpers: [CALayer] = []
         var lantern: CALayer?
         /// The tree a branch grows on, or the balloons a swing hangs from.
         var extra: CALayer?
@@ -789,6 +798,121 @@ final class OverlayController {
     }
 
     /// A little bird lands on the end of a platform, looks around, and flies off.
+    /// Claude buddy: the building on this Gremlet's island (a block per file Claude edits), and its helpers.
+    private func updateBuild(_ st: inout PropState, _ c: Creature, _ j: Job, ground: Double, x: Double, si: Int, origin o: CGPoint) {
+        guard j.kind == .claude else { return }
+        let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
+        let key = "\(b.rawValue)-\(j.blocks)-\(world.isNight)-\(si)"
+        if st.buildKey != key {
+            st.buildKey = key
+            if let img = BuildArt.image(b, blocks: j.blocks, night: world.isNight) {
+                let l = st.build ?? {
+                    let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+                    screens[si].root.insertSublayer(l, at: 0)
+                    l.zPosition = -0.2
+                    return l
+                }()
+                setImage(l, img)
+                st.build = l
+            }
+        }
+        st.build?.position = CGPoint(x: (x - o.x).rounded(), y: (ground - o.y).rounded())
+        // Helpers: tiny copies of the Gremlet hopping around the building, one per running subagent.
+        while st.helpers.count < j.helpers, let sp = species[c.species.id], let img = sp.frames.first {
+            let h = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
+            h.contents = img
+            h.bounds = CGRect(x: 0, y: 0, width: c.size.x * 0.5, height: c.size.y * 0.5)
+            h.opacity = 0.92
+            let hop = CABasicAnimation(keyPath: "transform.translation.y")
+            hop.fromValue = 0; hop.toValue = 9; hop.duration = 0.28 + Double(st.helpers.count) * 0.04
+            hop.autoreverses = true; hop.repeatCount = .infinity
+            hop.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            h.add(hop, forKey: "hop")
+            screens[si].root.addSublayer(h)
+            popIn(h)
+            burst([Effects.sparkle, Effects.smallStar], si: si, at: CGPoint(x: x - o.x, y: ground - o.y + 20), count: 5, dx: -30...30, dy: 0...40, duration: 0.7)
+            st.helpers.append(h)
+        }
+        while st.helpers.count > j.helpers, let h = st.helpers.popLast() {
+            let pos = h.position
+            fadeOut(h, 0.4)
+            burst([Effects.heart, Effects.sparkle], si: si, at: CGPoint(x: pos.x, y: pos.y + 14), count: 3, dx: -14...14, dy: 10...30, duration: 0.8)
+        }
+        for (n, h) in st.helpers.enumerated() {
+            let side: Double = n % 2 == 0 ? -1 : 1
+            let dx = side * (34 + Double(n / 2) * 22)
+            h.position = CGPoint(x: (x + dx - o.x).rounded(), y: (ground - o.y).rounded())
+            h.setAffineTransform(CGAffineTransform(scaleX: side < 0 ? 1 : -1, y: 1))
+        }
+    }
+
+    /// What Claude is doing, acted out by the Gremlet beside its window.
+    func handleClaude(_ events: [ClaudeWorkEvent]) {
+        for e in events {
+            switch e {
+            case .placedBlock(let id, let count):
+                guard let st = props[id], let l = st.build, let c = creature(id), let j = c.job else { continue }
+                let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
+                if let cell = BuildArt.lastCell(b, blocks: count) {
+                    let f = l.frame
+                    let pt = CGPoint(x: f.minX + CGFloat(cell.x * 3), y: f.minY + CGFloat(cell.y * 3))
+                    burst([Effects.dust, Effects.smallStar], si: st.screen, at: pt, count: 3, dx: -14...14, dy: -4...14, duration: 0.45)
+                    if BuildArt.isComplete(b, blocks: count) && !BuildArt.isComplete(b, blocks: count - 1) {
+                        burst([Effects.sparkle, Effects.star, Effects.heart], si: st.screen, at: CGPoint(x: f.midX, y: f.maxY), count: 10, dx: -40...40, dy: 10...60, duration: 1.4, stagger: 0.05)
+                    }
+                }
+                let a = CAKeyframeAnimation(keyPath: "transform.scale.y"); a.values = [1, 1.06, 0.98, 1]; a.duration = 0.25
+                l.add(a, forKey: "thunk")
+            case .look(let id):
+                if let c = creature(id) { spawnEffect(ClaudeIcons.lantern, above: c, drift: 10 * c.facing) }
+            case .run(let id):
+                if let c = creature(id) { spawnEffect(Effects.steam, above: c, drift: 6); spawnEffect(Effects.steam, above: c, drift: -8, delay: 0.2) }
+            case .web(let id):
+                if let c = creature(id), let (si, p) = localPoint(c, dy: c.size.y * 0.8) {
+                    // A paper bird flies off to fetch the page and comes back.
+                    let l = particle(ClaudeIcons.paperBird, si)
+                    l.position = p
+                    let fly = CAKeyframeAnimation(keyPath: "position")
+                    let out = CGPoint(x: p.x + c.facing * 220, y: p.y + 160)
+                    fly.values = [p, out, CGPoint(x: out.x + c.facing * 40, y: out.y + 30), p].map { NSValue(point: $0) }
+                    fly.keyTimes = [0, 0.45, 0.55, 1]
+                    fly.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    fly.duration = 2.4
+                    run(l, fly)
+                }
+            case .plan(let id):
+                if let c = creature(id) { spawnEffect(ClaudeIcons.flag, above: c, drift: 0) }
+            case .helperJoined, .helperLeft:
+                break   // drawn by updateBuild
+            }
+        }
+    }
+
+    /// A little local (bunny, penguin, frog, lizard, glowing snail) hops across its island and away.
+    private func spawnCritter(_ b: Biome, si: Int, from s: Surface, origin o: CGPoint, flip: CGFloat) {
+        let frames = [IslandArt.critter(b, frame: 0), IslandArt.critter(b, frame: 1)]
+        let l = particle(frames[0], si)
+        l.anchorPoint = CGPoint(x: 0.5, y: 0)
+        l.zPosition = -0.5
+        let leftToRight = Bool.random()
+        let x0 = (leftToRight ? s.minX + 8 : s.maxX - 8) - o.x, x1 = (leftToRight ? s.maxX + 30 : s.minX - 30) - o.x
+        let y = s.y - o.y
+        l.setAffineTransform(CGAffineTransform(scaleX: leftToRight ? 1 : -1, y: 1))
+        let hops = 7
+        var pts: [NSValue] = []
+        for i in 0...(hops * 2) {
+            let t = Double(i) / Double(hops * 2)
+            pts.append(NSValue(point: CGPoint(x: x0 + (x1 - x0) * t, y: y + (i % 2 == 1 ? 7 : 0))))
+        }
+        let move = CAKeyframeAnimation(keyPath: "position"); move.values = pts
+        let anim = CAKeyframeAnimation(keyPath: "contents"); anim.values = frames; anim.calculationMode = .discrete
+        anim.duration = 0.36; anim.repeatCount = .infinity
+        let fade = CAKeyframeAnimation(keyPath: "opacity"); fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.08, 0.85, 1]
+        let g = CAAnimationGroup(); g.animations = [move, fade]; g.duration = Double(hops) * 0.55
+        l.add(anim, forKey: "hop")
+        run(l, g)
+    }
+
     private func spawnBird(_ st: PropState, side: Double) {
         guard let shelf = st.shelf else { return }
         let si = st.screen, f = shelf.frame
@@ -1090,10 +1214,17 @@ final class OverlayController {
             // The shelf (pops in when it goes up).
             if let s = shelf {
                 let px = max(8, Int((s.width / 3).rounded()))
+                let islandStyles: [ShelfStyle] = [.plank, .stone, .leaf, .cloud, .mushroom]
+                let seed = UInt64(abs(j.windowID ?? (c.id &* 7919)))
+                if islandStyles.contains(j.shelfStyle) && st.biome == nil { st.biome = Biome.pick(j.shelfStyle, seed: seed, month: world.month) }
                 if st.shelf == nil || st.shelfPx != px || st.screen != si {
                     st.shelf?.removeFromSuperlayer()
                     let l = pixelLayer(si, anchor: CGPoint(x: 0, y: 1))
-                    setImage(l, PropArt.shelf(j.shelfStyle, widthPx: px))
+                    if let b = st.biome {
+                        setImage(l, IslandArt.body(b, widthPx: px, seed: seed))
+                    } else {
+                        setImage(l, PropArt.shelf(j.shelfStyle, widthPx: px))
+                    }
                     screens[si].root.insertSublayer(l, at: 0)
                     if st.shelf == nil { popIn(l); burst([Effects.dust], si: si, at: CGPoint(x: s.minX - o.x + s.width / 2, y: s.y - o.y), count: 3, dx: -40...40, dy: -6...6, duration: 0.5) }
                     st.shelf = l; st.shelfPx = px
@@ -1103,7 +1234,26 @@ final class OverlayController {
                 let p = CGPoint(x: (s.minX - o.x).rounded() + (flip < 0 ? s.width : 0), y: (s.y - o.y).rounded())
                 st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
                 if st.shelf?.position != p { st.shelf?.position = p }
+                if let b = st.biome {
+                    let key = "\(b.rawValue)-\(px)-\(world.isNight)-\(si)"
+                    if st.decorKey != key {
+                        st.decor?.removeFromSuperlayer()
+                        let d = pixelLayer(si, anchor: CGPoint(x: 0, y: 0))
+                        setImage(d, IslandArt.decor(b, widthPx: px, seed: seed, night: world.isNight))
+                        screens[si].root.insertSublayer(d, at: 0)
+                        if st.decor == nil { popIn(d) }
+                        st.decor = d; st.decorKey = key
+                    }
+                    st.decor?.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1))
+                    st.decor?.anchorPoint = CGPoint(x: 0, y: 0)
+                    if st.decor?.position != p { st.decor?.position = p }
+                    if j.phase == .working, now >= st.nextCritter {
+                        if st.nextCritter > 0 { spawnCritter(b, si: si, from: s, origin: o, flip: flip) }
+                        st.nextCritter = now + Double.random(in: 25...70)
+                    }
+                }
                 updateShelfExtra(&st, j, s, si, o, flip)
+                updateBuild(&st, c, j, ground: s.y, x: flip > 0 ? s.minX + s.width * 0.3 : s.maxX - s.width * 0.3, si: si, origin: o)
                 if j.shelfStyle == .carpet {
                     let phase = Int(CACurrentMediaTime() * 7) % 8
                     if phase != st.carpetPhase { st.carpetPhase = phase; st.shelf?.contents = PropArt.carpet(widthPx: px, phase: phase) }
@@ -1131,7 +1281,9 @@ final class OverlayController {
                     let lx = side > 0 ? s.maxX - 12 : s.minX + 12
                     st.lantern?.position = CGPoint(x: (lx - o.x).rounded(), y: (s.y - o.y - 9).rounded())
                 } else if let l = st.lantern { l.removeFromSuperlayer(); st.lantern = nil }
-            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil; st.extra?.removeFromSuperlayer(); st.extra = nil }
+            } else if let l = st.shelf { l.removeFromSuperlayer(); st.shelf = nil; st.lantern?.removeFromSuperlayer(); st.lantern = nil; st.extra?.removeFromSuperlayer(); st.extra = nil; st.decor?.removeFromSuperlayer(); st.decor = nil; st.decorKey = "" }
+            // No shelf (working on the floor): the building goes up on the ground beside it.
+            if shelf == nil { updateBuild(&st, c, j, ground: ref.y, x: ref.x - j.propSide * 90, si: si, origin: o) }
 
             // The bouncy mushroom that launches a Gremlet up to its shelf.
             if let b = j.bounceAt, b != st.lastBounce, let spot = j.bounceSpot {
@@ -1223,6 +1375,10 @@ final class OverlayController {
         // Job over: the shelf comes down now; the creation lingers a minute (on the floor, or where it was), then fades.
         for (id, var st) in props where !busy.contains(id) {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
+            if let d = st.decor { fadeOut(d, 0.4); st.decor = nil; st.decorKey = "" }
+            if let b = st.build { fadeOut(b, 0.8); st.build = nil; st.buildKey = "" }
+            for h in st.helpers { fadeOut(h, 0.4) }
+            st.helpers.removeAll()
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
             if let l = st.extra { fadeOut(l, 0.5); st.extra = nil }
             if let l = st.extra2 { fadeOut(l, 0.5); st.extra2 = nil }
@@ -1724,4 +1880,28 @@ enum Effects {
                        bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
                        provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!
     }
+}
+
+/// Tiny icons for what Claude is doing.
+enum ClaudeIcons {
+    static let lantern = Effects.pixels([
+        ".kk.",
+        "kyyk",
+        "yYYy",
+        "kyyk",
+        ".kk.",
+    ], ["k": 0x5E3B22, "y": 0xFFC845, "Y": 0xFFF3A0])
+    static let paperBird = Effects.pixels([
+        "w....",
+        "ww..w",
+        ".wwww",
+        "..ww.",
+    ], ["w": 0xF4F6FA])
+    static let flag = Effects.pixels([
+        "krr.",
+        "krrr",
+        "krr.",
+        "k...",
+        "k...",
+    ], ["k": 0x6B4428, "r": 0xE8574A])
 }

@@ -160,3 +160,23 @@ import Testing
         #expect(a.play == nil && b.play == nil)
     }
 }
+
+@Suite struct ClaudeWorkTests {
+    @Test func toolsBecomeBlocksAndHelpers() throws {
+        let w = World(seed: 9)
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [WindowInfo(id: 4, frame: Rect(x: 300, y: 100, w: 600, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 0))
+        for _ in 0..<30 { w.step(1.0 / 30) }
+        let id = try #require(w.startJob(windowID: 4, craft: .garden, prefer: c.id))
+        for name in ["Edit", "Write", "Read", "Bash", "Task", "Task", "WebFetch", "TodoWrite", "mcp__x__y", "Edit"] {
+            w.claudeTool(workerID: id, ClaudeTool.from(name))
+        }
+        let j = try #require(w.creatures.first { $0.id == id }?.job)
+        #expect(j.blocks == 3)
+        #expect(j.helpers == 2)
+        w.claudeHelperDone(workerID: id)
+        #expect(j.helpers == 1)
+        let ev = w.drainClaudeEvents()
+        #expect(ev.contains(.look(id)) && ev.contains(.run(id)) && ev.contains(.web(id)) && ev.contains(.plan(id)))
+    }
+}

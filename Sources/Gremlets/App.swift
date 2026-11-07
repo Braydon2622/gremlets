@@ -93,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        world.dayFollowsClaude = true
         species = SpriteLibrary.loadAll()
         guard !species.isEmpty else {
             let alert = NSAlert()
@@ -335,7 +336,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func buildMenuItems() -> [NSMenuItem] {
-        let menu = NSMenu()
+        // Kept short: the everyday things up top, then Settings (a few plain switches) and More (everything else).
+        let menu = NSMenu(), settings = NSMenu(), more = NSMenu(), focusMenu = NSMenu()
         var headerText = "Gremlets: \(world.creatures.count) out"
         switch presence.hidden {
         case .call?: headerText = "Gremlets: hiding while you're on a call"
@@ -345,9 +347,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let header = NSMenuItem(title: headerText, action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
-        menu.addItem(.separator())
 
-        let add = NSMenuItem(title: "Add Gremlet", action: nil, keyEquivalent: "")
+        menu.addItem(.separator())
+        let add = NSMenuItem(title: "Add a Gremlet", action: nil, keyEquivalent: "")
         let sub = NSMenu()
         // Group the 50 species by family so the menu stays browsable.
         let families: [(String, String)] = [("animal", "Animals"), ("insect", "Insects & Bugs"), ("dragon", "Dragons"),
@@ -381,7 +383,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(add)
 
         if !world.creatures.isEmpty {
-            let remove = NSMenuItem(title: "Send Home", action: nil, keyEquivalent: "")
+            let remove = NSMenuItem(title: "Send One Home", action: nil, keyEquivalent: "")
             let rsub = NSMenu()
             for c in world.creatures {
                 let item = NSMenuItem(title: "\(c.species.name) #\(c.id)", action: #selector(removeCreature(_:)), keyEquivalent: "")
@@ -418,26 +420,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tip.isEnabled = false
             msub.addItem(.separator()); msub.addItem(tip)
             mine.submenu = msub
-            menu.addItem(mine)
+            more.addItem(mine)
         }
-        menu.addItem(.separator())
-        for item in walletMenuItems() { menu.addItem(item) }
-        menu.addItem(.separator())
+        let wallet = walletMenuItems()
+        if !wallet.isEmpty { more.addItem(.separator()); for item in wallet { more.addItem(item) } }
 
         // Focus buddy.
         if let label = focus.label {
             let state = NSMenuItem(title: focus.isFocusing ? "Focusing · \(label) left" : label + " left", action: nil, keyEquivalent: "")
             state.isEnabled = false
-            menu.addItem(state)
+            focusMenu.addItem(state)
             let stop = NSMenuItem(title: "Stop Focus Timer", action: #selector(stopFocus), keyEquivalent: "")
             stop.target = self
-            menu.addItem(stop)
+            focusMenu.addItem(stop)
         } else {
             for m in [25, 50] {
                 let f = NSMenuItem(title: "Focus for \(m) min", action: #selector(startFocus(_:)), keyEquivalent: "")
                 f.target = self
                 f.representedObject = m
-                menu.addItem(f)
+                focusMenu.addItem(f)
             }
         }
         let mins = Int(focusLog.todayMinutes.rounded()), streak = focusLog.streak
@@ -446,43 +447,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let st = NSMenuItem(title: line, action: nil, keyEquivalent: "")
             st.isEnabled = false
             st.toolTip = "Gremlets that keep you company through a focus session grow closer to you."
-            menu.addItem(st)
+            focusMenu.addItem(st)
         }
         let ic = NSMenuItem(title: "Play with Desktop Icons", action: #selector(toggleIcons), keyEquivalent: "")
         ic.target = self
         ic.state = icons.enabled ? .on : .off
         ic.toolTip = icons.lastError ?? "Gremlets sit on your desktop icons, make them boing, and borrow them for a bit. Nothing on your desktop is moved. macOS will ask once to let Gremlets read icon positions from Finder."
-        menu.addItem(ic)
+        settings.addItem(ic)
         if icons.enabled, let err = icons.lastError {
             let e = NSMenuItem(title: "  ⚠︎ " + err, action: nil, keyEquivalent: ""); e.isEnabled = false
-            menu.addItem(e)
+            settings.addItem(e)
         }
         let chat = NSMenuItem(title: "Chat with a Gremlet…", action: #selector(openChatMenu), keyEquivalent: "")
         chat.target = self
         chat.toolTip = "Talk with any of your Gremlets (or double-click one). Replies come from Claude when you add an API key."
-        menu.addItem(chat)
-        let bud = NSMenuItem(title: "Claude Buddy", action: #selector(toggleBuddy), keyEquivalent: "")
+        more.addItem(chat)
+        let bud = NSMenuItem(title: "Help with Claude Code", action: #selector(toggleBuddy), keyEquivalent: "")
         bud.target = self
         bud.state = buddy.enabled ? .on : .off
         bud.toolTip = "While Claude Code works, a Gremlet works next to its window, and tells you when Claude is done or needs you."
-        menu.addItem(bud)
+        settings.addItem(bud)
         if let made = buddy.log.todaySummary {
             let m = NSMenuItem(title: "Made with Claude today: \(made)", action: nil, keyEquivalent: "")
             m.isEnabled = false
             menu.addItem(m)
         }
-        menu.addItem(groveMenuItem())
-        menu.addItem(bonsaiMenuItem())
+        more.addItem(.separator())
+        more.addItem(groveMenuItem())
+        more.addItem(bonsaiMenuItem())
         let journal = NSMenuItem(title: "Open Garden Journal", action: #selector(openJournal), keyEquivalent: "")
         journal.target = self
         journal.toolTip = "Your projects' trees and their stories, the village, the last two weeks of Claude work, and today's postcard. Stays on your Mac."
-        menu.addItem(journal)
-        let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on App Controls (needs Accessibility)" : "Stand on App Controls",
+        more.addItem(journal)
+        let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on Buttons and Search Bars · allow in System Settings" : "Stand on Buttons and Search Bars",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
         ctl.state = controls.enabled ? .on : .off
         ctl.toolTip = "Gremlets can stand on the address bar, search fields and buttons of the app you're using. Needs Accessibility access (System Settings › Privacy & Security › Accessibility). Reads only where controls are, never what's in them, and skips web page content."
-        menu.addItem(ctl)
         // The seed book: which plants you've grown so far.
         let book = overlay.seedBook
         // Phone: pair, send a Gremlet over, see who's visiting.
@@ -490,7 +491,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let pairItem = NSMenuItem(title: "Pair with Phone…", action: #selector(pairPhone), keyEquivalent: "")
             pairItem.target = self
             pairItem.toolTip = "Gremlets can hop over to your iPhone's web habitat and come back with what they grew."
-            menu.addItem(pairItem)
+            more.addItem(pairItem)
         } else {
             let ph = NSMenuItem(title: phone.connected ? "Phone · linked" : "Phone · connecting…", action: nil, keyEquivalent: "")
             let phMenu = NSMenu()
@@ -520,23 +521,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             unlink.target = self
             phMenu.addItem(unlink)
             ph.submenu = phMenu
-            menu.addItem(ph)
+            more.addItem(ph)
         }
         // Your Mac: the opt-in features that need a permission.
-        let mac = NSMenuItem(title: "Your Mac", action: nil, keyEquivalent: "")
-        let macMenu = NSMenu()
-        for (title, key, on, granted) in [
-            ("Stand on Text and Buttons (Screen Recording)", "text", sense.standOnText, ScreenSense.hasScreenAccess),
-            ("Save Highlight Clips (Screen Recording)", "clips", sense.highlightClips, ScreenSense.hasScreenAccess),
+        var senseItems: [NSMenuItem] = []
+        for (title, key, on, granted, tip) in [
+            ("Stand on Text in Windows", "text", sense.standOnText, ScreenSense.hasScreenAccess,
+             "Gremlets stand on lines of text in the front window. Needs Screen Recording; macOS shows a purple dot in the menu bar while it looks."),
+            ("Save Highlight GIFs", "clips", sense.highlightClips, ScreenSense.hasScreenAccess,
+             "Saves a short GIF of treasure runs and boosts to Movies › Gremlets. Needs Screen Recording, only while recording."),
         ] {
-            let it = NSMenuItem(title: title + (on && !granted ? " · needs permission" : ""), action: #selector(toggleSense(_:)), keyEquivalent: "")
-            it.target = self; it.representedObject = key; it.state = on ? .on : .off
-            macMenu.addItem(it)
+            let it = NSMenuItem(title: title + (on && !granted ? " · allow in System Settings" : ""), action: #selector(toggleSense(_:)), keyEquivalent: "")
+            it.target = self; it.representedObject = key; it.state = on ? .on : .off; it.toolTip = tip
+            senseItems.append(it)
         }
-        mac.submenu = macMenu
-        menu.addItem(mac)
         // Weather where you are (off until you name a city).
-        let wx = NSMenuItem(title: weatherService.summary.map { "Weather · " + $0 } ?? "Weather Where You Are", action: nil, keyEquivalent: "")
+        let wx = NSMenuItem(title: weatherService.summary.map { "Weather · " + $0 } ?? "Weather…", action: nil, keyEquivalent: "")
         wx.toolTip = "Rain splashes on your window tops, snow piles up along them, wind sends the kites up. Only shows where it lands, never across your work."
         let wxMenu = NSMenu()
         let setCity = NSMenuItem(title: weatherService.place == nil ? "Set Your City…" : "Change City…", action: #selector(askWeatherCity), keyEquivalent: "")
@@ -554,10 +554,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(wx)
         // Another screen (iPad, phone, a friend's laptop): a doorway at one edge of this screen.
         if !bridge.linked {
-            let link = NSMenuItem(title: "Link Another Screen (iPad, Phone)…", action: nil, keyEquivalent: "")
+            let link = NSMenuItem(title: "Walk onto My iPad…", action: nil, keyEquivalent: "")
             link.toolTip = "Gremlets walk off one edge of your Mac and in from the edge of the other screen, and back."
             let lm = NSMenu()
-            for (title, side) in [("Other screen is on the right", "right"), ("Other screen is on the left", "left")] {
+            for (title, side) in [("It's to the right of my Mac", "right"), ("It's to the left of my Mac", "left")] {
                 let it = NSMenuItem(title: title, action: #selector(linkScreen(_:)), keyEquivalent: "")
                 it.target = self; it.representedObject = side
                 lm.addItem(it)
@@ -565,7 +565,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             link.submenu = lm
             menu.addItem(link)
         } else {
-            let st = NSMenuItem(title: bridge.peerOnline ? "Screen link · open (\(bridge.side ?? "right") edge)" : "Screen link · waiting for the other screen…", action: nil, keyEquivalent: "")
+            let st = NSMenuItem(title: bridge.peerOnline ? "iPad linked · \(bridge.side ?? "right") edge" : "iPad link · waiting for it to open…", action: nil, keyEquivalent: "")
             let lm = NSMenu()
             let away = bridge.away.compactMap { species[$0]?.info.name }
             if !away.isEmpty {
@@ -610,58 +610,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             sbMenu.addItem(tip)
         }
         sb.submenu = sbMenu
-        menu.addItem(sb)
+        more.addItem(.separator())
+        more.addItem(sb)
         if world.wishes > 0 {
             let wi = NSMenuItem(title: "✨ A wish is waiting: the next seed will be special", action: nil, keyEquivalent: "")
             wi.isEnabled = false
-            menu.addItem(wi)
+            more.addItem(wi)
         }
         if book.today > 0 {
             let t = NSMenuItem(title: "Grown today: \(book.today) plant\(book.today == 1 ? "" : "s")", action: nil, keyEquivalent: "")
             t.isEnabled = false
-            menu.addItem(t)
+            more.addItem(t)
         }
-        let snd = NSMenuItem(title: "Garden Sounds", action: #selector(toggleSounds), keyEquivalent: "")
+        let snd = NSMenuItem(title: "Sounds", action: #selector(toggleSounds), keyEquivalent: "")
         snd.target = self
         snd.state = sounds.enabled ? .on : .off
         snd.toolTip = "Tiny chimes when a flower opens on a tree, a fruit ripens, a house joins the village or a gem turns up. Quiet, and never during focus sessions."
-        menu.addItem(snd)
+        settings.addItem(snd)
         let rem = NSMenuItem(title: "Water & Stretch Reminders", action: #selector(toggleReminders), keyEquivalent: "")
         rem.target = self
         rem.state = remindersOn ? .on : .off
-        menu.addItem(rem)
+        settings.addItem(rem)
         let cli = NSMenuItem(title: "Copy Terminal Command Setup", action: #selector(copyCLISetup), keyEquivalent: "")
         cli.target = self
         cli.toolTip = "Lets scripts and test runners make your Gremlets react (gremlet pass / fail / done)."
-        menu.addItem(cli)
-        menu.addItem(.separator())
+        more.addItem(cli)
 
         let pause = NSMenuItem(title: paused ? "Resume" : "Pause", action: #selector(togglePause), keyEquivalent: "p")
         pause.target = self
-        menu.addItem(pause)
         let hide = NSMenuItem(title: manuallyHidden ? "Show Gremlets" : "Hide Gremlets", action: #selector(toggleHidden), keyEquivalent: "g")
         hide.keyEquivalentModifierMask = [.control, .option]
         hide.target = self
         hide.toolTip = "Works anywhere with ⌃⌥G"
-        menu.addItem(hide)
         let calls = NSMenuItem(title: "Hide During Calls", action: #selector(toggleHideDuringCalls), keyEquivalent: "")
         calls.target = self
         calls.state = hideDuringCalls ? .on : .off
         calls.toolTip = "Slip away whenever an app uses your camera or microphone (Zoom, Meet, FaceTime…), so they never end up in a screen share."
-        menu.addItem(calls)
-        menu.addItem(.separator())
+        settings.addItem(calls)
 
-        let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
+        let login = NSMenuItem(title: "Start When I Log In", action: #selector(toggleLogin), keyEquivalent: "")
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
+        settings.addItem(login)
 
         let folder = NSMenuItem(title: "Open Custom Sprites Folder…", action: #selector(openSpritesFolder), keyEquivalent: "")
         folder.target = self
-        menu.addItem(folder)
-        menu.addItem(.separator())
+        more.addItem(folder)
 
         let quit = NSMenuItem(title: "Quit Gremlets", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        // Assemble: everyday things, then Settings and More, then pause / hide / quit.
+        menu.addItem(.separator())
+        settings.addItem(.separator())
+        let permHeader = NSMenuItem(title: "Extras that need your permission", action: nil, keyEquivalent: ""); permHeader.isEnabled = false
+        settings.addItem(permHeader)
+        settings.addItem(ctl)
+        for it in senseItems { settings.addItem(it) }
+        let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
+        settingsItem.submenu = settings
+        menu.addItem(settingsItem)
+        let focusItem = NSMenuItem(title: focus.label.map { "Focus Timer · \($0) left" } ?? "Focus Timer", action: nil, keyEquivalent: "")
+        focusItem.submenu = focusMenu
+        more.insertItem(focusItem, at: 0)
+        let moreItem = NSMenuItem(title: "More", action: nil, keyEquivalent: "")
+        moreItem.submenu = more
+        menu.addItem(moreItem)
+        menu.addItem(.separator())
+        menu.addItem(pause)
+        menu.addItem(hide)
+        menu.addItem(.separator())
         menu.addItem(quit)
         let items = menu.items
         menu.removeAllItems()

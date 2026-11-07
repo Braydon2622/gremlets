@@ -458,6 +458,7 @@ import Testing
     @Test func treesRideTheirWindowThenRestInTheNursery() throws {
         let w = World(seed: 52)
         w.maxHobbies = 0
+        w.showNursery = true
         var win = WindowInfo(id: 9, frame: Rect(x: 300, y: 150, w: 700, h: 400))
         w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
         w.loadBonsai(BonsaiBook())

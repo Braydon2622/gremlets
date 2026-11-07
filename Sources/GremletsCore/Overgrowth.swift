@@ -179,7 +179,8 @@ extension World {
         c.mossTask = MossTask(kind: kind, started: clock)
         c.targetX = x; c.facing = x > c.pos.x ? 1 : -1
         c.set(.walk, duration: 30)
-        nextMossTaskAt = clock + rng.range(8, 20)
+        // While Claude works they're busy gardeners: the next moss job comes round quickly.
+        nextMossTaskAt = clock + (claudeWorking ? rng.range(2, 5) : rng.range(8, 20))
     }
 
     /// `gremlet moss climb|pad|plant`: someone does it now, if anyone can.

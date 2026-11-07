@@ -414,7 +414,7 @@ extension World {
             add("dig", grove.digCharges > 0 ? 1.3 : 0.12) { self.startDig(c); _ = m }
         }
         let sleepingIn = creatures.filter { $0.homeHouse != nil }.count
-        if !grove.village.isEmpty, isNight || c.energy < 0.35, sleepingIn < grove.village.count * 2 {
+        if !grove.village.isEmpty, isNight || c.energy < 0.35 || claudeResting, sleepingIn < grove.village.count * 2 {
             // Its own house if it has one, otherwise any house (not the mine or the village amenities).
             let homes = grove.village.indices.filter { !grove.village[$0].biome.hasPrefix("item:") && grove.village[$0].biome != "mine" }
             if let n = grove.village.firstIndex(where: { $0.owner == c.species.id }) ?? (homes.isEmpty ? nil : homes[Int(rng.next() % UInt64(homes.count))]) {

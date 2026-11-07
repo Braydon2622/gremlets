@@ -91,6 +91,16 @@ public final class World {
     var nextPadID = 0, nextPatchID = 0
     var nextMossTaskAt = 60.0
     var lastVineBuild = -10.0
+    /// When Claude last used a tool in any session (drives the Gremlets' day: garden while Claude works, rest after).
+    public internal(set) var lastClaudeWorkAt = -1e9
+    /// The Gremlets' day follows Claude (the app turns this on; the engine's other tests run without it).
+    public var dayFollowsClaude = false
+    /// Claude is working right now (a tool call in the last 90 s).
+    public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
+    /// Claude has been quiet for a couple of minutes: time to wind down.
+    public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    /// Resting project trees on brackets up the side of the screen (off by default; see rebuildAttached).
+    public var showNursery = false
     /// The weather where you are (see Weather.swift).
     var liveWeather: LocalWeather?
     var weatherPreview: LocalWeather?
@@ -353,6 +363,7 @@ public final class World {
         updateOvergrowth(dt)
         updateWeather(dt)
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
+        if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
         mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)
         updateFerry(dt)
         updateMerchant(dt)

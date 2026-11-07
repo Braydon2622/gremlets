@@ -496,10 +496,11 @@ extension World {
             }
             if let p = placed { placements.append(p) }
         }
-        // Resting trees on the nursery brackets, and live ones whose window has no room or isn't showing right now.
+        // The nursery (resting trees on brackets up the side of the screen) is switched off: Braydon found the faded
+        // labelled trees on the right edge confusing. A tree only shows on its terminal while Claude works there.
         var liveProjects = Set(placements.map(\.project))
         let waiting = bonsaiBook.trees.filter { liveBonsai[$0.project] != nil && !liveProjects.contains($0.project) }
-        for (k, tree) in (waiting + restingTrees.filter { !liveProjects.contains($0.project) }).prefix(World.nurserySlots).enumerated() {
+        for (k, tree) in (waiting + restingTrees.filter { !liveProjects.contains($0.project) }).prefix(showNursery ? World.nurserySlots : 0).enumerated() {
             guard let br = nurseryBracket(k) else { break }
             liveProjects.insert(tree.project)
             let layout = BonsaiGeometry.layout(tree)

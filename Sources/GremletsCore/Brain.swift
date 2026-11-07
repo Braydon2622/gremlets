@@ -173,7 +173,37 @@ struct Brain {
             _ = pick
         }
 
-        pickAndStart(choices, world)
+        // The rhythm of the day follows Claude: garden while it works, wind down once it's quiet.
+        if world.claudeResting {
+            if let s = world.supportingSurface(for: c), s.kind != .floor {
+                // Up on a platform already: settle in and watch the screen for a good while.
+                add("chill", 3.0) { c.idleVariant = world.rng.chance(0.6) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(10, 28)) }
+            }
+        }
+        pickAndStart(reweighted(choices, world), world)
+    }
+
+    static let gardening: Set<String> = ["plantMoss", "tendMoss", "tend", "buildPad", "climbVine"]
+    static let lively: Set<String> = ["walk", "hop", "chase", "tag", "follow", "stairs", "rail", "grapple", "glide", "bridge", "boost",
+                                      "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
+                                      "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]
+    static let restful: Set<String> = ["idle", "sleep", "napTogether", "goHome", "sitInTree", "climbTree", "jumpUp", "soak", "campfire",
+                                       "chill", "napInTree", "drink"]
+
+    static func reweighted(_ choices: [Choice], _ world: World) -> [Choice] {
+        if world.claudeWorking {
+            return choices.map { ch in
+                let k = gardening.contains(ch.name) ? 4.0 : (ch.name == "sleep" || ch.name == "goHome" ? 0.4 : 1.0)
+                return Choice(name: ch.name, weight: ch.weight * k, start: ch.start)
+            }
+        }
+        if world.claudeResting {
+            return choices.map { ch in
+                let k = lively.contains(ch.name) ? 0.25 : restful.contains(ch.name) ? 2.5 : 1.0
+                return Choice(name: ch.name, weight: ch.weight * k, start: ch.start)
+            }
+        }
+        return choices
     }
 
     static func pickAndStart(_ choices: [Choice], _ world: World) {

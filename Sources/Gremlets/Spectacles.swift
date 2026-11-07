@@ -11,6 +11,7 @@ final class SpectacleRenderer {
     private struct PlantLayer { let layer: CALayer; var glow: CALayer?; var key: String; var si: Int; var size: CGSize }
     private var plants: [Int: PlantLayer] = [:]
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
+    private var castleLayers: [String: (layer: CALayer, key: String)] = [:]
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
@@ -98,6 +99,7 @@ final class SpectacleRenderer {
         renderDoor()
         renderMoss()
         renderWeather()
+        renderCastles()
         renderPlans()
         renderRoutes()
         renderRopes()
@@ -1782,3 +1784,40 @@ extension SpectacleRenderer {
         for (id, l) in leafLayers where !holders.contains(id) { fade(l, to: 0, remove: true); leafLayers[id] = nil }
     }
 }
+
+// MARK: Codebase castles (see Castle.swift)
+
+extension SpectacleRenderer {
+    fileprivate func renderCastles() {
+        var alive = Set<String>()
+        for p in world.castlePlacements {
+            guard let c = world.castles[p.project], let (si, pt) = local(p.origin) else { continue }
+            alive.insert(p.project)
+            var e = castleLayers[p.project] ?? {
+                let l = pixelLayer(); l.anchorPoint = .zero; l.zPosition = 1.9
+                popIn(l)
+                return (l, "")
+            }()
+            attach(e.layer, si)
+            let key = c.towers.map { "\($0.name):\($0.files):\($0.edits)" }.joined(separator: ",") + "@\(p.scale)"
+            if e.key != key {
+                let img = CastleArt.image(c)
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * 3 * p.scale, height: Double(img.height) * 3 * p.scale)
+                e.key = key
+            }
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 2)
+            castleLayers[p.project] = e
+        }
+        for (k, e) in castleLayers where !alive.contains(k) { fade(e.layer, to: 0, remove: true); castleLayers[k] = nil }
+        // A block lands on a tower: a little burst of sparkle on its top.
+        for case .block(let project, let i) in world.drainCastleEvents() {
+            guard let p = world.castlePlacements.first(where: { $0.project == project }), let c = world.castles[project], c.towers.indices.contains(i) else { continue }
+            let top = Vec2(p.origin.x + (c.minX(i) + c.width(i) / 2) * p.scale, p.origin.y + c.height(i) * p.scale + 4)
+            if let (si, pt) = local(top) {
+                overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 5, dx: -16...16, dy: 10...40, duration: 0.8)
+            }
+        }
+    }
+}
+

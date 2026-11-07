@@ -1193,6 +1193,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             guard let url = WrappedPoster.make(m, world: world) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
+        case "castle":
+            // Build (or rebuild) the codebase castle for a folder; it shows while that project's Claude session is live.
+            let dir = (Self.decoded(query["dir"] ?? "") as NSString).expandingTildeInPath
+            guard dir.hasPrefix("/") else { return (400, #"{"ok":false,"error":"dir must be a folder path"}"#) }
+            let project = (dir as NSString).lastPathComponent
+            CastleScanner.scan(project: project, root: dir) { [weak self] c in self?.world.setCastle(c); self?.schedule(rate: 60) }
+            if let a = query["edit"] { world.castleEdit(project: project, area: Self.decoded(a)); schedule(rate: 60) }
+            let live = world.bonsaiPlacements.contains { $0.project == project && $0.windowID != nil }
+            return (200, #"{"ok":true,"project":"\#(project)","live":\#(live)}"#)
         case "village-page":
             // A static page of the village to put online (default: ~/Pictures/Gremlets/Village Page).
             let raw = query["dir"].map(Self.decoded) ?? ""

@@ -99,6 +99,10 @@ public final class World {
     public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
     /// Claude has been quiet for a couple of minutes: time to wind down.
     public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    /// Codebase castles by project, where they stand, and what just landed on them (see Castle.swift).
+    public internal(set) var castles: [String: Castle] = [:]
+    public internal(set) var castlePlacements: [CastlePlacement] = []
+    var castleEvents: [CastleEvent] = []
     /// Resting project trees on brackets up the side of the screen (off by default; see rebuildAttached).
     public var showNursery = false
     /// The weather where you are (see Weather.swift).

@@ -108,6 +108,22 @@ enum ArtPreview {
         ctxW.draw(ClimateArt.leafUmbrella, in: CGRect(x: 460, y: 100, width: 25 * 7, height: 15 * 7))
         ctxW.draw(ClimateArt.splash, in: CGRect(x: 660, y: 140, width: 7 * 10, height: 4 * 10))
         write(ctxW.makeImage()!, dir.appendingPathComponent("weather.png"))
+        // The codebase castle of the folder this runs in (and a small sample), at 1x and 2x.
+        let git = Process(); git.executableURL = URL(fileURLWithPath: "/usr/bin/git"); git.arguments = ["ls-files"]
+        let pipe = Pipe(); git.standardOutput = pipe; git.standardError = FileHandle.nullDevice
+        try? git.run(); let listed = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self); git.waitUntilExit()
+        var here = Castle.from(project: "here", paths: listed.split(separator: "\n").map(String.init))
+        for i in here.towers.indices where i % 2 == 0 { here.towers[i].edits = 12 }
+        let sample = Castle.from(project: "sample", paths: ["README.md", "app.py", "web/index.html", "web/app.js", "api/server.py", "api/db.py"])
+        let ctxC = CGContext(data: nil, width: 1000, height: 420, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctxC.setFillColor(CGColor(red: 0.16, green: 0.18, blue: 0.24, alpha: 1)); ctxC.fill(CGRect(x: 0, y: 0, width: 1000, height: 420))
+        ctxC.interpolationQuality = .none
+        ctxC.setFillColor(CGColor(red: 0.55, green: 0.58, blue: 0.66, alpha: 1)); ctxC.fill(CGRect(x: 0, y: 36, width: 1000, height: 4))
+        let a = CastleArt.image(here), b = CastleArt.image(sample)
+        ctxC.draw(a, in: CGRect(x: 30, y: 40, width: a.width * 6, height: a.height * 6))
+        ctxC.draw(b, in: CGRect(x: 640, y: 40, width: b.width * 6, height: b.height * 6))
+        write(ctxC.makeImage()!, dir.appendingPathComponent("castle.png"))
         // The shelf trees: four seeds at two heights, summer and autumn, the last one mirrored, each with its shelf.
         let tW = PropArt.treeWidthPx * 3 + 30, tH = 120 * 3 + 20
         let ctxT = CGContext(data: nil, width: tW * 5, height: tH, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!

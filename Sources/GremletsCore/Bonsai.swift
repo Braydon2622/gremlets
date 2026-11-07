@@ -518,6 +518,14 @@ extension World {
             }
         }
         bonsaiPlacements = placements
+        // Codebase castles, at the other end of the same window tops.
+        var castlesOut: [CastlePlacement] = []
+        for (k, p) in placements.enumerated() where p.slot < 0 {
+            guard let (cp, tops) = castleLayout(for: p, k: k) else { continue }
+            castlesOut.append(cp)
+            for s in tops { surfacesOut.append(s); attached[s.ownerID] = cp.windowID }
+        }
+        castlePlacements = castlesOut
 
         // Terminal ledges: mossy shelves that grow out of a Claude window's side as the edits pile up.
         var ledges: [TerminalLedge] = []

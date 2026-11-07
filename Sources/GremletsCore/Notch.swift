@@ -63,7 +63,7 @@ extension World {
         guard notchHomeShowing, claudeResting || isNight || c.energy < 0.35, !compact, clock >= nextNotchTripAt, c.expedition == nil, c.job == nil, c.isGrounded,
               !creatures.contains(where: { if case .notch? = $0.expedition?.goal { return true }; return World.isNotchOwner($0.groundOwner) && $0 !== c }) else { return }
         if World.isNotchOwner(c.groundOwner) { return }
-        add("notchNap", 1.4) { if !self.startExpedition(c, .notch) { self.nextNotchTripAt = self.clock + 120 } }
+        add("notchNap", isNight ? 4 : 1.4) { if !self.startExpedition(c, .notch) { self.nextNotchTripAt = self.clock + 120 } }
     }
 
     /// Arrived at the hanging house: into the hammock if it's free (and it fancies it), otherwise in through the door.
@@ -114,9 +114,38 @@ extension World {
     /// In through the door: out of sight for a while (smoke curls from the chimney), then back out onto the porch.
     func goInsideHangingHome(_ c: Creature) {
         guard notchHomeShowing else { return }
+        lastHomeArrival = clock
         c.homeHouse = -1
         c.homeUntil = clock + rng.range(isNight ? 120 : 50, isNight ? 300 : 150)
         c.set(.sleep, duration: 9999)
+    }
+
+    // MARK: Growing with you, the night, and the vine to the hut
+
+    /// The house grows as the Claude sessions add up: a balcony (5), a loft (15), a rooftop garden (40).
+    public var houseStage: Int {
+        let sessions = bonsaiBook.trees.reduce(0) { $0 + $1.sessions }
+        return sessions >= 40 ? 3 : sessions >= 15 ? 2 : sessions >= 5 ? 1 : 0
+    }
+
+    /// The lights: on while Claude works; after dark, on while anyone's up, and out a few minutes after the last
+    /// one has gone in to sleep.
+    public var houseLightsOn: Bool {
+        if claudeWorking { return true }
+        guard isNight else { return false }
+        return insideHangingHome.isEmpty || clock - lastHomeArrival < 240
+    }
+
+    /// Keeps the vine between the hanging house and the terminal's hut in place (only when the hut hangs below the
+    /// house and not too far across).
+    func updateHomeLine() {
+        guard let n = notchHome, notchHomeShowing, !compact, let pod = podPlacements.first else { homeLine = nil; return }
+        let top = Vec2(n.porch.maxX - 6, n.porch.y + Zipline.hang)
+        let bottom = Vec2(pod.side > 0 ? pod.branch.maxX - 10 : pod.branch.minX + 10, pod.branch.y + Zipline.hang)
+        let d = bottom - top
+        guard d.y < -120, d.y > -720, abs(d.x) < 760 else { homeLine = nil; return }
+        if let h = homeLine, (h.top - top).length < 2, (h.bottom - bottom).length < 2 { return }
+        homeLine = Zipline(id: 900_000, top: top, bottom: bottom, topOwner: World.notchPorchOwner, bottomOwner: pod.branch.ownerID, madeAt: clock)
     }
 }
 

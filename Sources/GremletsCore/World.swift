@@ -72,6 +72,9 @@ public final class World {
     var terrainEvents: [TerrainEvent] = []
     /// Expeditions: ziplines, chests and summit flags (see Expedition.swift).
     public internal(set) var ziplines: [Zipline] = []
+    /// The vine from the hanging house's porch down to the Claude terminal's hut: the two homes, linked.
+    public internal(set) var homeLine: Zipline?
+    public var allZiplines: [Zipline] { ziplines + (homeLine.map { [$0] } ?? []) }
     public internal(set) var chests: [Chest] = []
     public internal(set) var flags: [Flag] = []
     var nextZipID = 0, nextChestID = 0, nextFlagID = 0
@@ -115,6 +118,7 @@ public final class World {
     public var rotateGrove = false
     var nextGroveRotation = 0.0
     var lastCornerKind: GroveKind?
+    var lastCornerUse = 0.0, cornerShownAt = 0.0
     /// Wall-clock seconds since 1970, set by the app every tick (the grove's corner keeps real time); the engine's
     /// own clock when nobody sets it (tests).
     public var wallClock: Double = 0
@@ -131,6 +135,9 @@ public final class World {
     /// A postcard in the hanging house's mailbox (a Gremlet came back from a friend's Mac); the flag is up until
     /// someone goes home and takes it in.
     public var mailWaiting = false
+    /// Where the postcard came from ("a friend's Mac", "your iPad") and who sent it (species id).
+    public var postcard: (from: String, species: String)?
+    var lastHomeArrival = -1e9
     /// Counts mail taken in (the platform layer shows a little moment for it).
     public internal(set) var mailEvents = 0
     /// The huts hanging beside live Claude terminals (see Pod.swift).
@@ -399,6 +406,7 @@ public final class World {
         updateOvergrowth(dt)
         updateWeather(dt)
         checkHammock()
+        updateHomeLine()
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
         if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
         // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
@@ -428,7 +436,10 @@ public final class World {
             if c.job != nil || clock >= until || spectacle != nil {
                 c.homeUntil = nil
                 if let n = c.homeHouse, n >= 0 { groveEvents.append(.leftHome(n, by: c.id)) }
+                let fromHangingHouse = c.homeHouse == -1
                 c.homeHouse = nil
+                // Morning: down from the hanging house under a leaf, once it's properly awake.
+                if fromHangingHouse && !isNight { c.driftDown = true }
                 if c.mining { finishDig(c) }
                 c.set(.wake, duration: c.animationLength(for: .wake))
                 emit(.wokeUp(c.id))
@@ -550,6 +561,11 @@ public final class World {
             // A grove errand that ran out of time (or got interrupted) is over: never leave it hanging.
             if c.groveTask != nil { c.groveTask = nil; c.targetX = nil }
             if c.mossTask == nil { c.carrying = nil }
+            if c.driftDown, c.job == nil, !compact, let scr = screen(containingX: c.pos.x, y: c.pos.y) ?? screens.first {
+                c.driftDown = false
+                startFloat(c, to: Vec2((c.pos.x + c.facing * 60).clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)
+                return
+            }
             if compact { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
             else if c.boost != nil || c.helping != nil { boostDecide(c) } else if c.mossTask != nil { mossDecide(c) }

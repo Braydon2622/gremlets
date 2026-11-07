@@ -136,9 +136,10 @@ enum ClimateArt {
 enum NotchArt {
     /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
     /// window glows (Claude is working, or it's night).
-    static func house(lit: Bool, month: Int = 6, mail: Bool = false) -> CGImage {
-        // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each).
-        let w = 23, h = 17
+    static func house(lit: Bool, month: Int = 6, mail: Bool = false, stage: Int = 0) -> CGImage {
+        // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each). A loft (stage 2) and a rooftop
+        // garden (stage 3) add rows on top.
+        let w = 23, h = 17 + (stage >= 2 ? 8 : 0) + (stage >= 3 ? 3 : 0)
         var cv = PixelCanvas(w, h)
         let plank: UInt32 = 0xB07A47, plankDark: UInt32 = 0x8A5A35, plankLight: UInt32 = 0xC99460
         // Walls (15 px wide), boards running across.
@@ -177,6 +178,19 @@ enum NotchArt {
         } }
         if [12, 1, 2].contains(month) { for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 9, 0xBFE3F7) } }   // icicles
         if [6, 7, 8].contains(month) { cv.set(7, 5, 0xFFC845); cv.set(7, 6, 0x9E5C34) }                           // a sunflower in the box
+        // Growing with you: a balcony rail on the porch (1), a loft with a round window (2), a rooftop garden (3).
+        if stage >= 1 { for x in 15..<w { if x % 2 == 0 { cv.vspan(x, 2, 4, 0x8A5A35) } }; cv.hspan(15, w - 1, 5, 0xC99460) }
+        if stage >= 2 {
+            let by = 16
+            for y in by..<(by + 6) { for x in 3..<12 { cv.set(x, y, y == by ? 0x8A5A35 : (x == 3 ? 0x8A5A35 : 0xB07A47)) } }
+            cv.blob(7.5, Double(by + 3), 1.4, 1.4, base: lit ? 0xFFD36B : 0x3B4660, light: lit ? 0xFFF0B8 : 0x56627E)
+            for k in 0..<3 { cv.hspan(2 + k, 12 - k, by + 6 + k, k == 2 ? 0x8BD66A : 0x5E9E46) }
+        }
+        if stage >= 3 {
+            let gy = 16 + 9
+            for (x, c) in [(4, 0xFF8FB1), (6, 0x6CC04A), (7, 0xFFE45C), (9, 0x6CC04A), (10, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, gy, c); cv.set(x, gy - 1, 0x5E9E46) }
+            cv.vspan(8, gy - 1, gy + 1, 0x6B4428); cv.set(7, gy + 2, 0x6CC04A); cv.set(9, gy + 2, 0x8BD66A); cv.set(8, gy + 2, 0x8BD66A)   // a sapling
+        }
         cv.outline(0.6)
         return cv.image
     }

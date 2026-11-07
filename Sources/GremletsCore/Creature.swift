@@ -85,6 +85,8 @@ public final class Creature {
     var mossTask: MossTask?
     /// Something carried overhead on the way to a job: "sprout" (a tuft of moss to plant), "can" (the watering can).
     public internal(set) var carrying: String?
+    /// Just woke up in the hanging house on a morning: floats down under a leaf next.
+    var driftDown = false
     /// The snow-Gremlet it's helping to build (see Weather.swift).
     var snowmanTask: Int?
     /// When it came over from the linked screen on the sky ferry (it gets off here rather than riding straight back).

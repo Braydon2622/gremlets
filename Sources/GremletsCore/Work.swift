@@ -237,6 +237,8 @@ extension World {
         if let (si, side, y) = wall {
             job.wall = (si, y)
             job.shelfSide = side
+            // On the screen's side, a tree grows up to hold the shelf.
+            job.shelfStyle = (job.seed >> 11) % 2 == 0 ? .branch : .treehouse
         }
         if let (si, x) = snailAt {
             job.snail = (si, x)
@@ -281,6 +283,9 @@ extension World {
         let total = ShelfStyle.allCases.reduce(0) { $0 + $1.weight }
         var roll = rng.range(0, total)
         j.shelfStyle = ShelfStyle.allCases.first { roll -= $0.weight; return roll <= 0 } ?? .plank
+        // Trees grow only on the screen's sides (wall shelves, set up in startHobby), never between windows.
+        // (From the job's own seed, so the world's random sequence is untouched.)
+        if [.branch, .treehouse].contains(j.shelfStyle) { j.shelfStyle = [.leaf, .mushroom, .stone, .plank][Int((j.seed >> 7) % 4)] }
         j.rideUp = Ride.up[Int(rng.next() % UInt64(Ride.up.count))]
     }
 

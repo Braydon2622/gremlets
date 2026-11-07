@@ -657,7 +657,7 @@ extension World {
 
     @discardableResult
     func rideZip(_ c: Creature, _ id: Int) -> Bool {
-        guard let z = ziplines.first(where: { $0.id == id }) else { return false }
+        guard let z = allZiplines.first(where: { $0.id == id }) else { return false }
         endSocial(c)
         c.zip = ZipRide(zipline: id, t: 0)
         c.groundOwner = nil
@@ -670,7 +670,7 @@ extension World {
     }
 
     func updateZip(_ c: Creature, _ dt: Double) {
-        guard var ride = c.zip, let z = ziplines.first(where: { $0.id == ride.zipline }) else {
+        guard var ride = c.zip, let z = allZiplines.first(where: { $0.id == ride.zipline }) else {
             c.zip = nil; c.set(.airborne); return
         }
         let span = z.bottom - z.top
@@ -691,7 +691,7 @@ extension World {
     /// Someone standing by the top of a line may take it down.
     func zipChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
         guard c.job == nil, c.play == nil, c.expedition == nil, c.isGrounded else { return }
-        for z in ziplines where abs(z.top.x - c.pos.x) < 50 && abs(z.top.y - Zipline.hang - c.pos.y) < 4 {
+        for z in allZiplines where abs(z.top.x - c.pos.x) < 50 && abs(z.top.y - Zipline.hang - c.pos.y) < 4 {
             add("zip", 1.1) { self.rideZip(c, z.id) }
             return
         }

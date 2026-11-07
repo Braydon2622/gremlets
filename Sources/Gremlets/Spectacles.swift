@@ -860,7 +860,7 @@ final class SpectacleRenderer {
     /// Ziplines (cable, posts, the pulley a rider hangs from), chests, summit flags, and the blocks climbers carry.
     private func renderExpeditions() {
         var alive = Set<Int>()
-        for z in world.ziplines {
+        for z in world.allZiplines {
             alive.insert(z.id)
             guard let (si, top) = local(z.top), let (_, bottom) = local(z.bottom) else { continue }
             var e = zipLayers[z.id] ?? {
@@ -1168,7 +1168,7 @@ final class SpectacleRenderer {
             case .flagLost:
                 break
             case .zipMade(let id):
-                if let z = world.ziplines.first(where: { $0.id == id }), let (si, pt) = local(z.top) {
+                if let z = world.allZiplines.first(where: { $0.id == id }), let (si, pt) = local(z.top) {
                     overlay.burst([Effects.sparkle], si: si, at: pt, count: 3, dx: -10...10, dy: -4...10, duration: 0.4)
                 }
             case .zipped(let by, _):
@@ -1878,7 +1878,7 @@ extension SpectacleRenderer {
             swingLayer?.removeFromSuperlayer(); swingLayer = nil
             return
         }
-        let lit = world.claudeWorking || world.isNight
+        let lit = world.houseLightsOn
         swingLayer.map { attach($0, si) }
         var l = notchLayers ?? {
             let house = pixelLayer(); house.anchorPoint = .zero; house.zPosition = 1.15
@@ -1890,9 +1890,10 @@ extension SpectacleRenderer {
             return (house, hammock, ropes, "")
         }()
         for layer in [l.house, l.hammock, l.ropes] as [CALayer] { attach(layer, si) }
-        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))-\(world.month)-\(world.mailWaiting)-\(world.isNight)"
+        let stage = world.houseStage
+        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))-\(world.month)-\(world.mailWaiting)-\(world.isNight)-\(stage)"
         if l.key != key {
-            let img = NotchArt.house(lit: lit, month: world.month, mail: world.mailWaiting)
+            let img = NotchArt.house(lit: lit, month: world.month, mail: world.mailWaiting, stage: stage)
             l.house.contents = img
             l.house.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
             let hm = NotchArt.hammock(widthPx: Int((n.hammock.maxX - n.hammock.minX) / 3), lights: world.isNight)
@@ -1907,7 +1908,7 @@ extension SpectacleRenderer {
         // Ropes up to the bottom of the menu bar: two for the house, two for the hammock.
         let top = n.menuBottom - o.y + 2
         let path = CGMutablePath()
-        let roofY = base.y - 3 + 17 * 3 - 3
+        let roofY = base.y - 3 + l.house.bounds.height - 3
         for x in [base.x + 6, base.x + 40] { path.move(to: CGPoint(x: x, y: roofY)); path.addLine(to: CGPoint(x: x, y: top)) }
         for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
         // The swing under the porch, swaying.

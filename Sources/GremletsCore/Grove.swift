@@ -220,9 +220,9 @@ public final class Grove: Codable {
         let p = plants[i]
         // The corner plant is kept small (and the skyvine short), so it never gets in the way.
         if featured != nil {
-            let s = p.scale * 0.6
+            let s = min(1.1, p.scale) * 0.42
             switch p.kind {
-            case .skyvine: return Vec2(64, min(190, 90 + 34 * Double(p.level - 1)))
+            case .skyvine: return Vec2(52, min(150, 80 + 24 * Double(p.level - 1)))
             case .bouncecap: return Vec2(54 * s, 46 * s)
             case .lanternbloom: return Vec2(34 * s, 56 * s)
             case .sunberry: return Vec2(52 * s, 30 * s)
@@ -334,7 +334,8 @@ extension World {
         if let f = grove.featured, grove.plants.indices.contains(f), grove.plants[f].kind == .sunberry { grove.featured = nil }
         let featuredKind = grove.featured.flatMap { grove.plants.indices.contains($0) ? grove.plants[$0].kind : nil }
         grove.plants.removeAll { $0.kind == .sunberry }
-        grove.featured = featuredKind.flatMap { grove.plant(of: $0) }
+        // (-1, an empty corner, survives a restart too: only a real plant needs re-finding by its kind.)
+        if grove.featured != -1 { grove.featured = featuredKind.flatMap { grove.plant(of: $0) } }
         // Older villages grew in from the left corner, where the garden lives now: move those houses to the right.
         let displaced = grove.village.filter { $0.x < 0.36 }
         if !displaced.isEmpty {
@@ -432,6 +433,7 @@ extension World {
         c.groundOwner = nil
         c.set(.airborne)
         groveEvents.append(.bounce(groveLedges[n].plot, by: c.id))
+        lastCornerUse = now
         return true
     }
 
@@ -480,7 +482,7 @@ extension World {
             guard let i = shownPlant(k), let leaf = groveLedges.enumerated().filter({ $0.element.plot == i }).min(by: { $0.element.y < $1.element.y }) else { continue }
             let l = leaf.element, mid = (l.minX + l.maxX) / 2
             guard l.y - c.pos.y < maxJumpHeight * c.species.jumpPower * 0.9, abs(mid - c.pos.x) < 360 else { continue }
-            add(k == .skyvine ? "climbSkyvine" : "sitInWillow", 0.6) { self.launch(c, velocity: self.ballistic(from: c.pos, toX: mid, y: l.y, apexExtra: 30)) }
+            add(k == .skyvine ? "climbSkyvine" : "sitInWillow", 0.6) { self.lastCornerUse = self.now; self.launch(c, velocity: self.ballistic(from: c.pos, toX: mid, y: l.y, apexExtra: 30)) }
         }
         // Bedtime (or just tired): walk home to a house in the village and sleep inside.
         if villageOn, let m = mineIndex, !creatures.contains(where: { $0.mining }) {
@@ -528,6 +530,7 @@ extension World {
     func arriveAtGrove(_ c: Creature) {
         guard let t = c.groveTask else { return }
         c.groveTask = nil
+        lastCornerUse = now
         switch t {
         case .snack(let i):
             guard i < grove.plants.count, grove.plants[i].berries > 0 else { return }
@@ -596,6 +599,13 @@ extension World {
     /// minutes, then something else turns up. Timed on the wall clock (`now`), so restarting doesn't freeze it.
     func rotateGroveIfDue() {
         let t = now
+        // The corner mode never shows every plant at once: no plant chosen means an empty corner.
+        if grove.featured == nil { grove.featured = -1; rebuildGroveSurfaces(); setSurfacesDirty() }
+        if cornerShownAt == 0 { cornerShownAt = t }   // (just started: give whatever's there its full four minutes)
+        // A plant nobody has played with for four minutes doesn't wait out its time: it goes.
+        if let f = grove.featured, f >= 0, !grove.plants[f].kind.brief, t - max(lastCornerUse, cornerShownAt) > 240 {
+            grove.nextCornerChange = t
+        }
         if let due = grove.nextCornerChange, t < due { return }
         if grove.featured == nil || grove.nextCornerChange == nil || grove.featured! >= 0 {
             if grove.featured != nil && grove.nextCornerChange != nil {
@@ -617,6 +627,7 @@ extension World {
         if let found = grove.plant(of: k) { i = found } else { grove.plants.append(GrovePlant(kind: k, x: 0.16)); i = grove.plants.count - 1 }
         grove.featured = i
         lastCornerKind = k
+        cornerShownAt = t
         grove.nextCornerChange = t + (k.brief ? rng.range(180, 260) : rng.range(480, 900))
         rebuildGroveSurfaces()
         setSurfacesDirty()

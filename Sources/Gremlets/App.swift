@@ -373,6 +373,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case .manual?: headerText = "Gremlets: hidden (⌃⌥G to bring them back)"
         case nil: if presence.isAway { headerText += " · napping until you're back" }
         }
+        if let card = world.postcard {
+            let pc = NSMenuItem(title: "💌 A postcard from \(card.from)", action: #selector(openPostcard), keyEquivalent: "")
+            pc.target = self
+            menu.addItem(pc)
+        }
         let header = NSMenuItem(title: headerText, action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
@@ -1740,6 +1745,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Visiting a friend's Mac: a room on the relay both Macs join; the doorway is this Mac's right edge.
+    /// Opens the postcard a traveller brought home: a little pixel card of where it went, and takes in the mail.
+    @objc private func openPostcard() {
+        guard let card = world.postcard else { return }
+        let W = 420.0, H = 260.0
+        let img = NSImage(size: NSSize(width: W, height: H))
+        img.lockFocus()
+        let ctx = NSGraphicsContext.current!.cgContext
+        ctx.interpolationQuality = .none
+        // A sky, a meadow, the traveller, and the hanging house in the corner.
+        NSGradient(colors: [NSColor(red: 0.55, green: 0.78, blue: 0.98, alpha: 1), NSColor(red: 0.97, green: 0.92, blue: 0.82, alpha: 1)])?.draw(in: NSRect(x: 0, y: 0, width: W, height: H), angle: -90)
+        NSColor(red: 0.42, green: 0.70, blue: 0.32, alpha: 1).setFill(); NSRect(x: 0, y: 0, width: W, height: 54).fill()
+        let house = NotchArt.house(lit: true, month: world.month, stage: world.houseStage)
+        ctx.draw(house, in: CGRect(x: W - 130, y: H - 30 - Double(house.height) * 4, width: Double(house.width) * 4, height: Double(house.height) * 4))
+        if let sp = species[card.species], let frame = sp.frames.first {
+            let s = 4.0
+            ctx.draw(frame, in: CGRect(x: 60, y: 50, width: Double(frame.width) * s, height: Double(frame.height) * s))
+        }
+        let name = species[card.species]?.info.name ?? "A Gremlet"
+        NSAttributedString(string: "Greetings from \(card.from)!", attributes: [.font: NSFont.systemFont(ofSize: 22, weight: .heavy), .foregroundColor: NSColor(red: 0.15, green: 0.17, blue: 0.27, alpha: 1)]).draw(at: NSPoint(x: 24, y: H - 46))
+        NSAttributedString(string: "Love, \(name)", attributes: [.font: NSFont.systemFont(ofSize: 15, weight: .semibold), .foregroundColor: NSColor(red: 0.15, green: 0.17, blue: 0.27, alpha: 0.8)]).draw(at: NSPoint(x: 26, y: H - 72))
+        NSColor(white: 1, alpha: 0.9).setStroke(); let b = NSBezierPath(rect: NSRect(x: 6, y: 6, width: W - 12, height: H - 12)); b.lineWidth = 4; b.stroke()
+        img.unlockFocus()
+        let a = NSAlert()
+        a.messageText = "A postcard from \(card.from)"
+        a.informativeText = "\(name) brought it home and left it in the mailbox."
+        let view = NSImageView(frame: NSRect(x: 0, y: 0, width: W, height: H)); view.image = img
+        a.accessoryView = view
+        NSApp.activate(ignoringOtherApps: true)
+        a.runModal()
+        world.postcard = nil
+        world.mailWaiting = false
+        rebuildMenu()
+    }
+
     @objc private func inviteFriend() {
         if !bridge.linked { bridge.create(side: "right"); updateDoor() }
         let code = bridge.room ?? ""
@@ -1852,9 +1891,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bridge.away = bridge.away.filter { $0 != w.species }
         if world.door == nil { updateDoor() }
         guard let c = world.arriveThroughDoor(sp.info, yFrac: w.y, vx: w.vx, vy: w.vy, airborne: w.air) else { return }
-        // Home from a friend's Mac with a postcard for the mailbox (or a visitor arriving from theirs).
+        // Home from a trip with a postcard for the mailbox.
+        if cameHome {
+            world.mailWaiting = true
+            world.postcard = (bridge.peerIsMac ? "a friend's Mac" : "your iPad", w.species)
+        }
+        // (or a visitor arriving from a friend's Mac).
         if bridge.peerIsMac {
-            if cameHome { world.mailWaiting = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 guard let self, self.world.creatures.contains(where: { $0.id == c.id }) else { return }
                 self.overlay.showBubble(cameHome ? "Back! I brought a postcard 💌" : "Hi! Just visiting 🎒", on: c.id, seconds: 2.6)

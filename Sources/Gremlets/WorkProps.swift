@@ -390,22 +390,42 @@ enum PropArt {
     /// back under the shelf at `shelfPx` to prop it up. Every tree is a little different (`seed`), and the leaves turn
     /// with the season. The trunk stands a third of the way in from the left edge of the image (`treeAnchorX`);
     /// `mirror` draws it for a shelf on the window's left side.
-    static let treeWidthPx = 96
-    static let treeAnchorX = 1.0 / 3.0
+    static let treeWidthPx = 132
+    static let treeAnchorX = 50.0 / 132.0
     static func tree(heightPx: Int, shelfPx: Int, seed: UInt64, month: Int, mirror: Bool = false) -> CGImage {
-        let W = treeWidthPx, H = max(30, heightPx), x0 = 32.0
+        // A wider picture than the tree needs, so no leaf or limb is ever cut off at its edges.
+        let W = treeWidthPx, H = max(30, heightPx) + 12, x0 = 50.0
         var cv = PixelCanvas(W, H)
         var r = ArtRNG(s: seed &* 31 &+ 17)
-        let bark: UInt32 = 0x8A5A35, dark: UInt32 = 0x5E3B22, light: UInt32 = 0xA9743F
-        let autumn = [9, 10, 11].contains(month), winter = [12, 1, 2].contains(month), spring = [3, 4, 5].contains(month)
-        let lf: UInt32 = autumn ? 0xE08A2C : 0x6CC04A
-        let lfL: UInt32 = autumn ? 0xF2B45C : 0xA6E36E
-        let lfD: UInt32 = autumn ? 0xA8521E : 0x3E8E3A
-        let vine: UInt32 = autumn ? 0xB8762A : 0x4FA03A
+        let autumn = [9, 10, 11].contains(month), spring = [3, 4, 5].contains(month)
+        // Every tree is a kind: oak, pine, maple, birch, cherry or willow, each with its own colours and its own
+        // autumn (the pine stays green, the maple goes red, the birch gold), so a desktop of them is never all one hue.
+        let kind = Int(seed % 6)
+        let evergreen = kind == 1
+        let winter = [12, 1, 2].contains(month) && !evergreen
+        let bark: UInt32 = kind == 3 ? 0xD8D2C4 : 0x8A5A35, dark: UInt32 = kind == 3 ? 0x5A5650 : 0x5E3B22, light: UInt32 = kind == 3 ? 0xF0ECE2 : 0xA9743F
+        let palettes: [(UInt32, UInt32, UInt32)] = [
+            (0x6CC04A, 0xA6E36E, 0x3E8E3A),   // oak
+            (0x3E8E5A, 0x6CB87A, 0x2A6640),   // pine
+            (0x7CC24E, 0xB0E37A, 0x4A8E36),   // maple
+            (0x9ACD5A, 0xC8EC8A, 0x6A9E3A),   // birch
+            (0x6CC04A, 0xA6E36E, 0x3E8E3A),   // cherry
+            (0x8CC860, 0xBCE68C, 0x5E9A44),   // willow
+        ]
+        let autumnPalettes: [(UInt32, UInt32, UInt32)] = [
+            (0xE08A2C, 0xF2B45C, 0xA8521E),   // oak: orange
+            (0x3E8E5A, 0x6CB87A, 0x2A6640),   // pine: still green
+            (0xC8402E, 0xE8705A, 0x8E2A20),   // maple: red
+            (0xE8C04A, 0xF8E07A, 0xB8902A),   // birch: gold
+            (0xD8644A, 0xF0957A, 0xA8402E),   // cherry: coral
+            (0xC8C04A, 0xE4DC7A, 0x8E8A2E),   // willow: yellow-green
+        ]
+        let (lf, lfL, lfD) = autumn ? autumnPalettes[kind] : palettes[kind]
+        let vine: UInt32 = 0x4FA03A
         let lean: Double = r.range(-3, 8)
         let wobble: Double = r.range(2.4, 4.2)
         let phase: Double = r.range(0, 3)
-        let hh = Double(H)
+        let hh = Double(H - 12)          // the tree itself; the 12 rows above are headroom for the crown
         func trunkX(_ y: Double) -> Double { let t = y / hh; return x0 + lean * t + sin(t * 4.2 + phase) * wobble * (0.25 + t) }
         func trunkW(_ y: Double) -> Double { 12 - 7 * (y / hh) }
         // Limbs: (height, direction, length, rise). Mostly toward the open side; one props up the shelf.
@@ -418,18 +438,21 @@ enum PropArt {
             let dir: Double = (i % 3 == 1) ? -1 : (r.next() < 0.8 ? 1 : -1)
             // Taller trees spread wider (within the picture: more room on the open side than over the window).
             let reach: Double = min(1.7, 0.75 + hh / 130)
-            let len: Double = min(dir < 0 ? 28 : 60, r.range(17, 36) * reach * (dir < 0 ? 0.7 : 1))
+            let len: Double = min(dir < 0 ? 26 : 50, r.range(17, 36) * reach * (dir < 0 ? 0.7 : 1))
             let rise: Double = r.range(4, 16)
             limbs.append((y: y, dir: dir, len: len, rise: rise, prop: false))
         }
         limbs.append((y: Double(shelfPx) - 4, dir: -1, len: 30, rise: 3, prop: true))
-        func leafCluster(_ x: Double, _ y: Double, _ big: Double) {
+        func leafCluster(_ x0: Double, _ y: Double, _ big: Double) {
+            // Kept inside the picture.
+            let x = x0.clamped(big + 2, Double(W) - big - 2)
             guard !winter else { if r.next() < 0.3 { cv.blob(x, y, 2.5, 1.6, base: 0xB8B6AE, light: 0xE8F4FF) }; return }
             cv.blob(x, y, big, big * 0.64, base: lf, light: lfL, shade: lfD)
             cv.blob(x - big * 0.55, y + big * 0.3, big * 0.62, big * 0.45, base: lf, light: lfL, shade: lfD)
             cv.blob(x + big * 0.5, y - big * 0.22, big * 0.58, big * 0.42, base: lf, light: lfL, shade: lfD)
             cv.blob(x + big * 0.1, y + big * 0.5, big * 0.5, big * 0.36, base: lf, light: lfL, shade: lfD)
-            if spring { for _ in 0..<4 { cv.set(Int(x + r.range(-big, big)), Int(y + r.range(-2, 4)), 0xFFB6D9) } }
+            if spring || kind == 4 && !autumn { for _ in 0..<4 { cv.set(Int(x + r.range(-big, big)), Int(y + r.range(-2, 4)), 0xFFB6D9) } }   // blossom
+            if evergreen && [12, 1, 2].contains(month) { for _ in 0..<3 { cv.set(Int(x + r.range(-big, big)), Int(y + big * 0.5), 0xFFFFFF) } }
             if autumn && r.next() < 0.6 { cv.set(Int(x + r.range(-big, big)), Int(y - big * 0.5), 0xC2562C) }
         }
         func hangingVine(_ x: Double, _ y: Double, _ len: Int) {
@@ -448,7 +471,7 @@ enum PropArt {
             leafCluster(tx + dx * crown, top + dy * min(1.2, crown), rad * min(1.25, crown))
         }
         // Trunk with bark, roots, a knot hole, and a vine winding up it.
-        for y in 0..<H {
+        for y in 0..<Int(hh) {
             let cx = trunkX(Double(y)), w = trunkW(Double(y))
             let xa = Int((cx - w / 2).rounded()), xb = Int((cx + w / 2).rounded()) - 1
             guard xb >= xa else { continue }
@@ -484,6 +507,8 @@ enum PropArt {
                 let w = max(1, Int((4.6 * (1 - t) + (l.prop ? 2.2 : 1.0)).rounded()))
                 cv.rect(Int(x.rounded()), Int(y.rounded()) - w / 2, 1, w, i % 6 == 2 ? dark : (i % 9 == 4 ? light : bark))
                 if w >= 3 { cv.set(Int(x.rounded()), Int(y.rounded()) - w / 2, dark) }
+                // Moss along the top of the limb, like everywhere else they live.
+                if i % 3 != 2 && t < 0.85 { cv.set(Int(x.rounded()), Int(y.rounded()) - w / 2 + w, i % 5 == 0 ? 0x8BD66A : 0x5E9E46) }
                 tipX = x; tipY = y
             }
             if l.prop {

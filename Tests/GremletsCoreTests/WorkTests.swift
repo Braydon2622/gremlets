@@ -432,7 +432,8 @@ import Testing
             w.remove(c.id)
         }
         // The snail is for floor gardens; the hot-air basket and flying carpet are retired.
-        #expect(styles == Set(ShelfStyle.allCases.filter { ![.snail, .basket, .carpet, .cloud, .swing].contains($0) }))
+        // Beside a window: no snail (floor gardens), no retired styles, and no trees (those grow only on the screen's sides).
+        #expect(styles == Set(ShelfStyle.allCases.filter { ![.snail, .basket, .carpet, .cloud, .swing, .branch, .treehouse].contains($0) }))
         #expect(rides == Set(Ride.up))
         #expect(!rides.contains(.balloon) && !rides.contains(.umbrella), "only rides from nature")
     }

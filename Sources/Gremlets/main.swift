@@ -2,6 +2,7 @@ import AppKit
 
 // Menu-bar-only app: no Dock icon, no main window.
 ArtPreview.runIfRequested()
+ShowcaseRender.runIfRequested()
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

@@ -57,6 +57,7 @@ struct Brain {
         world.boostChoices(for: c, add: add)
         world.mossChoices(for: c, add: add)
         world.snowChoices(for: c, add: add)
+        world.notchChoices(for: c, add: add)
         world.zipChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)
@@ -188,7 +189,7 @@ struct Brain {
                                       "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
                                       "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]
     static let restful: Set<String> = ["idle", "sleep", "napTogether", "goHome", "sitInTree", "climbTree", "jumpUp", "soak", "campfire",
-                                       "chill", "napInTree", "drink"]
+                                       "chill", "napInTree", "drink", "notchNap"]
 
     static func reweighted(_ choices: [Choice], _ world: World) -> [Choice] {
         if world.claudeWorking {

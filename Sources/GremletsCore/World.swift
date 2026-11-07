@@ -99,6 +99,11 @@ public final class World {
     public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
     /// Claude has been quiet for a couple of minutes: time to wind down.
     public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    /// The home under the notch (nil on screens without one); see Notch.swift.
+    public var notchHome: NotchHome? { didSet { if notchHome != oldValue { setSurfacesDirty() } } }
+    var nextNotchTripAt = 0.0
+    /// The Gremlet napping (or about to) in the notch hammock: id, since when, and whether it has dozed off yet.
+    var hammockNapper: (Int, Double, Bool)?
     /// Codebase castles by project, where they stand, and what just landed on them (see Castle.swift).
     public internal(set) var castles: [String: Castle] = [:]
     public internal(set) var castlePlacements: [CastlePlacement] = []
@@ -225,7 +230,7 @@ public final class World {
         rebuildVines()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces + mossPadSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces + mossPadSurfaces + notchSurfaces }
 
     // MARK: Creatures
 
@@ -366,6 +371,7 @@ public final class World {
         updateSigns()
         updateOvergrowth(dt)
         updateWeather(dt)
+        checkHammock()
         let working = creatures.contains { $0.job?.kind == .claude && $0.job?.phase == .working && clock - ($0.job?.lastToolTime ?? -999) < 90 }
         if let t = creatures.compactMap({ $0.job?.kind == .claude ? $0.job?.lastToolTime : nil }).max(), t > lastClaudeWorkAt { lastClaudeWorkAt = t }
         mossMinutes = (mossMinutes + (working ? dt * workClockScale / 60 : -dt / 360)).clamped(0, World.mossMax)

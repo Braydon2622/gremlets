@@ -12,6 +12,7 @@ final class SpectacleRenderer {
     private var plants: [Int: PlantLayer] = [:]
     private var brackets: [Int: (layer: CALayer, key: String)] = [:]
     private var castleLayers: [String: (layer: CALayer, key: String)] = [:]
+    private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
     private var squashUntil: [Int: CFTimeInterval] = [:]
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
@@ -100,6 +101,7 @@ final class SpectacleRenderer {
         renderMoss()
         renderWeather()
         renderCastles()
+        renderNotch()
         renderPlans()
         renderRoutes()
         renderRopes()
@@ -1818,6 +1820,50 @@ extension SpectacleRenderer {
                 overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 5, dx: -16...16, dy: 10...40, duration: 0.8)
             }
         }
+    }
+}
+
+// MARK: The home under the notch (see Notch.swift)
+
+extension SpectacleRenderer {
+    fileprivate func renderNotch() {
+        guard let n = world.notchHome, world.notchHomeShowing, let (si, base) = local(Vec2(n.houseMinX, n.houseBottom)) else {
+            if let l = notchLayers { l.house.removeFromSuperlayer(); l.hammock.removeFromSuperlayer(); l.ropes.removeFromSuperlayer(); notchLayers = nil }
+            return
+        }
+        let lit = world.claudeWorking || world.isNight
+        var l = notchLayers ?? {
+            let house = pixelLayer(); house.anchorPoint = .zero; house.zPosition = 1.15
+            let hammock = pixelLayer(); hammock.anchorPoint = CGPoint(x: 0.5, y: 0); hammock.zPosition = 1.15
+            let ropes = CAShapeLayer(); ropes.strokeColor = NSColor(red: 0.54, green: 0.42, blue: 0.29, alpha: 0.95).cgColor
+            ropes.lineWidth = 1.5; ropes.fillColor = nil; ropes.zPosition = 1.14
+            ropes.actions = ["path": NSNull()]
+            popIn(house); popIn(hammock)
+            return (house, hammock, ropes, "")
+        }()
+        for layer in [l.house, l.hammock, l.ropes] as [CALayer] { attach(layer, si) }
+        let key = "\(lit)-\(Int(n.minX))-\(Int(n.maxX))"
+        if l.key != key {
+            let img = NotchArt.house(lit: lit)
+            l.house.contents = img
+            l.house.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+            let hm = NotchArt.hammock(widthPx: Int((n.hammock.maxX - n.hammock.minX) / 3))
+            l.hammock.contents = hm
+            l.hammock.bounds = CGRect(x: 0, y: 0, width: hm.width * 3, height: hm.height * 3)
+            l.key = key
+        }
+        l.house.position = CGPoint(x: base.x.rounded(), y: base.y.rounded() - 3)
+        let o = screens[si].frame.origin
+        let hx = (n.hammock.minX + n.hammock.maxX) / 2 - o.x, hy = n.hammock.y - o.y
+        l.hammock.position = CGPoint(x: hx.rounded(), y: (hy - 8).rounded())
+        // Ropes up to the bottom of the menu bar: two for the house, two for the hammock.
+        let top = n.menuBottom - o.y + 2
+        let path = CGMutablePath()
+        let roofY = base.y - 3 + 17 * 3 - 3
+        for x in [base.x + 6, base.x + 40] { path.move(to: CGPoint(x: x, y: roofY)); path.addLine(to: CGPoint(x: x, y: top)) }
+        for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
+        l.ropes.path = path
+        notchLayers = l
     }
 }
 

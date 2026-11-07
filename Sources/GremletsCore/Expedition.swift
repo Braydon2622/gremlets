@@ -53,6 +53,8 @@ public struct Flag: Equatable, Sendable {
 public enum ExpeditionGoal: Equatable, Sendable {
     case treasure(Int)
     case summit
+    /// Up to the home under the notch, for a nap in the hammock.
+    case notch
 }
 
 public enum LegMethod: String, Sendable {
@@ -212,6 +214,10 @@ extension World {
             target = nodes.firstIndex { abs($0.y - ch.pos.y) < 3 && $0.supports(x: ch.pos.x) }
             guard target != nil else { return nil }
         }
+        if goal == .notch {
+            target = nodes.firstIndex { $0.ownerID == World.notchPorchOwner } ?? nodes.firstIndex { $0.ownerID == World.notchHammockOwner }
+            guard target != nil else { return nil }
+        }
         while true {
             var u = -1
             for i in 0..<n where !done[i] && dist[i] < .infinity && (u < 0 || dist[i] < dist[u]) { u = i }
@@ -274,6 +280,9 @@ extension World {
             guard let r = route(for: c, from: support, nodes: nodes, goal: goal), !r.isEmpty else { return false }
             legs = r
             nextSummitAt = clock + rng.range(1500, 2700)
+        case .notch:
+            guard let r = route(for: c, from: support, nodes: nodes, goal: goal), !r.isEmpty else { return false }
+            legs = r
         }
         endSocial(c)
         c.visitingID = nil; c.tendX = nil; c.targetX = nil
@@ -432,6 +441,9 @@ extension World {
                 c.expedition = ex
             case .summit:
                 plantFlag(c, on: s)
+            case .notch:
+                c.expedition = nil
+                settleInHammock(c)
             }
         case .homebound:
             ex.phase = .opening; ex.legStarted = clock

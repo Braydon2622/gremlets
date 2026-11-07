@@ -16,6 +16,7 @@
 #   gremlet ferry cross          the ferry makes one stop and sails through the doorway to the linked screen
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
 #   gremlet castle [folder] [edit <subfolder>]  build that project's codebase castle on its Claude terminal (default: here)
+#   gremlet notch                someone climbs up to the home under the notch for a nap in the hammock
 #   gremlet village-page [folder] a read-only web page of your village to put online (counts only, no project names)
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
 #   gremlet kite                 a free Gremlet flies a kite for a while
@@ -71,7 +72,7 @@ case "${1:-}" in
   ferry)   if [ "${2:-}" = "cross" ]; then call "ferry?cross=1"; echo; else call ferry >/dev/null; fi ;;
   merchant) call merchant >/dev/null ;;
   kite)    call kite; echo ;;
-  stairs|cart|chest|expedition|unlink|cross|boost) call "$1"; echo ;;
+  stairs|cart|chest|expedition|unlink|cross|boost|notch) call "$1"; echo ;;
   react)   call "react?name=${2:-screenshot}"; echo ;;
   moss)    case "${2:-}" in
              climb|pad|plant) call "moss?do=$2" ;;

@@ -253,6 +253,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshEnvironment() {
         lastWindowPoll = CACurrentMediaTime()
+        world.notchHome = Self.notchHome()
         var wins = WindowTracker.snapshot()
         if sense.standOnText {
             for i in wins.indices { wins[i].spans = sense.spans(for: wins[i].id, size: CGSize(width: wins[i].frame.w, height: wins[i].frame.h)) }
@@ -1202,6 +1203,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let a = query["edit"] { world.castleEdit(project: project, area: Self.decoded(a)); schedule(rate: 60) }
             let live = world.bonsaiPlacements.contains { $0.project == project && $0.windowID != nil }
             return (200, #"{"ok":true,"project":"\#(project)","live":\#(live)}"#)
+        case "notch":
+            guard world.notchHome != nil else { return (409, #"{"ok":false,"error":"this screen has no notch"}"#) }
+            guard world.notchHomeShowing else { return (409, #"{"ok":false,"error":"a window is in the space under the notch, so the home is tucked away"}"#) }
+            guard world.startNotchTrip() else { return (409, #"{"ok":false,"error":"nobody can find a way up right now (it needs windows reaching up toward the top of the screen)"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
         case "village-page":
             // A static page of the village to put online (default: ~/Pictures/Gremlets/Village Page).
             let raw = query["dir"].map(Self.decoded) ?? ""
@@ -1605,6 +1612,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (id, CGRect(x: b["X"] ?? 0, y: b["Y"] ?? 0, width: width, height: height))
         }
         return nil
+    }
+
+    /// The built-in screen's notch (MacBooks from 2021 on): its left and right edges and the bottom of the menu bar.
+    static func notchHome() -> NotchHome? {
+        guard #available(macOS 12, *), let s = NSScreen.screens.first, s.safeAreaInsets.top > 0,
+              let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea else { return nil }
+        let lo = s.frame.minX + l.maxX, hi = s.frame.minX + r.minX
+        guard hi - lo > 60, hi - lo < 400 else { return nil }
+        return NotchHome(minX: lo, maxX: hi, menuBottom: s.visibleFrame.maxY)
     }
 
     @objc private func askWeatherCity() {

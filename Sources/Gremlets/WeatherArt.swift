@@ -226,3 +226,48 @@ enum CastleArt {
         return cv.image
     }
 }
+
+/// The home under the notch (see Notch.swift).
+enum NotchArt {
+    /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
+    /// window glows (Claude is working, or it's night).
+    static func house(lit: Bool) -> CGImage {
+        // 46 + 22 pt wide, 38 pt tall + roof: in art pixels (3 pt each).
+        let w = 23, h = 17
+        var cv = PixelCanvas(w, h)
+        let plank: UInt32 = 0xB07A47, plankDark: UInt32 = 0x8A5A35, plankLight: UInt32 = 0xC99460
+        // Walls (15 px wide), boards running across.
+        for y in 1..<10 { for x in 0..<15 { cv.set(x, y, y % 3 == 0 ? plankDark : (x == 0 ? plankDark : plank)) } }
+        for x in stride(from: 3, to: 15, by: 5) { cv.set(x, 5, plankLight) }
+        // The porch floor, out to the right, with a little rail post.
+        cv.hspan(0, w - 1, 0, plankDark); cv.hspan(0, w - 1, 1, plank)
+        cv.vspan(w - 1, 2, 4, plankDark); cv.hspan(15, w - 1, 4, plankLight)
+        // Roof: a mossy gable overhanging both sides.
+        for k in 0..<6 { cv.hspan(-1 + k, 15 - k, 10 + k, k < 2 ? 0x6E4428 : 0x5E9E46) }
+        for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 11, 0x8BD66A); cv.set(x + 1, 12, 0x3E7A34) }
+        // Round window and the door.
+        let glass: UInt32 = lit ? 0xFFD36B : 0x3B4660, glow: UInt32 = lit ? 0xFFF0B8 : 0x56627E
+        cv.blob(4.5, 6.5, 2.1, 2.1, base: glass, light: glow)
+        cv.set(4, 6, 0x6E4428); cv.set(5, 6, 0x6E4428); cv.set(4, 7, 0x6E4428)
+        cv.rect(9, 2, 4, 6, 0x5E3B22); cv.set(12, 5, 0xE0B04A)
+        // A tiny lantern on the porch post when it's lit.
+        if lit { cv.set(w - 1, 5, 0xFFC845); cv.set(w - 1, 6, 0xFFE9A0) }
+        cv.outline(0.6)
+        return cv.image
+    }
+
+    /// A hammock, sagging, woven in two colours, `widthPx` long.
+    static func hammock(widthPx: Int) -> CGImage {
+        let w = max(10, widthPx), h = 6
+        var cv = PixelCanvas(w, h)
+        for x in 0..<w {
+            let t = Double(x) / Double(w - 1)
+            let sag = Int((sin(t * .pi) * 3.2).rounded())
+            let top = 4 - sag
+            cv.set(x, top, x % 4 < 2 ? 0xE8D7B0 : 0xD9855A)
+            cv.set(x, top + 1, x % 4 < 2 ? 0xC9B48A : 0xB8683F)
+        }
+        cv.outline(0.7)
+        return cv.image
+    }
+}

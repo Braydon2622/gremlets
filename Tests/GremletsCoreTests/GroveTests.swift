@@ -14,16 +14,16 @@ import Testing
 
     @Test func claudeTasksGrowAndUnlockTheGrove() {
         let w = world()
-        #expect(w.grove.plants.map(\.kind) == [.sunberry, .bouncecap])
+        #expect(w.grove.plants.map(\.kind) == [.bouncecap])
         #expect(w.grove.plants.allSatisfy { $0.level == 1 })
-        let small = w.grove.size(1).y
+        let small = w.grove.size(0).y
         for _ in 0..<30 { w.feedGrove() }
-        #expect(w.grove.plants.count == 6, "all six plots unlock by 30 tasks")
+        #expect(w.grove.plants.count == 5, "all five plots unlock by 30 tasks")
+        #expect(!w.grove.plants.contains { $0.kind == .sunberry }, "the sunberry bush is retired")
         #expect(w.grove.plants[0].level == 5 && w.grove.plants[1].level == 5)
-        #expect(w.grove.size(1).y > small * 2.5, "a maxed plant is far bigger than a sprout")
-        #expect(w.grove.plants[0].berries > 0)
+        #expect(w.grove.size(0).y > small * 2.5, "a maxed plant is far bigger than a sprout")
         // Bigger plants offer platforms: the skyvine has leaves all the way up.
-        let vine = w.groveLedges.filter { $0.plot == 3 }
+        let vine = w.groveLedges.filter { $0.plot == 2 }
         #expect(vine.count >= 4)
         #expect(w.surfaces.contains { $0.kind == .plant })
     }

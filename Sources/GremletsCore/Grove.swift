@@ -124,11 +124,12 @@ public final class Grove: Codable {
         festivalDone = try c.decodeIfPresent(Bool.self, forKey: .festivalDone) ?? false
     }
 
-    public static let maxPlots = 6
+    public static let maxPlots = 5
     /// Plot unlock schedule: total tasks needed for plot n (the first two are free).
-    public static let unlockAt = [0, 0, 4, 10, 18, 30]
-    /// Planting order, so every grove grows the same useful mix.
-    static let order: [GroveKind] = [.sunberry, .bouncecap, .lanternbloom, .skyvine, .snapjaw, .wishwillow]
+    public static let unlockAt = [0, 4, 10, 18, 30]
+    /// Planting order, so every grove grows the same useful mix. (The sunberry bush is retired: Braydon found the
+    /// green clump beside the mushroom odd, and it sat over the bottoms of windows.)
+    static let order: [GroveKind] = [.bouncecap, .lanternbloom, .skyvine, .snapjaw, .wishwillow]
     /// The garden is a corner, not a row: it hugs the left edge of the screen and climbs it (the skyvine runs up the
     /// wall, the willow spreads over everything). Offsets in points from the screen's left edge.
     static func offset(_ k: GroveKind) -> Double {
@@ -260,6 +261,7 @@ extension World {
     /// Replaces the grove (loaded from disk) and plants anything already unlocked.
     public func loadGrove(_ g: Grove) {
         grove = g
+        grove.plants.removeAll { $0.kind == .sunberry }
         // Older villages grew in from the left corner, where the garden lives now: move those houses to the right.
         let displaced = grove.village.filter { $0.x < 0.36 }
         if !displaced.isEmpty {

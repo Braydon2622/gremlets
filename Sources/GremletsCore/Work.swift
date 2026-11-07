@@ -671,7 +671,7 @@ extension World {
                 return travel(c, j, dt, on: support)
             }
             let resting = j.isHobby && !userActive
-            if !resting { j.workSeconds += dt }
+            if !resting { j.workSeconds += dt * workClockScale }
             growGarden(j, dt, tending: !resting)
             if j.isHobby && j.garden.allBloomed {
                 finishJob(c.id); return true

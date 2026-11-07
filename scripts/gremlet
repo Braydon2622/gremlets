@@ -14,6 +14,7 @@
 #   gremlet meteors | festival | lanterns   start a little grove moment now
 #   gremlet ferry | merchant     call the sky ferry, or the traveling merchant
 #   gremlet snapshot             save a picture of your village (Pictures/Gremlets) and copy it
+#   gremlet demo [seconds]       play a scripted Claude session on your front window and record it (Movies/Gremlets)
 #   gremlet grow [tasks]         count Claude tasks toward the grove by hand (default 1)
 #   gremlet run <command...>     run a command, then pass/fail on its exit code (exit code is preserved)
 #
@@ -49,6 +50,18 @@ case "${1:-}" in
   status)  call status GET; echo ;;
   ferry|merchant) call "$1" >/dev/null ;;
   snapshot) call snapshot; echo ;;
+  demo)
+    secs="${2:-42}"
+    out="$(curl -s -m 2 -X POST -H 'X-Gremlets: 1' "${URL}/demo?seconds=${secs}&pid=$PPID")" || { echo "gremlet: the Gremlets app isn't running" >&2; exit 1; }
+    region="$(printf '%s' "$out" | /usr/bin/python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("region",""))
+except Exception: print("")')"
+    [ -n "$region" ] || { echo "gremlet: $out" >&2; exit 1; }
+    if [ "${3:-}" = "--no-record" ]; then echo "Playing a ${secs}s Claude session demo."; exit 0; fi
+    mkdir -p "$HOME/Movies/Gremlets"
+    f="$HOME/Movies/Gremlets/Claude session $(date '+%Y-%m-%d %H.%M').mov"
+    echo "Recording ${secs}s of the front window to $f"
+    screencapture -V "$secs" -R "$region" "$f" && echo "Saved: $f" ;;
   meteors|festival|lanterns) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
   run)
@@ -57,6 +70,6 @@ case "${1:-}" in
     "$@"; code=$?
     if [ $code -eq 0 ]; then call pass >/dev/null; else call fail >/dev/null; fi
     exit $code ;;
-  ""|-h|--help|help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+  ""|-h|--help|help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "gremlet: unknown action '$1' (try: gremlet help)" >&2; exit 2 ;;
 esac

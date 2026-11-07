@@ -27,7 +27,8 @@ final class ClaudeBuddy {
         let pid = q["pid"].flatMap { Int32($0) }
         switch q["event"] ?? "" {
         case "start":
-            let windowID = pid.flatMap { ProcessTree.frontWindow(forDescendant: $0) }
+            // The window comes from the hook's process (or, for the demo, is named outright).
+            let windowID = q["window"].flatMap { Int($0) } ?? pid.flatMap { ProcessTree.frontWindow(forDescendant: $0) }
             let prefer = sessions[session].map(\.creatureID)
             let craft = Craft.allCases.filter { $0 != lastCraft }.randomElement() ?? .garden
             guard let id = world.startJob(windowID: windowID, craft: craft, prefer: prefer) else {

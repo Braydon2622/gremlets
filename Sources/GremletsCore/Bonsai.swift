@@ -319,7 +319,7 @@ extension World {
     static func isNurseryOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= nurseryOwnerBase && o > nurseryOwnerBase - 100 }
     static func isLedgeOwner(_ o: Int?) -> Bool { guard let o else { return false }; return o <= ledgeOwnerBase && o > bonsaiOwnerBase }
 
-    public static let nurserySlots = 5
+    public static let nurserySlots = 4
     public static let nurseryWidth = 140.0
 
     // MARK: Growth (called by the Claude buddy)
@@ -344,6 +344,13 @@ extension World {
         let wasLive = liveBonsai[project] != nil
         liveBonsai[project] = LiveBonsai(windowID: windowID, floorX: floorX)
         if !wasLive { bonsaiEvents.append(.moved(project, live: true)) }
+        rebuildAttached()
+    }
+
+    /// Puts a tree in the book as given (the demo plants an established one; the real book is restored after).
+    public func seedBonsai(_ t: Bonsai) {
+        bonsaiBook.trees.removeAll { $0.project == t.project }
+        bonsaiBook.trees.append(t)
         rebuildAttached()
     }
 
@@ -393,8 +400,8 @@ extension World {
     /// Nursery bracket `k` (0 = lowest) on the main screen.
     public func nurseryBracket(_ k: Int) -> Surface? {
         guard let f = groveFloor else { return nil }
-        let y = f.minY + 150 + Double(k) * 140
-        guard y < f.maxY - 160 else { return nil }
+        let y = f.minY + 170 + Double(k) * 160
+        guard y < f.maxY - 170 else { return nil }
         let lo = nurserySide < 0 ? f.minX + 6 : f.maxX - World.nurseryWidth - 6
         return Surface(ownerID: World.nurseryOwnerBase - k, kind: .shelf, y: y, minX: lo, maxX: lo + World.nurseryWidth)
     }
@@ -439,7 +446,7 @@ extension World {
             guard let br = nurseryBracket(k) else { break }
             liveProjects.insert(tree.project)
             let layout = BonsaiGeometry.layout(tree)
-            let scale = min(0.62, 118 / max(1, layout.bounds.maxY))
+            let scale = min(0.8, 150 / max(1, layout.bounds.maxY))
             placements.append(BonsaiPlacement(project: tree.project, base: Vec2(br.minX + br.width / 2, br.y), scale: scale, windowID: nil, slot: k, layout: layout, index: placements.count))
             surfacesOut.append(br)
         }

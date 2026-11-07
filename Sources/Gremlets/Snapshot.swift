@@ -6,6 +6,20 @@ import GremletsCore
 /// ~/Pictures/Gremlets and copied to the clipboard, ready to paste into a post.
 enum VillageSnapshot {
     static func make(world: World, species: [String: LoadedSpecies]) -> URL? {
+        guard let (image, size) = render(world: world, species: species) else { return nil }
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/Gremlets", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm"
+        let url = dir.appendingPathComponent("Village \(f.string(from: Date())).png")
+        let rep = NSBitmapImageRep(cgImage: image)
+        guard let png = rep.representation(using: .png, properties: [:]), (try? png.write(to: url)) != nil else { return nil }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects([NSImage(cgImage: image, size: size)])
+        return url
+    }
+
+    /// The postcard itself.
+    static func render(world: World, species: [String: LoadedSpecies]) -> (image: CGImage, size: CGSize)? {
         guard let floor = world.groveFloor else { return nil }
         let W = 1600, H = 660
         guard let ctx = CGContext(data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
@@ -112,14 +126,6 @@ enum VillageSnapshot {
         NSGraphicsContext.restoreGraphicsState()
 
         guard let image = ctx.makeImage() else { return nil }
-        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/Gremlets", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH.mm"
-        let url = dir.appendingPathComponent("Village \(f.string(from: Date())).png")
-        let rep = NSBitmapImageRep(cgImage: image)
-        guard let png = rep.representation(using: .png, properties: [:]), (try? png.write(to: url)) != nil else { return nil }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.writeObjects([NSImage(cgImage: image, size: NSSize(width: W, height: H))])
-        return url
+        return (image, CGSize(width: W, height: H))
     }
 }

@@ -53,6 +53,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let phone = PhoneLink()
     private let icons = DesktopIcons()
     private let controls = AppControls()
+    private let dayLog = DayLog()
+    private lazy var showcase: Showcase = {
+        let sc = Showcase(world: world, buddy: buddy)
+        sc.onFinish = { [weak self] in self?.rebuildMenu() }
+        return sc
+    }()
     private let companion = CompanionAI()
     private var lastMorning = UserDefaults.standard.string(forKey: "companion.lastMorning") ?? ""
     private var lastEvening = UserDefaults.standard.string(forKey: "companion.lastEvening") ?? ""
@@ -136,25 +142,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.handle(events)
         let groveEvents = world.drainGroveEvents()
         overlay.fx.handle(groveEvents)
+        if !showcase.running {
+            for e in groveEvents {
+                if case .fed = e { dayLog.add { $0.tasks += 1 } }
+                if case .houseAdded = e { dayLog.add { $0.houses += 1 } }
+            }
+        }
         if groveEvents.contains(where: { if case .fed = $0 { return true }; if case .wish = $0 { return true }; if case .houseAdded = $0 { return true }; return false }) { saveGrove() }
         overlay.fx.handle(world.drainSpectacleEvents())
         overlay.handleClaude(world.drainClaudeEvents())
         let growth = world.drainBonsaiEvents()
-        if !growth.isEmpty { overlay.bonsaiFX.handle(growth); bonsaiDirty = true }
+        if !growth.isEmpty {
+            overlay.bonsaiFX.handle(growth); bonsaiDirty = true
+            if !showcase.running {
+                let leaves = growth.filter { if case .grew(_, "leaf", _) = $0 { return true }; return false }.count
+                if leaves > 0 { dayLog.add { $0.edits += leaves } }
+            }
+        }
         overlay.fx.handle(world.drainBuildEvents())
         let trades = world.drainMerchantEvents()
         overlay.fx.handle(trades)
         if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
         let adventures = world.drainAdventureEvents()
         overlay.fx.handle(adventures)
-        if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
+        if adventures.contains(where: { if case .gemFound = $0 { return true }; return false }) {
+            saveGrove(); rebuildMenu()
+            if !showcase.running { dayLog.add { $0.gems += adventures.filter { if case .gemFound = $0 { return true }; return false }.count } }
+        }
         overlay.render()
         overlay.updateClickThrough()
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
         if overlay.hasBubbles { wanted = max(wanted, 30) }
-        if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.merchant != nil || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
+        if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.merchant != nil || showcase.running || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
         schedule(rate: wanted)
@@ -379,6 +400,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(groveMenuItem())
         menu.addItem(bonsaiMenuItem())
+        let journal = NSMenuItem(title: "Open Garden Journal", action: #selector(openJournal), keyEquivalent: "")
+        journal.target = self
+        journal.toolTip = "Your projects' trees and their stories, the village, the last two weeks of Claude work, and today's postcard. Stays on your Mac."
+        menu.addItem(journal)
         let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on App Controls (needs Accessibility)" : "Stand on App Controls",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
@@ -719,6 +744,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
         server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
+        server.pages["/journal"] = { [weak self] in
+            guard let self else { return "" }
+            return Journal.page(world: self.world, species: self.species, log: self.dayLog)
+        }
         overlay.onDoubleClick = { [weak self] id in self?.openChat(with: id) }
         overlay.icons = icons
         icons.onChange = { [weak self] in self?.rebuildMenu() }
@@ -753,7 +782,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }.joined(separator: ",")
             let f = focus.label.map { "\"\($0)\"" } ?? "null"
             let h = presence.hidden.map { "\"\($0.rawValue)\"" } ?? "null"
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)]}"#)
+            let jobs = world.creatures.compactMap { c -> String? in
+                guard let j = c.job, j.kind == .claude else { return nil }
+                return #"{"gremlet":"\#(c.species.id)","phase":"\#(j.phase)","blocks":\#(j.blocks),"work":\#(Int(j.workSeconds)),"window":\#(j.windowID.map(String.init) ?? "null"),"side":\#(j.shelfSide.map { String(Int($0)) } ?? "null"),"label":"\#(j.label ?? "")"}"#
+            }.joined(separator: ",")
+            let trees = world.bonsaiPlacements.map { #"{"project":"\#($0.project)","slot":\#($0.slot),"window":\#($0.windowID.map(String.init) ?? "null"),"x":\#(Int($0.base.x)),"y":\#(Int($0.base.y)),"scale":\#($0.scale)}"# }.joined(separator: ",")
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)]}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {
@@ -806,6 +840,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.startEvent(k) else { return (409, #"{"ok":false,"error":"an event is already running"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "demo":
+            // A scripted Claude session on the front window; the reply names the screen region worth recording.
+            let seconds = min(120, max(20, Double(query["seconds"] ?? "") ?? 42))
+            let pid = query["pid"].flatMap { Int32($0) }
+            guard let r = showcase.start(seconds: seconds, pid: pid) else {
+                return (409, #"{"ok":false,"error":"no front window with room above it (or a demo is already running)"}"#)
+            }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
         case "snapshot":
             guard let url = VillageSnapshot.make(world: world, species: species) else { return (500, #"{"ok":false}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
@@ -1055,6 +1098,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         companion.moment(kind, as: sp.info, bond: bonds.bond(sp.info.id), day: dayStats()) { [weak self] line in
             self?.world.receive(.wave)
             self?.overlay.showBubble(line, on: id, seconds: 8)
+            // In the morning, what yesterday added up to (the garden journal has the rest).
+            if kind == "morning", let y = self?.dayLog.yesterdayLine {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 9) { self?.overlay.showBubble(y + " The journal's in the menu.", on: id, seconds: 10) }
+            }
         }
     }
 
@@ -1189,6 +1236,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Bloom Festival", #selector(summonEvent(_:)), tag: 2)
         action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
         action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
+        action("Play a Claude Session Demo", #selector(playDemo), tip: "A scripted 40-second Claude session on your front window: the tree takes root, edits build, helpers arrive, a storm then a rainbow, the house moves to the village. Nothing is kept. 'gremlet demo' records it too.")
         action("Save Village Snapshot", #selector(saveSnapshot), tip: "Saves a picture of your village and its Claude stats to Pictures › Gremlets and copies it, ready to paste into a post.")
         action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
         let next = VillageItem.allCases.first { !world.owns($0) }
@@ -1235,6 +1283,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return item
     }
 
+    @objc private func openJournal() {
+        let port = ProcessInfo.processInfo.environment["GREMLETS_PORT"] ?? "47920"
+        if let url = URL(string: "http://127.0.0.1:\(port)/journal") { NSWorkspace.shared.open(url) }
+    }
+
     @objc private func toggleNurserySide() {
         world.nurserySide = -world.nurserySide
         UserDefaults.standard.set(world.nurserySide, forKey: "nursery.side")
@@ -1251,6 +1304,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func callFerry() { world.callFerry(); schedule(rate: 60) }
     @objc private func callMerchant() { world.callMerchant(); schedule(rate: 60) }
+
+    @objc private func playDemo() {
+        if showcase.start() == nil { NSSound.beep() }
+        schedule(rate: 60)
+    }
 
     @objc private func saveSnapshot() {
         guard let url = VillageSnapshot.make(world: world, species: species) else { NSSound.beep(); return }

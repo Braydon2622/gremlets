@@ -77,6 +77,8 @@ public final class World {
     /// Platforms that belong to a window (tree pads, terminal ledges) and ride along with it.
     var attachedOwnerWindow: [Int: Int] = [:]
     var _nurserySide = 1.0
+    /// How fast time at work passes (the demo turns it up so the ivy covers a window in a minute).
+    public var workClockScale = 1.0
     var nextMerchantAt: Double?
     var merchantEvents: [MerchantEvent] = []
     var adventureEvents: [AdventureEvent] = []

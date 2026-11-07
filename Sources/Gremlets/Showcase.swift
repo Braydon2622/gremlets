@@ -5,7 +5,7 @@ import GremletsCore
 /// while Claude works without waiting for a real session to go through every beat. A Gremlet comes to the window,
 /// the project's bonsai takes root on its top edge, edits place blocks and leaves, ivy creeps along the frame and
 /// mossy ledges grow out of its side, two helpers arrive for the subagents, a failed test brings a storm, a passing
-/// one a rainbow, the finished task puts a flower on the tree, and when the session ends the building moves down
+/// one a rainbow, a lantern hangs on the tree while Claude waits for an OK, the finished task puts a flower on the tree, and when the session ends the building moves down
 /// to the village and the tree to the nursery.
 ///
 /// Nothing sticks: the grove, village and bonsai book are restored when the show is over.
@@ -74,6 +74,7 @@ final class Showcase {
         send(15.5, "tool", ["tool": "Task"])
         send(17.0, "tool", ["tool": "TodoWrite"])
         send(20.5, "toolfail", ["tool": "Bash"])
+        send(21.2, "attention", ["kind": "permission"])   // a lantern hangs on the tree until the next tool call
         send(22.8, "toolfail", ["tool": "Bash", "kind": "test"])
         send(26.0, "helperdone")
         send(28.5, "tool", ["tool": "Bash", "kind": "test"])

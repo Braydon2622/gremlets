@@ -85,7 +85,7 @@ public final class World {
     /// Seeds in flight in games of catch.
     public internal(set) var playBalls: [PlayBall] = []
     public internal(set) var kite: Kite?
-    var nextKiteAt = 0.0
+    var nextKiteAt = 240.0   // the first kite goes up after a few minutes of life, then every ten to twenty-five
     var pendingThrows: [(at: Double, from: Int, to: Int)] = []
     public var eventsAllowed = true
     var builtSurfaces: [Surface] = []

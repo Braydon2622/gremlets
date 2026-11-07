@@ -52,9 +52,7 @@ struct Brain {
         if c.play != nil { c.set(.idle, duration: 0.4); return }
         world.groveChoices(for: c, add: add)
         world.playChoices(for: c, add: add)
-        // Kites are on request for now (gremlet kite): letting the brain pick them shifts the soak test's seed and a
-        // creature floats off the right edge, which needs a look before kites go automatic.
-        // world.kiteChoices(for: c, add: add)
+        world.kiteChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)
         if world.spectacle == nil, c.job == nil {

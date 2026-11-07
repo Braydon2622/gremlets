@@ -20,7 +20,7 @@ extension World {
     public func kiteHand(_ c: Creature) -> Vec2 { c.pos + Vec2(c.facing * c.size.x * 0.45, c.size.y * 0.62) }
 
     func kiteChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
-        guard kite == nil, !isNight, clock >= nextKiteAt, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
+        guard kite == nil, !isNight, maxHobbies > 0, clock >= nextKiteAt, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
               let g = c.groundOwner, (-100 ... -1).contains(g), c.energy > 0.3,
               let scr = screen(containingX: c.pos.x, y: c.pos.y), scr.maxY - c.pos.y > 320 else { return }
         add("kite", 0.5) { _ = self.startKite(for: c.id) }
@@ -55,7 +55,9 @@ extension World {
 
     func updateKite(_ dt: Double) {
         guard var k = kite else { return }
-        guard let c = creature(id: k.flyer), c.isGrounded, c.job == nil, c.play == nil, c.activity == .idle, !isNight else { endKite(); return }
+        // A nudge, a greeting or a few steps don't bring it down; sleep, a jump, a drag, a job or nightfall do.
+        guard let c = creature(id: k.flyer), c.isGrounded, c.job == nil, c.play == nil, !isNight,
+              [.idle, .walk, .chase, .react, .yawn, .alert, .work].contains(c.activity) else { endKite(); return }
         k.age += dt
         if k.age > k.duration { endKite(); return }
         let hand = kiteHand(c)
@@ -76,7 +78,7 @@ extension World {
             if along > 0 { k.vel = k.vel - n * along }
         }
         if k.pos.y < hand.y + 12 { k.pos.y = hand.y + 12; k.vel.y = abs(k.vel.y) * 0.3 }
-        c.facing = k.dir
+        if c.activity == .idle { c.facing = k.dir }
         // Friends nearby look up at it now and then.
         if Int(clock * 2) != Int((clock - dt) * 2) {
             for o in creatures where o.id != c.id && o.isGrounded && o.activity == .idle && o.job == nil

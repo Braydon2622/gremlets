@@ -401,8 +401,11 @@ extension World {
         }
         let y = min(w.maxY - World.shelfDrop, scr.maxY - 130).clamped(scr.minY + 40, scr.maxY - 60) + j.shelfStyle.bob(clock, j.seed)
         let edge = side > 0 ? w.maxX : w.minX
-        // Drifting platforms swing out away from the window and back, never into it.
-        let dx = abs(j.shelfStyle.drift(clock, j.seed)) * side
+        // Drifting platforms swing out away from the window and back, never into it, and never so far that the
+        // Gremlet standing out past its creation (146 points along the plank) would leave the screen.
+        var dx = abs(j.shelfStyle.drift(clock, j.seed)) * side
+        let reach = 146 + 24.0
+        if side > 0 { dx = min(dx, max(0, scr.maxX - reach - edge)) } else { dx = max(dx, min(0, scr.minX + reach - edge)) }
         let lo = (side > 0 ? edge - 6 : edge - World.shelfWidth) + dx
         let hi = (side > 0 ? edge + World.shelfWidth : edge + 6) + dx
         return Surface(ownerID: World.shelfOwner(workerID), kind: .shelf, y: y, minX: lo, maxX: hi)

@@ -211,12 +211,13 @@ final class BonsaiRenderer {
         for (k, e) in brackets where !used.contains(k) { fadeOut(e.layer); brackets[k] = nil }
     }
 
-    /// Ivy along the top edge of every window Claude is working in, growing from the tree's pot (or the corner)
-    /// toward the far end: a quarter of an hour of work covers a whole terminal.
+    /// Ivy along the top edge of every window a Gremlet is working at (Claude's terminals, and the windows they
+    /// garden beside), growing from the tree's pot (or the corner) toward the far end: a quarter of an hour of work
+    /// covers a whole terminal.
     private func renderIvy() {
         var alive = Set<Int>()
         for c in world.creatures {
-            guard let j = c.job, j.kind == .claude, j.phase == .working || j.phase == .finished, let wid = j.windowID,
+            guard let j = c.job, j.phase == .working || j.phase == .finished, let wid = j.windowID,
                   let w = world.windows[wid], let scr = NSScreen.screens.first(where: { $0.frame.contains(CGPoint(x: (w.minX + w.w / 2), y: w.maxY - 1)) }) ?? NSScreen.screens.first else { continue }
             let placement = world.bonsaiPlacements.first { $0.windowID == wid }
             // Start beside the pot if the tree is on this window, else at the corner nearer the screen edge.

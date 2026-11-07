@@ -853,7 +853,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
         case "gif":
             // A looping GIF of a recording (the demo), for a README or a post.
-            guard let path = query["path"], path.hasPrefix(FileManager.default.homeDirectoryForCurrentUser.path), FileManager.default.fileExists(atPath: path) else {
+            let path = Self.decoded(query["path"] ?? "")
+            guard path.hasPrefix(FileManager.default.homeDirectoryForCurrentUser.path), FileManager.default.fileExists(atPath: path) else {
                 return (400, #"{"ok":false,"error":"path must be a recording in your home folder"}"#)
             }
             guard let url = GIFMaker.make(from: URL(fileURLWithPath: path)) else { return (500, #"{"ok":false,"error":"couldn't read that recording"}"#) }
@@ -863,7 +864,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let url = TimeLapse.build() else { return (404, #"{"ok":false,"error":"no daily postcards yet"}"#) }
             return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "card":
-            let name = query["project"] ?? ""
+            let name = Self.decoded(query["project"] ?? "")
             guard let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name] else {
                 return (404, #"{"ok":false,"error":"no tree for that project"}"#)
             }
@@ -1140,6 +1141,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             switch action {
             case "chat": openChat(with: chatTarget(q["name"])?.id ?? 0)
             case "pair": pairPhone()
+            case "journal": openJournal()
+            case "demo": playDemo()
+            case "card":
+                let name = Self.decoded(q["project"] ?? "")
+                if let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name],
+                   let url = TreeCard.make(t, world: world) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             case "send": _ = handleControl(method: "POST", path: "/phone/send", query: q)
             default: _ = handleControl(method: "POST", path: "/" + action, query: q)
             }
@@ -1316,6 +1323,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sub.addItem(side)
         item.submenu = sub
         return item
+    }
+
+    /// Query values arrive raw from the control server.
+    static func decoded(_ raw: String) -> String {
+        raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? raw
     }
 
     @objc private func saveTimelapse() {

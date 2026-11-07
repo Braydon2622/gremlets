@@ -213,6 +213,8 @@ public enum GroveEvent: Equatable, Sendable {
     case bounce(Int, by: Int)
     case chomp(Int)
     case houseAdded(Int)
+    case wentHome(Int, by: Int)
+    case leftHome(Int, by: Int)
 }
 
 extension World {
@@ -316,6 +318,12 @@ extension World {
         if let i = grove.plant(of: .bouncecap) {
             add("bounce", 0.5 * (0.3 + c.energy)) { self.startGroveVisit(c, plot: i, task: .bounce) }
         }
+        // Bedtime (or just tired): walk home to a house in the village and sleep inside.
+        let sleepingIn = creatures.filter { $0.homeHouse != nil }.count
+        if !grove.village.isEmpty, isNight || c.energy < 0.35, sleepingIn < grove.village.count * 2 {
+            let n = Int(rng.next() % UInt64(grove.village.count))
+            add("goHome", isNight ? 1.3 : 0.8) { self.startHomeVisit(c, house: n) }
+        }
         if isNight, let i = grove.plant(of: .lanternbloom) {
             add("campfire", 1.1) { self.startGroveVisit(c, plot: i, task: .campfire) }
         }
@@ -360,6 +368,12 @@ extension World {
             groveEvents.append(.berryPicked(i, by: c.id))
         case .bounce(let i):
             startGroveVisit(c, plot: i, task: .bounce)
+        case .home(let n):
+            guard n < grove.village.count else { return }
+            c.homeUntil = clock + rng.range(isNight ? 60 : 25, isNight ? 180 : 70)
+            c.homeHouse = n
+            c.set(.sleep, duration: 9999)
+            groveEvents.append(.wentHome(n, by: c.id))
         case .campfire(let i):
             if let f = groveFloor { c.facing = grove.base(i, floor: f).x > c.pos.x ? 1 : -1 }
             c.idleVariant = "idle"
@@ -370,4 +384,15 @@ extension World {
 }
 
 /// Where a Gremlet is headed in the grove.
-enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int) }
+enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int) }
+
+extension World {
+    func startHomeVisit(_ c: Creature, house n: Int) {
+        guard let f = groveFloor, n < grove.village.count else { return }
+        let h = grove.village[n]
+        // The door is at the middle of the house.
+        c.targetX = (f.minX + h.x * f.w).clamped(f.minX + 20, f.maxX - 20)
+        c.groveTask = .home(n)
+        c.set(.walk, duration: 25)
+    }
+}

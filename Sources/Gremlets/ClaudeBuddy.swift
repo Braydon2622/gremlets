@@ -35,6 +35,7 @@ final class ClaudeBuddy {
             }
             if let c = world.creatures.first(where: { $0.id == id }), c.job?.craft == craft { lastCraft = craft }
             sessions[session] = Session(creatureID: id, project: project, lastEvent: Date(), finishedAt: nil)
+            world.labelJob(workerID: id, project)
         case "done":
             // Every finished Claude task grows the grove.
             world.feedGrove()

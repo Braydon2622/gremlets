@@ -5,7 +5,7 @@ extension World {
     /// Awake friends on roughly the same level and within reach.
     func nearbyFriends(of c: Creature, range: Double = 360) -> [Creature] {
         creatures.filter { o in
-            o !== c && o.job == nil && o.isGrounded && abs(o.pos.y - c.pos.y) < 40 && abs(o.pos.x - c.pos.x) < range
+            o !== c && o.job == nil && o.homeUntil == nil && o.isGrounded && abs(o.pos.y - c.pos.y) < 40 && abs(o.pos.x - c.pos.x) < range
         }
     }
 

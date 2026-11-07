@@ -267,6 +267,12 @@ enum BuildArt {
 
     static func isComplete(_ b: Biome, blocks: Int) -> Bool { blocks >= cells(b).count }
 
+    /// Height (art pixels) of what's been built so far: smoke and flags go on top of that, not the empty blueprint.
+    static func builtHeight(_ b: Biome, blocks: Int) -> Int {
+        let placed = cells(b).prefix(max(0, blocks))
+        return ((placed.map(\.1).max() ?? -1) + 1) * block
+    }
+
     private static func draw(_ cv: inout PixelCanvas, _ k: Character, x: Int, y: Int, b: Biome, lit: Bool, i: Int) {
         let s = block
         func fill(_ c: UInt32, _ hi: UInt32, _ lo: UInt32) {

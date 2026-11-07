@@ -38,6 +38,8 @@ extension World {
     public func claudeTool(workerID: Int, _ tool: ClaudeTool) {
         guard let c = creature(id: workerID), let j = c.job, j.phase != .leaving else { return }
         j.lastTool = tool
+        j.lastToolTime = clock
+        j.needsYou = false
         j.beats += 1
         switch tool {
         case .build:
@@ -53,6 +55,14 @@ extension World {
             claudeEvents.append(.helperJoined(worker: c.id, count: j.helpers))
         case .other: break
         }
+    }
+
+    /// Names the Claude session a Gremlet is helping with (the project folder), for the village journal.
+    public func labelJob(workerID: Int, _ label: String) {
+        guard let j = creature(id: workerID)?.job else { return }
+        j.label = label
+        j.needsYou = false
+        j.lastToolTime = clock
     }
 
     /// A subagent finished: one helper waves and goes home.

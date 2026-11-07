@@ -243,3 +243,42 @@ import Testing
         #expect(g.tasks == 3 && g.village.isEmpty && g.plants.count == 1)
     }
 }
+
+@Suite struct VillageLifeTests {
+    @Test func tiredGremletsSleepInsideAVillageHouseAndComeBackOut() {
+        let w = World(seed: 12)
+        w.maxHobbies = 0
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [])
+        w.loadGrove(Grove())
+        w.addHouse(biome: "snow", blocks: 20, size: Vec2(105, 90), project: "Gremlets", day: "Nov 6")
+        w.isNight = true
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(700, 40))
+        var wentIn = false, cameOut = false
+        for _ in 0..<(60 * 400) where !cameOut {
+            w.step(1.0 / 60)
+            _ = w.drainEvents()
+            for e in w.drainGroveEvents() {
+                if case .wentHome = e { wentIn = true; #expect(w.creature(at: c.pos + Vec2(0, 5)) == nil, "hidden inside, not clickable") }
+                if case .leftHome = e { cameOut = true }
+            }
+        }
+        #expect(wentIn && cameOut)
+        #expect(c.homeUntil == nil)
+    }
+
+    @Test func claudeSessionStatusFlags() throws {
+        let w = World(seed: 13)
+        w.setEnvironment(screens: [Rect(x: 0, y: 0, w: 1440, h: 860)], windowsFrontToBack: [WindowInfo(id: 5, frame: Rect(x: 300, y: 100, w: 600, h: 400))])
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(400, 0))
+        for _ in 0..<30 { w.step(1.0 / 30) }
+        let id = try #require(w.startJob(windowID: 5, craft: .garden, prefer: c.id))
+        w.labelJob(workerID: id, "MyApp")
+        let j = try #require(w.creatures.first { $0.id == id }?.job)
+        #expect(j.label == "MyApp" && !j.needsYou)
+        w.jobNeedsAttention(id)
+        #expect(j.needsYou)
+        w.claudeTool(workerID: id, .build)
+        #expect(!j.needsYou, "Claude got going again")
+    }
+}

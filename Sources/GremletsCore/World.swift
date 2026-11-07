@@ -156,7 +156,7 @@ public final class World {
 
     /// Top-most creature whose sprite has an opaque pixel at `p`.
     public func creature(at p: Vec2) -> Creature? {
-        creatures.last { $0.hitTest(p) }
+        creatures.last { $0.homeUntil == nil && $0.hitTest(p) }
     }
 
     func creature(id: Int?) -> Creature? {
@@ -272,6 +272,19 @@ public final class World {
 
     private func update(_ c: Creature, _ dt: Double) {
         c.animTime += dt * c.animSpeed
+        // Asleep inside a village house: rest up, and come back out when it's time (or when there's work to do).
+        if let until = c.homeUntil {
+            if c.job != nil || clock >= until || spectacle != nil {
+                c.homeUntil = nil
+                if let n = c.homeHouse { groveEvents.append(.leftHome(n, by: c.id)) }
+                c.homeHouse = nil
+                c.set(.wake, duration: c.animationLength(for: .wake))
+                emit(.wokeUp(c.id))
+            } else {
+                c.energy = min(1, c.energy + dt * 0.08)
+                return
+            }
+        }
         c.bumpCooldown = max(0, c.bumpCooldown - dt)
         c.startleCooldown = max(0, c.startleCooldown - dt)
         c.tagImmunity = max(0, c.tagImmunity - dt)

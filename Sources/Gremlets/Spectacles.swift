@@ -19,6 +19,7 @@ final class SpectacleRenderer {
     private var houses: [Int: (layer: CALayer, ground: CALayer, key: String)] = [:]
     private var bridgeLayers: [Int: (layer: CALayer, blocks: Int)] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
+    private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var projectiles: [CALayer] = []
     private var balls: [CALayer] = []
     private var shards: [Int: CALayer] = [:]
@@ -168,6 +169,13 @@ final class SpectacleRenderer {
                 }
             case .chomp(let i):
                 snapUntil[i] = CACurrentMediaTime() + 0.35
+            case .wentHome(let n, _), .leftHome(let n, _):
+                guard n < world.grove.village.count else { continue }
+                let h = world.grove.village[n]
+                if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + 8)) {
+                    overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 3, dx: -16...16, dy: 0...18, duration: 0.5)
+                }
+                if let l = houses[n]?.layer { boing(l, amount: 0.05) }
             case .houseAdded(let n):
                 guard n < world.grove.village.count else { continue }
                 let h = world.grove.village[n]
@@ -256,6 +264,14 @@ final class SpectacleRenderer {
             entry.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y)
             entry.ground.position = CGPoint(x: pt.x.rounded(), y: pt.y + 6)
             houses[n] = entry
+            // Someone's home: smoke from the chimney, and the odd "z" drifting out.
+            let now = CACurrentMediaTime()
+            if world.creatures.contains(where: { $0.homeHouse == n }), now >= (nextHouseSmoke[n] ?? 0) {
+                nextHouseSmoke[n] = now + 1.4
+                let f = entry.layer.frame
+                overlay.burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * 0.55, y: f.maxY), count: 1, dx: 4...14, dy: 26...44, duration: 2.2)
+                if Int(now) % 3 == 0 { overlay.burst([Effects.zzz], si: si, at: CGPoint(x: f.midX, y: f.maxY - 10), count: 1, dx: -10...10, dy: 20...34, duration: 1.8) }
+            }
         }
         for n in houses.keys where n >= world.grove.village.count {
             houses[n]?.layer.removeFromSuperlayer(); houses[n]?.ground.removeFromSuperlayer(); houses[n] = nil
@@ -721,6 +737,28 @@ final class SpectacleRenderer {
     }
 
     // MARK: Hit testing (for click-through)
+
+    /// The village house under a point, if any.
+    func house(at p: Vec2) -> Int? {
+        guard let floor = world.groveFloor else { return nil }
+        return world.grove.village.indices.last { n in
+            let h = world.grove.village[n]
+            return abs(p.x - (floor.minX + h.x * floor.w)) < h.w * 0.45 && p.y >= floor.minY && p.y < floor.minY + h.h
+        }
+    }
+
+    /// Clicking a village house: the work it remembers.
+    func describeHouse(_ n: Int) {
+        guard let floor = world.groveFloor, n < world.grove.village.count else { return }
+        let h = world.grove.village[n]
+        var parts = ["Built while Claude worked on \(h.project ?? "a project")", "\(h.blocks) edits"]
+        if let d = h.day { parts.append(d) }
+        if world.creatures.contains(where: { $0.homeHouse == n }) { parts.append("someone's asleep inside") }
+        if let (si, pt) = local(Vec2(floor.minX + h.x * floor.w, floor.minY + h.h + 24)) {
+            floatText(parts.joined(separator: " · "), si: si, at: pt, color: .systemBrown, size: 14, rise: 40, duration: 3.6)
+        }
+        if let l = houses[n]?.layer { boing(l, amount: 0.08) }
+    }
 
     /// The grove plant under a point, if any.
     func plant(at p: Vec2) -> Int? {

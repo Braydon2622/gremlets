@@ -105,6 +105,10 @@ final class OverlayController {
         var lastBiome: Biome?
         var lastBlocks = 0
         var project: String?
+        var nextChimney = 0.0
+        var flag: CALayer?
+        var doneCelebrated = false
+        var nextAmbient = 0.0
         var helpers: [CALayer] = []
         var lantern: CALayer?
         /// The tree a branch grows on, or the balloons a swing hangs from.
@@ -241,6 +245,10 @@ final class OverlayController {
                 layerScreen[c.id] = si
             }
             let origin = screens[si].frame.origin
+            // Asleep inside a village house: out of sight (the house shows smoke and z's instead).
+            let inside = c.homeUntil != nil
+            if layer.isHidden != inside { layer.isHidden = inside }
+            if inside { shadows[c.id]?.isHidden = true; continue }
             // Only touch layer properties that changed; every write dirties the layer tree for the next commit.
             let pos = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (c.pos.y - origin.y).rounded())
             if layer.position != pos { layer.position = pos }
@@ -808,6 +816,7 @@ final class OverlayController {
         let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
         let key = "\(b.rawValue)-\(j.blocks)-\(world.isNight)-\(si)"
         st.lastBiome = b; st.lastBlocks = j.blocks
+        st.project = j.label ?? st.project
         if st.buildKey != key {
             st.buildKey = key
             if let img = BuildArt.image(b, blocks: j.blocks, night: world.isNight) {
@@ -822,6 +831,36 @@ final class OverlayController {
             }
         }
         st.build?.position = CGPoint(x: (x - o.x).rounded(), y: (ground - o.y).rounded())
+        // Session status at a glance: chimney smoke while Claude works, a red flag on the roof when Claude needs
+        // you, a little shower of sparkles when it's done.
+        if let l = st.build {
+            var f = l.frame
+            f.size.height = CGFloat(BuildArt.builtHeight(b, blocks: j.blocks) * 3)
+            let now = CACurrentMediaTime()
+            let working = j.phase == .working && world.time - j.lastToolTime < 25 && !j.needsYou
+            if working && now >= st.nextChimney {
+                st.nextChimney = now + 1.3
+                burst([Effects.smoke], si: si, at: CGPoint(x: f.minX + f.width * 0.55, y: f.maxY), count: 1, dx: 3...12, dy: 24...40, duration: 2)
+            }
+            if j.needsYou {
+                let flag = st.flag ?? {
+                    let fl = pixelLayer(si, anchor: CGPoint(x: 0, y: 0))
+                    setImage(fl, ClaudeIcons.flag)
+                    let wave = CABasicAnimation(keyPath: "transform.rotation.z")
+                    wave.fromValue = -0.08; wave.toValue = 0.08; wave.duration = 0.5; wave.autoreverses = true; wave.repeatCount = .infinity
+                    fl.add(wave, forKey: "wave")
+                    screens[si].root.addSublayer(fl)
+                    popIn(fl)
+                    return fl
+                }()
+                flag.position = CGPoint(x: f.midX, y: f.maxY - 2)
+                st.flag = flag
+            } else if let fl = st.flag { fadeOut(fl, 0.3); st.flag = nil }
+            if j.phase == .finished && !st.doneCelebrated {
+                st.doneCelebrated = true
+                burst([Effects.sparkle, Effects.star, Effects.smallStar], si: si, at: CGPoint(x: f.midX, y: f.maxY), count: 9, dx: -40...40, dy: 10...70, duration: 1.3, stagger: 0.05)
+            }
+        }
         // Helpers: tiny copies of the Gremlet hopping around the building, one per running subagent.
         while st.helpers.count < j.helpers, let sp = species[c.species.id], let img = sp.frames.first {
             let h = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
@@ -890,6 +929,23 @@ final class OverlayController {
             case .helperJoined, .helperLeft:
                 break   // drawn by updateBuild
             }
+        }
+    }
+
+    /// Each biome breathes a little: snow drifts off the snowy island, petals off the cherry one, drips from jungle
+    /// vines, sand trickling from the desert, sparks rising off glowing mushrooms and crystals.
+    private func islandAmbient(_ b: Biome, si: Int, s: Surface, origin o: CGPoint) {
+        let x = Double.random(in: s.minX + 10...s.maxX - 10) - o.x
+        let top = CGPoint(x: x, y: s.y - o.y + 6), under = CGPoint(x: x, y: s.y - o.y - 30)
+        switch b {
+        case .snow: burst([Effects.snow], si: si, at: under, count: 1, dx: -20...20, dy: -120 ... -60, duration: 3)
+        case .cherry: burst([Effects.petal], si: si, at: top, count: 1, dx: -60...60, dy: -110 ... -40, duration: 3.2)
+        case .autumn: burst([Effects.leaf, Effects.leaf2], si: si, at: top, count: 1, dx: -50...50, dy: -110 ... -40, duration: 3)
+        case .jungle: burst([Effects.rain], si: si, at: under, count: 1, dx: -2...2, dy: -90 ... -60, duration: 0.9)
+        case .desert: burst([Effects.dust], si: si, at: under, count: 1, dx: -4...4, dy: -70 ... -40, duration: 1.2)
+        case .glowshroom, .crystal: burst([Effects.sparkle, Effects.smallStar], si: si, at: top, count: 1, dx: -10...10, dy: 20...60, duration: 1.8)
+        case .sky: burst([Effects.cloud], si: si, at: under, count: 1, dx: -40...40, dy: -20...10, duration: 3)
+        case .meadow: burst([Effects.pollen], si: si, at: top, count: 1, dx: -30...30, dy: 10...50, duration: 2.2)
         }
     }
 
@@ -1252,6 +1308,10 @@ final class OverlayController {
                     st.decor?.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1))
                     st.decor?.anchorPoint = CGPoint(x: 0, y: 0)
                     if st.decor?.position != p { st.decor?.position = p }
+                    if now >= st.nextAmbient {
+                        st.nextAmbient = now + Double.random(in: 1.4...3.2)
+                        islandAmbient(b, si: si, s: s, origin: o)
+                    }
                     if j.phase == .working, now >= st.nextCritter {
                         if st.nextCritter > 0 { spawnCritter(b, si: si, from: s, origin: o, flip: flip) }
                         st.nextCritter = now + Double.random(in: 25...70)
@@ -1385,13 +1445,15 @@ final class OverlayController {
                 // The finished building moves down to the village and stays.
                 if let biome = st.lastBiome, st.lastBlocks >= 4 {
                     let (cols, rows) = BuildArt.size(biome)
+                    let day = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none)
                     world.addHouse(biome: biome.rawValue, blocks: st.lastBlocks,
-                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project)
+                                   size: Vec2(Double(cols * BuildArt.block * 3), Double(rows * BuildArt.block * 3)), project: st.project, day: day)
                     st.lastBlocks = 0
                 }
                 fadeOut(b, 0.8); st.build = nil; st.buildKey = ""
             }
             for h in st.helpers { fadeOut(h, 0.4) }
+            if let fl = st.flag { fadeOut(fl, 0.3); st.flag = nil }
             st.helpers.removeAll()
             if let l = st.lantern { fadeOut(l, 0.4); st.lantern = nil }
             if let l = st.extra { fadeOut(l, 0.5); st.extra = nil }
@@ -1639,7 +1701,7 @@ final class OverlayController {
         let p = vec(NSEvent.mouseLocation)
         if dragging || pressed != nil { return }
         let hot = world.creature(at: p) != nil || propOwner(at: p) != nil || platformOwner(at: p) != nil
-            || world.bossContains(p) || fx.plant(at: p) != nil
+            || world.bossContains(p) || fx.plant(at: p) != nil || fx.house(at: p) != nil
         setClickThrough(hot ? screenIndex(for: p) : nil)
     }
 
@@ -1664,6 +1726,9 @@ final class OverlayController {
         if world.creature(at: vec(p)) == nil, world.hitBoss(at: vec(p)) { return }
         if world.creature(at: vec(p)) == nil, propOwner(at: vec(p)) == nil, platformOwner(at: vec(p)) == nil, let i = fx.plant(at: vec(p)) {
             fx.describePlant(i); return
+        }
+        if world.creature(at: vec(p)) == nil, propOwner(at: vec(p)) == nil, platformOwner(at: vec(p)) == nil, let n = fx.house(at: vec(p)) {
+            fx.describeHouse(n); return
         }
         if world.creature(at: vec(p)) == nil, let owner = propOwner(at: vec(p)) { pressedProp = owner; return }
         if world.creature(at: vec(p)) == nil, let owner = platformOwner(at: vec(p)) { pressedPlatform = owner; return }

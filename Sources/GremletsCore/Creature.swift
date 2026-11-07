@@ -64,6 +64,9 @@ public final class Creature {
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?
     var grappleTime = 0.0
+    /// Asleep inside a village house until this time (hidden from view; pops back out after).
+    public internal(set) var homeUntil: Double?
+    public internal(set) var homeHouse: Int?
     var petAmount: Double = 0
     var edgeDecisionMade = false
     var grabOffset: Vec2 = .zero

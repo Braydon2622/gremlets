@@ -36,6 +36,8 @@ public struct House: Codable, Equatable, Sendable {
     /// Drawn size in points.
     public var w: Double, h: Double
     public var project: String?
+    /// When it was built (e.g. "Nov 6"), and how many files Claude edited.
+    public var day: String?
 }
 
 public enum BuildEvent: Equatable, Sendable {
@@ -197,7 +199,7 @@ extension World {
     /// A Claude building moves to the village. Finds a free spot along the bottom of the main screen, away from the
     /// grove plants and the other houses; the oldest house makes way when there's no room.
     @discardableResult
-    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?) -> Int? {
+    public func addHouse(biome: String, blocks: Int, size: Vec2, project: String?, day: String? = nil) -> Int? {
         guard let f = groveFloor, blocks > 0 else { return nil }
         func free(_ x: Double) -> Bool {
             let px = f.minX + x * f.w
@@ -213,7 +215,8 @@ extension World {
         for k in 0..<40 { let u = 0.03 + Double(k / 2) * 0.024; spots.append(k % 2 == 0 ? u : 1 - u) }
         if grove.village.count >= Grove.maxHouses { grove.village.removeFirst() }
         guard let x = spots.first(where: free) else { return nil }
-        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project))
+        grove.village.append(House(biome: biome, blocks: blocks, x: x, w: size.x, h: size.y, project: project, day: day))
+        for o in creatures where o.homeHouse != nil { o.homeUntil = clock }   // house numbers may shift: everyone wakes
         rebuildGroveSurfaces(); setSurfacesDirty()
         groveEvents.append(.houseAdded(grove.village.count - 1))
         return grove.village.count - 1

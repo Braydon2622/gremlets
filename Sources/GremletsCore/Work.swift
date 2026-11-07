@@ -117,6 +117,10 @@ public final class Job {
     public internal(set) var helpers = 0
     /// The last thing Claude did, for the Gremlet's pose and the hover description.
     public internal(set) var lastTool: ClaudeTool?
+    /// Claude buddy: the project name, whether Claude is waiting on you, and when Claude last used a tool.
+    public internal(set) var label: String?
+    public internal(set) var needsYou = false
+    public internal(set) var lastToolTime = -100.0
 
     init(craft: Craft, kind: Kind, windowID: Int?, seed: UInt64, now: Double) {
         self.craft = craft; self.kind = kind; self.windowID = windowID; self.seed = seed; self.started = now
@@ -293,6 +297,7 @@ extension World {
 
     /// Claude needs you: the Gremlet looks up from its work and waves.
     public func jobNeedsAttention(_ id: Int) {
+        creature(id: id)?.job?.needsYou = true
         guard let c = creature(id: id), c.isGrounded else { return }
         endSocial(c)
         if let cur = cursor { c.facing = cur.x > c.pos.x ? 1 : -1 }

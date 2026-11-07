@@ -170,3 +170,22 @@ blip the mic on and off when you mute. Using the per-process input flag matters:
 "running" flag is also true whenever music plays. Hiding calls `orderOut` on the overlay panels (rather than
 alpha 0), so screen-capture APIs have nothing to pick up, and the simulation stops so no time "piles up".
 The boss key uses Carbon `RegisterEventHotKey`, which unlike global key monitors needs no Accessibility permission.
+
+## The grown world
+
+Everything the Gremlets build lives in the engine as plain data and becomes surfaces the physics already understands:
+
+- **Grove** (`Grove.swift`): six plants in a corner garden, levelled by Claude tasks (`feedGrove`). Their geometry
+  (`ledges(floor:)`) turns into one-way `Surface`s (the bouncecap is a trampoline, the skyvine a ladder of leaves).
+- **Village** (`Construction.swift`): finished Claude buildings, the mine and the merchant's items are `House` records
+  along the floor; roofs are surfaces. Bridges Gremlets build between windows crumble when a window moves.
+- **Bonsai** (`Bonsai.swift`): one `Bonsai` record per project, grown by `ClaudeBuddy` events. `BonsaiGeometry.layout`
+  is a pure function of the record (seeded by an FNV-1a hash of the project name), so the same work always grows the
+  same tree and the app, the postcard, the journal and the web port all draw it identically. `rebuildAttached()`
+  places live trees on their terminal window's visible top edge (or in the nursery) and turns foliage pads and the
+  terminal's mossy ledges into surfaces; `attachedOwnerWindow` lets riders on those surfaces move with the window
+  exactly like riders on a window top.
+- **Rendering** (`BonsaiArt`, `IslandArt`, `BuildArt`, `GroveArt`): procedural pixel art drawn on a tiny
+  `PixelCanvas` and shown at 3× with nearest-neighbour scaling, regenerated only when its cache key changes.
+- **Events** (`ClaudeBuddy` → `World.claudeTool`, `bonsaiGrow`, `feedGrove` …): the Claude Code hook sends only event
+  names, the project folder's name and a tool name. Nothing about files, prompts or output ever reaches the app.

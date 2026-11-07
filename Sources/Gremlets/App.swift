@@ -54,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let icons = DesktopIcons()
     private let controls = AppControls()
     private let dayLog = DayLog()
+    private var dailyPostcardTried = false
+    private let launchTime = CACurrentMediaTime()
     private lazy var showcase: Showcase = {
         let sc = Showcase(world: world, buddy: buddy)
         sc.onFinish = { [weak self] in self?.rebuildMenu() }
@@ -849,6 +851,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             schedule(rate: 60)
             return (200, #"{"ok":true,"seconds":\#(Int(seconds)),"region":"\#(Int(r.minX)),\#(Int(r.minY)),\#(Int(r.width)),\#(Int(r.height))"}"#)
+        case "timelapse":
+            TimeLapse.saveToday(world: world, species: species)
+            guard let url = TimeLapse.build() else { return (404, #"{"ok":false,"error":"no daily postcards yet"}"#) }
+            return (200, #"{"ok":true,"path":"\#(url.path)"}"#)
         case "card":
             let name = query["project"] ?? ""
             guard let t = name.isEmpty ? world.bonsaiBook.trees.max(by: { $0.lastSeen < $1.lastSeen }) : world.bonsaiBook[name] else {
@@ -980,6 +986,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.eventsAllowed = epicEvents && !paused && !presence.isHidden && !focus.isFocusing
         if bonsaiDirty || Int(CACurrentMediaTime()) % 60 == 0 { saveBonsai() }
         world.checkLanternFestival(hour: Calendar.current.component(.hour, from: Date()))
+        // One postcard a day, for the time-lapse (a couple of minutes after launch, once things have settled).
+        if !dailyPostcardTried && CACurrentMediaTime() - lastTick > -1 && Int(CACurrentMediaTime() - launchTime) > 120 && !presence.isHidden {
+            dailyPostcardTried = true
+            TimeLapse.saveToday(world: world, species: species)
+        }
         if Int(CACurrentMediaTime()) % 60 == 0 {
             world.checkWishwillow(day: Int(Date().timeIntervalSinceReferenceDate / 86400))
             saveGrove()
@@ -1244,6 +1255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         action("Lantern Festival", #selector(summonEvent(_:)), tag: 3, tip: "Paper lanterns rise from the village, one for each Claude task you finished today. Happens on its own on evenings after 8+ tasks.")
         action("Call the Sky Ferry", #selector(callFerry), tip: "A little flying boat docks beside a high window; Gremlets hop aboard and ride to another one.")
         action("Play a Claude Session Demo", #selector(playDemo), tip: "A scripted 40-second Claude session on your front window: the tree takes root, edits build, helpers arrive, a storm then a rainbow, the house moves to the village. Nothing is kept. 'gremlet demo' records it too.")
+        action("Save Village Time-lapse", #selector(saveTimelapse), tip: "A postcard of the village is saved once a day (Pictures › Gremlets › Daily). This stitches them into a short video in Movies › Gremlets.")
         action("Save Village Snapshot", #selector(saveSnapshot), tip: "Saves a picture of your village and its Claude stats to Pictures › Gremlets and copies it, ready to paste into a post.")
         action("Call the Merchant", #selector(callMerchant), tip: "A traveling merchant trades your gems for things for the village: lamp posts, a well, a hot spring, a windmill, a flower arch.")
         let next = VillageItem.allCases.first { !world.owns($0) }
@@ -1297,6 +1309,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sub.addItem(side)
         item.submenu = sub
         return item
+    }
+
+    @objc private func saveTimelapse() {
+        TimeLapse.saveToday(world: world, species: species)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let url = TimeLapse.build()
+            DispatchQueue.main.async { if let url { NSWorkspace.shared.activateFileViewerSelecting([url]) } else { NSSound.beep() } }
+        }
     }
 
     @objc private func saveTreeCard(_ sender: NSMenuItem) {

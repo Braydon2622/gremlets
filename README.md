@@ -6,17 +6,36 @@ mote of evening light) and old guardian machines that nature reclaimed (one has 
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
 
-**What it is now:** a desktop AI companion. Talk to any Gremlet (it knows how your day is going and can start a focus
-session for you), watch them tend window-box gardens on platforms they build beside your windows (a hot-air balloon,
-a treehouse, a giant snail...), let one keep you company while Claude Code works and tell you when it's done, and send
-one through a portal to your phone and back.
+**What it is now:** a desktop AI companion whose world is grown by your work with Claude Code.
+
+- **Every project grows a bonsai.** While a Claude Code session runs, its project's tree is rooted on that terminal
+  window: a new branch per session, a leaf per file edit, a flower per finished task, golden fruit when tests pass.
+  Species and style come from the project's name; maples turn in autumn, cherries blossom in spring, the deciduous
+  ones stand bare under snow. Between sessions the trees rest on bracket shelves up the side of the screen. Gremlets
+  sit in the foliage and nap there after dark. Click a tree for its story; `gremlet card <project>` makes a postcard.
+- **The terminal comes alive while Claude works.** Ivy creeps along its top edge, mossy ledges grow out of its side
+  every few edits (platforms the Gremlets use), each edit places a block of a little building beside it, subagents
+  arrive as tiny helpers, a failed command brings rain, a passing test run a rainbow. When the session ends the
+  building moves down to a village along the bottom of the screen, where Gremlets claim houses and sleep in them.
+- **A garden that grows from tasks.** Six useful plants in a corner of the screen grow a level at a time as Claude
+  tasks finish: a berry bush, a trampoline mushroom, a lantern flower the Gremlets gather around at night, a beanstalk
+  ladder up the wall, a snapping plant that catches fireflies, a wishing willow. A mine opens once the garden is
+  established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
+  a hot spring, a windmill and a flower arch.
+- **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
+  ferry, wind that sweeps leaves along the floor, shy night spirits.
+- **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
+  windows, a garden journal (today, your streak, every tree's story, two weeks of Claude work), a morning recap, a
+  daily postcard and a time-lapse of your village, and a 44-second scripted demo you can record with one command.
+- **Phone:** send a Gremlet through a portal to your phone and back.
 
 - **Download:** [latest release](https://github.com/Braydon2622/gremlets/releases/latest) (macOS 13+, Apple Silicon) ·
   **Try it in a browser:** [braydonhartai.com/gremlets](https://braydonhartai.com/gremlets/) · **Guide:** see below
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 89 engine tests (physics, gardens, platforms, a 10-minute soak test), 1–3% CPU with eight creatures,
+- **Engineering:** 116 engine tests (physics, gardens, platforms, bonsai growth and placement, a boss-free event system,
+  a 10-minute soak test), 1–3% CPU with eight creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.
 

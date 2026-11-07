@@ -27,10 +27,17 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   established; every task earns a dig, digs turn up gems, and a traveling merchant trades gems for lamp posts, a well,
   a hot spring, a windmill and a flower arch.
 - **They reshape the desktop, Terraria style.** A window out of jumping reach gets a staircase of wooden blocks laid
-  up to its edge, one block at a time, climbed as it goes; everyone steps up and down it afterwards until the window
-  moves. A wide window gets a stretch of rail along its top and a minecart that rolls end to end, sparks flying,
-  Gremlets taking turns. Gaps between windows get plank bridges, and a grappling hook reaches the rest.
+  up to its edge, one block at a time, climbed as it goes and picked up again behind the climber (it only carries
+  three), so the stairs travel up with it and are gone once it's on top. A wide window gets a stretch of rail along
+  its top and a minecart that rolls end to end, sparks flying, Gremlets taking turns. Gaps between windows get plank
+  bridges, a zipline runs from a high window down to a lower one, and a grappling hook reaches the rest.
   (`gremlet stairs`, `gremlet cart`.)
+- **Expeditions.** Now and then a treasure chest turns up somewhere hard to reach (the top of a tall window, a high
+  ledge). A Gremlet that spots it plans a route from wherever it stands, across every trick above, and sets off: up a
+  staircase, over a bridge, hook up to the next window, chest over its head, zip or glide back down, home to the
+  village to open it (a gem for the merchant). When a landing goes wrong it plans again from where it ended up. Every
+  so often one climbs to the highest point on the desktop just to plant its flag there. The route depends entirely on
+  where your windows happen to be. (`gremlet chest`, `gremlet expedition`.)
 - **Quiet moments, never during focus:** meteor showers, a bloom festival, a lantern festival after a good day, a sky
   ferry, wind that sweeps leaves along the floor, a kite on a free afternoon, shy night spirits.
 - **Companion:** talk to any Gremlet, start focus sessions, window-box gardens on floating biome islands beside your
@@ -49,7 +56,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 121 engine tests (physics, gardens, platforms, stairs and minecarts, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 124 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines and multi-leg expeditions, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.

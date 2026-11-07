@@ -193,6 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         overlay.fx.handle(world.drainBuildEvents())
         overlay.fx.handle(world.drainTerrainEvents())
+        overlay.fx.handle(world.drainExpeditionEvents())
         let trades = world.drainMerchantEvents()
         overlay.fx.handle(trades)
         if trades.contains(where: { if case .sold = $0 { return true }; return false }) { saveGrove(); rebuildMenu() }
@@ -948,6 +949,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "expedition":
+            guard world.startExpeditionWithAnyone(.summit) else {
+                return (409, #"{"ok":false,"error":"no route up: nobody free, or nothing standable high enough above them"}"#)
+            }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "chest":
+            guard let id = world.spawnChest() else {
+                return (409, #"{"ok":false,"error":"nowhere to hide a chest: it needs a window top or ledge 220 points or more above the floor"}"#)
+            }
+            let going = world.startExpeditionWithAnyone(.treasure(id))
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"chest":\#(id),"expedition":\#(going)}"#)
         case "cart":
             guard world.startRailWithAnyone() else {
                 return (409, #"{"ok":false,"error":"no window wide enough for a rail (420 points or more along the top, with nobody free)"}"#)

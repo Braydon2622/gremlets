@@ -1560,7 +1560,7 @@ final class OverlayController {
     /// What a floating Gremlet rides: a balloon, soap bubble, dandelion puff, umbrella or big leaf. When it lands,
     /// the balloon drifts away, the bubble pops, and the rest float off and fade.
     private func updateBalloon(_ c: Creature) {
-        let floating = c.activity == .float
+        let floating = c.activity == .float && !c.isZipping   // zipline riders hang from a pulley instead
         if !floating {
             if let b = balloons.removeValue(forKey: c.id) {
                 let start = b.position

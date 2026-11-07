@@ -3,9 +3,9 @@ import Foundation
 /// More ways Gremlets reshape the desktop, Terraria style:
 ///
 /// - **Staircases:** a window too high to jump onto, with room beside it? A Gremlet lays wooden blocks in a diagonal
-///   from where it stands up to the window's edge, climbing each one as it goes, then walks on up. The stairs stay
-///   for a while and anyone can use them (Gremlets step up and down them in stride as they walk); they come down
-///   when the window moves away, or after a quarter of an hour.
+///   from where it stands up to the window's edge, climbing each one as it goes and picking the blocks up again
+///   behind it (it only ever carries a few), so the staircase travels up with the climber and is gone once it's on
+///   the window. Gremlets step up and down the blocks in stride while they stand.
 /// - **Minecarts:** on a wide window a Gremlet lays a stretch of rail along the top edge, a cart rolls up, and it
 ///   rides back and forth with sparks flying at the ends. The rail stays as long as the window does, and others
 ///   take turns in the cart.
@@ -16,12 +16,21 @@ public struct Stair: Sendable {
     public let dir: Double
     public let steps: Int
     public internal(set) var built = 0
+    /// The lowest block still standing: the climber takes the ones behind it as it goes up.
+    public internal(set) var first = 0
     public let builtAt: Double
+    public let climber: Int
+    /// Set once the climber is done with it: the remaining blocks get picked up one by one.
+    var doneAt: Double?
+    var nextTake = 0.0
     let fromOwner: Int, toOwner: Int
     /// One block: 5 art pixels.
     public static let rise = 15.0, run = 15.0
-    public static let lifetime = 900.0
+    /// Blocks left standing behind the one the climber is on.
+    public static let trail = 2
     public var isComplete: Bool { built >= steps }
+    /// Blocks standing right now.
+    public var standing: Int { max(0, built - first) }
     /// The top of block `k` (0-based).
     public func step(_ k: Int) -> (y: Double, minX: Double, maxX: Double) {
         let a = base.x + dir * Double(k) * Stair.run, b = base.x + dir * Double(k + 1) * Stair.run
@@ -67,6 +76,8 @@ public struct Rail: Sendable {
 
 public enum TerrainEvent: Equatable, Sendable {
     case stairBlock(Vec2, stair: Int)
+    /// The climber picked a block back up (its centre).
+    case stairBlockTaken(Vec2)
     case stairsDone(Int)
     /// The blocks that fell (their centres), for the crumble effect.
     case stairsCrumbled(blocks: [Vec2])
@@ -87,8 +98,8 @@ extension World {
 
     var stairSurfaces: [Surface] {
         var out: [Surface] = []
-        for s in stairs {
-            for k in 0..<s.built {
+        for s in stairs where s.built > s.first {
+            for k in s.first..<s.built {
                 let t = s.step(k)
                 out.append(Surface(ownerID: World.stairOwner(s.id), kind: .plant, y: t.y, minX: t.minX, maxX: t.maxX))
             }
@@ -108,15 +119,17 @@ extension World {
 
     /// A platform to step onto in stride when the ground runs out at `nx`, or a stair block right ahead: another
     /// surface at the same height, or a stair block within one block's height up or down.
+    /// How big a step (points) a walker takes in stride when its ground runs out and another platform is right there.
+    static let strideStep = 26.0
+
     func stepAcross(_ c: Creature, from support: Surface, toX nx: Double) -> Surface? {
         // A block straight ahead, entered from its side: up we go.
         if let up = surfaces.first(where: { World.isStairOwner($0.ownerID) && $0.y > c.pos.y + 4 && $0.y <= c.pos.y + Stair.rise + 1.5
                                                 && $0.supports(x: nx) && !$0.supports(x: c.pos.x) }) { return up }
         guard !support.supports(x: nx) else { return nil }
-        if let same = surfaces.first(where: { $0.ownerID != support.ownerID && abs($0.y - c.pos.y) < 1 && $0.supports(x: nx) }) { return same }
-        let stairy = World.isStairOwner(support.ownerID)
-        return surfaces.filter { ($0.y < c.pos.y - 1 && $0.y >= c.pos.y - Stair.rise - 1.5) && $0.supports(x: nx) && (stairy || World.isStairOwner($0.ownerID)) }
-            .max { $0.y < $1.y }
+        // The ground ran out: the nearest platform within a small step up or down, if one is right there.
+        return surfaces.filter { $0.ownerID != support.ownerID && abs($0.y - c.pos.y) <= World.strideStep && $0.supports(x: nx) }
+            .min { abs($0.y - c.pos.y) < abs($1.y - c.pos.y) }
     }
 
     // MARK: Staircases
@@ -127,37 +140,46 @@ extension World {
         public var standX: Double { base.x - dir * 24 }
     }
 
+    /// How to build from `s` up to the edge of window top `t`, if there's room (either direction; the one with its
+    /// foot nearer `nearX` wins).
+    func stairPlan(from s: Surface, to t: Surface, nodes: [Surface]? = nil, nearX: Double? = nil) -> StairPlan? {
+        guard t.kind == .windowTop, t.ownerID != s.ownerID, t.width >= 120, s.kind == .floor || s.kind == .windowTop else { return nil }
+        let dy = t.y - s.y
+        guard dy >= 90, dy <= 480 else { return nil }
+        let steps = Int(dy / Stair.rise)
+        let runW = Double(steps) * Stair.run
+        var plans: [StairPlan] = []
+        for dir in [1.0, -1.0] {
+            let topEdge = dir > 0 ? t.minX : t.maxX
+            let baseX = topEdge - dir * runW
+            let standX = baseX - dir * 24
+            guard s.supports(x: baseX), s.supports(x: standX), s.supports(x: standX - dir * 20) else { continue }
+            let lo = min(baseX, topEdge), hi = max(baseX, topEdge)
+            // Nothing in the way: no other window edge crossing the stairs, no stairs already there.
+            if builtSurfaces.contains(where: { $0.ownerID != t.ownerID && $0.ownerID != s.ownerID && $0.y > s.y + 10 && $0.y < t.y + 40 && $0.maxX > lo - 10 && $0.minX < hi + 10 }) { continue }
+            if stairs.contains(where: { $0.maxX > lo - 80 && $0.minX < hi + 80 }) { continue }
+            if let scr = screen(containingX: baseX, y: s.y), lo < scr.minX + 10 || hi > scr.maxX - 10 { continue }
+            plans.append(StairPlan(from: s, to: t, dir: dir, base: Vec2(baseX, s.y), steps: steps))
+        }
+        guard let x = nearX else { return plans.first }
+        return plans.min { abs($0.standX - x) < abs($1.standX - x) }
+    }
+
     /// A window above, too high to jump onto, with room to build up to its edge from where this creature stands.
     func stairCandidate(for c: Creature) -> StairPlan? {
         guard clock >= nextStairAt, stairs.count < 2, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
               let s = supportingSurface(for: c), s.kind == .floor || s.kind == .windowTop else { return nil }
-        var plans: [StairPlan] = []
-        for t in builtSurfaces where t.kind == .windowTop && t.ownerID != s.ownerID && t.width >= 120 {
-            let dy = t.y - s.y
-            guard dy >= 90, dy <= 480 else { continue }
-            let steps = Int(dy / Stair.rise)
-            let runW = Double(steps) * Stair.run
-            for dir in [1.0, -1.0] {
-                let topEdge = dir > 0 ? t.minX : t.maxX
-                let baseX = topEdge - dir * runW
-                let standX = baseX - dir * 24
-                guard s.supports(x: baseX), s.supports(x: standX), s.supports(x: standX - dir * 20), abs(standX - c.pos.x) < 560 else { continue }
-                let lo = min(baseX, topEdge), hi = max(baseX, topEdge)
-                // Nothing in the way: no other window edge crossing the stairs, no stairs or bridge already there.
-                if builtSurfaces.contains(where: { $0.ownerID != t.ownerID && $0.ownerID != s.ownerID && $0.y > s.y + 10 && $0.y < t.y + 40 && $0.maxX > lo - 10 && $0.minX < hi + 10 }) { continue }
-                if stairs.contains(where: { $0.maxX > lo - 80 && $0.minX < hi + 80 }) { continue }
-                if let scr = screen(containingX: baseX, y: s.y), lo < scr.minX + 10 || hi > scr.maxX - 10 { continue }
-                plans.append(StairPlan(from: s, to: t, dir: dir, base: Vec2(baseX, s.y), steps: steps))
-            }
-        }
+        let plans = builtSurfaces.compactMap { t in stairPlan(from: s, to: t, nearX: c.pos.x) }.filter { abs($0.standX - c.pos.x) < 560 }
         return plans.min { abs($0.standX - c.pos.x) < abs($1.standX - c.pos.x) }
     }
 
     func startStairs(_ c: Creature, _ plan: StairPlan) {
+        if c.stair != nil { abandonStairs(c) }
         nextStairID += 1
-        stairs.append(Stair(id: nextStairID, base: plan.base, dir: plan.dir, steps: plan.steps, builtAt: clock, fromOwner: plan.from.ownerID, toOwner: plan.to.ownerID))
+        stairs.append(Stair(id: nextStairID, base: plan.base, dir: plan.dir, steps: plan.steps, builtAt: clock, climber: c.id, fromOwner: plan.from.ownerID, toOwner: plan.to.ownerID))
         endSocial(c)
         c.stair = nextStairID
+        c.blocksInHand = 3
         c.targetX = plan.standX
         c.facing = plan.standX > c.pos.x ? 1 : -1
         c.set(.walk, duration: 40)
@@ -180,30 +202,39 @@ extension World {
         var st = stairs[i]
         if st.isComplete {
             c.stair = nil; c.targetX = nil
+            st.doneAt = clock; st.nextTake = clock + 0.5
+            stairs[i] = st
             terrainEvents.append(.stairsDone(st.id))
-            // Proudly on up and onto the window.
+            // On up the last blocks and onto the window; the blocks come up behind it.
             c.facing = st.dir
             c.edgeDecisionMade = true
-            c.set(.walk, duration: Double(st.steps) * Stair.run / c.species.walkSpeed + 2.5)
+            c.set(.walk, duration: Double(Stair.trail + 2) * Stair.run / c.species.walkSpeed + 1.5)
             return true
         }
         let k = st.built
         let standY = st.base.y + Double(k) * Stair.rise
         let standX = st.base.x + st.dir * Double(k) * Stair.run - st.dir * 9
         if abs(c.pos.x - standX) > 5 || abs(c.pos.y - standY) > 2 {
-            // Walk there; the blocks already laid carry it up. Lost (fell off, or walled in)? Leave what's built.
+            // Walk there; the blocks already laid carry it up. Lost (fell off, or walled in)? Pick up and give up.
             if c.pos.y > standY + 2 || c.pos.y < st.base.y - 2 || c.pos.x < st.minX - 400 || c.pos.x > st.maxX + 400 {
-                c.stair = nil; c.targetX = nil
-                if st.built == 0 { stairs.remove(at: i) }
+                abandonStairs(c)
                 return false
             }
             c.facing = standX > c.pos.x ? 1 : -1
             if c.activity != .walk { c.set(.walk, duration: 30) }
-            if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 0) {
-                c.stair = nil; c.targetX = nil
-                if st.built == 0 { stairs.remove(at: i) }
-            }
+            if !move(c, dt, speed: c.species.walkSpeed, on: support, ledgeTurnChance: 0) { abandonStairs(c) }
             return true
+        }
+        // Standing on block k-1: the blocks more than a trail behind come up into its hands.
+        let keepFrom = max(0, k - 1 - Stair.trail)
+        if st.first < keepFrom {
+            while st.first < keepFrom {
+                let t = st.step(st.first)
+                terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2)))
+                st.first += 1
+            }
+            stairs[i] = st
+            setSurfacesDirty()
         }
         c.facing = st.dir
         c.buildTimer -= dt
@@ -221,8 +252,50 @@ extension World {
         return true
     }
 
-    /// After the windows change, and as time passes: stairs whose window moved away or that have stood a quarter of
-    /// an hour come down.
+    /// The climber stops: whatever is standing gets picked up over the next moments.
+    func abandonStairs(_ c: Creature) {
+        guard let id = c.stair else { return }
+        c.stair = nil; c.targetX = nil
+        if let i = stairs.firstIndex(where: { $0.id == id }) {
+            if stairs[i].standing == 0 { stairs.remove(at: i); c.blocksInHand = 0 }
+            else { stairs[i].doneAt = clock; stairs[i].nextTake = clock + 0.3 }
+        } else {
+            c.blocksInHand = 0
+        }
+    }
+
+    /// Finished (or abandoned) staircases come up block by block, from the bottom, once the climber is off them.
+    func updateStairs(_ dt: Double) {
+        guard !stairs.isEmpty else { return }
+        var changed = false
+        var i = 0
+        while i < stairs.count {
+            var s = stairs[i]
+            if let done = s.doneAt, clock >= s.nextTake {
+                let climber = creature(id: s.climber)
+                let off = climber.map { $0.groundOwner != World.stairOwner(s.id) } ?? true
+                if off || clock - done > 4 {
+                    s.nextTake = clock + 0.12
+                    if s.first < s.built {
+                        let t = s.step(s.first)
+                        terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2)))
+                        s.first += 1
+                        changed = true
+                    }
+                    if s.first >= s.built {
+                        climber?.blocksInHand = 0
+                        stairs.remove(at: i)
+                        continue
+                    }
+                }
+            }
+            stairs[i] = s
+            i += 1
+        }
+        if changed { setSurfacesDirty() }
+    }
+
+    /// After the windows change: stairs whose window moved away come down.
     func validateStairs() {
         guard !stairs.isEmpty else { return }
         var keep: [Stair] = []
@@ -231,10 +304,9 @@ extension World {
             let toOK = builtSurfaces.contains { $0.ownerID == s.toOwner && $0.kind == .windowTop && abs($0.y - s.topY) < Stair.rise + 2
                 && abs((s.dir > 0 ? $0.minX : $0.maxX) - topEdgeX) < 14 }
             let fromOK = builtSurfaces.contains { $0.ownerID == s.fromOwner && abs($0.y - s.base.y) < 2 && $0.supports(x: s.base.x) }
-            let fresh = clock - s.builtAt < Stair.lifetime || !s.isComplete
-            if toOK && fromOK && fresh { keep.append(s); continue }
-            if s.built > 0 { terrainEvents.append(.stairsCrumbled(blocks: (0..<s.built).map { let t = s.step($0); return Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2) })) }
-            for c in creatures where c.stair == s.id { c.stair = nil; c.targetX = nil }
+            if (toOK && fromOK) || s.doneAt != nil { keep.append(s); continue }
+            if s.standing > 0 { terrainEvents.append(.stairsCrumbled(blocks: (s.first..<s.built).map { let t = s.step($0); return Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2) })) }
+            for c in creatures where c.stair == s.id { c.stair = nil; c.targetX = nil; c.blocksInHand = 0 }
         }
         if keep.count != stairs.count { stairs = keep; setSurfacesDirty() }
     }

@@ -181,12 +181,24 @@ Everything the Gremlets build lives in the engine as plain data and becomes surf
   along the floor; each house carries where a Gremlet can stand on it (`roofY`, `roofHalfW`: the ridge, the dome, the
   terrace), and that spot is a surface. Bridges Gremlets build between windows crumble when a window moves.
 - **Stairs and rails** (`Terrain.swift`): a `Stair` is a diagonal of 15-point blocks from a floor or window top up to
-  a window's edge; every block laid so far is a one-way surface. Walking takes stairs in stride: `stepAcross` lets a
-  walker step onto a stair block right ahead, down to one just below, or straight onto any neighbouring platform at
-  the same height (the old rule was "the ground ran out: maybe turn back"). A `Rail` belongs to a window (`validateRails`
-  moves it with the window, drops it when the window goes or gets narrow); its `Cart` is a moving surface added to
-  `allSurfaces` like the ferry deck, and `updateRails` carries riders and bounces the cart at the ends. Both have
-  lifetimes, so the desktop doesn't fill up with lumber.
+  a window's edge; the blocks standing right now (`first..<built`) are one-way surfaces. The climber keeps a trail of
+  two blocks behind the one it stands on and takes the rest back up (`stairBlockTaken`), and `updateStairs` collects
+  whatever is left once it has stepped off, so a staircase travels with its climber and leaves nothing behind.
+  Walking takes steps in stride: `stepAcross` lets a walker step onto a stair block right ahead, or onto any platform
+  within `strideStep` (26 points) up or down when its ground runs out (the old rule was "maybe turn back"). A `Rail`
+  belongs to a window (`validateRails` moves it with the window, drops it when the window goes or gets narrow); its
+  `Cart` is a moving surface added to `allSurfaces` like the ferry deck, and `updateRails` carries riders and bounces
+  the cart at the ends.
+- **Expeditions** (`Expedition.swift`): a tiny route planner over the same surfaces. `routeNodes` are floors, window
+  tops and ledges, and plant platforms (not the trampoline); `leg(from:to:)` offers the cheapest single move between
+  two of them (walk across a small step, jump, drop off an end when nothing is in the way, glide, zip, climb a block
+  staircase, grapple as a last resort, bridge a gap), and `route` runs Dijkstra to a chest's perch or to the highest
+  reachable place. Execution is a small state machine per creature (`Expedition`: legs, index, stage) driven from two
+  hooks: `updateExpeditions` every tick (arrived at the leg's destination? strayed? timed out? then re-plan from
+  wherever it is, up to three times) and `expeditionDecide` whenever the creature's current activity ends (walk to
+  the acting spot, then act). Chests (`spawnChest`), summit flags and ziplines ride along with their windows
+  (`validateChests/Flags/Zips`) and go when the window goes. A zipline ride reuses the `.float` activity (the dangling
+  pose) with its own integrator, `updateZip`.
 - **Bonsai** (`Bonsai.swift`): one `Bonsai` record per project, grown by `ClaudeBuddy` events. `BonsaiGeometry.layout`
   is a pure function of the record (seeded by an FNV-1a hash of the project name), so the same work always grows the
   same tree and the app, the postcard, the journal and the web port all draw it identically. `rebuildAttached()`

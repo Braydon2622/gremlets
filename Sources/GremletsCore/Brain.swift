@@ -53,6 +53,8 @@ struct Brain {
         world.groveChoices(for: c, add: add)
         world.playChoices(for: c, add: add)
         world.kiteChoices(for: c, add: add)
+        world.expeditionChoices(for: c, add: add)
+        world.zipChoices(for: c, add: add)
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)
         world.cartChoices(for: c, add: add)

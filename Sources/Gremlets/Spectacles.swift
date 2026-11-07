@@ -17,6 +17,11 @@ final class SpectacleRenderer {
     private var stairLayers: [Int: (layer: CALayer, built: Int)] = [:]
     private var railLayers: [Int: (rail: CALayer, cart: CALayer, px: Int, frame: Int)] = [:]
     private var nextCartSpark: [Int: CFTimeInterval] = [:]
+    private var zipLayers: [Int: (line: CAShapeLayer, top: CALayer, bottom: CALayer)] = [:]
+    private var pulleyLayers: [Int: CALayer] = [:]
+    private var chestLayers: [Int: (layer: CALayer, key: String)] = [:]
+    private var flagLayers: [Int: CALayer] = [:]
+    private var stackLayers: [Int: (layer: CALayer, n: Int)] = [:]
     private var ropes: [Int: (line: CAShapeLayer, hook: CALayer)] = [:]
     private var nextHouseSmoke: [Int: CFTimeInterval] = [:]
     private var pennants: [Int: CALayer] = [:]
@@ -74,6 +79,7 @@ final class SpectacleRenderer {
         renderVillage()
         renderBridges()
         renderStairs(); renderRails()
+        renderExpeditions()
         renderRopes()
         renderSpectacle()
         renderBalls()
@@ -727,6 +733,8 @@ final class SpectacleRenderer {
             switch e {
             case .stairBlock(let p, _):
                 if let (si, pt) = local(p) { overlay.burst([Effects.dust, Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: -4...12, duration: 0.4) }
+            case .stairBlockTaken(let p):
+                if let (si, pt) = local(p) { overlay.burst([Effects.dust], si: si, at: pt, count: 2, dx: -8...8, dy: 6...16, duration: 0.35) }
             case .stairsDone(let id):
                 if let s = world.stairs.first(where: { $0.id == id }), let (si, pt) = local(Vec2((s.minX + s.maxX) / 2, s.topY)) {
                     overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 8, dx: -60...60, dy: 0...40, duration: 0.9, stagger: 0.03)
@@ -751,6 +759,150 @@ final class SpectacleRenderer {
                 if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
                     overlay.burst([Effects.smallStar], si: si, at: pt, count: 2, dx: -10...10, dy: 10...24, duration: 0.6)
                 }
+            }
+        }
+    }
+
+    /// Ziplines (cable, posts, the pulley a rider hangs from), chests, summit flags, and the blocks climbers carry.
+    private func renderExpeditions() {
+        var alive = Set<Int>()
+        for z in world.ziplines {
+            alive.insert(z.id)
+            guard let (si, top) = local(z.top), let (_, bottom) = local(z.bottom) else { continue }
+            var e = zipLayers[z.id] ?? {
+                let line = CAShapeLayer()
+                line.strokeColor = NSColor(red: 0.55, green: 0.58, blue: 0.64, alpha: 1).cgColor
+                line.lineWidth = 2; line.fillColor = nil; line.zPosition = -0.35
+                line.actions = ["path": NSNull()]
+                let t = pixelLayer(); t.contents = TerrainArt.zipPost; t.bounds = CGRect(x: 0, y: 0, width: 15, height: 30); t.anchorPoint = CGPoint(x: 0.5, y: 0); t.zPosition = -0.34
+                let b = pixelLayer(); b.contents = TerrainArt.zipPost; b.bounds = t.bounds; b.anchorPoint = CGPoint(x: 0.5, y: 0); b.zPosition = -0.34
+                popIn(t); popIn(b)
+                return (line, t, b)
+            }()
+            attach(e.line, si); attach(e.top, si); attach(e.bottom, si)
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: top.x, y: top.y + 2))
+            path.addQuadCurve(to: CGPoint(x: bottom.x, y: bottom.y + 2), control: CGPoint(x: (top.x + bottom.x) / 2, y: (top.y + bottom.y) / 2 - 9))
+            e.line.path = path
+            e.top.position = CGPoint(x: top.x.rounded(), y: (top.y - Zipline.hang).rounded())
+            e.bottom.position = CGPoint(x: bottom.x.rounded(), y: (bottom.y - Zipline.hang).rounded())
+            zipLayers[z.id] = e
+        }
+        for (id, e) in zipLayers where !alive.contains(id) { e.line.removeFromSuperlayer(); e.top.removeFromSuperlayer(); e.bottom.removeFromSuperlayer(); zipLayers[id] = nil }
+        // Pulleys over riders, block stacks over climbers.
+        var riders = Set<Int>(), climbers = Set<Int>()
+        for c in world.creatures {
+            if c.isZipping, let (si, pt) = local(c.pos + Vec2(0, Zipline.hang)) {
+                riders.insert(c.id)
+                let l = pulleyLayers[c.id] ?? { let l = pixelLayer(); l.contents = TerrainArt.pulley; l.bounds = CGRect(x: 0, y: 0, width: 21, height: 27); l.anchorPoint = CGPoint(x: 0.5, y: 1); l.zPosition = 1.2; return l }()
+                attach(l, si)
+                l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() + 4)
+                pulleyLayers[c.id] = l
+            }
+            if c.blocksInHand > 0, let (si, pt) = local(c.pos + Vec2(c.facing * 2, c.size.y - 2)) {
+                climbers.insert(c.id)
+                var e = stackLayers[c.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = 1.1; popIn(l); return (l, -1) }()
+                attach(e.layer, si)
+                if e.n != c.blocksInHand {
+                    let img = TerrainArt.blockStack(c.blocksInHand)
+                    e.layer.contents = img
+                    e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                    e.n = c.blocksInHand
+                }
+                e.layer.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+                stackLayers[c.id] = e
+            }
+        }
+        for (id, l) in pulleyLayers where !riders.contains(id) { l.removeFromSuperlayer(); pulleyLayers[id] = nil }
+        for (id, e) in stackLayers where !climbers.contains(id) { fade(e.layer, to: 0, remove: true); stackLayers[id] = nil }
+        // Chests: on their perch, or over a carrier's head (with a little bob).
+        var chestsAlive = Set<Int>()
+        let now = CACurrentMediaTime()
+        for ch in world.chests {
+            chestsAlive.insert(ch.id)
+            guard let (si, pt) = local(ch.pos) else { continue }
+            var e = chestLayers[ch.id] ?? { let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.5, y: 0); l.zPosition = ch.carriedBy == nil ? -0.2 : 1.15; popIn(l); return (l, "") }()
+            attach(e.layer, si)
+            let key = "\(ch.golden)-\(ch.carriedBy != nil)"
+            if e.key != key {
+                let img = TerrainArt.chest(open: false, golden: ch.golden)
+                e.layer.contents = img
+                e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                e.layer.zPosition = ch.carriedBy == nil ? -0.2 : 1.15
+                if ch.golden {
+                    e.layer.shadowColor = NSColor(red: 1, green: 0.85, blue: 0.4, alpha: 1).cgColor
+                    e.layer.shadowRadius = 8; e.layer.shadowOpacity = 0.8; e.layer.shadowOffset = .zero
+                }
+                e.key = key
+            }
+            let bob = ch.carriedBy == nil ? 0 : sin(now * 5) * 2
+            e.layer.position = CGPoint(x: pt.x.rounded(), y: (pt.y + bob).rounded())
+            chestLayers[ch.id] = e
+        }
+        for (id, e) in chestLayers where !chestsAlive.contains(id) { e.layer.removeFromSuperlayer(); chestLayers[id] = nil }
+        // Flags.
+        var flagsAlive = Set<Int>()
+        for f in world.flags {
+            flagsAlive.insert(f.id)
+            guard let (si, pt) = local(f.pos) else { continue }
+            let l = flagLayers[f.id] ?? {
+                let l = pixelLayer(); l.anchorPoint = CGPoint(x: 0.15, y: 0); l.zPosition = -0.25
+                let img = TerrainArt.summitFlag(OwnerArt.color(for: f.owner))
+                l.contents = img; l.bounds = CGRect(x: 0, y: 0, width: img.width * 3, height: img.height * 3)
+                let wave = CABasicAnimation(keyPath: "transform.rotation.z")
+                wave.fromValue = -0.05; wave.toValue = 0.05; wave.duration = 0.9; wave.autoreverses = true; wave.repeatCount = .infinity
+                l.add(wave, forKey: "wave")
+                popIn(l)
+                return l
+            }()
+            attach(l, si)
+            l.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded())
+            flagLayers[f.id] = l
+        }
+        for (id, l) in flagLayers where !flagsAlive.contains(id) { fade(l, to: 0, remove: true); flagLayers[id] = nil }
+    }
+
+    func handle(_ events: [ExpeditionEvent]) {
+        for e in events {
+            switch e {
+            case .started(let by, let goal, _):
+                if case .treasure = goal { overlay.showBubble(["Treasure! Back soon.", "Ooh, a chest. Mine!", "Off to get it!"].randomElement()!, on: by, seconds: 2.5) }
+                else { overlay.showBubble(["To the top!", "Summit time.", "Going up!"].randomElement()!, on: by, seconds: 2.5) }
+            case .legDone:
+                break
+            case .gaveUp(let by):
+                overlay.showBubble("Hmph. Another day.", on: by, seconds: 2)
+            case .chestAppeared(let id):
+                if let ch = world.chests.first(where: { $0.id == id }), let (si, pt) = local(ch.pos + Vec2(0, 14)) {
+                    overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 8, dx: -30...30, dy: 0...40, duration: 1.2, stagger: 0.05)
+                }
+            case .chestTaken(_, let by):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 5, dx: -20...20, dy: 10...40, duration: 0.8)
+                }
+                overlay.showBubble("Got it!", on: by, seconds: 1.8)
+            case .chestDropped:
+                break
+            case .chestOpened(_, let by, let gem):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([AdventureArt.gem(gem), Effects.sparkle, Effects.star], si: si, at: pt, count: 12, dx: -50...50, dy: 10...80, duration: 1.6, stagger: 0.04)
+                }
+                overlay.showBubble(gem == .starstone ? "A starstone! ✨" : "\(gem.name == "Amber" || gem == .amethyst || gem == .emerald ? "An" : "A") \(gem.name.lowercased())!", on: by, seconds: 3.5)
+            case .summit(let by, _):
+                if let c = world.creatures.first(where: { $0.id == by }), let (si, pt) = local(c.pos + Vec2(0, c.size.y)) {
+                    overlay.burst([Effects.star, Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 14, dx: -60...60, dy: 10...90, duration: 1.6, stagger: 0.04)
+                }
+                overlay.showBubble(["Made it to the top!", "Highest point. Claimed.", "What a view."].randomElement()!, on: by, seconds: 3.5)
+            case .flagLost:
+                break
+            case .zipMade(let id):
+                if let z = world.ziplines.first(where: { $0.id == id }), let (si, pt) = local(z.top) {
+                    overlay.burst([Effects.sparkle], si: si, at: pt, count: 3, dx: -10...10, dy: -4...10, duration: 0.4)
+                }
+            case .zipped(let by, _):
+                overlay.showBubble("Wheee!", on: by, seconds: 1.4)
+            case .zipLost:
+                break
             }
         }
     }

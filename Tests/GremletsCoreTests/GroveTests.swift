@@ -600,11 +600,11 @@ import Testing
 @Suite struct TerrainTests {
     let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
 
-    @Test func gremletBuildsStairsUpToAWindowAndWalksOnUp() throws {
+    @Test func gremletBuildsStairsUpToAWindowAndTakesThemWithIt() throws {
         let w = World(seed: 9)
         w.maxHobbies = 0
         w.maxJumpHeight = 50   // no jumping up there: the stairs are the only way
-        var win = WindowInfo(id: 1, frame: Rect(x: 700, y: 0, w: 500, h: 150))
+        let win = WindowInfo(id: 1, frame: Rect(x: 700, y: 0, w: 500, h: 150))
         w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
         let c = w.spawn(testSpecies(scale: 10), at: Vec2(420, 2))
         for _ in 0..<60 { w.step(1.0 / 60) }
@@ -613,36 +613,31 @@ import Testing
         let plan = try #require(w.stairCandidate(for: c))
         #expect(plan.dir == 1 && plan.steps == 10 && abs(plan.base.x - 550) < 0.01)
         w.startStairs(c, plan)
-        var done = false, blocks = 0
+        #expect(c.blocksInHand == 3)
+        var done = false, laid = 0, taken = 0, mostStanding = 0
         for _ in 0..<(60 * 60) where !done {
             w.step(1.0 / 60)
+            mostStanding = max(mostStanding, w.stairs.first?.standing ?? 0)
             for e in w.drainTerrainEvents() {
-                if case .stairBlock = e { blocks += 1 }
+                if case .stairBlock = e { laid += 1 }
+                if case .stairBlockTaken = e { taken += 1 }
                 if case .stairsDone = e { done = true }
             }
         }
-        #expect(done && blocks == 10)
-        let stair = try #require(w.stairs.first)
-        #expect(stair.isComplete && abs(stair.topY - 150) < 0.01)
-        #expect(w.surfaces.filter { World.isStairOwner($0.ownerID) }.count == 10)
-        // It walks on up the steps and onto the window.
+        #expect(done && laid == 10)
+        #expect(mostStanding <= Stair.trail + 2, "it only ever leaves a short trail of blocks behind it")
+        // It walks on up and onto the window, and the last blocks come up after it.
         var onWindow = false
-        for _ in 0..<(60 * 8) where !onWindow { w.step(1.0 / 60); onWindow = c.groundOwner == 1 }
+        for _ in 0..<(60 * 10) {
+            w.step(1.0 / 60)
+            for e in w.drainTerrainEvents() { if case .stairBlockTaken = e { taken += 1 } }
+            if c.groundOwner == 1 { onWindow = true }
+            if onWindow && w.stairs.isEmpty { break }
+        }
         #expect(onWindow, "climbed its own stairs onto the window")
-        // Anyone walking along the floor into the stairs climbs them in stride.
-        let d = w.spawn(testSpecies(scale: 10), at: Vec2(500, 2))
-        for _ in 0..<30 { w.step(1.0 / 60) }
-        d.facing = 1
-        d.set(.walk, duration: 20)
-        var peak = d.pos.y
-        for _ in 0..<(60 * 4) { w.step(1.0 / 60); peak = max(peak, d.pos.y); if d.activity != .walk && d.isGrounded { d.facing = 1; d.set(.walk, duration: 20) } }
-        #expect(peak > 100, "stepped up the staircase while walking")
-        // Move the window away: the stairs crumble.
-        win.frame.x = 1000
-        w.setEnvironment(screens: [scr], windowsFrontToBack: [win])
-        #expect(w.stairs.isEmpty)
-        #expect(w.drainTerrainEvents().contains { if case .stairsCrumbled = $0 { return true }; return false })
+        #expect(w.stairs.isEmpty && taken == 10, "every block was picked back up")
         #expect(!w.surfaces.contains { World.isStairOwner($0.ownerID) })
+        #expect(c.blocksInHand == 0)
     }
 
     @Test func gremletLaysARailAndRidesTheCart() throws {
@@ -685,5 +680,105 @@ import Testing
         w.setEnvironment(screens: [scr], windowsFrontToBack: [])
         #expect(w.rails.isEmpty)
         #expect(w.drainTerrainEvents().contains { if case .railCrumbled = $0 { return true }; return false })
+    }
+}
+
+@Suite struct ExpeditionTests {
+    let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+
+    /// Three windows: A reachable from the floor only by stairs, B across a gap from A, C above B (grapple only,
+    /// and too far from A to hook straight from there).
+    func layout() -> [WindowInfo] {
+        [WindowInfo(id: 1, frame: Rect(x: 480, y: 0, w: 260, h: 360)),
+         WindowInfo(id: 2, frame: Rect(x: 960, y: 0, w: 400, h: 380)),
+         WindowInfo(id: 3, frame: Rect(x: 1200, y: 380, w: 160, h: 320))]
+    }
+
+    /// Steps until the creature is standing on `owner` (the brain may hop about in the meantime).
+    func settle(_ c: Creature, in w: World, on owner: Int) {
+        for _ in 0..<600 where !(c.isGrounded && c.groundOwner == owner && [.idle, .walk, .land].contains(c.activity)) { w.step(1.0 / 60) }
+        _ = w.drainExpeditionEvents(); _ = w.drainTerrainEvents(); _ = w.drainBuildEvents()
+    }
+
+    @Test func treasureRunAcrossThreeWindowsAndBackHome() throws {
+        let w = World(seed: 21)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: layout())
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(300, 2))
+        settle(c, in: w, on: -1)
+        #expect(c.groundOwner == -1)
+        let chest = try #require(w.spawnChest(at: Vec2(1280, 700), golden: false))
+        #expect(w.chests.count == 1)
+        #expect(w.startExpedition(c, .treasure(chest)))
+        let ex = try #require(c.expedition)
+        #expect(ex.methods == [.climb, .bridge, .grapple], "stairs up to A, a bridge over to B, the hook up to C")
+        var taken = false, opened: GemKind?, legs: [LegMethod] = []
+        for _ in 0..<(60 * 150) where opened == nil {
+            w.step(1.0 / 60)
+            _ = w.drainTerrainEvents(); _ = w.drainBuildEvents()
+            for e in w.drainExpeditionEvents() {
+                switch e {
+                case .legDone(_, let m): legs.append(m)
+                case .chestTaken: taken = true
+                case .chestOpened(_, _, let gem): opened = gem
+                case .gaveUp: Issue.record("gave up with legs \(legs)")
+                default: break
+                }
+            }
+        }
+        #expect(taken, "picked the chest up")
+        #expect(opened != nil, "brought it home and opened it (legs: \(legs))")
+        #expect(legs.prefix(3) == [.climb, .bridge, .grapple])
+        #expect(legs.count >= 4, "came back down by another route")
+        #expect(w.chests.isEmpty && c.expedition == nil)
+        #expect(w.grove.gems.values.reduce(0, +) == 1)
+        #expect(c.groundOwner == -1, "back on the floor")
+        #expect(w.stairs.isEmpty, "no lumber left behind")
+    }
+
+    @Test func summitExpeditionPlantsAFlagOnTheHighestWindow() throws {
+        let w = World(seed: 22)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: layout())
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(300, 2))
+        settle(c, in: w, on: -1)
+        #expect(w.startExpedition(c, .summit))
+        #expect(c.expedition?.methods == [.climb, .bridge, .grapple])
+        var planted = false
+        for _ in 0..<(60 * 120) where !planted {
+            w.step(1.0 / 60)
+            _ = w.drainTerrainEvents(); _ = w.drainBuildEvents()
+            for e in w.drainExpeditionEvents() { if case .summit = e { planted = true } }
+        }
+        #expect(planted)
+        let flag = try #require(w.flags.first)
+        #expect(abs(flag.pos.y - 700) < 1 && c.groundOwner == 3, "the flag is on C, the highest window")
+        // Close that window: the flag goes with it.
+        w.setEnvironment(screens: [scr], windowsFrontToBack: Array(layout().prefix(2)))
+        #expect(w.flags.isEmpty)
+    }
+
+    @Test func ziplineCarriesGremletsDown() throws {
+        let w = World(seed: 23)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: layout())
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(1280, 702))
+        let d = w.spawn(testSpecies(scale: 10), at: Vec2(1250, 702))
+        settle(c, in: w, on: 3)
+        #expect(c.groundOwner == 3)
+        let floor = try #require(w.surfaces.first { $0.kind == .floor })
+        #expect(w.startZip(c, to: floor))
+        let z = try #require(w.ziplines.first)
+        #expect(z.bottom.x < z.top.x - 80, "the line runs down and away")
+        var landed = false
+        for _ in 0..<(60 * 12) where !landed { w.step(1.0 / 60); landed = c.groundOwner == -1 }
+        #expect(landed, "slid down and landed on the floor")
+        #expect(w.ziplines.count == 1, "the line stays for the next one")
+        // A friend at the top takes it too.
+        d.pos = Vec2(z.top.x, 700); d.groundOwner = 3; d.set(.idle, duration: 1)
+        #expect(w.rideZip(d, z.id))
+        var landed2 = false
+        for _ in 0..<(60 * 12) where !landed2 { w.step(1.0 / 60); landed2 = d.groundOwner == -1 }
+        #expect(landed2)
     }
 }

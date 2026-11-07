@@ -736,3 +736,78 @@ enum TerrainArt {
         return cv.image
     }
 }
+
+/// Treasure chests, carried blocks, zipline fittings and summit flags (see Expedition.swift).
+extension TerrainArt {
+    /// A treasure chest: iron-banded wood, or gold. Open, the lid is up and the inside glows.
+    static func chest(open: Bool, golden: Bool) -> CGImage {
+        var cv = PixelCanvas(12, open ? 14 : 10)
+        let wood: UInt32 = golden ? 0xF2C94C : 0xC98B4A, woodDark: UInt32 = golden ? 0xD6A72A : 0x8A5A35
+        let band: UInt32 = golden ? 0x8A5A35 : 0x5E3B22, bandHi: UInt32 = golden ? 0xFFF3A0 : 0x9AA3AE
+        cv.rect(0, 0, 12, 6, wood)
+        cv.hspan(0, 11, 0, woodDark); cv.vspan(11, 0, 5, woodDark); cv.hspan(1, 10, 3, woodDark)
+        for x in [2, 9] { cv.vspan(x, 0, 5, band); cv.set(x, 4, bandHi) }
+        if open {
+            cv.rect(1, 6, 10, 2, golden ? 0xFFF3A0 : 0xFFE9A8)
+            cv.set(3, 7, 0xFFFFFF); cv.set(7, 6, 0xFFFFFF)
+            // The lid, thrown back.
+            cv.rect(0, 9, 12, 3, woodDark); cv.dome(5.5, baseY: 12, rx: 6, ry: 2, woodDark)
+            cv.hspan(0, 11, 9, band); for x in [2, 9] { cv.vspan(x, 9, 12, band) }
+            cv.hspan(1, 10, 8, 0x3A2412)
+        } else {
+            cv.rect(0, 6, 12, 2, woodDark); cv.dome(5.5, baseY: 8, rx: 6, ry: 2, woodDark)
+            cv.hspan(1, 10, 9, wood)
+            for x in [2, 9] { cv.vspan(x, 6, 9, band) }
+            cv.rect(5, 4, 2, 2, golden ? 0x8A5A35 : 0xF2C94C); cv.set(5, 5, 0xFFF3A0)
+        }
+        cv.outline(0.7)
+        return cv.image
+    }
+
+    /// Blocks carried over the head while climbing.
+    static func blockStack(_ n: Int) -> CGImage {
+        let k = max(1, min(4, n)), b = BuildArt.block
+        var cv = PixelCanvas(b + 2, k * b)
+        for i in 0..<k {
+            let y = i * b
+            cv.rect(0, y, b + 2, b, 0xC98B4A)
+            cv.rect(0, y + b - 1, b + 2, 1, 0xE0A866)
+            cv.rect(b + 1, y, 1, b, 0x8A5A35)
+            cv.rect(0, y, b + 2, 1, 0x8A5A35)
+            cv.set(1, y + 2, 0x5E3B22)
+        }
+        cv.outline(0.7)
+        return cv.image
+    }
+
+    /// The pulley that runs along a zipline, with the bar the rider holds.
+    static let pulley: CGImage = {
+        var cv = PixelCanvas(7, 9)
+        cv.blob(3.5, 6.5, 2.4, 2.4, base: 0x6E7680, light: 0x9AA3AE, shade: 0x4A5058)
+        cv.set(3, 6, 0xC6CFD8)
+        cv.vspan(3, 1, 4, 0x4A5058)
+        cv.hspan(0, 6, 0, 0x8A5A35); cv.hspan(1, 5, 1, 0xC98B4A)
+        cv.outline(0.7)
+        return cv.image
+    }()
+
+    /// A post a zipline is tied to.
+    static let zipPost: CGImage = {
+        var cv = PixelCanvas(5, 10)
+        cv.rect(1, 0, 3, 9, 0x8A5A35); cv.vspan(1, 0, 8, 0x5E3B22); cv.hspan(0, 4, 9, 0x5E3B22)
+        cv.set(2, 7, 0x6E7680)
+        cv.outline(0.7)
+        return cv.image
+    }()
+
+    /// The flag a Gremlet plants at the top: a tall pole and a pennant in its colour.
+    static func summitFlag(_ color: UInt32) -> CGImage {
+        var cv = PixelCanvas(10, 18)
+        cv.vspan(1, 0, 17, 0x5E3B22); cv.set(1, 17, 0xF2C94C)
+        cv.hspan(0, 2, 0, 0x5E3B22)
+        for (i, w) in [8, 7, 6, 5, 4].enumerated() { cv.hspan(2, 2 + w, 16 - i, i == 2 ? PixelCanvas.darken(color, 0.85) : color) }
+        cv.set(3, 16, 0xFFFFFF)
+        cv.outline(0.7)
+        return cv.image
+    }
+}

@@ -256,6 +256,7 @@ extension World {
         endSocial(c)
         c.visitingID = nil
         c.tendX = nil
+        if c.expedition != nil { giveUp(c) }
         if c.isAsleep { emit(.wokeUp(c.id)) }
         c.job = j
         if let id = j.windowID { j.shelfSide = shelfSideFor(window: id, near: c.pos.x, for: c.id) }

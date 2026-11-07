@@ -70,6 +70,15 @@ public final class World {
     var nextRailID = 0
     var nextRailAt = 300.0
     var terrainEvents: [TerrainEvent] = []
+    /// Expeditions: ziplines, chests and summit flags (see Expedition.swift).
+    public internal(set) var ziplines: [Zipline] = []
+    public internal(set) var chests: [Chest] = []
+    public internal(set) var flags: [Flag] = []
+    var nextZipID = 0, nextChestID = 0, nextFlagID = 0
+    var nextChestAt = 600.0
+    var nextSummitAt = 900.0
+    var nextExpeditionAt = 0.0
+    var expeditionEvents: [ExpeditionEvent] = []
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
     public internal(set) var ferry: Ferry?
     var nextFerryAt: Double?
@@ -163,6 +172,9 @@ public final class World {
         rebuildGroveSurfaces()
         rebuildAttached()
         setSurfacesDirty()
+        validateZips()
+        validateChests()
+        validateFlags()
     }
 
     func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces }
@@ -298,7 +310,10 @@ public final class World {
         for c in creatures { c.prevPos = c.pos }
         carryRiders()
         updateRails(dt)
-        validateStairs()
+        updateStairs(dt)
+        updateChests(dt)
+        updateFlags()
+        updateExpeditions(dt)
         updateFerry(dt)
         updateMerchant(dt)
         updateBonsai(dt)
@@ -350,7 +365,7 @@ public final class World {
             updateFlight(c, dt)
             return
         case .float:
-            updateFloat(c, dt)
+            if c.zip != nil { updateZip(c, dt) } else { updateFloat(c, dt) }
             return
         default:
             break
@@ -439,7 +454,7 @@ public final class World {
             }
             if c.activity == .run { endTag(c) }
             endSocial(c)
-            if c.job != nil { c.set(.idle, duration: 0.2) } else { Brain.decide(c, in: self) }
+            if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) } else { Brain.decide(c, in: self) }
         }
     }
 
@@ -481,6 +496,13 @@ public final class World {
                 }
                 c.facing = tx > c.pos.x ? 1 : -1
             }
+        }
+        if c.activity == .walk, let tx = c.targetX, c.expedition != nil {
+            // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
+            if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
+            c.facing = tx > c.pos.x ? 1 : -1
+            if !move(c, dt, speed: c.species.walkSpeed * 1.15, on: support, ledgeTurnChance: 0) { c.targetX = nil; c.set(.idle, duration: 0.3) }
+            return
         }
         if c.activity == .walk, let tx = c.targetX, c.groveTask != nil || c.play != nil {
             if abs(tx - c.pos.x) < 8 {

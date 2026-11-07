@@ -64,6 +64,12 @@ public final class Creature {
     /// Building a staircase, or laying a rail (their ids).
     var stair: Int?
     var rail: Int?
+    /// Blocks carried over its head while it climbs on its own staircase.
+    public internal(set) var blocksInHand = 0
+    /// Out on an expedition (see Expedition.swift), and sliding down a zipline.
+    public internal(set) var expedition: Expedition?
+    public internal(set) var zip: ZipRide?
+    public var isZipping: Bool { zip != nil && activity == .float }
     /// Reeling in on a grappling hook toward this point.
     public internal(set) var grapple: Vec2?
     var grappleTime = 0.0

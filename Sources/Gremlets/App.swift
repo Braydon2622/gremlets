@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         world.dayFollowsClaude = true
         // The tidy desktop: no village or road on the floor, no vines up the screen's sides, one small corner plant.
         world.villageOn = false
+        world.railsOn = false
         world.edgeVines = false
         world.rotateGrove = true
         species = SpriteLibrary.loadAll()

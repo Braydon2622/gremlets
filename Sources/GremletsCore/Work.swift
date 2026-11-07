@@ -28,7 +28,8 @@ public enum ShelfStyle: String, CaseIterable, Sendable {
     /// Relative chance of each (the snail is chosen separately, for gardens on the floor).
     var weight: Double {
         // The hot-air basket and the flying carpet are retired (they didn't feel like part of the forest).
-        switch self { case .plank: return 1.4; case .branch, .leaf, .treehouse: return 1.2; case .snail, .basket, .carpet: return 0; default: return 1.0 }
+        // Nature only: the hot-air basket, the flying carpet, the cloud and the balloon swing are retired.
+        switch self { case .plank: return 1.4; case .branch, .leaf, .treehouse, .mushroom: return 1.2; case .snail, .basket, .carpet, .cloud, .swing: return 0; default: return 1.0 }
     }
 
     /// Side-to-side drift (points) at time t.

@@ -85,6 +85,10 @@ final class OverlayController {
     private var nextButterfly: [Int: Double] = [:]
     private struct PropState {
         var screen: Int
+        /// Moss creeping out along the shelf from the window side, thicker the longer it's been up.
+        var moss: CALayer?
+        var mossKey = ""
+        var mossSince: CFTimeInterval = 0
         var anchorX: Double = 0
         var harvest: [Plant] = []
         var nextSparkle = 0.0
@@ -819,7 +823,8 @@ final class OverlayController {
     /// A little bird lands on the end of a platform, looks around, and flies off.
     /// Claude buddy: the building on this Gremlet's island (a block per file Claude edits), and its helpers.
     private func updateBuild(_ st: inout PropState, _ c: Creature, _ j: Job, ground: Double, x: Double, si: Int, origin o: CGPoint) {
-        guard j.kind == .claude else { return }
+        // The little house a session used to build is retired with the village (the castle shows the project now).
+        guard j.kind == .claude, world.villageOn else { return }
         let b = st.biome ?? Biome.pick(.plank, seed: UInt64(abs(j.windowID ?? c.id)), month: world.month)
         let key = "\(b.rawValue)-\(j.blocks)-\(world.isNight)-\(si)"
         st.lastBiome = b; st.lastBlocks = j.blocks
@@ -1348,7 +1353,8 @@ final class OverlayController {
             // The shelf (pops in when it goes up).
             if let s = shelf {
                 let px = max(8, Int((s.width / 3).rounded()))
-                let islandStyles: [ShelfStyle] = [.plank, .stone, .leaf, .cloud, .mushroom]
+                // No floating islands: every shelf is something that grows or is built from wood, stone and leaves.
+                let islandStyles: [ShelfStyle] = world.villageOn ? [.plank, .stone, .leaf, .cloud, .mushroom] : []
                 let seed = UInt64(abs(j.windowID ?? (c.id &* 7919)))
                 if islandStyles.contains(j.shelfStyle) && st.biome == nil { st.biome = Biome.pick(j.shelfStyle, seed: seed, month: world.month) }
                 if st.shelf == nil || st.shelfPx != px || st.screen != si {
@@ -1362,12 +1368,33 @@ final class OverlayController {
                     screens[si].root.insertSublayer(l, at: 0)
                     if st.shelf == nil { popIn(l); burst([Effects.dust], si: si, at: CGPoint(x: s.minX - o.x + s.width / 2, y: s.y - o.y), count: 3, dx: -40...40, dy: -6...6, duration: 0.5) }
                     st.shelf = l; st.shelfPx = px
+                    if st.mossSince == 0 { st.mossSince = CACurrentMediaTime() }
                 }
                 let flip: CGFloat = (j.shelfSide ?? 1) < 0 ? -1 : 1
                 st.shelf?.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1))
                 let p = CGPoint(x: (s.minX - o.x).rounded() + (flip < 0 ? s.width : 0), y: (s.y - o.y).rounded())
                 st.shelf?.anchorPoint = CGPoint(x: 0, y: 1)
                 if st.shelf?.position != p { st.shelf?.position = p }
+                // Moss creeps out along the shelf from the window, filling in over a quarter of an hour (a few
+                // minutes for a hobby shelf).
+                let grow = ((CACurrentMediaTime() - st.mossSince) / (j.kind == .claude ? 900 : 240)).clamped(0, 1)
+                let reach = max(4, Int(Double(px) * (0.25 + 0.75 * grow) / 2) * 2)
+                let mkey = "\(reach)-\(Int(grow * 5))-\(world.isNight)-\(si)"
+                if grow > 0.04 && st.mossKey != mkey {
+                    let m = st.moss ?? {
+                        let m = pixelLayer(si, anchor: .zero)
+                        m.zPosition = (st.shelf?.zPosition ?? 0) + 0.05
+                        screens[si].root.addSublayer(m)
+                        return m
+                    }()
+                    setImage(m, MossArt.carpet(lengthPx: reach, density: 0.12 + grow * 0.8, seed: seed &+ 77, night: world.isNight))
+                    st.moss = m; st.mossKey = mkey
+                }
+                if let m = st.moss {
+                    m.setAffineTransform(CGAffineTransform(scaleX: flip, y: 1))
+                    let mp = CGPoint(x: (flip < 0 ? s.maxX : s.minX) - o.x, y: (s.y - o.y).rounded() - 9)
+                    if m.position != mp { m.position = mp }
+                }
                 if let b = st.biome {
                     let key = "\(b.rawValue)-\(px)-\(world.isNight)-\(si)"
                     if st.decorKey != key {
@@ -1513,6 +1540,7 @@ final class OverlayController {
         // Job over: the shelf comes down now; the creation lingers a minute (on the floor, or where it was), then fades.
         for (id, var st) in props where !busy.contains(id) {
             if let l = st.shelf { fadeOut(l, 0.4); st.shelf = nil }
+            if let m = st.moss { fadeOut(m, 0.4); st.moss = nil; st.mossKey = ""; st.mossSince = 0 }
             if let d = st.decor { fadeOut(d, 0.4); st.decor = nil; st.decorKey = "" }
             if let b = st.build {
                 // The finished building moves down to the village and stays.

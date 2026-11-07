@@ -34,6 +34,9 @@ final class SpectacleRenderer {
     private var planLayers: [Int: (layer: CALayer, key: String)] = [:]
     private var packLayers: [Int: (layer: CALayer, level: Int)] = [:]
     private var lastMoss: CFTimeInterval = 0
+    private var windowPrev: [Int: Vec2] = [:]
+    private var windowSway: [Int: Double] = [:]
+    private var nextShed: [Int: CFTimeInterval] = [:]
     private var snowLayers: [String: (layer: CALayer, key: String)] = [:]
     private var snowmanLayers: [Int: (layer: CALayer, key: String)] = [:]
     private var leafLayers: [Int: CALayer] = [:]
@@ -847,8 +850,10 @@ final class SpectacleRenderer {
             guard let (si, top) = local(z.top), let (_, bottom) = local(z.bottom) else { continue }
             var e = zipLayers[z.id] ?? {
                 let line = CAShapeLayer()
-                line.strokeColor = NSColor(red: 0.55, green: 0.58, blue: 0.64, alpha: 1).cgColor
-                line.lineWidth = 2; line.fillColor = nil; line.zPosition = -0.35
+                // A vine strung between two stakes, not a cable.
+                line.strokeColor = NSColor(red: 0.30, green: 0.55, blue: 0.24, alpha: 1).cgColor
+                line.lineWidth = 2.5; line.fillColor = nil; line.zPosition = -0.35
+                line.lineDashPattern = [7, 1.5]
                 line.actions = ["path": NSNull()]
                 let t = pixelLayer(); t.contents = TerrainArt.zipPost; t.bounds = CGRect(x: 0, y: 0, width: 15, height: 30); t.anchorPoint = CGPoint(x: 0.5, y: 0); t.zPosition = -0.34
                 let b = pixelLayer(); b.contents = TerrainArt.zipPost; b.bounds = t.bounds; b.anchorPoint = CGPoint(x: 0.5, y: 0); b.zPosition = -0.34
@@ -1226,10 +1231,23 @@ final class SpectacleRenderer {
     /// and vines climb the screen's side edges; from 90, the carpets meet in the middle and flower; from 150, moss
     /// fringes the bottom of the menu bar and the floor; at 300 everything is covered.
     private func renderMoss() {
+        // Every frame, so moss stays glued to a window being dragged (images are only redrawn when they change).
         let now = CACurrentMediaTime()
-        guard now - lastMoss > 0.12 else { return }   // a few times a second is plenty for moss
+        let dt = min(0.1, max(0.001, now - lastMoss))
         lastMoss = now
         let m = world.mossMinutes
+        // How each window is moving: strands swing the other way and settle back; a quick drag shakes bits loose.
+        var moved: [Int: Vec2] = [:]
+        for (id, r) in world.windows {
+            let p = Vec2(r.minX, r.maxY)
+            if let q = windowPrev[id] { moved[id] = p - q }
+            windowPrev[id] = p
+            let v = (moved[id]?.x ?? 0) / dt
+            let target = (-v * 0.0006).clamped(-0.45, 0.45)
+            let s = windowSway[id] ?? 0
+            windowSway[id] = s + (target - s) * min(1, dt * 9)
+        }
+        for id in windowPrev.keys where world.windows[id] == nil { windowPrev[id] = nil; windowSway[id] = nil }
         var alive = Set<String>()
         let night = world.isNight
         func place(_ key: String, _ si: Int, at p: CGPoint, anchor: CGPoint, flip: Bool = false, rotate: Double = 0, imageKey: String, make: () -> CGImage) {
@@ -1258,14 +1276,22 @@ final class SpectacleRenderer {
             // Window tops: carpets creeping in from both ends.
             let reach = ((m - 10) / 90).clamped(0, 1)       // fraction of each half covered
             let density = ((m - 10) / 140).clamped(0, 1)
-            for s in world.surfaces where s.kind == .windowTop && s.width >= 40 {
+            var segIndex: [Int: Int] = [:]
+            for s in world.surfaces.filter({ $0.kind == .windowTop && $0.width >= 40 }).sorted(by: { ($0.ownerID, $0.minX) < ($1.ownerID, $1.minX) }) {
+                let seg = segIndex[s.ownerID, default: 0]; segIndex[s.ownerID] = seg + 1
                 let half = s.width / 2 * max(0.12, reach)
+                // A quick drag shakes a few bits of moss off the ends.
+                if let d = moved[s.ownerID], d.length > 9, density > 0.15, now >= nextShed[s.ownerID] ?? 0, let (si, pt) = local(Vec2(s.minX + 10, s.y)) {
+                    nextShed[s.ownerID] = now + 0.35
+                    let ex = d.x > 0 ? pt.x : pt.x + s.width - 20
+                    overlay.burst([Effects.leaf, Effects.leaf2], si: si, at: CGPoint(x: ex, y: pt.y), count: 2, dx: -20...20, dy: -60 ... -20, duration: 0.9)
+                }
                 let px = max(4, Int(half / artScale / 4) * 4)
                 let dq = Int(density * 5)
                 for (end, x, flip) in [("l", s.minX, false), ("r", s.maxX, true)] {
                     guard let (si, pt) = local(Vec2(x, s.y)) else { continue }
                     let seed = UInt64(abs(s.ownerID) &* 31 &+ (end == "l" ? 1 : 2))
-                    place("w\(s.ownerID)-\(Int(s.minX))-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
+                    place("w\(s.ownerID)-\(seg)-\(end)", si, at: CGPoint(x: pt.x, y: pt.y - 3 * artScale), anchor: CGPoint(x: 0, y: 0), flip: flip,
                           imageKey: "\(px)-\(dq)-\(night)") { MossArt.carpet(lengthPx: px, density: density, seed: seed, night: night) }
                 }
             }
@@ -1277,7 +1303,8 @@ final class SpectacleRenderer {
             case .windowSide:
                 guard let (si, pt) = local(Vec2(v.x, v.top)) else { continue }
                 let seed = UInt64(v.key.unicodeScalars.reduce(7) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF })
-                place("s\(v.key)", si, at: CGPoint(x: pt.x, y: pt.y + 4), anchor: CGPoint(x: 0.5, y: 1),
+                let swing: Double = { if case .windowSide(let wid, _) = v.anchor { return windowSway[wid] ?? 0 }; return 0 }()
+                place("s\(v.key)", si, at: CGPoint(x: pt.x, y: pt.y + 4), anchor: CGPoint(x: 0.5, y: 1), rotate: swing,
                       imageKey: "\(lpx)-\(m >= 90)") { MossArt.strand(lengthPx: lpx, seed: seed, bloom: m >= 90) }
             case .screenEdge(let i, let side):
                 guard let (si, pt) = local(Vec2(v.x - side * 6, v.bottom)) else { continue }
@@ -1327,7 +1354,7 @@ final class SpectacleRenderer {
             let anchor = CGPoint(x: a.x - o.x, y: a.y - o.y)
             let r = ropes[c.id] ?? {
                 let line = CAShapeLayer()
-                line.strokeColor = NSColor(red: 0.85, green: 0.72, blue: 0.5, alpha: 1).cgColor
+                line.strokeColor = NSColor(red: 0.35, green: 0.62, blue: 0.28, alpha: 1).cgColor
                 line.lineWidth = 2; line.fillColor = nil; line.zPosition = 20
                 line.actions = ["path": NSNull()]
                 let hook = pixelLayer(); hook.contents = BridgeArt.hook; hook.bounds = CGRect(x: 0, y: 0, width: 15, height: 12)

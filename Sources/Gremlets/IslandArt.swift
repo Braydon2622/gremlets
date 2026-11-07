@@ -390,7 +390,9 @@ enum BridgeArt {
             cv.rect(x, 0, bw, 2, i % 2 == 0 ? 0xC98B4A : 0xB97E42)
             cv.rect(x + bw - 1, 0, 1, 2, 0x8A5A35)
             if i % 2 == 0 { cv.rect(x + 1, 2, 1, 4, 0x8A5A35) }
-            cv.rect(x, 5, bw, 1, 0xD9C08A)
+            cv.rect(x, 5, bw, 1, 0x5E9E46)                    // a vine for a rail
+            if i % 3 == 1 { cv.set(x + 2, 6, 0x8BD66A); cv.set(x + 3, 4, 0x8BD66A) }   // leaves on it
+            if i % 2 == 1 { cv.set(x + 1, 1, 0x6CC04A); cv.set(x + 2, 1, 0x8BD66A) }   // moss on the deck
         }
         cv.rect(0, 0, n * bw, 1, 0x7A5232)
         if !fromLeft { cv = flipped(cv) }
@@ -404,12 +406,13 @@ enum BridgeArt {
     }
 
     static let plank = Effects.pixels(["wwwww", "ddddd"], ["w": 0xC98B4A, "d": 0x8A5A35])
+    /// The grapple: a forked twig, not a metal hook.
     static let hook = Effects.pixels([
-        ".kkk.",
         "k...k",
-        "k..k.",
+        ".k.kg",
         "..k..",
-    ], ["k": 0xB8C2CC])
+        "..k..",
+    ], ["k": 0x7A5232, "g": 0x6CC04A])
 }
 
 /// Weather over a Claude session's island.
@@ -687,11 +690,14 @@ enum TerrainArt {
         for k in max(0, first)..<min(built, n) {
             let x = dir > 0 ? k * b : (n - 1 - k) * b, y = k * b
             cv.rect(x, y, bw, b, 0xC98B4A)
-            cv.rect(x, y + b - 1, bw, 1, 0xE0A866)
             cv.rect(x + bw - 1, y, 1, b, 0x8A5A35)
             cv.rect(x, y, bw, 1, 0x8A5A35)
             cv.rect(x, y + 2, bw, 1, 0xA9743F)
-            cv.set(x + 1, y + 1, 0x5E3B22); cv.set(x + bw - 2, y + 3, 0x5E3B22)
+            cv.set(x + 1, y + 1, 0x5E3B22)
+            // Moss on every tread, a little dripping over the front.
+            cv.rect(x, y + b - 1, bw, 1, 0x6CC04A)
+            cv.set(x + 2, y + b - 1, 0x8BD66A); cv.set(x + bw - 3, y + b - 1, 0x8BD66A)
+            cv.set(dir > 0 ? x + bw - 1 : x, y + b - 2, 0x5E9E46)
             if k % 2 == 0 {
                 let px = dir > 0 ? x : x + bw - 1
                 cv.vspan(px, y + b, y + b + 5, 0x5E3B22)
@@ -699,7 +705,7 @@ enum TerrainArt {
             }
         }
         for i in 1..<max(1, posts.count) {
-            cv.line(Double(posts[i - 1].0), Double(posts[i - 1].1), Double(posts[i].0), Double(posts[i].1), 0xD9C08A)
+            cv.line(Double(posts[i - 1].0), Double(posts[i - 1].1), Double(posts[i].0), Double(posts[i].1), 0x5E9E46)   // a vine handrail
         }
         return cv.image
     }
@@ -772,7 +778,7 @@ extension TerrainArt {
         for i in 0..<k {
             let y = i * b
             cv.rect(0, y, b + 2, b, 0xC98B4A)
-            cv.rect(0, y + b - 1, b + 2, 1, 0xE0A866)
+            cv.rect(0, y + b - 1, b + 2, 1, 0x6CC04A); cv.set(2, y + b - 1, 0x8BD66A)
             cv.rect(b + 1, y, 1, b, 0x8A5A35)
             cv.rect(0, y, b + 2, 1, 0x8A5A35)
             cv.set(1, y + 2, 0x5E3B22)
@@ -782,12 +788,13 @@ extension TerrainArt {
     }
 
     /// The pulley that runs along a zipline, with the bar the rider holds.
+    /// What a Gremlet hangs from on a zipline vine: an acorn, its stalk curled over the vine.
     static let pulley: CGImage = {
         var cv = PixelCanvas(7, 9)
-        cv.blob(3.5, 6.5, 2.4, 2.4, base: 0x6E7680, light: 0x9AA3AE, shade: 0x4A5058)
-        cv.set(3, 6, 0xC6CFD8)
-        cv.vspan(3, 1, 4, 0x4A5058)
-        cv.hspan(0, 6, 0, 0x8A5A35); cv.hspan(1, 5, 1, 0xC98B4A)
+        cv.blob(3.5, 2.6, 2.3, 2.6, base: 0xD9A25E, light: 0xF0C987, shade: 0xB07A3E)   // the nut
+        cv.hspan(1, 5, 5, 0x7A5232); cv.hspan(0, 6, 4, 0x8A5A35)                        // the cap
+        cv.set(1, 4, 0x6B4428); cv.set(3, 4, 0x6B4428); cv.set(5, 4, 0x6B4428)
+        cv.vspan(3, 6, 7, 0x6B8A3A); cv.set(4, 8, 0x6B8A3A); cv.set(2, 8, 0x6B8A3A)     // the stalk, curled over
         cv.outline(0.7)
         return cv.image
     }()
@@ -796,7 +803,7 @@ extension TerrainArt {
     static let zipPost: CGImage = {
         var cv = PixelCanvas(5, 10)
         cv.rect(1, 0, 3, 9, 0x8A5A35); cv.vspan(1, 0, 8, 0x5E3B22); cv.hspan(0, 4, 9, 0x5E3B22)
-        cv.set(2, 7, 0x6E7680)
+        cv.set(3, 9, 0x6CC04A); cv.set(4, 8, 0x8BD66A); cv.set(0, 6, 0x6CC04A)            // a leaf or two sprouting
         cv.outline(0.7)
         return cv.image
     }()
@@ -859,8 +866,9 @@ enum PlanArt {
         for k in 0..<n {
             let x = k * (pw + gap)
             if k < done {
-                cv.rect(x, 0, pw, 3, 0xC98B4A); cv.hspan(x, x + pw - 1, 2, 0xE0A866); cv.hspan(x, x + pw - 1, 0, 0x8A5A35)
-                cv.set(x + 1, 1, 0x4A4A4A); cv.set(x + pw - 2, 1, 0x4A4A4A)
+                cv.rect(x, 0, pw, 3, 0xC98B4A); cv.hspan(x, x + pw - 1, 2, k % 3 == 1 ? 0x6CC04A : 0xE0A866); cv.hspan(x, x + pw - 1, 0, 0x8A5A35)
+                cv.set(x + 1, 1, 0x6B4428); cv.set(x + pw - 2, 1, 0x6B4428)
+                if k % 2 == 0 { cv.set(x + 2, 2, 0x8BD66A) }
             } else {
                 for xx in x..<(x + pw) where (xx - x) % 2 == 0 { cv.set(xx, 2, 0xF1E4C8); cv.set(xx, 0, 0xF1E4C8) }
                 cv.set(x, 1, 0xF1E4C8); cv.set(x + pw - 1, 1, 0xF1E4C8)

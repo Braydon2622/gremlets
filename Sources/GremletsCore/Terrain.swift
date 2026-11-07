@@ -331,7 +331,7 @@ extension World {
 
     /// The wide window top this creature stands on, if it has no rail yet.
     func railCandidate(for c: Creature) -> Surface? {
-        guard clock >= nextRailAt, rails.count < 2, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
+        guard railsOn, clock >= nextRailAt, rails.count < 2, c.job == nil, c.play == nil, c.groveTask == nil, c.isGrounded,
               let s = supportingSurface(for: c), s.kind == .windowTop, s.ownerID >= 0, s.width >= Rail.minWindowWidth,
               !rails.contains(where: { $0.windowID == s.ownerID }) else { return nil }
         return s

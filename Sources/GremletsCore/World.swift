@@ -102,6 +102,8 @@ public final class World {
     /// The app's tidier desktop: no village or road on the floor, no vines up the screen's sides, and one small plant
     /// at a time in the corner (the engine's own tests run with the older, fuller world).
     public var villageOn = true
+    /// Minecart rails (the app turns them off: not part of the forest).
+    public var railsOn = true
     public var edgeVines = true
     public var rotateGrove = false
     var nextGroveRotation = 0.0

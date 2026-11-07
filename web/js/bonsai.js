@@ -110,27 +110,24 @@ export class Bonsai {
  * potHeight, thickness, bounds: {x, y, w, h} } (bounds include the pot; y from -potHeight).
  */
 export function layoutBonsai(b) {
+  // A simple, readable "cloud pad" bonsai (the same as the Mac's BonsaiGeometry.layout): a thick trunk that tapers
+  // and curves, roots flaring at its foot, and a few flat-bottomed pads in a lopsided triangle. 1 pad for a seedling,
+  // up to 5 when mature; it grows bigger and fuller, never busier.
   const rng = new SplitMix64(b.seed + 1n);
   const s = b.stature;
-  const H = 48 + 160 * s;
-  const W = 70 + 250 * s;
-  const windDir = (b.seed >> 24n) % 2n === 0n ? 1 : -1;
+  const H = 42 + 92 * s;
+  const lean = (b.seed >> 24n) % 2n === 0n ? 1 : -1;
   const phase = rng.range(0, 6.28);
-  const wiggle = Array.from({ length: 10 }, () => rng.range(-1, 1));
 
-  // Trunk.
   const trunk = [V(0, 0)];
   const n = 8;
   for (let k = 1; k <= n; k++) {
     const t = k / n;
     let p;
     switch (b.form) {
-      case 'upright': p = V(0.05 * H * t + wiggle[k] * 3 * s, t * H); break;
-      case 'informal': p = V(Math.sin(t * Math.PI * 1.7 + phase) * (12 + 18 * s) + wiggle[k] * 2, t * H); break;
-      case 'windswept': p = V(windDir * (0.08 * H * t + 0.45 * H * t * t), t * H * (1 - 0.28 * t)); break;
-      default:   // cascade
-        if (t < 0.3) p = V(windDir * t * 26, t * H * 0.9);
-        else p = V(windDir * (8 + (t - 0.3) * H * 0.8), 0.27 * H - (t - 0.3) * H * 0.9);
+      case 'upright': p = V(lean * 0.04 * H * t, t * H); break;
+      case 'informal': p = V(Math.sin(t * Math.PI * 1.5 + phase) * (6 + 12 * s) * (1 - 0.4 * t), t * H); break;
+      default: p = V(lean * (0.32 * H * t - 0.1 * H * t * t), t * H * 0.95);   // windswept and cascade grow slanting
     }
     trunk.push(p);
   }
@@ -138,81 +135,53 @@ export function layoutBonsai(b) {
     const f = t * n, i = Math.min(n - 1, int(f)), u = f - i;
     return add(trunk[i], mul(sub(trunk[i + 1], trunk[i]), u));
   };
-  const baseThickness = 5 + 15 * s;
+  const baseThickness = 7 + 15 * s;
 
-  // Surface roots.
   const roots = [];
-  const rootCount = s < 0.15 ? 0 : 2 + int(s * 3);
+  const rootCount = s < 0.08 ? 0 : 2 + int(s * 2.5);
   for (let r = 0; r < rootCount; r++) {
     const dir = r % 2 === 0 ? 1 : -1;
-    const len = (8 + 14 * s) * rng.range(0.7, 1.3);
-    roots.push([V(dir * baseThickness * 0.3, 2), V(dir * len * 0.6, 0.5), V(dir * len, -1)]);
+    const len = (7 + 12 * s) * rng.range(0.75, 1.2);
+    roots.push([V(dir * baseThickness * 0.25, 2), V(dir * len * 0.6, 0.6), V(dir * len, -1)]);
   }
 
-  // Branches, longest at the bottom, each with its pad and (as it fills out) a twig or two.
+  const first = b.branches.length ? b.branches[0].side : lean;
+  const tiers = [];
+  if (s >= 0.12) tiers.push({ t: 0.42, side: first, reach: 1.0, size: 1.0 });
+  if (s >= 0.12) tiers.push({ t: 0.62, side: -first, reach: 0.78, size: 0.85 });
+  if (s >= 0.4) tiers.push({ t: 0.78, side: first, reach: 0.5, size: 0.68 });
+  if (s >= 0.68) tiers.push({ t: 0.3, side: -first, reach: 0.62, size: 0.72 });
+  const W0 = 26 + 64 * s;
+  const totalBlooms = Math.min(4 * (tiers.length + 1), b.branches.reduce((a, br) => a + br.blooms, 0));
+  const totalFruit = Math.min(2 * (tiers.length + 1), b.branches.reduce((a, br) => a + br.fruit, 0));
+  const spots = (c, rx, count, r, fruit) => Array.from({ length: Math.max(0, count) }, () => fruit
+    ? add(c, V(r.range(-0.6, 0.6) * rx, -rx * 0.42 - 3 - r.range(0, 3)))
+    : add(c, V(r.range(-0.75, 0.75) * rx, r.range(0, 0.8) * rx * 0.42)));
   const limbs = [], pads = [];
-  const count = b.branches.length;
-  b.branches.forEach((br, i) => {
+  const pieces = tiers.length + 1;
+  tiers.forEach((tier, i) => {
     const brng = new SplitMix64(b.seed ^ u64(BigInt(i + 1) * 0x9E3779B97F4A7C15n));
-    const t = Math.min(0.9, 0.2 + 0.68 * (i + 0.5) / Math.max(count, 1));
-    const root = along(t);
-    const fullness = Math.min(1, Math.log2(1 + br.edits) / 7);
-    const L = W * 0.5 * (1 - 0.55 * t) * (0.45 + 0.55 * fullness);
-    const side = b.form === 'windswept' ? windDir : br.side;
-    let angle;
-    switch (b.form) {
-      case 'windswept': angle = brng.range(-0.1, 0.25); break;
-      case 'cascade': angle = t > 0.45 ? brng.range(-0.55, -0.2) : brng.range(0.05, 0.35); break;
-      default: angle = brng.range(0.08, 0.32) - 0.12 * t;   // upper branches flatter
-    }
-    const droop = s > 0.6 ? -0.08 * fullness : 0;   // old branches sag a little at the tip
-    const p1 = add(root, V(side * Math.cos(angle + 0.22) * L * 0.45, Math.sin(angle + 0.22) * L * 0.45));
-    const end = add(p1, V(side * Math.cos(angle + droop) * L * 0.55, Math.sin(angle + droop) * L * 0.55));
-    const thick = baseThickness * (0.55 - 0.3 * t);
-    limbs.push({ points: [root, p1, end], thickness: thick });
-    const rx = (10 + 26 * fullness) * (0.55 + 0.45 * s);
-    const padCenters = [end];
-    if (fullness > 0.35) {
-      const q = add(p1, V(side * Math.cos(angle + 0.9) * L * 0.32, Math.sin(angle + 0.9) * L * 0.32));
-      limbs.push({ points: [p1, q], thickness: thick * 0.5 });
-      padCenters.push(q);
-    }
-    if (fullness > 0.7) {
-      const m = add(p1, mul(sub(end, p1), 0.55));
-      const q = add(m, V(side * Math.cos(angle - 0.35) * L * 0.28, Math.sin(angle - 0.35) * L * 0.28 - 4));
-      limbs.push({ points: [m, q], thickness: thick * 0.45 });
-      padCenters.push(q);
-    }
-    // Blooms and fruit spread over this branch's pads.
-    const pc = padCenters.length;
-    const bloomSpots = padCenters.map(() => []), fruitSpots = padCenters.map(() => []);
-    padCenters.forEach((c, k) => {
-      const r = k === 0 ? rx : rx * 0.68;
-      for (let j = 0; j < 4; j++) bloomSpots[k].push(add(c, V(brng.range(-0.8, 0.8) * r, brng.range(-0.1, 0.9) * r * 0.4)));
-      for (let j = 0; j < 3; j++) fruitSpots[k].push(add(c, V(brng.range(-0.7, 0.7) * r, -r * 0.4 - 3 - brng.range(0, 5))));
-    });
-    let bloomsLeft = Math.min(br.blooms, 4 * pc), fruitLeft = Math.min(br.fruit, 3 * pc);
-    padCenters.forEach((c, k) => {
-      const r = k === 0 ? rx : rx * 0.68;
-      const nb = Math.min(bloomSpots[k].length, int((bloomsLeft + pc - 1 - k) / pc));
-      const nf = Math.min(fruitSpots[k].length, int((fruitLeft + pc - 1 - k) / pc));
-      bloomsLeft -= nb; fruitLeft -= nf;
-      pads.push({ center: c, rx: r, ry: r * 0.4, branch: i, blooms: bloomSpots[k].slice(0, nb), fruit: fruitSpots[k].slice(0, nf) });
-    });
+    const root = along(tier.t);
+    const L = W0 * tier.reach * (1 - 0.35 * tier.t);
+    const elbow = add(root, V(tier.side * L * 0.5, 3 + 3 * s));
+    const end = add(root, V(tier.side * L, 6 + 6 * s - 4 * tier.t));
+    limbs.push({ points: [root, elbow, end], thickness: baseThickness * (0.48 - 0.25 * tier.t) });
+    const rx = (16 + 30 * s) * tier.size;
+    const c = add(end, V(tier.side * rx * 0.15, rx * 0.22));
+    pads.push({ center: c, rx, ry: rx * 0.46, branch: Math.min(i, Math.max(0, b.branches.length - 1)),
+      blooms: spots(c, rx, int((totalBlooms + pieces - 1 - i) / pieces), brng, false),
+      fruit: spots(c, rx, int((totalFruit + pieces - 1 - i) / pieces), brng, true) });
   });
-  // The crown: a cluster at the top (for a cascade, at the bend).
-  const top = b.form === 'cascade' ? add(along(0.3), V(-windDir * 5, 10)) : add(trunk[n], V(0, 5));
-  const crx = 11 + 22 * s, cry = crx * 0.42;
-  pads.push({ center: top, rx: crx, ry: cry, branch: -1, blooms: [], fruit: [] });
-  if (s > 0.4) {
-    pads.push({ center: add(top, V(-crx * 0.7, -cry * 0.9)), rx: crx * 0.65, ry: cry * 0.7, branch: -1, blooms: [], fruit: [] });
-    pads.push({ center: add(top, V(crx * 0.75, -cry * 1.1)), rx: crx * 0.6, ry: cry * 0.7, branch: -1, blooms: [], fruit: [] });
-  }
+  const arng = new SplitMix64(b.seed + 99n);
+  const top = add(trunk[n], V(0, 4));
+  const arx = 15 + 24 * s;
+  pads.push({ center: top, rx: arx, ry: arx * 0.55, branch: -1,
+    blooms: spots(top, arx, int(totalBlooms / pieces), arng, false), fruit: spots(top, arx, int(totalFruit / pieces), arng, true) });
 
-  // Pot, and the bounds of it all.
-  const potW = 44 + 56 * s, potH = 15 + 13 * s;
+  // The moss mound's width (it used to be a pot), and the bounds of it all.
+  const potW = 34 + 40 * s, potH = 4;
   let minX = -potW / 2, maxX = potW / 2, minY = -potH, maxY = 0;
-  for (const p of trunk) { minX = Math.min(minX, p.x - 6); maxX = Math.max(maxX, p.x + 6); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
+  for (const p of trunk) { minX = Math.min(minX, p.x - 8); maxX = Math.max(maxX, p.x + 8); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
   for (const r of roots) for (const p of r) { minX = Math.min(minX, p.x - 2); maxX = Math.max(maxX, p.x + 2); }
   for (const p of pads) {
     minX = Math.min(minX, p.center.x - p.rx - 3); maxX = Math.max(maxX, p.center.x + p.rx + 3);
@@ -229,21 +198,21 @@ export function palette(sp, month) {
   const autumn = month >= 9 && month <= 11, spring = month >= 3 && month <= 5;
   switch (sp) {
     case 'pine':
-      return { bark: 0x6E5A4A, barkLight: 0x8C7560, barkDark: 0x4A3A2E, leaf: 0x2F6B3A, leafLight: 0x4E9A4A, leafDark: 0x1F4A2A, bloom: 0xC9A24A, bloomLight: 0xF2D37A };
+      return { bark: 0x7A5A44, barkLight: 0x9A7656, barkDark: 0x4E3828, leaf: 0x3A8448, leafLight: 0x62B85A, leafDark: 0x235A30, bloom: 0xC9A24A, bloomLight: 0xF2D37A };
     case 'maple': {
       const [l, ll, ld] = autumn ? [0xE0582C, 0xF7B45C, 0xA83A1E] : [0x5DBB46, 0x9BE36A, 0x2F7A2C];
-      return { bark: 0x8A8278, barkLight: 0xA59D92, barkDark: 0x5E5850, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xE8574A, bloomLight: 0xFF9A8A };
+      return { bark: 0x8A6448, barkLight: 0xA8805E, barkDark: 0x5A3E2C, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xE8574A, bloomLight: 0xFF9A8A };
     }
     case 'cherry': {
       const [l, ll, ld] = spring ? [0xF7B6D2, 0xFFE0EF, 0xD6789F] : [0x4FA83A, 0x8BD66A, 0x2F7A2C];
       return { bark: 0x5A3A2A, barkLight: 0x7A5232, barkDark: 0x3A2418, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xFF8FB1, bloomLight: 0xFFE0EF };
     }
     case 'juniper':
-      return { bark: 0x8A4A3A, barkLight: 0xA8685A, barkDark: 0x5E2E22, leaf: 0x4F8F7A, leafLight: 0x7FBFA8, leafDark: 0x2F5F52, bloom: 0xF2D37A, bloomLight: 0xFFF3C4 };
+      return { bark: 0x8A4A3A, barkLight: 0xA8685A, barkDark: 0x5E2E22, leaf: 0x4E9A62, leafLight: 0x86CC90, leafDark: 0x2E6444, bloom: 0xF2D37A, bloomLight: 0xFFF3C4 };
     case 'wisteria':
-      return { bark: 0x6E6258, barkLight: 0x8E8276, barkDark: 0x4A4038, leaf: 0x5E9E46, leafLight: 0x8BD66A, leafDark: 0x3E7A34, bloom: 0xB98CFF, bloomLight: 0xE0C2FF };
+      return { bark: 0x7A5A44, barkLight: 0x9A7656, barkDark: 0x4E3828, leaf: 0x5EA846, leafLight: 0x92DC6E, leafDark: 0x3A7A30, bloom: 0xB98CFF, bloomLight: 0xE0C2FF };
     default:   // olive
-      return { bark: 0x7A7060, barkLight: 0x9A9080, barkDark: 0x524A3E, leaf: 0x8FA98A, leafLight: 0xC2D4B8, leafDark: 0x5F7A5C, bloom: 0xFFFFFF, bloomLight: 0xFFFFFF };
+      return { bark: 0x8A6C4E, barkLight: 0xAA8A68, barkDark: 0x584432, leaf: 0x7AAA56, leafLight: 0xB2D88A, leafDark: 0x4C7A3A, bloom: 0xF2E6B0, bloomLight: 0xFFF6D8 };
   }
 }
 
@@ -265,15 +234,15 @@ export function renderBonsai(b, layout, scale, month, night, ageDays = 0) {
   const px = (p) => [(p.x - minX) * k, (p.y - minY) * k];
   const pline = (a, c, col, width) => { const [x0, y0] = px(a), [x1, y1] = px(c); cv.line(x0, y0, x1, y1, col, Math.max(1, width)); };
 
-  // Pot.
-  drawPot(cv, b.pot, layout.potWidth * k, layout.potHeight * k, px(V(0, 0)), ageDays, winter);
+  // No pot: the tree grows out of a mound of moss, a little flower in it for each round number reached.
+  drawMossMound(cv, layout.potWidth * k * 1.7, px(V(0, 0)), b.seed, Math.min(5, (b.milestones || []).length), night, winter);
 
   // Trunk (behind the limbs), tapering, with a lit side and a shaded side.
   const trunkPixels = [];
   const segs = layout.trunk.length - 1;
   for (let i = 0; i < segs; i++) {
     const t = i / segs;
-    const thick = Math.max(1, int(rounded(layout.thickness * (1 - 0.7 * t) * k)));
+    const thick = Math.max(1, int(rounded(layout.thickness * (1 - 0.62 * t) * k)));
     pline(layout.trunk[i], layout.trunk[i + 1], pal.bark, thick);
   }
   // Bark texture: a light column on the left of the trunk, dark on the right.
@@ -296,9 +265,9 @@ export function renderBonsai(b, layout, scale, month, night, ageDays = 0) {
   if (b.species === 'juniper' && ageDays > 14) {
     for (let i = 0; i < segs; i++) pline(add(layout.trunk[i], V(2, 0)), add(layout.trunk[i + 1], V(2, 0)), 0xE8E4DA, 1);
   }
-  // Lichen on old bark.
+  // A little moss on old bark.
   if (ageDays > 7) {
-    for (const [x, y] of trunkPixels) if (r.next() < Math.min(0.18, ageDays / 200)) cv.set(x, y, 0xBFD8B0);
+    for (const [x, y] of trunkPixels) if (r.next() < Math.min(0.07, ageDays / 300)) cv.set(x, y, r.next() < 0.5 ? 0x7FB85A : 0x5E9E46);
   }
 
   // Foliage.
@@ -315,10 +284,20 @@ export function renderBonsai(b, layout, scale, month, night, ageDays = 0) {
       }
       continue;
     }
-    cv.blob(cx, cy - ry * 0.25, rx, ry * 0.95, pal.leafDark);
-    cv.blob(cx, cy, rx, ry, pal.leaf, pal.leafLight, pal.leafDark);
-    cv.blob(cx - rx * 0.28, cy + ry * 0.3, rx * 0.5, ry * 0.5, pal.leafLight);
-    texture(cv, b.species, cx, cy, rx, ry, pal, r);
+    // A cloud pad: overlapping domes on a flat, dark underside (drawn apart so the trim doesn't cut the branch).
+    const pc = new PixelCanvas(w, h);
+    const lumps = rx > 9 ? 3 : 2;
+    for (let i = 0; i < lumps; i++) {
+      const f = (i + 0.5) / lumps, lx = cx - rx * 0.6 + rx * 1.2 * f, mid = i === (lumps >> 1);
+      pc.blob(lx, cy + ry * (mid ? 0.28 : 0), rx * (lumps === 3 ? 0.52 : 0.64), ry * (mid ? 1 : 0.85), pal.leaf, pal.leafLight, pal.leaf);
+    }
+    texture(pc, b.species, cx, cy, rx, ry, pal, r);
+    const flat = int(rounded(cy - ry * 0.55));
+    for (let x = 0; x < w; x++) for (let y = flat; y < h; y++) {
+      const c = pc.get(x, y);
+      if (c == null) continue;
+      cv.set(x, y, y <= flat + 1 ? pal.leafDark : c);
+    }
     if (winter) {
       // Snow along the top of evergreen pads.
       for (let x = int(cx - rx); x <= int(cx + rx); x++) {
@@ -349,7 +328,11 @@ export function renderBonsai(b, layout, scale, month, night, ageDays = 0) {
       cv.set(int(x), int(y) + 2, pal.barkDark);   // its stalk
     }
   }
+  // Snow (and white blossom) stays white: the outline would otherwise grey the edge pixels it sits on.
+  const white = [];
+  for (let i = 0; i < cv.px.length; i++) if (cv.px[i] === 0xFFFFFF) white.push(i);
   cv.outline(0.66);
+  for (const i of white) cv.px[i] = 0xFFFFFF;
   return { canvas: cv, anchor: { x: (-minX * k) / w, y: (-minY * k) / h } };
 }
 
@@ -386,6 +369,28 @@ const POTS = [
   [0x8E8B83, 0xB8B6AE, 0x5E5B55],   // stone tray
   [0x4F9A7A, 0x7FC9A8, 0x2F6B52],   // glazed jade
 ];
+
+/** A soft mound of moss the tree rises from (the same as the Mac's), with tiny flowers for its milestones. */
+function drawMossMound(cv, width, [ox, oy], seed, flowers, night, winter) {
+  const w = Math.max(8, width), half = w / 2;
+  const r = new ArtRNG(u64(BigInt(seed) * 131n + 7n));
+  const deep = 0x3E7A34, mid = 0x5E9E46, light = 0x8BD66A, pale = 0xB6E28A;
+  let x = ox - half;
+  while (x < ox + half) {
+    const t = 1 - Math.abs(x - ox) / half, rad = r.range(1.8, 2.8) + t * 1.4;
+    cv.blob(x, oy + 0.6 + t * 1.6, rad, 1.4 + t * 1.6, mid, light, deep);
+    x += rad * r.range(0.8, 1.1);
+  }
+  const topOf = (xx, span) => { for (let y = int(oy) + span; y >= int(oy); y--) if (cv.get(xx, y) != null) return y; return null; };
+  for (let xx = int(ox - half); xx <= int(ox + half); xx++) { const t = topOf(xx, 5); if (r.next() < 0.16 && t != null) cv.set(xx, t, r.next() < 0.5 ? pale : light); }
+  const cols = [0xFF8FB1, 0xFFE45C, 0x8FD3FF, 0xB98CFF, 0xFFFFFF];
+  for (let n = 0; n < flowers; n++) {
+    const fx = int(ox - half + 2 + n * Math.max(2, (w - 4) / Math.max(1, flowers))) + (n % 2), t = topOf(fx, 6);
+    if (t != null) { cv.set(fx, t + 1, cols[n]); cv.set(fx, t, 0x3E7A34); }
+  }
+  if (night) { const mx = int(ox + half * 0.6); cv.set(mx, int(oy) + 1, 0xEBDDC3); cv.set(mx, int(oy) + 2, 0x5FE8FF); cv.set(mx - 1, int(oy) + 2, 0x5FE8FF); }
+  if (winter) for (let xx = int(ox - half); xx <= int(ox + half); xx++) { const t = topOf(xx, 5); if (xx % 3 !== 0 && t != null) cv.set(xx, t, 0xFFFFFF); }
+}
 
 function drawPot(cv, style, potW, potH, [ox, oy], ageDays, winter) {
   const w = Math.max(6, int(potW)), hgt = Math.max(4, int(style === 2 ? potH * 0.6 : potH));

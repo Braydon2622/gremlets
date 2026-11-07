@@ -16,19 +16,20 @@ enum BonsaiArt {
         let autumn = (9...11).contains(month), spring = (3...5).contains(month)
         switch sp {
         case .pine:
-            return Palette(bark: 0x6E5A4A, barkLight: 0x8C7560, barkDark: 0x4A3A2E, leaf: 0x2F6B3A, leafLight: 0x4E9A4A, leafDark: 0x1F4A2A, bloom: 0xC9A24A, bloomLight: 0xF2D37A)
+            return Palette(bark: 0x7A5A44, barkLight: 0x9A7656, barkDark: 0x4E3828, leaf: 0x3A8448, leafLight: 0x62B85A, leafDark: 0x235A30, bloom: 0xC9A24A, bloomLight: 0xF2D37A)
         case .maple:
             let (l, ll, ld): (UInt32, UInt32, UInt32) = autumn ? (0xE0582C, 0xF7B45C, 0xA83A1E) : (0x5DBB46, 0x9BE36A, 0x2F7A2C)
-            return Palette(bark: 0x8A8278, barkLight: 0xA59D92, barkDark: 0x5E5850, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xE8574A, bloomLight: 0xFF9A8A)
+            return Palette(bark: 0x8A6448, barkLight: 0xA8805E, barkDark: 0x5A3E2C, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xE8574A, bloomLight: 0xFF9A8A)
         case .cherry:
             let (l, ll, ld): (UInt32, UInt32, UInt32) = spring ? (0xF7B6D2, 0xFFE0EF, 0xD6789F) : (0x4FA83A, 0x8BD66A, 0x2F7A2C)
             return Palette(bark: 0x5A3A2A, barkLight: 0x7A5232, barkDark: 0x3A2418, leaf: l, leafLight: ll, leafDark: ld, bloom: 0xFF8FB1, bloomLight: 0xFFE0EF)
         case .juniper:
-            return Palette(bark: 0x8A4A3A, barkLight: 0xA8685A, barkDark: 0x5E2E22, leaf: 0x4F8F7A, leafLight: 0x7FBFA8, leafDark: 0x2F5F52, bloom: 0xF2D37A, bloomLight: 0xFFF3C4)
+            return Palette(bark: 0x8A4A3A, barkLight: 0xA8685A, barkDark: 0x5E2E22, leaf: 0x4E9A62, leafLight: 0x86CC90, leafDark: 0x2E6444, bloom: 0xF2D37A, bloomLight: 0xFFF3C4)
         case .wisteria:
-            return Palette(bark: 0x6E6258, barkLight: 0x8E8276, barkDark: 0x4A4038, leaf: 0x5E9E46, leafLight: 0x8BD66A, leafDark: 0x3E7A34, bloom: 0xB98CFF, bloomLight: 0xE0C2FF)
+            return Palette(bark: 0x7A5A44, barkLight: 0x9A7656, barkDark: 0x4E3828, leaf: 0x5EA846, leafLight: 0x92DC6E, leafDark: 0x3A7A30, bloom: 0xB98CFF, bloomLight: 0xE0C2FF)
         case .olive:
-            return Palette(bark: 0x7A7060, barkLight: 0x9A9080, barkDark: 0x524A3E, leaf: 0x8FA98A, leafLight: 0xC2D4B8, leafDark: 0x5F7A5C, bloom: 0xFFFFFF, bloomLight: 0xFFFFFF)
+            // Silvery-sage leaves, but with colour in them (they used to read as grey), on warm twisted bark.
+            return Palette(bark: 0x8A6C4E, barkLight: 0xAA8A68, barkDark: 0x584432, leaf: 0x7AAA56, leafLight: 0xB2D88A, leafDark: 0x4C7A3A, bloom: 0xF2E6B0, bloomLight: 0xFFF6D8)
         }
     }
 
@@ -80,9 +81,9 @@ enum BonsaiArt {
         if b.species == .juniper && ageDays > 14 {
             for i in 0..<segs { pline(layout.trunk[i] + Vec2(2, 0), layout.trunk[i + 1] + Vec2(2, 0), 0xE8E4DA, width: 1) }
         }
-        // Lichen on old bark.
+        // A little moss on old bark.
         if ageDays > 7 {
-            for (x, y) in trunkPixels where r.next() < min(0.18, ageDays / 200) { cv.set(x, y, 0xBFD8B0) }
+            for (x, y) in trunkPixels where r.next() < min(0.07, ageDays / 300) { cv.set(x, y, r.next() < 0.5 ? 0x7FB85A : 0x5E9E46) }
         }
 
         // Foliage.
@@ -144,7 +145,10 @@ enum BonsaiArt {
                 cv.set(Int(x), Int(y) + 2, pal.barkDark)   // its stalk
             }
         }
+        // Snow (and white blossom) stays white: the outline would otherwise grey the edge pixels it sits on.
+        let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
         cv.outline(0.66)
+        for i in white { cv.px[i] = 0xFFFFFF }
         let anchor = CGPoint(x: (-bounds.minX * k) / Double(w), y: (-bounds.minY * k) / Double(h))
         return (cv.image, anchor)
     }

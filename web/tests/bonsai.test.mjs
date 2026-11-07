@@ -58,8 +58,9 @@ test('same record → identical layout; a seedling is small', () => {
   const b = grown('gremlets-web', { sessions: 3, edits: 40, blooms: 2, fruit: 1 });
   expect(JSON.stringify(layoutBonsai(a)) === JSON.stringify(layoutBonsai(b)), 'layouts differ');
   const seed = layoutBonsai(grown('gremlets-web'));
-  expect(seed.trunk.length === 9 && seed.pads.length === 2 && seed.roots.length === 0, `seedling: ${seed.pads.length} pads, ${seed.roots.length} roots`);
-  expect(seed.bounds.w < 100 && seed.bounds.w > 40, `seedling width ${seed.bounds.w}`);
+  // A seedling is a stem with one cloud pad (the apex), maybe a first pair of pads.
+  expect(seed.trunk.length === 9 && seed.pads.length >= 1 && seed.pads.length <= 3, `seedling: ${seed.pads.length} pads, ${seed.roots.length} roots`);
+  expect(seed.bounds.w < 120 && seed.bounds.w > 30, `seedling width ${seed.bounds.w}`);
   expect(close(seed.bounds.y, -(15 + 13 * seed.stature) - 2, 1e-9) || true);
 });
 
@@ -71,8 +72,9 @@ test('more edits → a wider, fuller tree', () => {
     expect(L.pads.length >= last.pads.length, 'pads never shrink');
     last = L;
   }
-  expect(last.pads.length >= 8 && last.limbs.length >= 6, `big tree has ${last.pads.length} pads, ${last.limbs.length} limbs`);
-  expect(last.bounds.w > 250, `big tree width ${last.bounds.w}`);
+  // Bigger and fuller, never busier: a mature tree is five cloud pads in a lopsided triangle.
+  expect(last.pads.length === 5 && last.limbs.length === 4, `big tree has ${last.pads.length} pads, ${last.limbs.length} limbs`);
+  expect(last.bounds.w > 150, `big tree width ${last.bounds.w}`);
 });
 
 test('twelve-branch cap: later sessions thicken the thinnest branch', () => {
@@ -110,7 +112,7 @@ test('record survives a JSON round trip', () => {
   expect(Bonsai.fromJSON(null) === null && Bonsai.fromJSON({}) === null);
 });
 
-test('art renders at 1 art pixel: pot under the origin, foliage above, seasons change the colours', () => {
+test('art renders at 1 art pixel: moss at the foot, foliage above, seasons change the colours', () => {
   const b = grown('gremlets-web', { sessions: 3, edits: 40, blooms: 3, fruit: 2 });
   const L = layoutBonsai(b);
   const { canvas, anchor } = renderBonsai(b, L, 1, 6, false, 0);
@@ -118,7 +120,7 @@ test('art renders at 1 art pixel: pot under the origin, foliage above, seasons c
   expect(anchor.x > 0.2 && anchor.x < 0.8 && anchor.y > 0 && anchor.y < 0.3, `anchor ${anchor.x},${anchor.y}`);
   expect(canvas.filled > canvas.w * canvas.h * 0.15, 'mostly empty');
   const ox = Math.trunc(anchor.x * canvas.w), oy = Math.trunc(anchor.y * canvas.h);
-  expect(canvas.get(ox, oy - 2) != null, 'pot below the origin');
+  expect(canvas.get(ox, oy + 1) != null, 'the tree rises out of moss at the origin');
   const same = renderBonsai(b, L, 1, 6, false, 0).canvas;
   expect(same.px.every((c, i) => c === canvas.px[i]), 'rendering is deterministic');
   // A maple goes red in autumn and bare in winter; a juniper keeps its needles under snow.
@@ -129,7 +131,7 @@ test('art renders at 1 art pixel: pot under the origin, foliage above, seasons c
   expect(has(autumn, palette('maple', 10).leaf), 'autumn maple is red');
   expect(winter.filled < summer.filled * 0.8 && has(winter, 0xFFFFFF), 'winter maple is bare with snow');
   const old = renderBonsai(b, L, 1, 6, false, 30).canvas;
-  expect(has(old, 0xBFD8B0) || has(old, 0x5E9E46), 'lichen or moss on an old tree');
+  expect(has(old, 0x7FB85A) || has(old, 0x5E9E46), 'moss on an old tree');
 });
 
 test('islands: deterministic bodies and decor for every biome, seasonal picks', () => {

@@ -26,6 +26,9 @@ public enum GardenEvent: Equatable, Sendable {
     case blanketGiven(Vec2, by: Int)
     case friendSeed(by: Int?)
     case stretchBreak([Int])
+    /// A Gremlet tapped the quest board and reads out the next step.
+    case questNag(by: Int)
+    case questStepDone(Int?)
 }
 
 extension World {

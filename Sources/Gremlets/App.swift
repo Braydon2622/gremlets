@@ -527,6 +527,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         scrap.target = self
         scrap.toolTip = "A page a day with a flower pressed into it: what the Gremlets picked from the moss, the fireflies they caught, and what Claude got done. Stays on your Mac."
         more.addItem(scrap)
+        more.addItem(questMenuItem())
         let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on Buttons and Search Bars · allow in System Settings" : "Stand on Buttons and Search Bars",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
@@ -967,6 +968,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return Journal.page(world: self.world, species: self.species, log: self.dayLog, sessions: self.buddy.sessionLog.recent)
         }
         overlay.onDoubleClick = { [weak self] id in self?.sayHello(id) }
+        overlay.fx.questLine = { [weak self] in self?.quests.nagLine() ?? "" }
+        world.questBoard = quests.board
         overlay.icons = icons
         icons.onChange = { [weak self] in self?.rebuildMenu() }
         icons.refresh()
@@ -1191,6 +1194,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.firefliesNow() else { return (409, #"{"ok":false,"error":"no moss or window top for them"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "quest":
+            // gremlet quest [done N | undo N | add TEXT | remove N | nag | reset]
+            switch query["do"] ?? "" {
+            case "done": if let n = query["n"].flatMap(Int.init), quests.setDone(n, true) { world.questBoard = quests.board; world.celebrateQuestStep() }
+            case "undo": if let n = query["n"].flatMap(Int.init) { quests.setDone(n, false) }
+            case "add": quests.add(Self.decoded(query["text"] ?? ""))
+            case "remove": if let n = query["n"].flatMap(Int.init) { quests.remove(n) }
+            case "nag": world.questBoard = quests.board; _ = world.startQuestNag()
+            default: break
+            }
+            world.questBoard = quests.board
+            rebuildMenu(); schedule(rate: 60)
+            let list = quests.steps.enumerated().map { i, st in "\(st.done ? "[x]" : "[ ]") \(i + 1). \(st.text)" }.joined(separator: "\n")
+            return (200, list + "\n")
         case "sprout":
             // Something ready to pick comes up in the moss on a window top (daisy, mushroom, berries, dandelion).
             let kind = query["kind"].flatMap { MossSprout.Kind(rawValue: $0) }
@@ -1378,6 +1395,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     private var inCall = false, idleSeconds = 0.0, lowPower = false, lastCallCheck = 0.0
     private var lastTypingCheck = 0.0, typingSince: Double?, lastFriendSeedDay = ""
+    let quests = QuestStore()
 
     /// Reads camera/mic/idle/power once a second and applies hide / show / away / welcome-back.
     private func updatePresence() {
@@ -1436,6 +1454,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !world.compact && !presence.isHidden {
             for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
             if Int(CACurrentMediaTime()) % 300 == 0 { bonds.save() }
+        }
+        // The launch quest: the board shows the next step; a Gremlet reads it out in the morning (from 10) and the
+        // evening (from 6), once each, while you're here.
+        world.questBoard = quests.board
+        if world.userActive && !world.compact && !presence.isHidden && !world.hushed && quests.next != nil && Int(CACurrentMediaTime()) % 30 == 0 {
+            let hour = Calendar.current.component(.hour, from: Date()), day = BondStore.dayKey()
+            let slot = hour >= 18 ? "evening" : hour >= 10 ? "morning" : nil
+            if let slot, UserDefaults.standard.string(forKey: "quest.lastNag.\(slot)") != day, world.startQuestNag() {
+                UserDefaults.standard.set(day, forKey: "quest.lastNag.\(slot)")
+            }
         }
         // Lunchtime picnic (once a day, around noon) and a blanket late at night (once a night), while you're here.
         if world.userActive && !world.compact && !presence.isHidden && Int(CACurrentMediaTime()) % 15 == 0 {
@@ -2268,6 +2296,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard sender.tag < trees.count, let url = TreeCard.make(trees[sender.tag], world: world) else { NSSound.beep(); return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
+
+    /// More → Launch Quest: the steps with checkmarks (click one to tick it off or undo it).
+    private func questMenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "Launch Quest (\(quests.doneCount) of \(quests.steps.count))", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for (i, st) in quests.steps.enumerated() {
+            let m = NSMenuItem(title: "\(i + 1). \(st.text)", action: #selector(toggleQuest(_:)), keyEquivalent: "")
+            m.target = self; m.tag = i + 1; m.state = st.done ? .on : .off
+            sub.addItem(m)
+        }
+        sub.addItem(.separator())
+        let nag = NSMenuItem(title: "Remind Me Now", action: #selector(questNagNow), keyEquivalent: "")
+        nag.target = self
+        sub.addItem(nag)
+        item.submenu = sub
+        item.toolTip = "Your launch plan on a notice board in the bottom-left corner. A Gremlet reads out the next step twice a day. 'gremlet quest' in Terminal too."
+        return item
+    }
+
+    @objc private func toggleQuest(_ sender: NSMenuItem) {
+        let done = !(quests.steps[sender.tag - 1].done)
+        quests.setDone(sender.tag, done)
+        world.questBoard = quests.board
+        if done { world.celebrateQuestStep() }
+        schedule(rate: 60)
+        rebuildMenu()
+    }
+
+    @objc private func questNagNow() { world.questBoard = quests.board; _ = world.startQuestNag(); schedule(rate: 60) }
 
     @objc private func openScrapbook() {
         let port = ProcessInfo.processInfo.environment["GREMLETS_PORT"] ?? "47920"

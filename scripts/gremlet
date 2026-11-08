@@ -28,6 +28,7 @@
 #   gremlet sprout [daisy|mushroom|berries|dandelion]  something ready to pick comes up in the moss now
 #   gremlet fireflies            a few fireflies come out over the moss (night or not), for a couple of minutes
 #   gremlet picnic|blanket       a lunchtime picnic now / a blanket brought over to you
+#   gremlet quest                the launch quest list; quest done N | undo N | add TEXT | remove N | nag
 #   gremlet friendseed           a friend's flower comes up in the moss (as if a friend's Gremlet brought a seed)
 #   gremlet weather [sky|live]   the weather now; preview rain|drizzle|storm|snow|wind|clear for two minutes; live goes back
 #   gremlet weather city <name>  get the real weather there (Open-Meteo); gremlet weather snowman: someone rolls one now
@@ -82,6 +83,12 @@ case "${1:-}" in
   sprout)  call "sprout?kind=${2:-}"; echo ;;
   fireflies) call fireflies; echo ;;
   picnic|blanket|friendseed) call "$1"; echo ;;
+  quest)   case "${2:-}" in
+             done|undo|remove) call "quest?do=$2&n=${3:-0}" ;;
+             add) shift 2; curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "do=add" --data-urlencode "text=$*" "${URL}/quest" ;;
+             nag) call "quest?do=nag" ;;
+             *) call quest ;;
+           esac ;;
   moss)    case "${2:-}" in
              climb|pad|plant) call "moss?do=$2" ;;
              "") call moss ;;

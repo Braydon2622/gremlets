@@ -236,6 +236,8 @@ public final class World {
     public internal(set) var picnic: (owner: Int, x: Double, y: Double, until: Double)?
     public internal(set) var blanket: (owner: Int, x: Double, y: Double, until: Double)?
     var summarySigns: [Int: (text: String, until: Double)] = [:]
+    /// The launch quest's notice board (set by the app; nil hides it). See Quest.swift.
+    public var questBoard: QuestBoard?
     /// You're typing fast: they go quiet and tiptoe (set by the app).
     public var hushed = false
     /// Wearing a flower crown today (an anniversary; set by the app).

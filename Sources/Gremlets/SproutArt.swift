@@ -237,3 +237,28 @@ enum ToolPropArt {
         return cv.image
     }()
 }
+
+
+/// The launch quest's notice board: a wooden board on two posts with a paper note pinned to it (40 × 32 px).
+enum QuestArt {
+    static let board: CGImage = {
+        var cv = PixelCanvas(40, 32)
+        let wood: UInt32 = 0x9C6B3E, woodDark: UInt32 = 0x6B4428, woodLight: UInt32 = 0xB88350
+        // Posts.
+        cv.rect(4, 0, 3, 30, woodDark); cv.rect(33, 0, 3, 30, woodDark)
+        // The board.
+        cv.rect(1, 6, 38, 24, wood)
+        for y in stride(from: 8, to: 30, by: 5) { cv.hspan(1, 38, y, woodDark) }
+        cv.hspan(1, 38, 29, woodLight); cv.hspan(1, 38, 6, woodDark)
+        // The paper note, pinned.
+        cv.rect(3, 8, 34, 20, 0xF6EFDF); cv.hspan(3, 36, 8, 0xE2D6BC)
+        cv.set(20, 27, 0xE8574A)
+        // A little roof of moss and a flower on top.
+        for x in 0...39 { cv.set(x, 30, x % 3 == 0 ? 0x8BD66A : 0x5E9E46); if x % 4 != 1 { cv.set(x, 31, 0x6CC04A) } }
+        cv.set(9, 31, 0xFF8FB1); cv.set(30, 31, 0xFFE45C)
+        // Moss at the foot of the posts.
+        for x in [3, 4, 5, 6, 7, 32, 33, 34, 35, 36] { cv.set(x, 0, 0x5E9E46); cv.set(x, 1, x % 2 == 0 ? 0x8BD66A : 0x5E9E46) }
+        cv.outline(0.6)
+        return cv.image
+    }()
+}

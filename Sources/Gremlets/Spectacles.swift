@@ -27,6 +27,9 @@ final class SpectacleRenderer {
     private var gardenLayers: [String: CALayer] = [:]
     private var summaryLayers: [Int: (board: CALayer, text: CATextLayer, key: String)] = [:]
     private var nextMossGust = 0.0
+    private var questLayers: (board: CALayer, note: CATextLayer, key: String)?
+    /// What the quest messenger says (set by the app).
+    var questLine: (() -> String)?
     private var topStructureLayers: [Int: (art: CALayer, ropes: CAShapeLayer, key: String)] = [:]
     private var notchLayers: (house: CALayer, hammock: CALayer, ropes: CAShapeLayer, key: String)?
     private var snapUntil: [Int: CFTimeInterval] = [:]
@@ -123,6 +126,7 @@ final class SpectacleRenderer {
         renderHeldProps()
         renderSeedlings()
         renderGarden2()
+        renderQuestBoard()
         renderSeason()
         renderWeather()
         renderPods()
@@ -2296,6 +2300,35 @@ extension SpectacleRenderer {
         }
     }
 
+    /// The launch quest's notice board in the bottom-left corner: the next step on a note, and how far along.
+    fileprivate func renderQuestBoard() {
+        guard let q = world.questBoard, let spot = world.questBoardSpot, let (si, pt) = local(spot) else {
+            if let l = questLayers { fade(l.board, to: 0, remove: true); questLayers = nil }
+            return
+        }
+        var e = questLayers ?? {
+            let board = pixelLayer(); board.anchorPoint = CGPoint(x: 0.5, y: 0); board.zPosition = 1.25
+            board.contents = QuestArt.board
+            board.bounds = CGRect(x: 0, y: 0, width: Double(QuestArt.board.width) * artScale, height: Double(QuestArt.board.height) * artScale)
+            let note = CATextLayer()
+            note.font = NSFont.systemFont(ofSize: 9, weight: .semibold); note.fontSize = 9
+            note.foregroundColor = NSColor(red: 0.29, green: 0.23, blue: 0.16, alpha: 1).cgColor
+            note.isWrapped = true; note.alignmentMode = .left; note.contentsScale = 2; note.truncationMode = .end
+            note.frame = CGRect(x: 4 * artScale, y: 9 * artScale, width: 32 * artScale - 2, height: 18 * artScale)
+            board.addSublayer(note)
+            popIn(board)
+            return (board, note, "")
+        }()
+        attach(e.board, si)
+        let key = "\(q.next)|\(q.done)|\(q.total)"
+        if e.key != key {
+            e.note.string = "QUEST \(q.done)/\(q.total)\n\(q.next)"
+            e.key = key
+        }
+        e.board.position = CGPoint(x: pt.x.rounded(), y: pt.y.rounded() - 2)
+        questLayers = e
+    }
+
     func handle(_ events: [GardenEvent]) {
         for e in events {
             switch e {
@@ -2315,6 +2348,10 @@ extension SpectacleRenderer {
                 overlay.showBubble("It's late… here's a little blanket. Night night.", on: by, seconds: 4)
             case .friendSeed(let by):
                 if let by { overlay.showBubble("I brought you a seed from home!", on: by, seconds: 3.5) }
+            case .questNag(let by):
+                overlay.showBubble(questLine?() ?? "Next step on the board!", on: by, seconds: 9)
+            case .questStepDone(let by):
+                if let by { overlay.showBubble(["Step done! 🎉", "Another one done!", "Yes! Onward."].randomElement()!, on: by, seconds: 3) }
             case .stretchBreak(let ids):
                 for (k, id) in ids.enumerated() {
                     DispatchQueue.main.asyncAfter(deadline: .now() + Double(k) * 0.4) { [weak self] in

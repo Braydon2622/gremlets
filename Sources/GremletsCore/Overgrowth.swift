@@ -76,7 +76,9 @@ struct MossTask: Sendable {
         /// Lunch on a picnic blanket (Garden2.swift).
         case picnic(seat: Double)
         /// Late at night: taking a blanket to you.
-        case blanket(x: Double) }
+        case blanket(x: Double)
+        /// Over to the quest board to read out the next step (Quest.swift).
+        case questNag }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -372,6 +374,8 @@ extension World {
             picnicDecide(c, &t, seat: seat)
         case .blanket(let x):
             blanketDecide(c, &t, x: x, on: s)
+        case .questNag:
+            questNagDecide(c, &t, on: s)
         case .plant(let wid, let offset):
             guard let b = bed(wid), s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = b.minX + offset

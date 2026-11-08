@@ -420,3 +420,28 @@ import Testing
         #expect(abs(c.pos.x - x0) < c.species.walkSpeed * 0.7, "slow and quiet")
     }
 }
+
+@Suite struct QuestTests {
+    @Test func aGremletWalksToTheBoardAndReadsItOut() {
+        let scr = Rect(x: 0, y: 0, w: 1440, h: 860)
+        let w = World(seed: 231)
+        w.maxHobbies = 0
+        w.setEnvironment(screens: [scr], windowsFrontToBack: [WindowInfo(id: 1, frame: Rect(x: 500, y: 100, w: 600, h: 300))])
+        let cs = [300.0, 900].map { w.spawn(testSpecies(scale: 10), at: Vec2($0, 0)) }
+        for _ in 0..<60 { w.step(1.0 / 60) }
+        #expect(!w.startQuestNag(), "no board, no nag")
+        w.questBoard = QuestBoard(next: "Record the clip", done: 1, total: 9, staleDays: 3)
+        #expect(w.questBoardSpot != nil)
+        #expect(w.startQuestNag())
+        var read = false
+        for _ in 0..<(60 * 40) {
+            w.step(1.0 / 60)
+            if w.drainGardenEvents().contains(where: { if case .questNag = $0 { return true }; return false }) { read = true; break }
+        }
+        #expect(read, "someone read it out")
+        let messenger = cs.min { abs($0.pos.x - 64) < abs($1.pos.x - 64) }!
+        #expect(abs(messenger.pos.x - (64 + 36)) < 20, "standing by the board")
+        w.compact = true
+        #expect(w.questBoardSpot == nil, "hidden in full screen")
+    }
+}

@@ -13,6 +13,7 @@ import { IslandArt, Biome, ledgeBiome, ledgeSeed } from './islands.js';
 import { Bonsai, layoutBonsai, renderBonsai, MAX_BRANCHES } from './bonsai.js';
 import { hex, PixelCanvas } from './pixelart.js';
 import { SproutArt } from './sproutart.js';
+import { Terrarium, terrariumMode } from './terrarium.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
@@ -45,9 +46,17 @@ let platforms = [];
 let scenery = null;
 let index = [];
 
+// The Terrarium (an always-on iPad, terrarium.js) keeps its own clock and changes the sky as the day goes on.
+const terra = !showcase && terrariumMode(params) ? new Terrarium({
+  world, bridge, particles, FX, toScreen: (x, y) => toScreen(x, y), px: () => PX, size: () => ({ w: W, h: H }), ground: () => GROUND,
+  isResident: (c) => !visitors.has(c.id) && c.id !== driven,
+  say: (id, text, secs) => say(id, text, secs),
+  onPhase: (p) => { night = p === 'night'; dusk = p === 'dusk'; document.body.classList.toggle('night', night); document.documentElement.style.background = night ? '#1d2347' : dusk ? '#7f8fd0' : ''; if (W) scenery = drawScenery(); },
+  save: () => saveGarden(),
+}) : null;
 const hour = new Date().getHours();
-const night = hour >= 20 || hour < 6;
-const dusk = !night && (hour >= 18 || hour < 7);
+let night = terra ? terra.phaseNow() === 'night' : hour >= 20 || hour < 6;
+let dusk = terra ? terra.phaseNow() === 'dusk' : !night && (hour >= 18 || hour < 7);
 const MONTH = Math.min(12, Math.max(1, +params.get('month') || new Date().getMonth() + 1));   // ?month=1 previews a season
 
 // ---------------------------------------------------------------- layout & scenery
@@ -314,7 +323,9 @@ async function addGremlet(id, at) {
 
 function removeGremlet(id) { world.remove(id); art.delete(id); saveRoster(); updateCount(); }
 
+let rosterReady = false;   // (not while the first ones are still arriving: a reload then would keep only those)
 function saveRoster() {
+  if (!rosterReady) return;
   if (showcase) return;
   // Visitors from the Mac are saved separately (they go home again).
   try { localStorage.setItem('gremlets.roster', JSON.stringify(world.creatures.filter((c) => !visitors.has(c.id)).map((c) => c.species.id))); } catch { /* private mode */ }
@@ -471,6 +482,7 @@ function frame(now) {
     else zzzTimers.set(c.id, t);
   }
   updateVisitors(dt, now / 1000);
+  terra?.update(dt, now / 1000);
   applyTilt(dt);
   particles.update(dt);
   draw();
@@ -501,6 +513,7 @@ function draw() {
     v.garden.draw(ctx, s.x, s.y, PX);
   }
   drawSprouts();
+  terra?.drawBack(ctx, performance.now() / 1000);
   drawBonsai(performance.now() / 1000);   // behind the Gremlets, so the ones on its pads stand in front
   for (const c of world.creatures) {
     const a = art.get(c.id);
@@ -518,7 +531,23 @@ function draw() {
     if (c.carrying) drawCarried(c);
   }
   drawMinions(performance.now() / 1000);
+  terra?.drawFront(ctx, performance.now() / 1000);
   particles.draw(ctx, toScreen, PX);
+}
+
+// ---------------------------------------------------------------- the Terrarium's garden (kept on the iPad)
+const GARDEN_KEY = 'gremlets.terrarium.garden';
+function saveGarden() {
+  if (!terra) return;
+  try { localStorage.setItem(GARDEN_KEY, JSON.stringify(world.sprouts.map((s) => ({ kind: s.kind, w: s.windowID, o: Math.round(s.offset), g: Math.round(s.growth * 1000) / 1000 })))); } catch { /* private mode */ }
+}
+function loadGarden() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(GARDEN_KEY) || '[]'); } catch { return; }
+  for (const s of saved.slice(0, 12)) {
+    const w = world.windows.get(s.w);
+    if (w && typeof s.kind === 'string' && s.o > 0 && s.o < w.w) world.addSprout(s.kind, s.w, w.x + s.o, Math.min(1, Math.max(0.02, +s.g || 0.02)));
+  }
 }
 
 // ---------------------------------------------------------------- sprouts in the moss (same art and effects as the Mac)
@@ -1871,6 +1900,7 @@ async function start() {
       ids = ['flurrie', 'kindlet', 'dandelet', ...rest].slice(0, n);
     }
     await Promise.all(ids.slice(0, MAX).map((id, i) => addGremlet(id, V(W * (0.12 + 0.76 * (i + 0.5) / ids.length), H - TOP - 120 - (i % 3) * 30))));
+    rosterReady = true; saveRoster();
     buildPicker();
     document.getElementById('add').addEventListener('click', openPicker);
     document.getElementById('close').addEventListener('click', closePicker);
@@ -1898,9 +1928,10 @@ async function start() {
       bridge.onStatus = updateRoomUI;
       bridge.onMoss = () => { scenery = drawScenery(); };
       wireLinker();
+      terra?.start();
       bridge.start();
       setInterval(updateRoomUI, 5000);
-      if (bridge.justJoined) setTimeout(() => { document.getElementById('linker').hidden = false; updateRoomUI(); }, 400);
+      if (bridge.justJoined && !terra) setTimeout(() => { document.getElementById('linker').hidden = false; updateRoomUI(); }, 400);
       updateRoomUI();
     }
     wirePad();
@@ -1931,6 +1962,7 @@ async function start() {
       if (Math.random() < 0.7) world.sproutNow(null, 0.25 + Math.random() * 0.2);
     }, 3000);
     if (params.has('sprout')) setTimeout(() => sproutNow(params.get('sprout')), 2000);
+    if (terra) { loadGarden(); if (!bridge) terra.start(); }
     try {
       const champ = localStorage.getItem('gremlets.crown');
       const c = champ && world.creatures.find((o) => o.species.id === champ);
@@ -1947,7 +1979,7 @@ async function start() {
       updateLinkUI();
     }
   }
-  if (params.has('debug')) window.gremlets = { world, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, watchSession, sprout: sproutNow, get sprouts() { return world.sprouts; }, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; }, get bonsai() { return bonsai; }, get session() { return session; } };
+  if (params.has('debug')) window.gremlets = { world, terra, toScreen, particles, bridge, summonCloud, takeControl, keys, spawnBoss, swing, act, life, watchSession, sprout: sproutNow, get sprouts() { return world.sprouts; }, get platforms() { return platforms; }, get boss() { return boss; }, get driven() { return driven; }, get door() { return door; }, get bonsai() { return bonsai; }, get session() { return session; } };
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 

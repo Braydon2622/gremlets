@@ -95,8 +95,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let b = ClaudeBuddy(world: world, overlay: overlay)
         b.onChange = { [weak self] in self?.rebuildMenu() }
         b.onSessionEnded = { [weak self] r, after in self?.sessionEnded(r, after: after) }
+        b.onState = { [weak self] session, project, state in self?.claudeState(session: session, project: project, state: state) }
         return b
     }()
+
+    // MARK: The Terrarium (docs/plans/TERRARIUM.md)
+
+    /// What each Claude session is doing, for a Terrarium iPad on the bridge.
+    let terrariumBoard: TerrariumBoard = {
+        let b = TerrariumBoard()
+        if let d = UserDefaults.standard.dictionary(forKey: "terrarium.aliases") as? [String: Int] { b.aliases = d }
+        return b
+    }()
+    private var terrariumNames: Bool {
+        get { UserDefaults.standard.bool(forKey: "terrarium.names") }
+        set { UserDefaults.standard.set(newValue, forKey: "terrarium.names") }
+    }
+
+    /// A Claude session changed state: the Terrarium hears about it (and the Back Office's Workshop).
+    private func claudeState(session: String, project: String, state: TerrariumStatus.State?) {
+        let now = Date().timeIntervalSince1970
+        if terrariumBoard.record(session: session, project: project, state: state, at: now) {
+            UserDefaults.standard.set(terrariumBoard.aliases, forKey: "terrarium.aliases")
+            bridge.sendStatus(terrariumBoard.snapshot(showNames: terrariumNames).json())
+        }
+    }
+
+    @objc private func makeTerrarium() {
+        if !bridge.linked || !bridge.sealed { bridge.create(side: bridge.side ?? "right"); updateDoor() }
+        if let url = URL(string: "http://127.0.0.1:\(ControlServer.defaultPort)/terrarium") { NSWorkspace.shared.open(url) }
+        rebuildMenu()
+    }
+
+    @objc private func toggleTerrariumNames() {
+        terrariumNames.toggle()
+        bridge.sendStatus(terrariumBoard.snapshot(showNames: terrariumNames).json())
+        rebuildMenu()
+    }
     private var hideDuringCalls: Bool {
         get { UserDefaults.standard.object(forKey: "hideDuringCalls") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "hideDuringCalls") }
@@ -639,6 +674,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             friend.submenu = fm
             menu.addItem(friend)
+            let terr = NSMenuItem(title: "Make an iPad a Terrarium…", action: #selector(makeTerrarium), keyEquivalent: "")
+            terr.target = self
+            terr.toolTip = "An iPad on the desk as a Gremlets home that stays on all day, showing what Claude is up to."
+            menu.addItem(terr)
         } else {
             let other = bridge.peerIsMac ? "Friend's Mac" : "iPad"
             let st = NSMenuItem(title: bridge.peerOnline ? "\(other) linked · \(bridge.side ?? "right") edge" : "Link · waiting for the other screen…", action: nil, keyEquivalent: "")
@@ -657,6 +696,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let show = NSMenuItem(title: "Show Link Code…", action: #selector(showLinkCode), keyEquivalent: "")
             show.target = self
             lm.addItem(show)
+            let terr = NSMenuItem(title: bridge.peerIsTerrarium ? "Terrarium Link Code…" : "Make It a Terrarium…", action: #selector(makeTerrarium), keyEquivalent: "")
+            terr.target = self
+            lm.addItem(terr)
+            let names = NSMenuItem(title: "Show Project Names on the Terrarium", action: #selector(toggleTerrariumNames), keyEquivalent: "")
+            names.target = self; names.state = terrariumNames ? .on : .off
+            names.toolTip = "Off: the Terrarium shows \"Project 1\", \"Project 2\" instead of your project names."
+            lm.addItem(names)
             lm.addItem(.separator())
             let unlink = NSMenuItem(title: "Unlink Screen", action: #selector(unlinkScreen), keyEquivalent: "")
             unlink.target = self
@@ -986,6 +1032,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.pages["/connect"] = { [weak self] in self?.wallet?.page() ?? "<p>Wallet linking isn't set up in this build.</p>" }
         server.pages["/pair"] = { [weak self] in self?.phone.pairPage() ?? "" }
         server.pages["/link"] = { [weak self] in self?.bridge.linkPage() ?? "" }
+        server.pages["/terrarium"] = { [weak self] in self?.bridge.linkPage(terrarium: true) ?? "" }
         server.pages["/chat"] = { [weak self] in self?.chatPage() ?? "" }
         server.pages["/scrapbook"] = { [weak self] in self.map { Scrapbook.page(log: $0.dayLog) } ?? "" }
         server.pages["/journal"] = { [weak self] in
@@ -1009,6 +1056,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         bridge.moss = { [weak self] in Int(self?.world.mossMinutes ?? 0) }
         bridge.onFerry = { [weak self] riders, y in self?.ferryArrivesThroughBridge(riders: riders, yFrac: y) }
         bridge.onStatus = { [weak self] in self?.updateDoor(); self?.rebuildMenu() }
+        bridge.status = { [weak self] in self.map { $0.terrariumBoard.snapshot(showNames: $0.terrariumNames).json() } }
         bridge.start()
         weatherService.onChange = { [weak self] in self?.schedule(rate: 60); self?.rebuildMenu() }
         weatherService.restart()
@@ -1568,6 +1616,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func housekeeping(elapsed: Double) {
         updatePresence()
         if world.userActive { postMorningCard() }
+        if terrariumBoard.prune(now: Date().timeIntervalSince1970) { bridge.sendStatus(terrariumBoard.snapshot(showNames: terrariumNames).json()) }
         // Where each one spends its time (for its favourite spot); out of full screen only, so it's their own choice.
         if !world.compact && !presence.isHidden {
             for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
@@ -2117,7 +2166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func inviteFriend() {
         if !bridge.linked { bridge.create(side: "right"); updateDoor() }
-        let code = bridge.room ?? ""
+        let code = bridge.friendCode ?? ""
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(code, forType: .string)
         let a = NSAlert()
@@ -2139,7 +2188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         a.window.initialFirstResponder = field
         guard a.runModal() == .alertFirstButtonReturn else { return }
         if !bridge.join(code: field.stringValue) {
-            let e = NSAlert(); e.messageText = "That code doesn't look right"; e.informativeText = "It's 12 letters and numbers."; e.runModal()
+            let e = NSAlert(); e.messageText = "That code doesn't look right"; e.informativeText = "Paste the whole code your friend sent (letters, numbers and a dash)."; e.runModal()
         }
         updateDoor()
         rebuildMenu()

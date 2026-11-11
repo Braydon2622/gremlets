@@ -241,3 +241,35 @@ body.showcase #bar, body.showcase #hint { display: none; }
 @media (max-width: 359px) {
   #bar .logo { display: none; }
 }
+
+/* ---------- the Terrarium (?terrarium=1, js/terrarium.js) ---------- */
+body.terrarium #bar, body.terrarium #hint, body.terrarium #pad, body.terrarium #drivehint { display: none !important; }
+body.terrarium { transition: transform 2s ease; }
+#tdim {
+  position: fixed; inset: -20px; pointer-events: none; z-index: 40;
+  background: #000; opacity: 0; transition: opacity 60s linear;
+}
+#trecent {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: max(8px, env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; gap: 8px; pointer-events: none; max-width: calc(100vw - 24px); overflow: hidden;
+}
+.tcard {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 4px 10px 4px 6px; border-radius: 6px;
+  background: rgba(255, 250, 241, 0.72); color: #3a2c22; font-size: 12px; font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(107, 68, 40, 0.35);
+}
+body.night .tcard { background: rgba(40, 44, 70, 0.7); color: #e8e4f4; box-shadow: 0 0 0 2px rgba(160, 170, 220, 0.25); }
+.tcard img { width: 18px; height: 18px; image-rendering: pixelated; }
+.tcard span { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.tcard small { opacity: 0.6; font-weight: 600; }
+.tcard.waiting { box-shadow: 0 0 0 2px rgba(255, 200, 69, 0.8); }
+#tintro {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  background: rgba(20, 24, 40, 0.35); padding: 16px;
+}
+#tintro .sheet { max-width: 460px; background: var(--paper); border-radius: 14px; padding: 20px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+#tintro h2 { margin: 0 0 8px; }
+#tintro p, #tintro li { font-weight: 500; line-height: 1.45; }
+#tintro ol { padding-left: 20px; }

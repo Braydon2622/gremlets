@@ -89,6 +89,23 @@ enum ArtPreview {
             }
         }
         write(ctxL.makeImage()!, dir.appendingPathComponent("menulogo.png"))
+        // The web habitat's Home Screen icons (web/icons, for the Terrarium): the menu logo on a sky over a moss strip.
+        for size in [180, 192, 512] {
+            let c = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            c.interpolationQuality = .none
+            let sky = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [CGColor(red: 0.75, green: 0.88, blue: 0.95, alpha: 1), CGColor(red: 0.96, green: 0.93, blue: 0.87, alpha: 1)] as CFArray, locations: [0, 1])!
+            c.drawLinearGradient(sky, start: CGPoint(x: 0, y: size), end: CGPoint(x: 0, y: 0), options: [])
+            let k = Double(size) / 16
+            c.setFillColor(CGColor(red: 0.49, green: 0.77, blue: 0.42, alpha: 1)); c.fill(CGRect(x: 0, y: 0, width: Double(size), height: k * 3))
+            c.setFillColor(CGColor(red: 0.35, green: 0.65, blue: 0.31, alpha: 1)); c.fill(CGRect(x: 0, y: k * 2.4, width: Double(size), height: k * 0.6))
+            var r = CGRect(x: 0, y: 0, width: 22, height: 18)
+            if let cg = MenuLogo.image(.idle).cgImage(forProposedRect: &r, context: nil, hints: nil) {
+                let w = k * 10, h = w * Double(cg.height) / Double(cg.width)
+                c.draw(cg, in: CGRect(x: (Double(size) - w) / 2, y: k * 2.6, width: w, height: h))
+            }
+            write(c.makeImage()!, dir.appendingPathComponent("icon-\(size).png"))
+        }
         write(ctxTop.makeImage()!, dir.appendingPathComponent("topcorners.png"))
         // The hanging home at every stage (unlit, then lit with the post), the nest hut, the pantry filling, the bird.
         let ctxH = CGContext(data: nil, width: 1500, height: 820, bitsPerComponent: 8, bytesPerRow: 0,

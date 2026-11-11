@@ -1,0 +1,16 @@
+{
+  "name": "Gremlets Terrarium",
+  "short_name": "Gremlets",
+  "description": "A Gremlets home that stays on all day: they live here, sleep at night, and show what Claude is doing on your Mac.",
+  "start_url": "./?terrarium=1",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#bfe0f2",
+  "theme_color": "#bfe0f2",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

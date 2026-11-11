@@ -15,6 +15,9 @@ final class ClaudeBuddy {
     let log = CreationLog()
     let sessionLog = SessionLog()
     var onChange: () -> Void = {}
+    /// A session's state changed (thinking / waiting / done; nil when it ended), for the Terrarium and the Back Office:
+    /// (session, project, state).
+    var onState: (String, String, TerrariumStatus.State?) -> Void = { _, _, _ in }
     /// A session closed with its record and the project's tree as it is now.
     var onSessionEnded: (SessionRecord, Bonsai?) -> Void = { _, _ in }
 
@@ -30,6 +33,13 @@ final class ClaudeBuddy {
         let session = String((q["session"] ?? "default").filter { $0.isLetter || $0.isNumber || $0 == "-" }.prefix(64))
         let project = String((SpeechText.clean(q["project"]) ?? "Claude").prefix(40))
         let pid = q["pid"].flatMap { Int32($0) }
+        switch q["event"] ?? "" {
+        case "start", "tool": onState(session, project, .thinking)
+        case "done": onState(session, project, .done)
+        case "attention": onState(session, project, .waiting)
+        case "end": onState(session, project, nil)
+        default: break
+        }
         switch q["event"] ?? "" {
         case "start":
             // The window comes from the hook's process (or, for the demo, is named outright).

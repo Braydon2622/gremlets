@@ -59,6 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var compactPreviewUntil: CFTimeInterval = 0
     /// Gremlets visiting from a friend's Mac (creature id → their home Mac's id).
     private var guests: [Int: String] = [:]
+    /// When each visitor arrived (they go home after a few minutes), when one of ours last went visiting, and whether
+    /// the other screen was open last time we looked (the moment it opens is a little event of its own).
+    private var guestSince: [Int: CFTimeInterval] = [:]
+    private var nextVisitAt: CFTimeInterval = 0
+    private var peerWasOnline = false
+    let dock = DockWatcher()
     private var liftKeysSince: CFTimeInterval?
     private lazy var weatherService = WeatherService(world: world)
     /// Watching the Mac: battery, the network, the screenshot tool.
@@ -97,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ note: Notification) {
-        world.gardenInMoss = true; world.topCornerPerches = true; world.dayFollowsClaude = true
+        world.gardenInMoss = true; world.topCornerPerches = true; world.dayFollowsClaude = true; world.crittersOn = true
         // The tidy desktop: no village or road on the floor, no vines up the screen's sides, one small corner plant.
         world.villageOn = false
         world.railsOn = false
@@ -117,9 +123,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.onWorkerClicked = { [weak self] c in self?.focusSession(of: c) }
         refreshEnvironment()
         world.loadGrove(UserDefaults.standard.data(forKey: groveKey).flatMap(Grove.decode) ?? Grove())
-        world.mossMinutes = UserDefaults.standard.double(forKey: mossKey)
+        // A fresh Mac starts with a little moss already creeping in, so there's something to see (and tend) at once.
+        world.mossMinutes = UserDefaults.standard.object(forKey: mossKey) as? Double ?? 45
         world.mossCare = UserDefaults.standard.object(forKey: "moss.care") as? Double ?? 1
         world.houseDaisies = UserDefaults.standard.integer(forKey: "house.daisies")
+        world.pantry = UserDefaults.standard.integer(forKey: "house.pantry")
+        world.homeCare = UserDefaults.standard.integer(forKey: "house.care")
+        if let b = UserDefaults.standard.object(forKey: "house.barrel") as? Double { world.rainBarrel = b }
+        if let p = UserDefaults.standard.string(forKey: "house.patch") { world.patchSaved = p }
+        if let p = UserDefaults.standard.string(forKey: "house.seeds") { world.seedTinSaved = p }
+        world.porchLeaves = UserDefaults.standard.double(forKey: "house.leaves")
+        world.roofSnow = UserDefaults.standard.double(forKey: "house.snow")
+        world.fireflyJar = UserDefaults.standard.integer(forKey: "house.jar")
+        if let d = UserDefaults.standard.data(forKey: "house.mail"), let m = try? JSONDecoder().decode([Postcard].self, from: d) { world.mailbox = m }
         if let d = UserDefaults.standard.data(forKey: "winFlags.v1"), let f = try? JSONDecoder().decode([WinFlag].self, from: d) { world.loadWinFlags(f) }
         world.houseDaisiesDay = UserDefaults.standard.integer(forKey: "house.daisiesDay")
         // Houses built by older versions take the shape of today's pictures.
@@ -245,6 +261,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay.fx.handle(sproutEvents)
         Scrapbook.record(sproutEvents, moss: mossEvents, into: dayLog)
         overlay.fx.handle(world.drainGardenEvents())
+        overlay.ecoFX.handle(world.drainEcoEvents())
+        let home = world.drainHomeEvents()
+        overlay.ecoFX.handle(home)
+        if !showcase.running, !home.isEmpty { recordHome(home) }
         updateTyping()
         overlay.fx.handle(world.drainPlanEvents())
         sense.tick(frontWindow: frontWindowForSense())
@@ -312,7 +332,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if #available(macOS 12, *) { top = Double(s.safeAreaInsets.top) } else { top = 0 }
             return Rect(x: s.frame.minX, y: s.frame.minY, w: s.frame.width, h: s.frame.height - top)
         } : WindowTracker.screens()
-        world.setEnvironment(screens: screens, windowsFrontToBack: wins)
+        world.setEnvironment(screens: screens, windowsFrontToBack: wins, menuBars: isFull ? [] : MenuBarSense.bars())
         // Switched only after the screens are in place, so the floats in and out of full screen aim at the real
         // floor and the real perches.
         if isFull != world.compact { world.compact = isFull; schedule(rate: 60) }
@@ -527,7 +547,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         scrap.target = self
         scrap.toolTip = "A page a day with a flower pressed into it: what the Gremlets picked from the moss, the fireflies they caught, and what Claude got done. Stays on your Mac."
         more.addItem(scrap)
-        more.addItem(questMenuItem())
         let ctl = NSMenuItem(title: controls.enabled && !controls.trusted ? "Stand on Buttons and Search Bars · allow in System Settings" : "Stand on Buttons and Search Bars",
                              action: #selector(toggleControls), keyEquivalent: "")
         ctl.target = self
@@ -721,6 +740,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let permHeader = NSMenuItem(title: "Extras that need your permission", action: nil, keyEquivalent: ""); permHeader.isEnabled = false
         settings.addItem(permHeader)
         settings.addItem(ctl)
+        let dk = NSMenuItem(title: dock.enabled && !dock.trusted ? "Play on the Dock · allow in System Settings" : "Play on the Dock",
+                            action: #selector(toggleDock), keyEquivalent: "")
+        dk.target = self
+        dk.state = dock.enabled && dock.trusted ? .on : .off
+        dk.toolTip = "Gremlets hop across your Dock icons, cheer apps you open (an icon's bounce sends whoever's on it flying), knock on icons with a new badge and nap on the Trash. Uses Accessibility (the same permission as above) to see where the icons are. Nothing is clicked."
+        settings.addItem(dk)
         for it in senseItems { settings.addItem(it) }
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
         settingsItem.submenu = settings
@@ -968,8 +993,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return Journal.page(world: self.world, species: self.species, log: self.dayLog, sessions: self.buddy.sessionLog.recent)
         }
         overlay.onDoubleClick = { [weak self] id in self?.sayHello(id) }
-        overlay.fx.questLine = { [weak self] in self?.quests.nagLine() ?? "" }
-        world.questBoard = quests.board
+        overlay.onRightClick = { [weak self] id in self?.showAskMenu(id) }
+        world.questBoard = nil
+        // The Dock: icons to hop on, apps opening and quitting, badges.
+        dock.onChange = { [weak self] icons in self?.world.dockIcons = icons }
+        dock.onOpened = { [weak self] app in self?.world.dockAppOpened(app); self?.schedule(rate: 60) }
+        dock.onQuit = { [weak self] app in self?.world.dockAppQuit(app); self?.schedule(rate: 60) }
+        dock.onBadge = { [weak self] app in self?.world.dockBadgeAppeared(app); self?.schedule(rate: 60) }
         overlay.icons = icons
         icons.onChange = { [weak self] in self?.rebuildMenu() }
         icons.refresh()
@@ -1037,7 +1067,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 #"{"id":\#(c.id),"species":"\#(c.species.id)","activity":"\#(c.activity)","grounded":\#(c.isGrounded),"x":\#(Int(c.pos.x)),"y":\#(Int(primaryTop - c.pos.y)),"job":\#(c.job != nil),"home":\#(c.homeUntil != nil),"ground":\#(c.groundOwner.map(String.init) ?? "null")}"#
             }.joined(separator: ",")
             let chests = world.chests.map { #"{"id":\#($0.id),"x":\#(Int($0.pos.x)),"y":\#(Int(primaryTop - $0.pos.y)),"golden":\#($0.golden),"carriedBy":\#($0.carriedBy.map(String.init) ?? "null")}"# }.joined(separator: ",")
-            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)],"expeditions":[\#(runs)],"chests":[\#(chests)],"who":[\#(who)],"door":\#(world.door.map { String(Int($0)) } ?? "null"),"flags":\#(world.flags.count),"ziplines":\#(world.ziplines.count),"stairs":\#(world.stairs.count),"rails":\#(world.rails.count)}"#)
+            return (200, #"{"ok":true,"gremlets":[\#(ids)],"focus":\#(f),"paused":\#(paused),"hidden":\#(h),"away":\#(presence.isAway),"focusToday":\#(Int(focusLog.todayMinutes)),"streak":\#(focusLog.streak),"busy":[\#(busy)],"claude":[\#(jobs)],"ledges":\#(world.terminalLedges.count),"trees":[\#(trees)],"expeditions":[\#(runs)],"chests":[\#(chests)],"who":[\#(who)],"door":\#(world.door.map { String(Int($0)) } ?? "null"),"flags":\#(world.flags.count),"ziplines":\#(world.ziplines.count),"stairs":\#(world.stairs.count),"rails":\#(world.rails.count),"widgets":\#(world.widgetIDs.count),"pantry":\#(world.pantry),"care":\#(world.homeCare),"houseStage":\#(world.houseStage),"birds":\#(world.birds.count),"critters":\#(world.critters.count),"ownDay":\#(world.ownDay),"barrel":\#((world.rainBarrel * 100).rounded() / 100),"patch":"\#(world.patchSaved)","mail":\#(world.mailbox.count),"unread":\#(world.unreadMail),"mailOpen":\#(world.mailOpen),"lanterns":\#(world.mossLanterns.count),"seeds":"\#(world.seedTinSaved)","leaves":\#((world.porchLeaves * 100).rounded() / 100),"snow":\#((world.roofSnow * 100).rounded() / 100),"jar":\#(world.fireflyJar),"hive":\#(world.hasHive),"basket":\#(world.basket.map { "\"\($0.phase)\"" } ?? "null"),"basketLanding":\#(world.basketLanding().map { String(Int($0.y)) } ?? "null"),"ax":\#(AXIsProcessTrusted()),"menuBar":[\#(world.menuBars.map { b in b.map { b in "[" + b.clear.map { "[\(Int($0.lo)),\(Int($0.hi))]" }.joined(separator: ",") + "]" } ?? "null" }.joined(separator: ","))],"topWalks":[\#(world.surfaces.filter { t in t.kind == .windowTop && t.y > (world.screens.first?.maxY ?? .infinity) - 40 }.map { "[\(Int($0.minX)),\(Int($0.maxX)),\(Int($0.y))]" }.joined(separator: ","))]}"#)
         }
         guard method == "POST" else { return (405, #"{"ok":false,"error":"use POST"}"#) }
         switch name {
@@ -1152,6 +1182,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 return (409, #"{"ok":false,"error":"nobody free to fly one right now"}"#)
             }
             return (200, #"{"ok":true}"#)
+        case "postcard":
+            // A sample postcard in the mailbox (what a session finishing while you're away leaves).
+            guard world.mailboxSpot != nil else { return (409, #"{"ok":false,"error":"no hanging home showing"}"#) }
+            world.post(Postcard(project: query["project"] ?? "Gremlets", text: query["text"] ?? "48 min · 31 edits · 3 tasks done · tests passing", at: Date().timeIntervalSince1970))
+            saveMoss()
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"unread":\#(world.unreadMail)}"#)
+        case "patch":
+            // Sow the vegetable patch now (ripe=1: ready to pick).
+            guard world.sowPatchNow(ripe: query["ripe"] == "1") else { return (409, #"{"ok":false,"error":"the nest hut isn't out (full screen, or widgets in both top corners)"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"patch":"\#(world.patchSaved)"}"#)
+        case "porch":
+            // Pile up autumn leaves or snow on the nest hut now (to try the sweeping), or clear them.
+            switch query["what"] ?? "leaves" {
+            case "snow": world.roofSnow = 1
+            case "clear": world.roofSnow = 0; world.porchLeaves = 0
+            default: world.porchLeaves = 1
+            }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"leaves":\#(world.porchLeaves),"snow":\#(world.roofSnow)}"#)
+        case "jar":
+            // Fireflies in the jar now.
+            world.fireflyJar = World.jarMax
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "seeds":
+            // Seeds from a friend for the patch now.
+            guard let crop = world.newFriendCrop, world.receiveSeeds(crop, by: world.say()) else { return (409, #"{"ok":false,"error":"the seed tin has every kind already"}"#) }
+            saveMoss()
+            return (200, #"{"ok":true,"seeds":"\#(world.seedTinSaved)"}"#)
+        case "morningcard":
+            // Yesterday's postcard in the mailbox now.
+            guard postMorningCard(force: true) else { return (409, #"{"ok":false,"error":"nothing to tell about yesterday"}"#) }
+            return (200, #"{"ok":true}"#)
+        case "lanterns":
+            // Someone sets a lantern out on the moss now.
+            guard world.hangLanternNow() else { return (409, #"{"ok":false,"error":"nobody free on a window top"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "bird":
+            // A bird drops by now.
+            guard world.spawnBird() else { return (409, #"{"ok":false,"error":"one's already here"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "nudge":
+            guard world.nudgeHome() else { return (409, #"{"ok":false,"error":"no hanging home showing (or just nudged)"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true}"#)
+        case "pantry":
+            if let n = query["n"].flatMap(Int.init) { world.pantry = max(0, min(World.pantryMax, n)); saveMoss() }
+            if let n = query["care"].flatMap(Int.init) { world.homeCare = max(0, n); saveMoss() }
+            return (200, #"{"ok":true,"pantry":\#(world.pantry),"care":\#(world.homeCare),"stage":\#(world.houseStage)}"#)
+        case "ask":
+            // gremlet ask <idea> [name]: what the right-click menu does (no idea: lists what each could do).
+            let pool = world.creatures.filter { c in query["name"].map { $0.isEmpty || c.species.id == $0 || c.species.name.lowercased() == $0.lowercased() } ?? true }
+            guard let raw = query["idea"], !raw.isEmpty else {
+                let list = pool.map { c in #"{"gremlet":"\#(c.species.id)","ideas":[\#(world.ideas(for: c).map { "\"\($0.rawValue)\"" }.joined(separator: ","))]}"# }
+                return (200, "[\(list.joined(separator: ","))]")
+            }
+            guard let idea = Idea(rawValue: raw) else { return (400, #"{"ok":false,"error":"unknown idea"}"#) }
+            guard let c = pool.first(where: { world.ideas(for: $0).contains(idea) }), world.ask(c, idea) else {
+                return (409, #"{"ok":false,"error":"nobody can do that from where they are right now"}"#)
+            }
+            overlay.ecoFX.handle(world.drainEcoEvents())
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"gremlet":"\#(c.species.id)"}"#)
         case "stairs":
             guard world.startStairsWithAnyone() else {
                 return (409, #"{"ok":false,"error":"nowhere to build up to: a Gremlet standing on a floor or window needs another window's top 90 to 480 points above it, with room beside it"}"#)
@@ -1189,23 +1286,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             schedule(rate: 60); return (200, #"{"ok":true}"#)
         case "stretch":
             world.stretchBreak(); schedule(rate: 60); return (200, #"{"ok":true}"#)
+        case "critters":
+            // A ladybug, a bee and a little snail come out onto the moss now.
+            let n = world.crittersNow()
+            guard n > 0 else { return (409, #"{"ok":false,"error":"no window top for them"}"#) }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"critters":\#(n)}"#)
+        case "dock":
+            // Someone hops along the Dock now (needs Play on the Dock + Accessibility).
+            guard world.dockHopNow() else {
+                return (409, dock.trusted ? #"{"ok":false,"error":"no Dock icons along the bottom (hidden, on a side, or full screen)"}"# : #"{"ok":false,"error":"allow Gremlets in System Settings > Privacy & Security > Accessibility"}"#)
+            }
+            schedule(rate: 60)
+            return (200, #"{"ok":true,"icons":\#(world.dockIcons.count)}"#)
         case "fireflies":
             // A few fireflies come out over the moss now (night or not) for a couple of minutes.
             guard world.firefliesNow() else { return (409, #"{"ok":false,"error":"no moss or window top for them"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
         case "quest":
-            // gremlet quest [done N | undo N | add TEXT | remove N | nag | reset]
+            // gremlet quest [done N | undo N | add TEXT | remove N]: the list only (the corner board is gone).
             switch query["do"] ?? "" {
-            case "done": if let n = query["n"].flatMap(Int.init), quests.setDone(n, true) { world.questBoard = quests.board; world.celebrateQuestStep() }
+            case "done": if let n = query["n"].flatMap(Int.init) { quests.setDone(n, true) }
             case "undo": if let n = query["n"].flatMap(Int.init) { quests.setDone(n, false) }
             case "add": quests.add(Self.decoded(query["text"] ?? ""))
             case "remove": if let n = query["n"].flatMap(Int.init) { quests.remove(n) }
-            case "nag": world.questBoard = quests.board; _ = world.startQuestNag()
             default: break
             }
-            world.questBoard = quests.board
-            rebuildMenu(); schedule(rate: 60)
             let list = quests.steps.enumerated().map { i, st in "\(st.done ? "[x]" : "[ ]") \(i + 1). \(st.text)" }.joined(separator: "\n")
             return (200, list + "\n")
         case "sprout":
@@ -1349,6 +1456,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 return (409, #"{"ok":false,"error":"no free Gremlet on the floor or a window"}"#)
             }
         case "claude":
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "claude.lastSeen")
+            world.claudeAround = true
             let r = buddy.handle(query)
             schedule(rate: 60)
             return r
@@ -1423,6 +1532,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 world.receive(.wake)
                 schedule(rate: 60)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in self?.world.receive(.wave) }
+                // Postcards came while you were away: someone mentions it.
+                if world.unreadMail > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [weak self] in
+                        guard let self, let id = self.world.say() else { return }
+                        let n = self.world.unreadMail
+                        self.overlay.showBubble(n == 1 ? "A postcard came! 📬" : "\(n) postcards came! 📬", on: id, seconds: 3)
+                    }
+                }
             }
             rebuildMenu()
         }
@@ -1450,21 +1567,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func housekeeping(elapsed: Double) {
         updatePresence()
+        if world.userActive { postMorningCard() }
         // Where each one spends its time (for its favourite spot); out of full screen only, so it's their own choice.
         if !world.compact && !presence.isHidden {
             for c in world.creatures { if let p = world.placeName(of: c) { bonds.addSpot(c.species.id, p, seconds: min(elapsed, 2)) } }
             if Int(CACurrentMediaTime()) % 300 == 0 { bonds.save() }
         }
-        // The launch quest: the board shows the next step; a Gremlet reads it out in the morning (from 10) and the
-        // evening (from 6), once each, while you're here.
-        world.questBoard = quests.board
-        if world.userActive && !world.compact && !presence.isHidden && !world.hushed && quests.next != nil && Int(CACurrentMediaTime()) % 30 == 0 {
-            let hour = Calendar.current.component(.hour, from: Date()), day = BondStore.dayKey()
-            let slot = hour >= 18 ? "evening" : hour >= 10 ? "morning" : nil
-            if let slot, UserDefaults.standard.string(forKey: "quest.lastNag.\(slot)") != day, world.startQuestNag() {
-                UserDefaults.standard.set(day, forKey: "quest.lastNag.\(slot)")
-            }
-        }
+        // Claude Code used on this Mac in the last day? If not, the Gremlets keep their own busy day.
+        world.claudeAround = Date().timeIntervalSince1970 - UserDefaults.standard.double(forKey: "claude.lastSeen") < 18 * 3600
+        dock.tick(now: CACurrentMediaTime(), fullScreen: world.compact)
+        friendVisits()
         // Lunchtime picnic (once a day, around noon) and a blanket late at night (once a night), while you're here.
         if world.userActive && !world.compact && !presence.isHidden && Int(CACurrentMediaTime()) % 15 == 0 {
             let hour = Calendar.current.component(.hour, from: Date()), day = BondStore.dayKey()
@@ -1659,6 +1771,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Double-click a Gremlet: it turns and waves, and a little card says who it is, how long you've been together and
     /// where it likes to be.
+    /// Right-click a Gremlet: what it could do for you right now.
+    private func showAskMenu(_ id: Int) {
+        guard let c = world.creatures.first(where: { $0.id == id }) else { return }
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        let mood = c.isAsleep || c.homeUntil != nil ? "fast asleep" : c.energy > 0.65 ? "full of beans" : c.energy > 0.3 ? "content" : "a bit sleepy"
+        let head = NSMenuItem(title: "\(c.species.name) · \(mood)", action: nil, keyEquivalent: "")
+        head.isEnabled = false
+        menu.addItem(head)
+        if let j = c.job, j.kind == .claude {
+            let busy = NSMenuItem(title: "Busy on your session\(j.label.map { ": \($0)" } ?? "")", action: nil, keyEquivalent: "")
+            busy.isEnabled = false
+            menu.addItem(busy)
+        }
+        let ideas = world.ideas(for: c)
+        if !ideas.isEmpty {
+            menu.addItem(.separator())
+            for idea in ideas {
+                let item = NSMenuItem(title: idea.title, action: #selector(askPicked(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = [id, idea.rawValue] as [Any]
+                menu.addItem(item)
+            }
+        }
+        menu.addItem(.separator())
+        let hello = NSMenuItem(title: "Say hello", action: #selector(askPicked(_:)), keyEquivalent: "")
+        hello.target = self
+        hello.representedObject = [id, "hello"] as [Any]
+        menu.addItem(hello)
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
+    @objc private func askPicked(_ sender: NSMenuItem) {
+        guard let pair = sender.representedObject as? [Any], let id = pair.first as? Int, let raw = pair.last as? String,
+              let c = world.creatures.first(where: { $0.id == id }) else { return }
+        if raw == "hello" { sayHello(id); return }
+        guard let idea = Idea(rawValue: raw) else { return }
+        if world.ask(c, idea) {
+            overlay.ecoFX.handle(world.drainEcoEvents())
+            if [.snack].contains(idea) == false, Int.random(in: 0..<2) == 0 {
+                overlay.showBubble(["On it!", "Okay!", "Ooh, yes!", "Can do!"].randomElement()!, on: id, seconds: 1.4)
+            }
+        } else {
+            overlay.showBubble(["Hmm, not right now.", "Can't from here!", "Maybe later?"].randomElement()!, on: id, seconds: 1.6)
+        }
+        schedule(rate: 60)
+    }
+
     private func sayHello(_ id: Int) {
         guard let c = world.creatures.first(where: { $0.id == id }) else { return }
         world.sayHello(c)
@@ -1877,6 +2037,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UserDefaults.standard.set(world.mossMinutes, forKey: mossKey)
         UserDefaults.standard.set(world.mossCare, forKey: "moss.care")
         UserDefaults.standard.set(world.houseDaisies, forKey: "house.daisies")
+        UserDefaults.standard.set(world.pantry, forKey: "house.pantry")
+        UserDefaults.standard.set(world.homeCare, forKey: "house.care")
+        UserDefaults.standard.set(world.rainBarrel, forKey: "house.barrel")
+        UserDefaults.standard.set(world.patchSaved, forKey: "house.patch")
+        UserDefaults.standard.set(world.seedTinSaved, forKey: "house.seeds")
+        UserDefaults.standard.set(world.porchLeaves, forKey: "house.leaves")
+        UserDefaults.standard.set(world.roofSnow, forKey: "house.snow")
+        UserDefaults.standard.set(world.fireflyJar, forKey: "house.jar")
+        if let d = try? JSONEncoder().encode(world.mailbox) { UserDefaults.standard.set(d, forKey: "house.mail") }
         if let d = try? JSONEncoder().encode(world.winFlags) { UserDefaults.standard.set(d, forKey: "winFlags.v1") }
         UserDefaults.standard.set(world.houseDaisiesDay, forKey: "house.daisiesDay")
     }
@@ -1988,7 +2157,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func crossNow() {
-        if world.sendThroughDoor() { schedule(rate: 60) }
+        updateDoor()
+        guard world.door != nil else {
+            let a = NSAlert()
+            a.messageText = "The other screen isn't open yet"
+            a.informativeText = "Your friend needs Gremlets running with the same code joined. Once their Mac says hello, the hollow log at the edge of your screen lights up."
+            NSApp.activate(ignoringOtherApps: true); a.runModal(); return
+        }
+        if world.sendThroughDoor() { overlay.ecoFX.handle(world.drainEcoEvents()); schedule(rate: 60) }
+        else if let c = world.creatures.first { overlay.showBubble("Busy right now! In a sec…", on: c.id, seconds: 2) }
+    }
+
+    /// While a friend's Mac (or the iPad) is linked: the first hello is a little moment (the log lights up and
+    /// someone goes over to say hi), then every few minutes one goes visiting, and visitors wander home after a while.
+    private func friendVisits() {
+        let now = CACurrentMediaTime()
+        overlay.peerOnline = bridge.linked && bridge.peerOnline
+        guard bridge.linked, bridge.peerOnline, world.door != nil, !presence.isHidden else { peerWasOnline = bridge.peerOnline; return }
+        if !peerWasOnline {
+            peerWasOnline = true
+            let who = bridge.peerIsMac ? "your friend's Mac" : "the iPad"
+            if let c = world.creatures.first(where: { guests[$0.id] == nil }) {
+                overlay.showBubble("The log goes through to \(who)! 🪵", on: c.id, seconds: 3.5)
+            }
+            nextVisitAt = now + 8
+            schedule(rate: 60)
+        }
+        // Visitors head home after 2-4 minutes (one at a time).
+        if let (id, _) = guestSince.first(where: { now - $0.value > 120 + Double($0.key % 7) * 20 }) {
+            if world.creatures.contains(where: { $0.id == id }) {
+                if world.sendThroughDoor(preferring: id) {
+                    overlay.showBubble(["Home time! Thanks! 👋", "Back to my Mac!", "Bye bye!"].randomElement()!, on: id, seconds: 2)
+                    overlay.ecoFX.handle(world.drainEcoEvents())
+                    schedule(rate: 60)
+                }
+            } else { guestSince[id] = nil }
+        }
+        // One of ours goes visiting every few minutes, keeping at least one at home.
+        let ownHere = world.creatures.filter { guests[$0.id] == nil }.count
+        if now >= nextVisitAt, ownHere >= 2 || (ownHere == 1 && bridge.away.isEmpty && guests.isEmpty == false) {
+            nextVisitAt = now + Double.random(in: 180...360)
+            let pick = world.creatures.filter { guests[$0.id] == nil && $0.job == nil }.randomElement()
+            if world.sendThroughDoor(preferring: pick?.id) {
+                overlay.ecoFX.handle(world.drainEcoEvents())
+                schedule(rate: 60)
+            }
+        }
     }
 
     /// The doorway is open while the other screen is around.
@@ -2008,6 +2222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let air = !c.isGrounded
         // Ours carry our id; a visitor carries its own home's, so it's recognised there as coming home.
         let owner = guests.removeValue(forKey: c.id) ?? bridge.owner
+        guestSince[c.id] = nil
         bridge.cross(["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air, "owner": owner])
         let wasGuest = owner != bridge.owner
         let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
@@ -2062,7 +2277,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if cameHome { bridge.away = bridge.away.filter { $0 != w.species } }
         if world.door == nil { updateDoor() }
         guard let c = world.arriveThroughDoor(sp.info, yFrac: w.y, vx: w.vx, vy: w.vy, airborne: w.air) else { return }
+        overlay.ecoFX.handle([.tunnelPop(Vec2(c.pos.x.clamped(main.minX + 24, main.maxX - 24), c.pos.y), by: c.id)])
         // Home from a trip with a postcard for the mailbox.
+        // Seeds for the vegetable patch: brought back from a friend's Mac, or brought along by a friend's Gremlet.
+        if cameHome, bridge.peerIsMac, let crop = world.newFriendCrop {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { [weak self] in self?.world.receiveSeeds(crop, by: c.id) }
+        } else if let o = w.owner, o != bridge.owner {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in self?.world.receiveSeeds(World.friendCrop(for: o), by: c.id) }
+        }
         if cameHome {
             world.mailWaiting = true
             world.postcard = (bridge.peerIsMac ? "a friend's Mac" : "your iPad", w.species)
@@ -2070,6 +2292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // (or a visitor arriving from a friend's Mac: a guest, sent home with its own tag when it leaves).
         if let o = w.owner, o != bridge.owner {
             guests[c.id] = o
+            guestSince[c.id] = CACurrentMediaTime()
             // A friend's Gremlet brings a seed from home: a flower in their own colour (once per visit day).
             let tint = o.utf8.reduce(UInt32(2_166_136_261)) { ($0 ^ UInt32($1)) &* 16_777_619 } & 0xFFFFFF | 0x404040
             if lastFriendSeedDay != BondStore.dayKey() + o {
@@ -2266,8 +2489,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? raw
     }
 
+    /// The hanging home's happenings, for the day log (and so the morning postcard).
+    private func recordHome(_ events: [HomeEvent]) {
+        var harvests = 0, birds = 0, suppers = 0, lanterns = 0
+        for e in events {
+            switch e {
+            case .harvested: harvests += 1
+            case .birdLanded: birds += 1
+            case .supper: suppers += 1
+            case .lanternHung: lanterns += 1
+            default: break
+            }
+        }
+        guard harvests + birds + suppers + lanterns > 0 else { return }
+        dayLog.add { d in
+            d.harvests = (d.harvests ?? 0) + harvests; d.birds = (d.birds ?? 0) + birds
+            d.suppers = (d.suppers ?? 0) + suppers; d.lanterns = (d.lanterns ?? 0) + lanterns
+        }
+    }
+
+    /// Once a morning, the first time you're about: a postcard in the mailbox about yesterday.
+    @discardableResult
+    private func postMorningCard(force: Bool = false) -> Bool {
+        let today = BondStore.dayKey()
+        let hour = Calendar.current.component(.hour, from: Date())
+        guard force || (hour >= 5 && UserDefaults.standard.string(forKey: "mail.morningDay") != today), world.mailboxSpot != nil else { return false }
+        if !force { UserDefaults.standard.set(today, forKey: "mail.morningDay") }
+        guard let text = dayLog.yesterdayCard else { return false }
+        world.post(Postcard(project: "Yesterday", text: text, at: Date().timeIntervalSince1970))
+        saveMoss()
+        return true
+    }
+
     /// A Claude session ended: if it did real work, a recap card goes to Pictures › Gremlets › Sessions.
     private func sessionEnded(_ r: SessionRecord, after: Bonsai?) {
+        // You're away: it leaves a postcard in the mailbox (what got done), to read when you're back.
+        if presence.isAway || idleSeconds > 120, r.toolCalls > 0, let card = r.postcard {
+            world.post(card)
+            saveMoss()
+        }
         guard !showcase.running, r.worthRecapping, SessionRecapCard.make(r, after: after, world: world) != nil else { return }
         if let id = world.say() { overlay.showBubble("\(r.project): session recap saved (Pictures › Gremlets › Sessions)", on: id, seconds: 8) }
         rebuildMenu()
@@ -2297,34 +2557,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
-    /// More → Launch Quest: the steps with checkmarks (click one to tick it off or undo it).
-    private func questMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Launch Quest (\(quests.doneCount) of \(quests.steps.count))", action: nil, keyEquivalent: "")
-        let sub = NSMenu()
-        for (i, st) in quests.steps.enumerated() {
-            let m = NSMenuItem(title: "\(i + 1). \(st.text)", action: #selector(toggleQuest(_:)), keyEquivalent: "")
-            m.target = self; m.tag = i + 1; m.state = st.done ? .on : .off
-            sub.addItem(m)
-        }
-        sub.addItem(.separator())
-        let nag = NSMenuItem(title: "Remind Me Now", action: #selector(questNagNow), keyEquivalent: "")
-        nag.target = self
-        sub.addItem(nag)
-        item.submenu = sub
-        item.toolTip = "Your launch plan on a notice board in the bottom-left corner. A Gremlet reads out the next step twice a day. 'gremlet quest' in Terminal too."
-        return item
-    }
-
-    @objc private func toggleQuest(_ sender: NSMenuItem) {
-        let done = !(quests.steps[sender.tag - 1].done)
-        quests.setDone(sender.tag, done)
-        world.questBoard = quests.board
-        if done { world.celebrateQuestStep() }
-        schedule(rate: 60)
-        rebuildMenu()
-    }
-
-    @objc private func questNagNow() { world.questBoard = quests.board; _ = world.startQuestNag(); schedule(rate: 60) }
 
     @objc private func openScrapbook() {
         let port = ProcessInfo.processInfo.environment["GREMLETS_PORT"] ?? "47920"
@@ -2370,6 +2602,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func saveSnapshot() {
         guard let url = VillageSnapshot.make(world: world, species: species) else { NSSound.beep(); return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    @objc private func toggleDock() {
+        if dock.enabled && !dock.trusted { controls.requestAccess(); return }
+        dock.enabled.toggle()
+        if dock.enabled && !dock.trusted { controls.requestAccess() }
+        rebuildMenu()
     }
 
     @objc private func toggleControls() {

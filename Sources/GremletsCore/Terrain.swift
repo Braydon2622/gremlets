@@ -23,6 +23,8 @@ public struct Stair: Sendable {
     /// Set once the climber is done with it: the remaining blocks get picked up one by one.
     var doneAt: Double?
     var nextTake = 0.0
+    /// The last time a block went down or came up: a climber that stops making progress gives up.
+    var progressAt = 0.0
     let fromOwner: Int, toOwner: Int
     /// One block: 5 art pixels.
     public static let rise = 15.0, run = 15.0
@@ -126,8 +128,10 @@ extension World {
 
     func stepAcross(_ c: Creature, from support: Surface, toX nx: Double) -> Surface? {
         // A block straight ahead, entered from its side: up we go.
+        // (Only the builder climbs a staircase: the blocks are coming up right behind it, and a friend on them would fall.)
         if let up = surfaces.first(where: { World.isStairOwner($0.ownerID) && $0.y > c.pos.y + 4 && $0.y <= c.pos.y + Stair.rise + 1.5
-                                                && $0.supports(x: nx) && !$0.supports(x: c.pos.x) }) { return up }
+                                                && $0.supports(x: nx) && !$0.supports(x: c.pos.x) }),
+           stairs.contains(where: { World.stairOwner($0.id) == up.ownerID && $0.climber == c.id }) { return up }
         guard !support.supports(x: nx) else { return nil }
         // The ground ran out: the nearest platform within a small step up or down, if one is right there.
         return surfaces.filter { $0.ownerID != support.ownerID && abs($0.y - c.pos.y) <= World.strideStep && $0.supports(x: nx) }
@@ -178,7 +182,7 @@ extension World {
     func startStairs(_ c: Creature, _ plan: StairPlan) {
         if c.stair != nil { abandonStairs(c) }
         nextStairID += 1
-        stairs.append(Stair(id: nextStairID, base: plan.base, dir: plan.dir, steps: plan.steps, builtAt: clock, climber: c.id, fromOwner: plan.from.ownerID, toOwner: plan.to.ownerID))
+        stairs.append(Stair(id: nextStairID, base: plan.base, dir: plan.dir, steps: plan.steps, builtAt: clock, climber: c.id, progressAt: clock, fromOwner: plan.from.ownerID, toOwner: plan.to.ownerID))
         endSocial(c)
         c.stair = nextStairID
         c.blocksInHand = 3
@@ -216,9 +220,17 @@ extension World {
         let k = st.built
         let standY = st.base.y + Double(k) * Stair.rise
         let standX = st.base.x + st.dir * Double(k) * Stair.run - st.dir * 9
+        // Stuck (knocked off, thrown, the bottom blocks already packed away so there's no getting back on, or just
+        // going nowhere)? Pack up and give up, rather than jittering under a staircase hanging in the air.
+        let lowestFoot = st.base.y + Double(st.first) * Stair.rise
+        if c.pos.y < lowestFoot - 2 || clock - st.progressAt > 12 {
+            abandonStairs(c)
+            return false
+        }
         if abs(c.pos.x - standX) > 5 || abs(c.pos.y - standY) > 2 {
             // Walk there; the blocks already laid carry it up. Lost (fell off, or walled in)? Pick up and give up.
-            if c.pos.y > standY + 2 || c.pos.y < st.base.y - 2 || c.pos.x < st.minX - 400 || c.pos.x > st.maxX + 400 {
+            if c.pos.y > standY + 2 || c.pos.y < st.base.y - 2 || c.pos.x < st.minX - 400 || c.pos.x > st.maxX + 400
+                || (abs(c.pos.x - standX) < 3 && abs(c.pos.y - standY) > 2) {
                 abandonStairs(c)
                 return false
             }
@@ -237,6 +249,7 @@ extension World {
                 c.facing = -st.dir
                 terrainEvents.append(.stairBlockTaken(Vec2((t.minX + t.maxX) / 2, t.y - Stair.rise / 2), by: c.id))
                 st.first += 1
+                st.progressAt = clock
                 c.blocksInHand += 1
                 c.buildTimer = 0.5
                 stairs[i] = st
@@ -247,6 +260,7 @@ extension World {
                 c.facing = st.dir
                 c.buildTimer = 0.45
                 st.built += 1
+                st.progressAt = clock
                 c.blocksInHand = max(0, c.blocksInHand - 1)
                 stairs[i] = st
                 setSurfacesDirty()

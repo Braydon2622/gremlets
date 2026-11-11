@@ -14,6 +14,9 @@ final class DayLog {
         var daisies: Int?, mushrooms: Int?, berries: Int?, dandelions: Int?, fireflies: Int?, tufts: Int?, boxed: Int?
         /// Anniversaries that day ("Kindlet: 30 days together").
         var anniversaries: [String]?
+        /// Around the hanging home (optional so older logs still decode): vegetables picked, birds that dropped by,
+        /// suppers on the porch, lanterns set out on the moss.
+        var harvests: Int?, birds: Int?, suppers: Int?, lanterns: Int?
     }
     private let key = "daylog.v1"
     private(set) var days: [String: Day] = [:]
@@ -53,6 +56,18 @@ final class DayLog {
         if self[d].tasks == 0 { d = Calendar.current.date(byAdding: .day, value: -1, to: d) ?? d }
         while self[d].tasks > 0 { n += 1; d = Calendar.current.date(byAdding: .day, value: -1, to: d) ?? d; if n > 400 { break } }
         return n
+    }
+
+    /// The morning postcard: yesterday in a line, Claude's work and the Gremlets' both ("9 Claude tasks · 3 picked
+    /// from the patch · 2 bird visits · 4 fireflies").
+    var yesterdayCard: String? {
+        guard let y = Calendar.current.date(byAdding: .day, value: -1, to: Date()) else { return nil }
+        let d = self[y]
+        func n(_ v: Int?, _ one: String, _ many: String) -> String? { guard let v, v > 0 else { return nil }; return "\(v) \(v == 1 ? one : many)" }
+        let parts = [n(d.tasks, "Claude task", "Claude tasks"), n(d.edits, "edit", "edits"), n(d.harvests, "picked from the patch", "picked from the patch"),
+                     n(d.birds, "bird visit", "bird visits"), n(d.fireflies, "firefly", "fireflies"), n(d.suppers, "porch supper", "porch suppers"),
+                     n(d.lanterns, "lantern lit", "lanterns lit"), n(d.tufts, "tuft of moss", "tufts of moss")].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// One line for the morning: what yesterday added up to.

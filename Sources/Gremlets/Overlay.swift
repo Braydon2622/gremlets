@@ -35,6 +35,9 @@ final class OverlayView: NSView {
         if e.clickCount == 2, let c = controller, let id = c.creatureID(at: NSEvent.mouseLocation) { c.onDoubleClick(id); return }
         controller?.mouseDown(at: NSEvent.mouseLocation, time: e.timestamp)
     }
+    override func rightMouseDown(with e: NSEvent) {
+        if let c = controller, let id = c.creatureID(at: NSEvent.mouseLocation) { c.onRightClick(id) }
+    }
     override func mouseDragged(with e: NSEvent) { controller?.mouseDragged(to: NSEvent.mouseLocation, time: e.timestamp) }
     override func mouseUp(with e: NSEvent) { controller?.mouseUp(at: NSEvent.mouseLocation, time: e.timestamp) }
 }
@@ -54,6 +57,9 @@ final class OverlayController {
     private(set) var fx: SpectacleRenderer!
     /// The project bonsai, the ivy and ledges on Claude's windows, and the nursery.
     private(set) var bonsaiFX: BonsaiRenderer!
+    private(set) var ecoFX: EcoRenderer!
+    /// Whether the linked screen is open right now (the log's hollow glows).
+    var peerOnline = false
     struct ScreenRef { let frame: CGRect; let root: CALayer; let scale: CGFloat }
     var screenRefs: [ScreenRef] { screens.map { ScreenRef(frame: $0.frame, root: $0.root, scale: $0.panel.backingScaleFactor) } }
     func screenIndexFor(_ p: Vec2) -> Int { screenIndex(for: p) }
@@ -69,6 +75,8 @@ final class OverlayController {
     private var balloons: [Int: CALayer] = [:]
     /// Double-clicking a Gremlet (the app opens a chat with it).
     var onDoubleClick: (Int) -> Void = { _ in }
+    /// Right-click on a Gremlet: the menu of things to ask it.
+    var onRightClick: (Int) -> Void = { _ in }
     func creatureID(at p: CGPoint) -> Int? { world.creature(at: Vec2(Double(p.x), Double(p.y)))?.id }
     /// Desktop icon play (set by the app; nil or disabled = off).
     var icons: DesktopIcons?
@@ -179,6 +187,7 @@ final class OverlayController {
         self.species = species
         fx = SpectacleRenderer(overlay: self, world: world)
         bonsaiFX = BonsaiRenderer(overlay: self, world: world)
+        ecoFX = EcoRenderer(overlay: self, world: world)
         rebuildScreens()
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.mouseMoved() }
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved], handler: handler) { monitors.append(g) }
@@ -205,6 +214,7 @@ final class OverlayController {
         shadows.removeAll()
         fx?.rebuild()
         bonsaiFX?.rebuild()
+        ecoFX?.rebuild()
     }
 
 
@@ -280,6 +290,7 @@ final class OverlayController {
         } else {
             fx.render()
             bonsaiFX.render()
+            ecoFX.render(peerOnline: peerOnline)
             updateBubbles(alive: alive)
             updateProps()
             if compactShown, CACurrentMediaTime() - lastCompactSweep > 0.25 { lastCompactSweep = CACurrentMediaTime(); applyCompact() }
@@ -776,21 +787,38 @@ final class OverlayController {
             }
             st.extra?.position = CGPoint(x: (s.minX + s.width / 2 - o.x).rounded(), y: (s.y - o.y).rounded())
         case .snail:
-            // The snail's body and shell under the platform; it faces the way it's crawling and wiggles its eyestalks.
+            // The snail's body and shell under the platform: it faces the way it's crawling, its foot ripples and its
+            // head stretches with each surge, and its eyestalks sway on their own (tucking in when it's startled).
             let t = CACurrentMediaTime()
             let x = s.minX + s.width / 2 - o.x
             if abs(x - st.lastShelfX) > 0.05 { st.snailFacing = x > st.lastShelfX ? 1 : -1 }
+            let moving = abs(x - st.lastShelfX) > 0.004
             st.lastShelfX = x
-            let look = t < st.snailTuckedUntil ? 2 : Int(t / 1.7) % 2
-            if st.extraKey != "snail\(look)" || st.extra == nil {
+            let tucked = t < st.snailTuckedUntil
+            let stride = (t * 1.3).truncatingRemainder(dividingBy: 2 * .pi) / (2 * .pi)
+            let frame = moving ? Int(stride * 6) % 6 : 3
+            let eyeL = Int(((sin(t * 0.9 + Double(j.seed % 7)) + 1) * 2.49).rounded(.down))
+            let eyeR = Int(((sin(t * 0.67 + 1.3) + 1) * 2.49).rounded(.down))
+            let key = "snail\(frame)\(eyeL)\(eyeR)\(tucked)"
+            if st.extraKey != key || st.extra == nil {
                 if st.extra == nil {
                     let l = pixelLayer(si, anchor: CGPoint(x: 0.5, y: 0))
                     screens[si].root.insertSublayer(l, at: 0)
                     popIn(l)
+                    // A glistening trail behind it, fading off.
+                    let trail = CAGradientLayer()
+                    trail.colors = [NSColor(white: 1, alpha: 0).cgColor, NSColor(red: 0.86, green: 0.95, blue: 1, alpha: 0.45).cgColor]
+                    trail.startPoint = CGPoint(x: 0, y: 0.5); trail.endPoint = CGPoint(x: 1, y: 0.5)
+                    trail.frame = CGRect(x: -150, y: 0, width: 160, height: 3)
+                    trail.name = "trail"
+                    let shimmer = CABasicAnimation(keyPath: "opacity"); shimmer.fromValue = 0.6; shimmer.toValue = 1
+                    shimmer.duration = 1.8; shimmer.autoreverses = true; shimmer.repeatCount = .infinity
+                    trail.add(shimmer, forKey: "shimmer")
+                    l.addSublayer(trail)
                     st.extra = l
                 }
-                setImage(st.extra!, PropArt.snailBody(look: look))
-                st.extraKey = "snail\(look)"
+                setImage(st.extra!, PropArt.snailBody(frame: frame, eyeL: eyeL, eyeR: eyeR, tucked: tucked))
+                st.extraKey = key
             }
             st.extra?.setAffineTransform(CGAffineTransform(scaleX: st.snailFacing, y: 1))
             st.extra?.position = CGPoint(x: (x + st.snailFacing * 21).rounded(), y: (s.y - 66 - o.y).rounded())
@@ -1666,7 +1694,7 @@ final class OverlayController {
     /// What a floating Gremlet rides: a balloon, soap bubble, dandelion puff, umbrella or big leaf. When it lands,
     /// the balloon drifts away, the bubble pops, and the rest float off and fade.
     private func updateBalloon(_ c: Creature) {
-        let floating = c.activity == .float && !c.isZipping && !c.isClimbing   // zipline riders hang from a pulley, climbers from the vine
+        let floating = c.activity == .float && !c.isZipping && !c.isClimbing && !c.inBasket   // zipline riders hang from a pulley, climbers from the vine; basket riders stand in it
         if !floating {
             if let b = balloons.removeValue(forKey: c.id) {
                 let start = b.position

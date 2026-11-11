@@ -16,6 +16,7 @@ final class SpectacleRenderer {
     private var carryLayers: [Int: (layer: CALayer, what: String)] = [:]
     private var nextMowPuff: [Int: CFTimeInterval] = [:]
     private var nextChimneyPuff: CFTimeInterval = 0
+    private var nextNestPuff: CFTimeInterval = 0
     private var swingLayer: CAShapeLayer?
     private var cornerBranchLayers: [CALayer] = []
     private var cornerStumpLayers: [CALayer] = []
@@ -119,14 +120,12 @@ final class SpectacleRenderer {
         renderBridges()
         renderStairs(); renderRails()
         renderExpeditions()
-        renderDoor()
         renderMoss()
         renderFireflies()
         renderMoods()
         renderHeldProps()
         renderSeedlings()
         renderGarden2()
-        renderQuestBoard()
         renderSeason()
         renderWeather()
         renderPods()
@@ -1409,7 +1408,8 @@ final class SpectacleRenderer {
             let reach = ((m - 10) / 55).clamped(0, 1)       // fraction of each half covered
             let density = ((m - 10) / 110).clamped(0, 1)
             var segIndex: [Int: Int] = [:]
-            for s in world.surfaces.filter({ $0.kind == .windowTop && $0.width >= 40 }).sorted(by: { ($0.ownerID, $0.minX) < ($1.ownerID, $1.minX) }) {
+            // Along each window's whole visible top, even right up under the menu bar where nobody walks.
+            for s in world.topEdges.filter({ $0.width >= 40 }).sorted(by: { ($0.ownerID, $0.minX) < ($1.ownerID, $1.minX) }) {
                 let seg = segIndex[s.ownerID, default: 0]; segIndex[s.ownerID] = seg + 1
                 let half = s.width / 2 * max(0.12, reach)
                 // A quick drag shakes a few bits of moss off the ends.
@@ -1753,7 +1753,7 @@ final class SpectacleRenderer {
 
 extension SpectacleRenderer {
     private var weatherSurfaces: [Surface] {
-        world.surfaces.filter { ($0.kind == .windowTop || $0.kind == .floor) && $0.width >= 40 }
+        (world.topEdges + world.surfaces.filter { $0.kind == .floor }).filter { $0.width >= 40 }
     }
 
     /// A random point on a window top or the floor, weighted by width.
@@ -2007,7 +2007,10 @@ extension SpectacleRenderer {
             l.hammock.bounds = CGRect(x: 0, y: 0, width: hm.width * 3, height: hm.height * 3)
             l.key = key
         }
-        l.house.position = CGPoint(x: base.x.rounded(), y: base.y.rounded() - 3)
+        // Nudged by the pointer: it swings on its ropes for a moment.
+        let nudge = world.homeNudgeAge
+        let swayX: CGFloat = nudge < 3 ? CGFloat(4 * exp(-1.4 * nudge) * sin(nudge * 8)) : 0
+        l.house.position = CGPoint(x: (base.x + swayX).rounded(), y: base.y.rounded() - 3)
         let o = screens[si].frame.origin
         let hx = (n.hammock.minX + n.hammock.maxX) / 2 - o.x, hy = n.hammock.y - o.y
         l.hammock.position = CGPoint(x: hx.rounded(), y: (hy - 8).rounded())
@@ -2015,7 +2018,7 @@ extension SpectacleRenderer {
         let top = n.menuBottom - o.y + 2
         let path = CGMutablePath()
         let roofY = base.y - 3 + l.house.bounds.height - 3
-        for x in [base.x + 6, base.x + 40] { path.move(to: CGPoint(x: x, y: roofY)); path.addLine(to: CGPoint(x: x, y: top)) }
+        for x in [base.x + 6, base.x + 40] { path.move(to: CGPoint(x: x + swayX, y: roofY)); path.addLine(to: CGPoint(x: x, y: top)) }
         for x in [n.hammock.minX - o.x + 1, n.hammock.maxX - o.x - 1] { path.move(to: CGPoint(x: x, y: hy - 2)); path.addLine(to: CGPoint(x: x + (x < hx ? -6 : 6), y: top)) }
         // The swing under the porch, swaying.
         let sw = swingLayer ?? {
@@ -2026,7 +2029,7 @@ extension SpectacleRenderer {
             return s
         }()
         swingLayer = sw
-        let sway = sin(CACurrentMediaTime() * 1.6) * 3
+        let sway = sin(CACurrentMediaTime() * 1.6) * 3 + swayX * 1.6
         let porchY = base.y - 3, seatY = n.swing.y - o.y
         let sx0 = n.swing.minX - o.x, sx1 = n.swing.maxX - o.x
         let swingPath = CGMutablePath()
@@ -2039,7 +2042,7 @@ extension SpectacleRenderer {
         // Someone's inside: smoke curls from the chimney (and z's drift from the window at night).
         if !world.insideHangingHome.isEmpty, CACurrentMediaTime() >= nextChimneyPuff {
             nextChimneyPuff = CACurrentMediaTime() + 1.4
-            overlay.burst([Effects.dust], si: si, at: CGPoint(x: base.x + 36, y: base.y - 3 + 17 * 3 + 4), count: 1, dx: -4...8, dy: 26...40, duration: 2.2)
+            overlay.burst([Effects.dust], si: si, at: CGPoint(x: base.x + swayX + 36, y: base.y - 3 + 17 * 3 + 4), count: 1, dx: -4...8, dy: 26...40, duration: 2.2)
         }
     }
 }
@@ -2105,9 +2108,10 @@ extension SpectacleRenderer {
                 return (art, ropes, "")
             }()
             attach(e.art, si); attach(e.ropes, si)
-            let key = kind == .nestHut ? "nest\(lit)" : "leaf"
+            let stage = world.houseStage
+            let key = kind == .nestHut ? "nest\(lit)\(stage)" : "leaf"
             if e.key != key {
-                let img = kind == .nestHut ? TopStructureArt.nestHut(lit: lit) : TopStructureArt.leafSwing
+                let img = kind == .nestHut ? TopStructureArt.nestHut(lit: lit, stage: stage) : TopStructureArt.leafSwing
                 e.art.contents = img
                 e.art.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
                 e.key = key
@@ -2116,19 +2120,27 @@ extension SpectacleRenderer {
             let own = world.screens.first { s.minX >= $0.minX - 1 && s.minX < $0.maxX }
             let top = CGFloat(own?.maxY ?? s.y + 200) - screens[si].frame.origin.y + 2
             let path = CGMutablePath()
+            // Nudged by the pointer: a little swing on the vines.
+            let age = kind == .nestHut ? world.homeNudgeAge : world.leafNudgeAge
+            let sw: CGFloat = age < 3.5 ? CGFloat((kind == .nestHut ? 4 : 7) * exp(-1.2 * age) * sin(age * 7)) : 0
             switch kind {
             case .nestHut:
                 // The porch starts at the hut's left edge; the hut hangs from two vines tied to its roof.
                 let x0 = pt.x - 2 * k
-                e.art.position = CGPoint(x: x0.rounded(), y: (pt.y - 2 * k).rounded())
+                e.art.position = CGPoint(x: (x0 + sw).rounded(), y: (pt.y - 2 * k).rounded())
                 let roofY = pt.y - 2 * k + 24 * k
-                for dx in [CGFloat(5), 17] { path.move(to: CGPoint(x: x0 + dx * k, y: roofY)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? -4 : 4), y: top)) }
+                for dx in [CGFloat(5), 17] { path.move(to: CGPoint(x: x0 + sw + dx * k, y: roofY)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? -4 : 4), y: top)) }
                 // And a vine down to the porch's far end.
-                path.move(to: CGPoint(x: x0 + 35 * k, y: pt.y + 6 * k)); path.addLine(to: CGPoint(x: x0 + 35 * k + 6, y: top))
+                path.move(to: CGPoint(x: x0 + sw + 35 * k, y: pt.y + 6 * k)); path.addLine(to: CGPoint(x: x0 + 35 * k + 6, y: top))
+                // Someone's napping inside: smoke from the chimney.
+                if !world.insideNest.isEmpty, CACurrentMediaTime() >= nextNestPuff {
+                    nextNestPuff = CACurrentMediaTime() + 1.4
+                    overlay.burst([Effects.dust], si: si, at: CGPoint(x: x0 + sw + 17 * k, y: pt.y + 25 * k), count: 1, dx: -4...8, dy: 26...40, duration: 2.2)
+                }
             case .leafSwing:
                 let x0 = pt.x - 4
-                e.art.position = CGPoint(x: x0.rounded(), y: (pt.y - 3 * k).rounded())
-                for dx in [CGFloat(2), 31] { path.move(to: CGPoint(x: x0 + dx * k, y: pt.y + 3 * k)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? 8 : -8), y: top)) }
+                e.art.position = CGPoint(x: (x0 + sw).rounded(), y: (pt.y - 3 * k).rounded())
+                for dx in [CGFloat(2), 31] { path.move(to: CGPoint(x: x0 + sw + dx * k, y: pt.y + 3 * k)); path.addLine(to: CGPoint(x: x0 + dx * k + (dx < 10 ? 8 : -8), y: top)) }
             }
             e.ropes.path = path
             topStructureLayers[s.ownerID] = e
@@ -2534,8 +2546,9 @@ extension SpectacleRenderer {
             attach(e.layer, si)
             if e.what != what {
                 let picked = MossSprout.Kind(rawValue: what)
-                let img = what == "can" ? PropArt.wateringCan : what == "lantern" ? PropArt.lantern : what == "blanket" ? SproutArt.foldedBlanket : picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
-                let k = picked == nil ? 3 : 2
+                let veg = PorchArt.crop(what)
+                let img = what == "can" ? PropArt.wateringCan : what == "lantern" ? PropArt.lantern : what == "blanket" ? SproutArt.foldedBlanket : veg ?? picked.map(SproutArt.carried) ?? BonsaiArt.carriedPot
+                let k = picked == nil && veg == nil ? 3 : 2
                 e.layer.contents = img
                 e.layer.bounds = CGRect(x: 0, y: 0, width: img.width * k, height: img.height * k)
                 e.what = what

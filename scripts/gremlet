@@ -27,6 +27,19 @@
 #   gremlet moss climb|pad|plant someone climbs a vine / weaves a platform into one / plants or waters moss now
 #   gremlet sprout [daisy|mushroom|berries|dandelion]  something ready to pick comes up in the moss now
 #   gremlet fireflies            a few fireflies come out over the moss (night or not), for a couple of minutes
+#   gremlet critters             a ladybug, a bee and a little snail come out onto the moss
+#   gremlet dock                 someone hops along your Dock icons (Play on the Dock)
+#   gremlet bird                 a little bird drops by (bring the pointer near and it flies off)
+#   gremlet postcard             a sample postcard in the mailbox under the porch (rest the pointer on it to read)
+#   gremlet patch [ripe]         sow the vegetable patch by the nest hut now (ripe: ready to pick)
+#   gremlet lanterns             someone sets a lantern out on the moss now
+#   gremlet porch [leaves|snow|clear]   pile autumn leaves / snow on the nest hut (someone comes to sweep)
+#   gremlet jar                  fireflies in the jar on the rain barrel now
+#   gremlet seeds                seeds from a friend for the vegetable patch now
+#   gremlet morningcard          yesterday's postcard in the mailbox now
+#   gremlet nudge                the hanging home swings; whoever's inside comes out to wave
+#   gremlet pantry [n]           what's in the pantry (or set it, 0-6), the care points, the house's stage
+#   gremlet ask [idea] [name]    what the right-click menu does: with no idea, lists what each could do now
 #   gremlet picnic|blanket       a lunchtime picnic now / a blanket brought over to you
 #   gremlet quest                the launch quest list; quest done N | undo N | add TEXT | remove N | nag
 #   gremlet friendseed           a friend's flower comes up in the moss (as if a friend's Gremlet brought a seed)
@@ -82,6 +95,19 @@ case "${1:-}" in
   react)   call "react?name=${2:-screenshot}"; echo ;;
   sprout)  call "sprout?kind=${2:-}"; echo ;;
   fireflies) call fireflies; echo ;;
+  critters) call critters; echo ;;
+  dock) call dock; echo ;;
+  bird)    call bird; echo ;;
+  postcard) call postcard; echo ;;
+  patch)   if [ "${2:-}" = ripe ]; then call "patch?ripe=1"; else call patch; fi; echo ;;
+  lanterns) call lanterns; echo ;;
+  porch)   call "porch?what=${2:-leaves}"; echo ;;
+  jar)     call jar; echo ;;
+  seeds)   call seeds; echo ;;
+  morningcard) call morningcard; echo ;;
+  nudge)   call nudge; echo ;;
+  pantry)  if [ -n "${2:-}" ]; then call "pantry?n=${2}"; else call pantry; fi; echo ;;
+  ask)     curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "idea=${2:-}" --data-urlencode "name=${3:-}" "${URL}/ask"; echo ;;
   picnic|blanket|friendseed) call "$1"; echo ;;
   quest)   case "${2:-}" in
              done|undo|remove) call "quest?do=$2&n=${3:-0}" ;;

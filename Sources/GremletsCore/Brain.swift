@@ -54,9 +54,17 @@ struct Brain {
             pickAndStart(choices, world)
             return
         }
-        world.bonsaiChoices(for: c, add: add)
         // In the middle of a game with a friend: wait for our turn.
         if c.play != nil { c.set(.idle, duration: 0.4); return }
+        pickAndStart(reweighted(general(c, world), world), world)
+    }
+
+    /// Everything a free Gremlet might do next, here and now (also what the right-click menu offers: see Ask.swift).
+    static func general(_ c: Creature, _ world: World) -> [Choice] {
+        var choices: [Choice] = []
+        let e = c.energy
+        func add(_ name: String, _ w: Double, _ f: @escaping () -> Void) { if w > 0 { choices.append(Choice(name: name, weight: w, start: f)) } }
+        world.bonsaiChoices(for: c, add: add)
         world.groveChoices(for: c, add: add)
         world.playChoices(for: c, add: add)
         world.kiteChoices(for: c, add: add)
@@ -65,6 +73,7 @@ struct Brain {
         world.mossChoices(for: c, add: add)
         world.sproutChoices(for: c, add: add)
         world.fireflyChoices(for: c, add: add)
+        world.ecoChoices(for: c, add: add)
         world.snowChoices(for: c, add: add)
         world.notchChoices(for: c, add: add)
         world.cornerChoices(for: c, add: add)
@@ -73,7 +82,7 @@ struct Brain {
         world.ferryChoices(for: c, add: add)
         world.villageChoices(for: c, add: add)
         world.cartChoices(for: c, add: add)
-        if World.isCartOwner(c.groundOwner) { pickAndStart(choices, world); return }
+        if World.isCartOwner(c.groundOwner) { return choices }
         if world.spectacle == nil, c.job == nil {
             if world.bridgeCandidate(for: c) != nil { add("bridge", 0.7) { world.startBridge(c) } }
             if let plan = world.stairCandidate(for: c) {
@@ -96,13 +105,15 @@ struct Brain {
             c.edgeDecisionMade = false
             c.set(.walk, duration: world.rng.range(1.5, 4.5))
         }
-        if let s = world.supportingSurface(for: c), s.kind == .windowTop {
+        // (Not right up under the menu bar: there's no room to bounce.)
+        let roomy = world.roomAbove(c) > 60
+        if roomy, let s = world.supportingSurface(for: c), s.kind == .windowTop {
             add("bounceOnWindow", 0.3 * (0.4 + e)) { c.bounces = Int(world.rng.range(2, 4.99)); world.launch(c, velocity: Vec2(0, (2 * world.gravity * 60 * c.species.jumpPower).squareRoot())) }
         }
-        add("hop", 0.3 * e) {
+        if roomy { add("hop", 0.3 * e) {
             let h = world.rng.range(30, 60) * c.species.jumpPower
             world.launch(c, velocity: Vec2(c.facing * world.rng.range(40, 110), (2 * world.gravity * h).squareRoot()))
-        }
+        } }
         if let target = world.jumpTarget(for: c) {
             add("jumpUp", 1.1 * (0.3 + e)) { world.launch(c, velocity: target) }
         }
@@ -195,7 +206,13 @@ struct Brain {
                 add("chill", 3.0) { c.idleVariant = world.rng.chance(0.6) ? "look" : "idle"; c.set(.idle, duration: world.rng.range(10, 28)) }
             }
         }
-        pickAndStart(reweighted(choices, world), world)
+        world.pantryChoices(for: c, add: add)
+        world.nestChoices(for: c, add: add)
+        world.homesteadChoices(for: c, add: add)
+        world.patchChoices(for: c, add: add)
+        world.lanternChoices(for: c, add: add)
+        world.seasonChoices(for: c, add: add)
+        return choices
     }
 
     static let popUps: Set<String> = ["diveInLeaves", "blowPuff"]
@@ -203,10 +220,24 @@ struct Brain {
     static let lively: Set<String> = ["walk", "hop", "chase", "tag", "follow", "stairs", "rail", "grapple", "glide", "bridge", "boost",
                                       "treasure", "summit", "kite", "zip", "dance", "joinDance", "fly", "special", "icon", "peek",
                                       "hobby", "visit", "toss", "catch", "highFive", "stack", "greet", "board", "bounce"]
+    static let errands: Set<String> = ["dockHop", "dockVisit", "meetCritter", "widgetMoss", "chaseFirefly", "plantFar", "visitFriend"]
     static let restful: Set<String> = ["idle", "sleep", "napTogether", "goHome", "sitInTree", "climbTree", "jumpUp", "soak", "campfire",
                                        "chill", "napInTree", "drink", "notchNap"]
 
     static func reweighted(_ choices: [Choice], _ world: World) -> [Choice] {
+        // No Claude on this Mac: their own busy day. Lots of gardening, errands and play; a nap now and then.
+        if world.ownDay && !world.claudeWorking {
+            return choices.map { ch in
+                let k: Double
+                if world.isNight { k = restful.contains(ch.name) ? 1.6 : lively.contains(ch.name) ? 0.6 : 1.0 }
+                else if gardening.contains(ch.name) || errands.contains(ch.name) { k = 3.2 }
+                else if lively.contains(ch.name) { k = 1.4 }
+                else if ch.name == "sleep" || ch.name == "goHome" || ch.name == "notchNap" { k = 0.35 }
+                else if ch.name == "idle" || ch.name == "chill" { k = 0.5 }
+                else { k = 1.0 }
+                return Choice(name: ch.name, weight: ch.weight * k, start: ch.start)
+            }
+        }
         if world.claudeWorking {
             // Busy while Claude works: lots of gardening, less standing about.
             return choices.map { ch in

@@ -3,11 +3,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ARCH_FLAGS=()
-if [[ "${1:-}" == "--universal" ]]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
-
-swift build -c release --product Gremlets "${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}"
-BIN="$(swift build -c release --product Gremlets "${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}" --show-bin-path)/Gremlets"
+swift build -c release --product Gremlets
+BIN="$(swift build -c release --product Gremlets --show-bin-path)/Gremlets"
+if [[ "${1:-}" == "--universal" ]]; then
+  # Apple silicon + Intel in one app. Two separate builds glued together with lipo, which works with just the
+  # Command Line Tools (swift build --arch arm64 --arch x86_64 needs the full Xcode).
+  swift build -c release --product Gremlets --triple x86_64-apple-macosx13.0 --scratch-path .build-x86
+  mkdir -p build
+  lipo -create "$BIN" .build-x86/release/Gremlets -output build/Gremlets-universal
+  BIN=build/Gremlets-universal
+fi
 
 APP=build/Gremlets.app
 rm -rf "$APP"

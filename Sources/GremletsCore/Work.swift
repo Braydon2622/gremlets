@@ -38,7 +38,10 @@ public enum ShelfStyle: String, CaseIterable, Sendable {
         switch self {
         case .basket: return sin(t * 0.22 + phase) * 55
         case .carpet: return sin(t * 0.35 + phase) * 32
-        case .snail: return sin(t * 0.045 + phase) * 140      // a slow crawl
+        case .snail:
+            // A slow crawl in pulses, the way a real snail goes: a surge as its foot ripples, then a near-pause.
+            let u = t * 0.045 + phase + 0.045 * 0.55 / 1.3 * sin(t * 1.3)
+            return sin(u) * 140
         default: return 0
         }
     }
@@ -286,6 +289,8 @@ extension World {
         c.visitingID = nil
         c.tendX = nil
         if c.expedition != nil { giveUp(c) }
+        if c.stair != nil { abandonStairs(c) }
+        if c.rail != nil { c.rail = nil; c.targetX = nil }
         if c.boost != nil || c.helping != nil { cancelBoost(c) }
         c.mossTask = nil
         c.snowmanTask = nil
@@ -642,6 +647,7 @@ extension World {
 
     /// Balloon ride: rises a little, drifts over, then settles down onto the target. Ignores platforms on the way.
     func startFloat(_ c: Creature, to target: Vec2, ride: Ride = .dandelion) {
+        if basket?.rider == c.id { dropBasket() }
         endSocial(c)
         c.ride = ride
         c.floatTarget = target
@@ -670,7 +676,7 @@ extension World {
         c.pos = c.pos + c.vel * dt
         let (lo, hi) = horizontalLimits(for: c, atY: c.pos.y)
         c.pos.x = c.pos.x.clamped(lo, hi)
-        if let scr = screen(containingX: c.pos.x, y: c.pos.y), c.pos.y + c.size.y > scr.maxY { c.pos.y = scr.maxY - c.size.y }
+        if let scr = screen(containingX: c.pos.x, y: c.pos.y), c.pos.y > highest(c, scr) { c.pos.y = highest(c, scr) }
         if abs(c.vel.x) > 10 { c.facing = c.vel.x > 0 ? 1 : -1 }
         target = c.floatTarget ?? target
         if (abs(c.pos.x - target.x) < 6 && c.pos.y <= target.y + 6) || c.timer <= 0 {

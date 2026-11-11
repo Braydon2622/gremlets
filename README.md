@@ -137,12 +137,63 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
   "no signal" sign until it's back. No permissions: only the screenshot tool's window name, the battery level and
   the network state are read. (`gremlet boost`, `gremlet react screenshot|battery|offline|online`.)
 - **Visit a friend's Mac.** Menu → Visit a Friend's Mac → Invite a Friend gives you a code; your friend joins with
-  it. Your Gremlets walk off your screen onto theirs (theirs onto yours) and wander home when they're ready, and one
+  it. A hollow mossy log appears at the edge of each screen and glows while the other Mac is online. Every few
+  minutes one of your Gremlets dives into the moss and pops out through the log onto their screen (Send One Over Now
+  does it at once, even for a napper); visitors bring a seed from home and head back after a few minutes, and one
   that comes back brings a postcard: the hanging house's mailbox flag goes up until someone goes home and takes it in.
+- **Busy without Claude.** On a Mac where Claude Code hasn't been used in the last day, the Gremlets keep their own
+  busy day: gardening, planting moss on far windows and widgets, hopping along the Dock, visiting critters. Moss
+  starts creeping in from the first launch.
+- **Widgets, the Dock and critters.** Desktop widgets are little mossy stones: moss grows on them and Gremlets set
+  off to plant it there. With Play on the Dock (Accessibility), the Dock's icons become stepping stones: they hop
+  across them, cheer an app you open (a Gremlet standing on a bouncing icon goes flying), knock on an icon that gets
+  a new badge, wave an app goodbye when it quits, and nap on the Trash. Ladybugs, bees and little snails live in the
+  moss in the daytime; a ladybug climbs onto a Gremlet's hand to say hello. (`gremlet critters`, `gremlet dock`.)
+- **The hanging home.** The house under the notch (or, on a Mac without one, the nest hut in a top corner; it moves
+  to the other corner when widgets fill the top-left) has a pantry: a woven acorn hanging off the porch. Gremlets
+  forage in the moss for seeds, berries, acorns and mushrooms and float home under a dandelion to stock it; come
+  evening, a couple of them go up for supper on the porch. The house grows with Claude sessions *and* with that
+  care (a balcony, a loft, a rooftop garden, then a birdhouse and a string of lights), so a Mac without Claude sees
+  it grow too. Rest the pointer on it and it swings on its ropes, and whoever's napping inside comes out to wave
+  (hovering only: the corners stay click-through). A little bird drops by now and then, perches on the roof, a
+  widget or a window top, gets a wave, sometimes leaves a seed in the pantry, and flies off if the pointer comes
+  close. (`gremlet bird`, `gremlet nudge`, `gremlet pantry`.)
+- **The rain barrel and the basket lift.** A barrel at the end of the porch fills when it really rains where you are
+  (and a little with the morning dew). When the moss is getting dry, a Gremlet floats up, fills its can, and comes
+  back down to water: rainwater does the moss twice the good. A woven basket hangs on a rope under the porch: a
+  Gremlet on the window top below waves it down and rides it up home, hand over hand (and back down again). It only
+  goes a short way, so the rope stays up in the corner; if the window moves or closes mid-ride, the rider hops out.
+- **The vegetable patch.** A little bed in front of the nest hut: Gremlets float up to sow carrots, radishes and
+  peas, water them (from the rain barrel when there's some; rain waters them too), and pick what's ripe for the
+  pantry. Left dry, it stops growing and droops until someone comes. (`gremlet patch [ripe]`.)
+- **Postcards.** A mailbox hangs under the porch. A Claude session that finishes while you're away leaves a postcard
+  in it (how long, edits, tasks done, whether the tests pass) and the little red flag goes up; when you're back, a
+  Gremlet mentions it. Rest the pointer on the mailbox to read them. (`gremlet postcard` posts a sample.)
+- **Lanterns on the moss.** Come dusk, Gremlets set tiny lanterns along the mossy window tops. They glow all night,
+  go out at dawn, and get taken in during the morning. A lantern goes with its window. (`gremlet lanterns`.)
+- **Bees.** Once the house has grown a little, a straw hive hangs off the nest hut. In the daytime its bees loop out
+  to the vegetable patch and back: the patch grows faster, and a picking sometimes comes with something extra.
+- **Seasons on the porch.** Autumn leaves pile up on the hut's roof and porch, winter snow settles there (faster when
+  it's really snowing), spring blossoms drift off the roof. Now and then a Gremlet floats up with a broom and sweeps
+  it all off. (`gremlet porch leaves|snow|clear`.)
+- **The firefly jar.** Fireflies caught at night go into a jar on the rain barrel's lid and light the porch; at dawn
+  they're let go. (`gremlet jar`.)
+- **Seed swap.** A Gremlet back from a friend's Mac brings seeds from there, and a friend's Gremlet visiting brings
+  seeds from theirs: strawberries, pumpkins and tomatoes join the carrots, radishes and peas. (`gremlet seeds`.)
+- **The morning postcard.** Each morning, the first time you're about, the mailbox has a card about yesterday:
+  Claude tasks and edits, what was picked from the patch, birds, fireflies, suppers, lanterns. (`gremlet morningcard`.)
+- **Right up under the menu bar.** A window filling the screen still gets moss along its top and strands down its
+  corners, and Gremlets can stand on it, but only below the empty stretches of the menu bar, never in front of the
+  menus, the status icons or the notch. (Reading where the app's menus end needs Accessibility; without it, they
+  keep to the right of the notch.)
+- **Ask them things.** Right-click a Gremlet for what it could do right now from where it stands: tend the moss,
+  forage, fetch rainwater, ride the basket, tend the vegetable patch, set out a lantern, sweep the porch, build a staircase, lay a minecart track, go home for a nap, play with a friend, say hi to the critters,
+  hop the Dock, fly a kite, go on an adventure, visit your friend's screen, or just give it a berry. Asleep, the only
+  thing on offer is waking it. (`gremlet ask` lists the options per Gremlet; `gremlet ask stairs` does one.)
 - **Walk off the Mac onto your iPad.** Link another screen (an iPad, a phone, a friend's laptop running the web
   habitat; the Gremlets menu shows a QR code) and put it against one edge of your Mac. A Gremlet that wanders to that
   edge walks straight off the Mac and in from the opposite edge of the other screen, keeping its stride and speed
-  (mid-air if it jumped), and wanders back the same way. A soft doorway glows at the edge while the other screen is
+  (mid-air if it jumped), and wanders back the same way. A hollow log glows at the edge while the other screen is
   open. `gremlet link right`, `gremlet cross`. While the screens are linked, the sky ferry sails out through the
   doorway with whoever is aboard, drops them off on the other screen, takes a couple of Gremlets from there on board
   and sails back to the Mac (`gremlet ferry cross`).
@@ -296,7 +347,8 @@ signature move when you pet them. A level-up sets off a shower of hearts. See *Y
 
 ## Run it
 
-Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools).
+Requires macOS 13+ and Swift 5.9+ (Xcode or just the Command Line Tools; `scripts/bundle.sh --universal` builds an
+Apple silicon + Intel app with either).
 
 ```bash
 swift run Gremlets                                      # dev run

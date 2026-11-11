@@ -78,7 +78,7 @@ extension World {
         }
         // Growing (not while the moss is parched).
         if !mossThirsty {
-            let rate = dt / (claudeWorking ? 70 : 160) * (0.6 + mossCare * 0.6)
+            let rate = dt / (busyDay ? 70 : 160) * (0.6 + mossCare * 0.6)
             for i in sprouts.indices where sprouts[i].growth < 1 {
                 sprouts[i].growth = min(1, sprouts[i].growth + rate)
                 if sprouts[i].growth >= 1 { sprouts[i].ripeAt = clock }
@@ -94,7 +94,7 @@ extension World {
         }
         // Something new comes up in the moss now and then (more often while Claude works).
         guard clock >= nextSproutAt, mossMinutes >= 12, !mossThirsty, sprouts.count < min(World.sproutLimit, 2 + Int(mossMinutes / 40)) else { return }
-        nextSproutAt = clock + (claudeWorking ? rng.range(15, 35) : rng.range(40, 90))
+        nextSproutAt = clock + (busyDay ? rng.range(15, 35) : rng.range(40, 90))
         // Mostly out of the moss the Gremlets planted; otherwise anywhere along a mossy window top, or in the moss
         // along the bottom of the screen.
         let tops = builtSurfaces.filter { $0.kind == .windowTop && $0.ownerID >= 0 && $0.width >= 100 && windows[$0.ownerID] != nil }

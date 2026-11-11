@@ -686,33 +686,76 @@ enum PropArt {
         "..dddddddddddd..",
     ], ["r": 0xB8463E, "R": 0xD8645A, "w": 0xD9A066, "b": 0xFFE9A8, "k": 0x6E4A26, "d": 0x7A5230]))
 
-    /// The garden snail: body along the floor, a spiral shell rising to the platform, eyestalks (`look` 0-2).
-    static var snailCache: [Int: CGImage] = [:]
-    static func snailBody(look: Int) -> CGImage {
-        if let c = snailCache[look] { return c }
-        let w = 82, h = 24
+    /// The garden snail: a rippling foot along the floor, a shaded spiral shell rising to the platform, a head that
+    /// stretches forward with each surge, and eyestalks that sway on their own (or tuck in when startled).
+    /// `frame` 0-5 is the stride (in step with the crawl's pulse), `eyeL`/`eyeR` 0-4 how each stalk leans.
+    static var snailCache: [String: CGImage] = [:]
+    static func snailBody(frame: Int, eyeL: Int, eyeR: Int, tucked: Bool) -> CGImage {
+        let key = "\(frame)-\(eyeL)-\(eyeR)-\(tucked)"
+        if let c = snailCache[key] { return c }
+        let w = 84, h = 24
         var g: Grid = Array(repeating: Array(repeating: nil, count: w), count: h)
-        let body: UInt32 = 0xB9C98A, bodyDark: UInt32 = 0x8FA36A, shell: UInt32 = 0xC98B4A, shellDark: UInt32 = 0x8A5A35, swirl: UInt32 = 0xE8B26A
-        // Foot along the ground, head at the front (right).
-        for y in 18..<h { for x in 4..<(w - 2) { g[y][x] = y == h - 1 ? bodyDark : body } }
-        for y in 10..<18 { for x in (w - 16)..<(w - 3) where (x - (w - 10)) * (x - (w - 10)) + (y - 15) * (y - 15) * 2 < 50 { g[y][x] = body } }
-        g[15][w - 7] = 0x2B2620                                            // a smile-ish eye spot
-        // Eyestalks: up, tilted, or tucked in.
-        let stalk = [(-1, 7), (1, 6), (0, 2)][look]
-        for i in 0..<stalk.1 { g[10 - i][w - 11 + (i * stalk.0) / 3] = bodyDark; g[10 - i][w - 7 + (i * stalk.0) / 3] = bodyDark }
-        if stalk.1 > 3 { g[10 - stalk.1][w - 11 + (stalk.1 * stalk.0) / 3] = 0x2B2620; g[10 - stalk.1][w - 7 + (stalk.1 * stalk.0) / 3] = 0x2B2620 }
-        // Shell: a big spiral sitting on the foot, its flat top lines up with the platform.
-        let scx = 34.0, scy = 9.0
-        for y in 0..<19 { for x in 6..<62 {
+        func put(_ x: Int, _ y: Int, _ c: UInt32) { if x >= 0, x < w, y >= 0, y < h { g[y][x] = c } }
+        let body: UInt32 = 0xB9C98A, bodyLight: UInt32 = 0xD3E0A8, bodyDark: UInt32 = 0x8FA36A, bodyDeep: UInt32 = 0x74874F
+        let ink: UInt32 = 0x2B2620
+        let stretch = [2, 2, 1, 0, 0, 1][frame % 6]
+        let bob = [0, 0, 0, 1, 1, 0][frame % 6]
+        // The foot: a long soft wedge, tapering to the tail, with waves rippling forward along its sole.
+        let headX = 70 + stretch
+        for y in 18..<h {
+            let tailStart = 2 + max(0, (h - 1 - y) * 2 - 1)
+            for x in tailStart..<(headX + 4) {
+                var c = y == 18 ? bodyLight : (y == h - 1 ? bodyDark : body)
+                if y >= 21, (x + frame * 4) % 22 < 3 { c = y == h - 1 ? bodyDeep : bodyDark }
+                put(x, y, c)
+            }
+        }
+        // Head and neck, stretching forward with each surge.
+        let cx = Double(headX), cy = 15.0
+        for y in 9..<21 { for x in (headX - 14)..<(headX + 11) {
+            let dx = (Double(x) - cx) / 9.5, dy = (Double(y) - cy) / 5.6
+            if dx * dx + dy * dy < 1 || (x < headX && y >= 14) { put(x, y, dy < -0.45 ? bodyLight : body) }
+        }}
+        // A smile and a rosy cheek.
+        put(headX + 3, 16, ink); put(headX + 4, 17, ink); put(headX + 5, 17, ink); put(headX + 6, 16, ink)
+        put(headX, 15, 0xF2A39A); put(headX + 1, 15, 0xF2A39A)
+        // Little feelers at the front, reaching forward.
+        put(headX + 10, 18, bodyDark); put(headX + 11, 18, bodyDark); put(headX + 10, 19, bodyDark)
+        // Eyestalks: each leans on its own; tucked, they're just nubs.
+        let leans = [-3, -1, 0, 1, 3]
+        for (bx, lean, len) in [(headX - 2, leans[min(4, max(0, eyeL))], tucked ? 2 : 8), (headX + 3, leans[min(4, max(0, eyeR))], tucked ? 2 : 7)] {
+            var tip = (bx, 10)
+            for i in 0..<len {
+                let x = bx + (lean * i) / max(1, len), y = 10 - i
+                put(x, y, bodyDark); put(x + 1, y, body)
+                tip = (x, y)
+            }
+            if !tucked {
+                // The eye: a dark bead with a glint.
+                put(tip.0, tip.1 - 1, ink); put(tip.0 + 1, tip.1 - 1, ink); put(tip.0, tip.1 - 2, ink); put(tip.0 + 1, tip.1 - 2, 0xFFFFFF)
+            } else {
+                put(tip.0, tip.1 - 1, ink)
+            }
+        }
+        // The shell: a big shaded spiral sitting on the foot (its flat top lines up with the platform above).
+        let scx = 34.0, scy = 9.0 + Double(bob)
+        let hi: UInt32 = 0xE8B26A, mid: UInt32 = 0xC98B4A, low: UInt32 = 0xA36B3A, line: UInt32 = 0x8A5A35, rim: UInt32 = 0x6E4426
+        for y in 0..<19 { for x in 5..<63 {
             let dx = Double(x) - scx, dy = (Double(y) - scy) * 1.6
             let d = (dx * dx + dy * dy).squareRoot()
             guard d < 27 else { continue }
             let ang = atan2(dy, dx)
             let ring = (d + ang * 4.3).truncatingRemainder(dividingBy: 9)
-            g[y][x] = abs(ring) < 1.4 ? shellDark : (dx < -8 && dy < 0 ? swirl : shell)
+            let light = (-dx * 0.6 - dy * 0.8) / max(1, d)
+            var c = light > 0.35 ? hi : light < -0.35 ? low : mid
+            if abs(ring) < 1.3 { c = line }
+            if d > 25.6 { c = rim }
+            // A soft shine near the top-left.
+            if dx < -10, dx > -16, dy < -8, dy > -14 { c = 0xF4CC8A }
+            put(x, y, c)
         }}
         let img = image(g)
-        snailCache[look] = img
+        snailCache[key] = img
         return img
     }
 

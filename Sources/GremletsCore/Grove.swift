@@ -562,6 +562,10 @@ extension World {
             c.set(.react, duration: c.animationLength(for: .react))
         case .hangingHome:
             goInsideHangingHome(c)
+        case .nestHome:
+            goInsideNest(c)
+        case .basket:
+            reachedBasket(c)
         case .pop(let i):
             guard grove.featured == i, grove.plants.indices.contains(i), let f = groveFloor else { return }
             let b = grove.base(i, floor: f)
@@ -586,7 +590,7 @@ extension World {
 }
 
 /// Where a Gremlet is headed in the grove.
-enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int), dare(Int), hangingHome, pop(Int) }
+enum GroveVisit: Equatable { case snack(Int), campfire(Int), bounce(Int), home(Int), drink(Int), soak(Int), dare(Int), hangingHome, nestHome, pop(Int), basket }
 
 extension World {
     /// A plant of this kind that's out right now (with one plant at a time, only the featured one is).

@@ -60,8 +60,11 @@ extension World {
         // hang above them), so an iPad over Sidecar gets its own.
         return tiers + screens.indices.filter { !compact || $0 > 0 }.flatMap { i -> [Surface] in
             let scr = screens[i]
-            return [Surface(ownerID: World.cornerOwner(screen: i, 1), kind: .plant, y: scr.maxY - 215, minX: scr.minX, maxX: scr.minX + 100),
-                    Surface(ownerID: World.cornerOwner(screen: i, 2), kind: .plant, y: scr.maxY - 210, minX: scr.maxX - 110, maxX: scr.maxX)]
+            let (left, right) = cornersFree(i)
+            var out: [Surface] = []
+            if left { out.append(Surface(ownerID: World.cornerOwner(screen: i, 1), kind: .plant, y: scr.maxY - 215, minX: scr.minX, maxX: scr.minX + 100)) }
+            if right { out.append(Surface(ownerID: World.cornerOwner(screen: i, 2), kind: .plant, y: scr.maxY - 210, minX: scr.maxX - 110, maxX: scr.maxX)) }
+            return out
         }
     }
 
@@ -73,9 +76,28 @@ extension World {
         guard topCornerPerches else { return [] }
         return screens.indices.filter { !compact || $0 > 0 }.flatMap { i -> [(surface: Surface, kind: TopStructure)] in
             let scr = screens[i]
-            return [(Surface(ownerID: World.cornerOwner(screen: i, 3), kind: .plant, y: scr.maxY - 132, minX: scr.minX + 22, maxX: scr.minX + 128), .nestHut),
-                    (Surface(ownerID: World.cornerOwner(screen: i, 4), kind: .plant, y: scr.maxY - 126, minX: scr.maxX - 142, maxX: scr.maxX - 42), .leafSwing)]
+            let (left, right) = cornersFree(i)
+            let nestLeft = Surface(ownerID: World.cornerOwner(screen: i, 3), kind: .plant, y: scr.maxY - 132, minX: scr.minX + 22, maxX: scr.minX + 128)
+            // Widgets in the top-left corner: the nest hut (home, on a Mac without a notch) moves to the top-right
+            // corner instead of the leaf swing; with widgets in both corners, neither hangs (the widgets are perches).
+            let nestRight = Surface(ownerID: World.cornerOwner(screen: i, 3), kind: .plant, y: scr.maxY - 132, minX: scr.maxX - 150, maxX: scr.maxX - 44)
+            let leaf = Surface(ownerID: World.cornerOwner(screen: i, 4), kind: .plant, y: scr.maxY - 126, minX: scr.maxX - 142, maxX: scr.maxX - 42)
+            switch (left, right) {
+            case (true, true): return [(nestLeft, .nestHut), (leaf, .leafSwing)]
+            case (true, false): return [(nestLeft, .nestHut)]
+            case (false, true): return [(nestRight, .nestHut)]
+            case (false, false): return []
+            }
         }
+    }
+
+    /// Whether each top corner of screen `i` is clear of desktop widgets (where the hanging places go).
+    func cornersFree(_ i: Int) -> (left: Bool, right: Bool) {
+        guard screens.indices.contains(i), !widgetIDs.isEmpty else { return (true, true) }
+        let scr = screens[i]
+        let ws = widgetIDs.compactMap { windows[$0] }.filter { $0.maxY > scr.maxY - 300 && $0.minY < scr.maxY }
+        return (!ws.contains { $0.minX < scr.minX + 170 && $0.maxX > scr.minX },
+                !ws.contains { $0.maxX > scr.maxX - 170 && $0.minX < scr.maxX })
     }
 
     /// Everything to perch on up in the top corners (branches and the hanging places).
@@ -252,18 +274,13 @@ extension World {
 
     // MARK: Growing with you, the night, and the vine to the hut
 
-    /// The house grows as the Claude sessions add up: a balcony (5), a loft (15), a rooftop garden (40).
-    public var houseStage: Int {
-        let sessions = bonsaiBook.trees.reduce(0) { $0 + $1.sessions }
-        return sessions >= 40 ? 3 : sessions >= 15 ? 2 : sessions >= 5 ? 1 : 0
-    }
-
     /// The lights: on while Claude works; after dark, on while anyone's up, and out a few minutes after the last
     /// one has gone in to sleep.
     public var houseLightsOn: Bool {
         if claudeWorking { return true }
         guard isNight else { return false }
-        return insideHangingHome.isEmpty || clock - lastHomeArrival < 240
+        let inside = notchHomeShowing ? insideHangingHome : insideNest
+        return inside.isEmpty || clock - lastHomeArrival < 240
     }
 
     /// Keeps the vine between the hanging house and the terminal's hut in place (only when the hut hangs below the

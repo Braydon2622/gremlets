@@ -125,7 +125,11 @@ public final class World {
     /// Claude is working right now (a tool call in the last 90 s).
     public var claudeWorking: Bool { dayFollowsClaude && clock - lastClaudeWorkAt < 90 }
     /// Claude has been quiet for a couple of minutes: time to wind down.
-    public var claudeResting: Bool { dayFollowsClaude && clock - lastClaudeWorkAt > 120 }
+    public var claudeResting: Bool { dayFollowsClaude && claudeAround && clock - lastClaudeWorkAt > 120 }
+    /// No Claude on this Mac lately: the Gremlets run their own day (busy in the daytime, winding down at night).
+    public var ownDay: Bool { dayFollowsClaude && !claudeAround }
+    /// A working day: Claude is busy, or they're keeping their own busy day.
+    public var busyDay: Bool { claudeWorking || (ownDay && !isNight) }
     /// The app's tidier desktop: no village or road on the floor, no vines up the screen's sides, and one small plant
     /// at a time in the corner (the engine's own tests run with the older, fuller world).
     public var villageOn = true
@@ -222,6 +226,11 @@ public final class World {
 
     public private(set) var screens: [Rect] = []
     public private(set) var windows: [Int: Rect] = [:]
+    /// Each screen's menu bar (nil where it's hidden or unknown).
+    public private(set) var menuBars: [MenuBar?] = []
+    /// Every window's whole visible top edge, even right up under the menu bar where nobody walks: moss grows along
+    /// these and strands hang from their corners.
+    public private(set) var topEdges: [Surface] = []
     /// Window ids, front-most first.
     public private(set) var windowOrder: [Int] = []
     /// Screen floors and window tops (creature heads are added on the fly, see `allSurfaces`).
@@ -236,6 +245,49 @@ public final class World {
     public internal(set) var picnic: (owner: Int, x: Double, y: Double, until: Double)?
     public internal(set) var blanket: (owner: Int, x: Double, y: Double, until: Double)?
     var summarySigns: [Int: (text: String, until: Double)] = [:]
+    /// Claude Code has been used on this Mac lately (set by the app). When it hasn't, the Gremlets keep their own busy
+    /// day instead of waiting on Claude: gardening, errands, visiting, critters (Ecosystem.swift).
+    public var claudeAround = true
+    /// Ladybugs, bees and snails in the moss (the app turns them on; the engine's older tests run without).
+    public var crittersOn = false
+    /// The Dock's icons along the bottom of the main screen (set by the app; empty when the Dock is hidden or unknown).
+    public var dockIcons: [DockIcon] = []
+    /// Desktop widgets among the windows (their ids): moss grows on them like on window tops.
+    public var widgetIDs: Set<Int> = []
+    var ecoEvents: [EcoEvent] = []
+    public internal(set) var critters: [Critter] = []
+    var nextCritterID = 0, nextCritterAt = 8.0, nextDockPlayAt = 40.0
+    /// App name → when its icon stops bouncing (it was just opened).
+    var dockBouncing: [String: Double] = [:]
+    /// The hanging home (Hanging.swift): what's in the pantry, the care put into the house, the bird.
+    public var pantry = 0
+    /// The rain barrel on the porch, 0...1 full (Homestead.swift).
+    public var rainBarrel = 0.3
+    /// The basket lift under the porch, while someone's using it.
+    public internal(set) var basket: HomeBasket?
+    var nextBasketAt = 40.0
+    var nextBarrelAt = 0.0
+    /// The vegetable patch in front of the nest hut, the mailbox's postcards, and the lanterns out on the moss (Porch.swift).
+    public internal(set) var vegPatch: [PatchPlot] = Array(repeating: PatchPlot(), count: World.patchPlots)
+    public var mailbox: [Postcard] = []
+    /// The pointer's resting on the mailbox: the postcards are showing.
+    public internal(set) var mailOpen = false
+    var mailHoverSince: Double?, mailLastHover = 0.0
+    public internal(set) var mossLanterns: [MossLantern] = []
+    var nextLanternID = 0, nextLanternAt = 0.0, nextPatchAt = 30.0
+    /// Seasons on the porch, the firefly jar and the seed tin (Seasons.swift).
+    public var porchLeaves = 0.0, roofSnow = 0.0
+    public var fireflyJar = 0
+    public internal(set) var seedTin: [PatchPlot.Crop] = PatchPlot.Crop.home
+    var nextSweepAt = 60.0
+    public var homeCare = 0
+    var homeEvents: [HomeEvent] = []
+    public internal(set) var birds: [Bird] = []
+    var nextBirdAt = 90.0, nextBirdID = 0, nextNudgeAt = 0.0
+    var nextForageAt = 0.0, nextSupperAt = 0.0, suppersTonight = 0
+    var homeHoverSince: Double?
+    /// When the pointer last nudged the hanging home / the leaf swing (they swing for a few seconds after).
+    public internal(set) var homeNudgedAt = -100.0, leafNudgedAt = -100.0
     /// The launch quest's notice board (set by the app; nil hides it). See Quest.swift.
     public var questBoard: QuestBoard?
     /// You're typing fast: they go quiet and tiptoe (set by the app).
@@ -277,7 +329,7 @@ public final class World {
 
     /// Updates screens and windows. Creatures standing on a window that moved ride along with it;
     /// if their window closed or got covered they'll fall on the next step.
-    public func setEnvironment(screens: [Rect], windowsFrontToBack: [WindowInfo]) {
+    public func setEnvironment(screens: [Rect], windowsFrontToBack: [WindowInfo], menuBars: [MenuBar?] = []) {
         var newWindows: [Int: Rect] = [:]
         for w in windowsFrontToBack { newWindows[w.id] = w.frame }
         for c in creatures where c.isGrounded {
@@ -293,7 +345,10 @@ public final class World {
         self.screens = screens
         self.windows = newWindows
         self.windowOrder = windowsFrontToBack.map(\.id)
-        builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack)
+        widgetIDs = Set(windowsFrontToBack.filter(\.isWidget).map(\.id))
+        self.menuBars = menuBars
+        builtSurfaces = SurfaceBuilder.build(screens: screens, windowsFrontToBack: windowsFrontToBack, menuBars: menuBars)
+        topEdges = SurfaceBuilder.topEdges(screens: screens, windowsFrontToBack: windowsFrontToBack)
         if let d = door, let main = screens.first, let i = builtSurfaces.firstIndex(where: { $0.kind == .floor && $0.ownerID == -1 }) {
             if d > 0 { builtSurfaces[i].maxX = main.maxX + World.doorDepth } else { builtSurfaces[i].minX = main.minX - World.doorDepth }
         }
@@ -457,7 +512,7 @@ public final class World {
         // Moss keeps growing: a minute a minute while Claude works, slowly otherwise. The Gremlets trim it back where
         // it gets thick, so it settles into a lush but tidy cover rather than taking everything over.
         mossCare = max(0, mossCare - dt / 2400)
-        let growth = working ? dt * workClockScale / 28 : dt / 120
+        let growth = working ? dt * workClockScale / 28 : (ownDay ? dt / 40 : dt / 120)
         // Thirsty moss shrinks back, but never below a little base for the Gremlets to bring back to life.
         mossMinutes = mossThirsty ? max(min(mossMinutes, 15), mossMinutes - dt / 400) : min(World.mossMax, mossMinutes + growth * (0.4 + mossCare))
         updateFerry(dt)
@@ -476,6 +531,7 @@ public final class World {
         updateSessionWeather()
         updateClaudeCompanions()
         updateGarden2(dt)
+        updateEcosystem(dt)
     }
 
     private func update(_ c: Creature, _ dt: Double) {
@@ -487,7 +543,13 @@ public final class World {
                 c.homeUntil = nil
                 if let n = c.homeHouse, n >= 0 { groveEvents.append(.leftHome(n, by: c.id)) }
                 let fromHangingHouse = c.homeHouse == -1
+                let fromNest = c.homeHouse == World.nestPorchHouse
                 c.homeHouse = nil
+                // Out of the nest hut's round door onto its porch.
+                if fromNest, let nest = topStructures.first(where: { $0.kind == .nestHut })?.surface, let door = nestDoorX {
+                    c.pos = Vec2(door, nest.y); c.groundOwner = nest.ownerID; c.vel = .zero
+                    if !isNight && !c.wavesOnWaking { c.driftDown = true }
+                }
                 // Out of the hanging house's door onto its porch, wherever the house hangs now (it moves to the
                 // top-right corner and back with full screen).
                 if fromHangingHouse {
@@ -505,7 +567,15 @@ public final class World {
                 // Morning: down from the hanging house under a leaf, once it's properly awake.
                 if fromHangingHouse && !isNight { c.driftDown = true }
                 if c.mining { finishDig(c) }
-                c.set(.wake, duration: c.animationLength(for: .wake))
+                if c.wavesOnWaking {
+                    // Called out by the pointer resting on the house: out onto the porch with a wave.
+                    c.wavesOnWaking = false
+                    c.driftDown = false
+                    c.facing = (cursor?.x ?? c.pos.x) > c.pos.x ? 1 : -1
+                    c.set(.wave, duration: 1.6)
+                } else {
+                    c.set(.wake, duration: c.animationLength(for: .wake))
+                }
                 emit(.wokeUp(c.id))
             } else {
                 c.energy = min(1, c.energy + dt * 0.08)
@@ -533,6 +603,7 @@ public final class World {
             updateFlight(c, dt)
             return
         case .float:
+            if c.basketRide { return }   // the basket carries it (Homestead.swift)
             if c.zip != nil { updateZip(c, dt) } else if c.climb != nil { updateClimb(c, dt) } else { updateFloat(c, dt) }
             return
         default:
@@ -628,7 +699,7 @@ public final class World {
             if c.driftDown && (c.job != nil || onFullScreen(c) || !c.isGrounded) { c.driftDown = false }   // the moment's passed
             if c.mossTask == nil { c.mowing = false }
             // A run of bounces on a window top: boing, boing, boing.
-            if c.bounces > 0, !onFullScreen(c), c.isGrounded {
+            if c.bounces > 0, !onFullScreen(c), c.isGrounded, roomAbove(c) > 60 {
                 c.bounces -= 1
                 launch(c, velocity: Vec2(c.facing * rng.range(0, 30), (2 * gravity * rng.range(46, 80) * c.species.jumpPower).squareRoot()))
                 return
@@ -664,6 +735,11 @@ public final class World {
             c.pos.x = nx; c.pos.y = s.y; c.groundOwner = s.ownerID
             c.edgeDecisionMade = false
             return true
+        }
+        // The window top carries on, but under a busy bit of menu bar: that's as far as anyone goes up here.
+        if !support.supports(x: nx), support.kind == .windowTop, topEdges.contains(where: { $0.ownerID == support.ownerID && $0.supports(x: nx) }) {
+            c.facing *= -1
+            return false
         }
         if !support.supports(x: nx) && !c.edgeDecisionMade {
             c.edgeDecisionMade = true
@@ -737,8 +813,8 @@ public final class World {
             c.vel.x = -c.vel.x * 0.45
             c.facing = c.vel.x >= 0 ? 1 : -1
         }
-        if let scr = screen(containingX: next.x, y: prev.y), next.y + c.size.y > scr.maxY {
-            next.y = scr.maxY - c.size.y
+        if let scr = screen(containingX: next.x, y: prev.y), next.y > highest(c, scr) {
+            next.y = highest(c, scr)
             c.vel.y = min(c.vel.y, 0) * 0.3
         }
 
@@ -819,7 +895,7 @@ public final class World {
         var next = c.pos + c.vel * dt
         let (lo, hi) = horizontalLimits(for: c, atY: next.y)
         next.x = next.x.clamped(lo, hi)
-        if let scr = screen(containingX: next.x, y: next.y), next.y + c.size.y > scr.maxY { next.y = scr.maxY - c.size.y }
+        if let scr = screen(containingX: next.x, y: next.y), next.y > highest(c, scr) { next.y = highest(c, scr) }
         c.pos = next
         if abs(c.vel.x) > 12 { c.facing = c.vel.x > 0 ? 1 : -1 }
         if dist < 16 || c.timer <= 0 {
@@ -900,6 +976,25 @@ public final class World {
     func supportingSurface(for c: Creature) -> Surface? {
         let candidates = allSurfaces(excluding: c).filter { abs($0.y - c.pos.y) <= 2 && $0.supports(x: c.pos.x) }
         return candidates.first { $0.ownerID == c.groundOwner } ?? candidates.max { $0.y < $1.y }
+    }
+
+    /// How much room there is over its head before the top of the screen.
+    func roomAbove(_ c: Creature) -> Double {
+        guard let scr = screen(containingX: c.pos.x, y: c.pos.y) else { return .infinity }
+        return ceiling(scr) - c.pos.y - c.headHeight
+    }
+
+    /// The highest its feet can go on this screen: its whole frame below the usable area's top, or with a menu bar
+    /// known, its head just under the very top of the screen (so it can stand on a window right up under the menu bar).
+    func highest(_ c: Creature, _ scr: Rect) -> Double {
+        let top = ceiling(scr)
+        return top > scr.maxY ? max(scr.maxY - c.size.y, top - c.headHeight) : scr.maxY - c.size.y
+    }
+
+    /// The very top of a screen: the top of its menu bar where there is one (Gremlets can stand right up under it).
+    func ceiling(_ scr: Rect) -> Double {
+        guard let i = screens.firstIndex(of: scr), i < menuBars.count, let bar = menuBars[i] else { return scr.maxY }
+        return scr.maxY + bar.height
     }
 
     func screen(containingX x: Double, y: Double) -> Rect? {
@@ -992,14 +1087,31 @@ public final class World {
 
     /// `gremlet cross`: a free Gremlet (the nearest to the door, or `id`) heads out through the doorway.
     @discardableResult
-    public func sendThroughDoor(preferring id: Int? = nil) -> Bool {
+    public func sendThroughDoor(preferring id: Int? = nil, express: Bool = true) -> Bool {
         guard let d = door, let main = screens.first else { return false }
         let edge = d > 0 ? main.maxX : main.minX
-        let free = creatures.filter { canUseDoor($0) && $0.isGrounded }
+        // Anyone not in the middle of something that can't be dropped (asleep, napping in the house, gardening: they
+        // all go when they're sent).
+        let free = creatures.filter { c in
+            c.job == nil && c.expedition == nil && c.stair == nil && c.rail == nil && c.building == nil && c.play == nil && c.boost == nil
+                && c.helping == nil && c.climb == nil && c.activity != .dragged && World.carrierID(c.groundOwner) == nil && !c.mining
+                && (c.isGrounded || c.homeUntil != nil)
+        }
         let preferred = creature(id: id).flatMap { p in free.contains(where: { $0 === p }) ? p : nil }
         guard let c = preferred ?? free.min(by: { abs($0.pos.x - edge) < abs($1.pos.x - edge) }) else { return false }
         endSocial(c)
+        c.mossTask = nil; c.groveTask = nil; c.snowmanTask = nil; c.carrying = nil
+        c.homeUntil = nil; c.homeHouse = nil
         c.visitingID = nil; c.tendX = nil; c.targetX = nil
+        // Express: down into the moss here, and up again by the hollow log at the doorway (no long walk).
+        if express, let floor = builtSurfaces.first(where: { $0.kind == .floor && $0.ownerID == -1 }) {
+            ecoEvents.append(.tunnelDive(c.pos, by: c.id))
+            c.pos = Vec2(edge - d * 46, floor.y)
+            c.prevPos = c.pos
+            c.vel = .zero
+            c.groundOwner = floor.ownerID
+            ecoEvents.append(.tunnelPop(c.pos, by: c.id))
+        }
         c.doorDecided = true; c.doorChoice = true; c.doorForced = true
         c.facing = d
         c.edgeDecisionMade = false

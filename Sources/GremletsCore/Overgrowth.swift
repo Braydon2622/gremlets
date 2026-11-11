@@ -78,7 +78,19 @@ struct MossTask: Sendable {
         /// Late at night: taking a blanket to you.
         case blanket(x: Double)
         /// Over to the quest board to read out the next step (Quest.swift).
-        case questNag }
+        case questNag
+        /// Over to an icon on the Dock (Ecosystem.swift): to hop on it, cheer an app opening, or knock about a badge.
+        case dock(app: String, why: DockWhy)
+        /// Saying hello to a ladybug or a bee (Ecosystem.swift).
+        case critter(Int)
+        /// Foraging in the moss for the pantry, carrying it home, and supper on the porch (Hanging.swift).
+        case forage(x: Double), stock(what: String), supper(seat: Double)
+        /// Up to the rain barrel on the porch for a can of rainwater (Homestead.swift).
+        case fetchWater
+        /// The vegetable patch in front of the nest hut, a lantern set out on the moss, and one taken in (Porch.swift).
+        case tendPatch(done: Int), lantern(window: Int, offset: Double), unlantern(Int)
+        /// Sweeping the autumn leaves or the snow off the nest hut (Seasons.swift).
+        case sweep }
     let kind: Kind
     var acting = false
     var actUntil = 0.0
@@ -120,13 +132,15 @@ extension World {
         // Moss trickling down the sides of windows: from 12 minutes, each corner grows a strand (and a shorter one
         // beside it) that keeps lengthening until a Gremlet prunes it back.
         if m >= 12 {
-            for s in builtSurfaces where s.kind == .windowTop && s.ownerID >= 0 {
+            for s in topEdges where s.ownerID >= 0 {
                 guard let w = windows[s.ownerID] else { continue }
                 for (side, x) in [(-1.0, w.minX), (1.0, w.maxX)] where abs((side < 0 ? s.minX : s.maxX) - x) < 2 {
                     let key = "w\(s.ownerID)\(side < 0 ? "l" : "r")"
                     // Each strand keeps its own length: it starts at the moss's level and grows until pruned.
                     if strandGrowth[key] == nil { strandGrowth[key] = (m - 12) * 0.9 }
-                    let len = min(w.h * 0.85, 34 + strandGrowth[key]!)
+                    // A corner nobody can stand on to prune it (up under the menu bar) keeps its strand short.
+                    let reachable = builtSurfaces.contains { $0.ownerID == s.ownerID && $0.kind == .windowTop && $0.supports(x: x - side * 14) }
+                    let len = min(w.h * 0.85, reachable ? 34 + strandGrowth[key]! : min(110, 34 + strandGrowth[key]!))
                     out.append(MossVine(key: key, anchor: .windowSide(window: s.ownerID, side: side), x: x + side * 2, bottom: s.y - len, top: s.y))
                     let short = len * 0.55
                     if short > 26 {
@@ -223,7 +237,11 @@ extension World {
         if mossMinutes >= 10, !mossThirsty, !compact, clock >= nextExpeditionAt - 60, c.expedition == nil {
             let bare = builtSurfaces.filter { t in t.kind == .windowTop && t.ownerID >= 0 && t.ownerID != s.ownerID && t.width >= 100
                 && !mossPatches.contains(where: { $0.windowID == t.ownerID }) }
-            if let target = bare.randomElement(using: &rng) {
+            // Desktop widgets first: they're the bare little stones of the desktop, and moss loves them.
+            let widgets = bare.filter { widgetIDs.contains($0.ownerID) && $0.y > s.y - 900 }
+            if let target = widgets.randomElement(using: &rng) {
+                add("widgetMoss", 1.3) { if !self.startExpedition(c, .plant(target.ownerID)) { self.nextMossTaskAt = self.clock + 20 } }
+            } else if let target = bare.randomElement(using: &rng) {
                 add("plantFar", 0.45) { if !self.startExpedition(c, .plant(target.ownerID)) { self.nextMossTaskAt = self.clock + 20 } }
             }
         }
@@ -243,9 +261,9 @@ extension World {
             }
         }
         // Water the moss on this window top (they notice when it's getting dry, and go to it far more often).
-        if mossMinutes >= 10 || mossCare < 0.6, s.kind == .windowTop, let w = windows[s.ownerID] {
+        if mossMinutes >= 10 || mossCare < 0.6 || c.hasRainwater, s.kind == .windowTop, let w = windows[s.ownerID] {
             let x = (c.pos.x + c.facing * rng.range(20, 90)).clamped(s.minX + 16, s.maxX - 16)
-            add("waterMoss", 0.4 + (1 - mossCare) * (mossThirsty ? 9 : 4)) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
+            add("waterMoss", 0.4 + (1 - mossCare) * (mossThirsty ? 9 : 4) + (c.hasRainwater ? 12 : 0)) { self.startMossTask(c, .water(window: s.ownerID, offset: x - w.minX), walkTo: x) }
         }
         // Keep it tidy: once the moss is thick, trim the carpet back near an end of this window top.
         if mossMinutes > 170, s.kind == .windowTop, let w = windows[s.ownerID] {
@@ -336,7 +354,7 @@ extension World {
         c.targetX = x; c.facing = x > c.pos.x ? 1 : -1
         c.set(.walk, duration: 30)
         // While Claude works they're busy gardeners: the next moss job comes round quickly.
-        nextMossTaskAt = clock + (claudeWorking ? rng.range(2, 4) : rng.range(4, 10))
+        nextMossTaskAt = clock + (busyDay ? rng.range(2, 4) : rng.range(4, 10))
     }
 
     /// `gremlet moss climb|pad|plant`: someone does it now, if anyone can.
@@ -376,6 +394,26 @@ extension World {
             blanketDecide(c, &t, x: x, on: s)
         case .questNag:
             questNagDecide(c, &t, on: s)
+        case .dock(let app, let why):
+            dockDecide(c, &t, app: app, why: why, on: s)
+        case .critter(let id):
+            critterDecide(c, &t, id: id, on: s)
+        case .fetchWater:
+            fetchWaterDecide(c, &t, on: s)
+        case .tendPatch(let done):
+            tendPatchDecide(c, &t, done: done, on: s)
+        case .lantern(let window, let offset):
+            lanternDecide(c, &t, window: window, offset: offset, on: s)
+        case .unlantern(let id):
+            unlanternDecide(c, &t, id: id, on: s)
+        case .sweep:
+            sweepDecide(c, &t, on: s)
+        case .forage(let x):
+            forageDecide(c, &t, x: x, on: s)
+        case .stock(let what):
+            stockDecide(c, &t, what: what, on: s)
+        case .supper(let seat):
+            supperDecide(c, &t, seat: seat, on: s)
         case .plant(let wid, let offset):
             guard let b = bed(wid), s.ownerID == wid else { c.mossTask = nil; c.set(.idle, duration: 0.3); return }
             let x = b.minX + offset
@@ -477,7 +515,9 @@ extension World {
                 mossEvents.append(.watered(Vec2(x, s.y), by: c.id))
                 return
             }
-            mossCare = min(1, mossCare + 0.25)
+            // Rainwater from the barrel does it twice the good.
+            mossCare = min(1, mossCare + (c.hasRainwater ? 0.5 : 0.25))
+            if c.hasRainwater { c.hasRainwater = false; mossEvents.append(.watered(Vec2(x + 20, s.y), by: c.id)) }
             c.mossTask = nil
             c.set(.idle, duration: 0.5)
         case .trim(let wid, let offset):

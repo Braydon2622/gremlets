@@ -253,3 +253,19 @@ enum SessionRecapCard {
         return (image, CGSize(width: W, height: H))
     }
 }
+
+extension SessionRecord {
+    /// What it did, in a line, for a postcard in the hanging home's mailbox ("48 min · 31 edits · 3 tasks done ·
+    /// tests passing").
+    var postcard: Postcard? {
+        guard toolCalls > 0 else { return nil }
+        var parts = [seconds < 90 ? "a minute" : "\(Int((seconds / 60).rounded())) min"]
+        if edits > 0 { parts.append(edits == 1 ? "1 edit" : "\(edits) edits") }
+        if !tasks.isEmpty { parts.append(tasks.count == 1 ? "1 task done" : "\(tasks.count) tasks done") }
+        if let pass = testsPassed.last, pass >= (testsFailed.last ?? -1) { parts.append("tests passing") }
+        else if !testsFailed.isEmpty { parts.append("tests still failing") }
+        if edits == 0, tasks.isEmpty { parts.append("\(toolCalls) look\(toolCalls == 1 ? "" : "s") around") }
+        if helpers > 0 { parts.append(helpers == 1 ? "1 helper" : "\(helpers) helpers") }
+        return Postcard(project: project, text: parts.joined(separator: " · "), at: ended ?? Date().timeIntervalSince1970)
+    }
+}

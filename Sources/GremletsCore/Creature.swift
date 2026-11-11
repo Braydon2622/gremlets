@@ -63,6 +63,13 @@ public final class Creature {
     var buildTimer = 0.0
     /// Building a staircase, or laying a rail (their ids).
     var stair: Int?
+    /// Called out of the house by the pointer: it waves as it comes out.
+    var wavesOnWaking = false
+    /// Riding the basket lift under the hanging home's porch.
+    var basketRide = false
+    public var inBasket: Bool { basketRide && activity == .float }
+    /// Carrying a can of rainwater from the barrel (the next watering does the moss twice the good).
+    var hasRainwater = false
     var rail: Int?
     /// Blocks carried over its head while it climbs on its own staircase.
     public internal(set) var blocksInHand = 0
@@ -158,6 +165,8 @@ public final class Creature {
     }
 
     public var size: Vec2 { species.pointSize }
+    /// How far up from its feet it actually reaches (the art sits at the bottom of a roomier frame).
+    var headHeight: Double { size.y * 0.38 }
     public var isGrounded: Bool { groundOwner != nil && ![.airborne, .dragged, .fly, .float].contains(activity) }
     public var isAsleep: Bool { activity == .sleep || activity == .yawn }
 

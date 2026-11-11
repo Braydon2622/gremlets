@@ -116,6 +116,13 @@ extension World {
             let close = (p - (c.pos + Vec2(0, c.size.y))).length < 60
             if close && rng.chance(0.6) {
                 c.mossTask = nil
+                if jarFirefly(from: c.pos) {
+                    // Into the jar on the porch with it.
+                    fireflies.remove(at: i)
+                    sproutEvents.append(.caughtFirefly(c.pos + Vec2(0, c.size.y), by: c.id))
+                    c.set(.react, duration: c.animationLength(for: .react) + 0.6)
+                    return
+                }
                 fireflies[i].leaving = true
                 fireflies[i].local.y = max(fireflies[i].local.y, c.size.y + 6)
                 fireflies[i].local.x = c.pos.x - (windows[s.ownerID]?.minX ?? 0)

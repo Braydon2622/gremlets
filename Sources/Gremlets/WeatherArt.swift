@@ -134,63 +134,101 @@ enum ClimateArt {
 
 /// The home under the notch (see Notch.swift).
 enum NotchArt {
-    /// A little wooden house with a mossy roof and a round window, its porch running out to the right. `lit`: the
-    /// window glows (Claude is working, or it's night).
+    /// A little timber house hanging under the menu bar: stone footing, board walls, a round window with a flower
+    /// box, an arched door with a lantern, a shingled roof under a drape of moss, a stone chimney, and a porch running
+    /// out to the right with a mailbox, a potted fern and a lantern post. `lit`: windows and lanterns glow (Claude is
+    /// working, or it's night). It grows: a balcony rail (stage 1), a loft (2), a rooftop garden (3), a birdhouse and
+    /// a string of lights (4). The footprint stays put (23 px wide; porch floor on the bottom two rows; door at 9-12).
     static func house(lit: Bool, month: Int = 6, mail: Bool = false, stage: Int = 0, daisies: Int = 3) -> CGImage {
-        // 46 + 22 pt wide, 38 pt tall + roof and chimney: in art pixels (3 pt each). A loft (stage 2) and a rooftop
-        // garden (stage 3) add rows on top.
-        let w = 23, h = 17 + (stage >= 2 ? 8 : 0) + (stage >= 3 ? 3 : 0)
+        let w = 23, h = 18 + (stage >= 2 ? 8 : 0) + (stage >= 3 ? 2 : 0)
         var cv = PixelCanvas(w, h)
-        let plank: UInt32 = 0xB07A47, plankDark: UInt32 = 0x8A5A35, plankLight: UInt32 = 0xC99460
-        // Walls (15 px wide), boards running across.
-        for y in 1..<10 { for x in 0..<15 { cv.set(x, y, y % 3 == 0 ? plankDark : (x == 0 ? plankDark : plank)) } }
-        for x in stride(from: 3, to: 15, by: 5) { cv.set(x, 5, plankLight) }
-        // The porch floor, out to the right, with a little rail post.
-        cv.hspan(0, w - 1, 0, plankDark); cv.hspan(0, w - 1, 1, plank)
-        cv.vspan(w - 1, 2, 4, plankDark); cv.hspan(15, w - 1, 4, plankLight)
-        // Roof: a mossy gable overhanging both sides.
-        for k in 0..<6 { cv.hspan(-1 + k, 15 - k, 10 + k, k < 2 ? 0x6E4428 : 0x5E9E46) }
-        for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 11, 0x8BD66A); cv.set(x + 1, 12, 0x3E7A34) }
-        // A stone chimney poking out of the roof, and a flower box under the window.
-        cv.rect(11, 12, 2, 5, 0x8E877B); cv.hspan(11, 12, 16, 0x5E584F)
+        let beam: UInt32 = 0x5E3B22, plank: UInt32 = 0xB07A47, plankAlt: UInt32 = 0xA06C3E, plankLight: UInt32 = 0xC99460
+        let stone: UInt32 = 0x9A958B, stoneDark: UInt32 = 0x6E6A62, stoneLight: UInt32 = 0xBDB8AE
+        let moss: UInt32 = 0x5E9E46, mossLight: UInt32 = 0x8BD66A, mossDark: UInt32 = 0x3E7A34
+        let shingle: UInt32 = 0x7A5236, shingleDark: UInt32 = 0x5E3B22
+        let warm: UInt32 = 0xFFD36B, warmHi: UInt32 = 0xFFF0B8, night: UInt32 = 0x3B4660, nightHi: UInt32 = 0x6A7898
+        // The porch: a beam under planks, seams every few boards.
+        cv.hspan(0, w - 1, 0, 0x6E4428)
+        for x in 0..<w { cv.set(x, 1, x % 4 == 3 ? 0x8A5A35 : (x % 7 == 1 ? plankLight : plank)) }
+        // Walls: vertical boards between corner posts, on a stone footing, a top plate along the eaves.
+        for y in 3...9 { for x in 1...13 { cv.set(x, y, x % 2 == 0 ? plank : plankAlt) } }
+        for x in 0...14 { cv.set(x, 2, x % 3 == 0 ? stoneDark : (x % 3 == 1 ? stone : stoneLight)) }
+        cv.vspan(0, 3, 10, beam); cv.vspan(14, 3, 10, beam); cv.hspan(0, 14, 10, beam)
+        cv.set(3, 8, 0x8A5A35); cv.set(12, 9, 0x8A5A35)   // knots
+        // The window: a wooden frame round four panes of glass, warm with curtains drawn back when it's lit.
+        cv.hspan(3, 6, 9, beam); cv.hspan(3, 6, 5, beam); cv.vspan(2, 6, 8, beam); cv.vspan(7, 6, 8, beam)
+        cv.rect(3, 6, 4, 3, lit ? warm : night)
+        cv.set(4, 8, lit ? warmHi : nightHi); cv.set(5, 7, lit ? warmHi : nightHi)
+        if lit { cv.set(3, 8, 0xE89AA8); cv.set(6, 8, 0xE89AA8); cv.set(3, 7, 0xE89AA8) }
+        // The window box under it: it starts the day with leaves and fills up with the daisies they bring home.
         cv.hspan(2, 7, 3, 0x6E4428)
-        // It starts the day with leaves and fills up with the daisies the Gremlets pick from the moss and bring home.
-        for k in 0..<6 { cv.set(2 + k, 4, k < daisies ? (k % 2 == 0 ? 0xFFFFFF : 0xFFF2B0) : (k % 2 == 0 ? 0x5E9E46 : 0x6CC04A)) }
+        for k in 0..<6 { cv.set(2 + k, 4, k < daisies ? (k % 2 == 0 ? 0xFFFFFF : 0xFFF2B0) : (k % 2 == 0 ? moss : 0x6CC04A)) }
         if daisies >= 6 { cv.set(2, 5, 0xFFFFFF); cv.set(7, 5, 0xFFF2B0) }
-        // Round window and the door.
-        let glass: UInt32 = lit ? 0xFFD36B : 0x3B4660, glow: UInt32 = lit ? 0xFFF0B8 : 0x56627E
-        cv.blob(4.5, 6.5, 2.1, 2.1, base: glass, light: glow)
-        cv.set(4, 6, 0x6E4428); cv.set(5, 6, 0x6E4428); cv.set(4, 7, 0x6E4428)
-        cv.rect(9, 2, 4, 6, 0x5E3B22); cv.set(12, 5, 0xE0B04A)
-        // A tiny lantern on the porch post when it's lit.
-        if lit { cv.set(w - 1, 5, 0xFFC845); cv.set(w - 1, 6, 0xFFE9A0) }
-        // The mailbox on the porch, its little red flag up when there's a postcard in it.
-        cv.vspan(18, 2, 3, 0x6B4428); cv.rect(17, 4, 3, 2, 0x8E877B); cv.set(17, 5, 0xB8B1A4)
-        if mail { cv.vspan(20, 4, 6, 0x5E3B22); cv.set(21, 6, 0xE8574A); cv.set(21, 5, 0xE8574A) }
+        // An arched door with a step, a brass knob and a little lantern beside it.
+        cv.rect(9, 3, 4, 5, 0x6E4428); cv.hspan(10, 11, 8, 0x6E4428)
+        cv.vspan(10, 3, 7, 0x5E3B22); cv.set(12, 5, 0xE0B04A)
+        cv.hspan(8, 13, 2, stoneLight)
+        cv.set(13, 7, 0x3A2A1C); cv.set(13, 6, lit ? 0xFFC845 : 0x8E7A52)
+        // The roof: overhanging eaves, rows of wooden shingles, moss draped over the top and dripping off the edge.
+        cv.hspan(-1, 15, 11, shingleDark)
+        for k in 0..<6 {
+            let y = 12 + k
+            for x in (-1 + k)...(15 - k) { cv.set(x, y, (x + k * 2) % 4 == 0 ? shingleDark : shingle) }
+        }
+        var r = ArtRNG(s: 9137)
+        for k in 2..<6 { for x in (-1 + k)...(15 - k) where r.next() < 0.75 { cv.set(x, 12 + k, r.next() < 0.3 ? mossLight : moss) } }
+        for x in stride(from: 0, through: 14, by: 2) where r.next() < 0.7 { cv.set(x, 12, moss); cv.set(x, 11, r.next() < 0.5 ? mossDark : moss) }
+        cv.set(1, 10, mossDark); cv.set(1, 9, moss); cv.set(13, 10, mossDark)   // strands off the eaves
+        cv.set(7, 15, beam); cv.set(7, 14, 0x3A2A1C)   // the vent in the gable
+        // A stone chimney with a cap.
+        cv.rect(11, 14, 2, 3, stone); cv.set(11, 15, stoneDark); cv.hspan(10, 13, 17, stoneDark)
+        // The porch: a potted fern, the mailbox (its red flag up when there's a postcard in it), a lantern post.
+        cv.set(17, 2, 0xC2643A); cv.set(17, 3, moss); cv.set(16, 4, mossLight); cv.set(18, 4, moss)
+        cv.vspan(19, 2, 3, 0x6B4428); cv.rect(18, 4, 3, 2, 0x8E877B); cv.set(18, 5, 0xB8B1A4)
+        if mail { cv.vspan(21, 4, 6, 0x5E3B22); cv.set(20, 6, 0xE8574A); cv.set(20, 7, 0xE8574A) }
+        cv.vspan(22, 2, 8, beam); cv.set(21, 8, beam)
+        cv.set(21, 7, 0x3A2A1C); cv.set(21, 6, lit ? 0xFFC845 : 0x8E7A52); cv.set(21, 5, lit ? 0xFFE9A0 : 0x6E6A62)
         // The roof through the seasons.
-        var r = ArtRNG(s: 4242)
-        for y in 10..<17 { for x in -1..<16 {
-            guard let c = cv.get(x, y), [0x5E9E46, 0x8BD66A, 0x3E7A34].contains(c) else { continue }
+        for y in 11..<18 { for x in -1..<16 {
+            guard let c = cv.get(x, y), [moss, mossLight, mossDark].contains(c) else { continue }
             switch month {
-            case 3, 4, 5: if r.next() < 0.3 { cv.set(x, y, r.next() < 0.5 ? 0xFF8FB1 : 0xFFD6E6) }           // blossom
-            case 9, 10, 11: cv.set(x, y, [0xD9853A, 0xC2462E, 0xE8B04A, 0x9E5C34][Int(r.next() * 4)])        // autumn leaves
-            case 12, 1, 2: if y >= 12 || r.next() < 0.5 { cv.set(x, y, r.next() < 0.8 ? 0xF4F8FF : 0xD6E2F2) } // snow
+            case 3, 4, 5: if r.next() < 0.25 { cv.set(x, y, r.next() < 0.5 ? 0xFF8FB1 : 0xFFD6E6) }            // blossom
+            case 9, 10, 11: cv.set(x, y, [0xD9853A, 0xC2462E, 0xE8B04A, 0x9E5C34][Int(r.next() * 4)])         // autumn leaves
+            case 12, 1, 2: cv.set(x, y, r.next() < 0.8 ? 0xF4F8FF : 0xD6E2F2)                                // snow
             default: break
             }
         } }
-        if [12, 1, 2].contains(month) { for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 9, 0xBFE3F7) } }   // icicles
-        // Growing with you: a balcony rail on the porch (1), a loft with a round window (2), a rooftop garden (3).
-        if stage >= 1 { for x in 15..<w { if x % 2 == 0 { cv.vspan(x, 2, 4, 0x8A5A35) } }; cv.hspan(15, w - 1, 5, 0xC99460) }
+        if [12, 1, 2].contains(month) { for x in stride(from: 0, to: 15, by: 3) { cv.set(x, 10, 0xBFE3F7) } }   // icicles
+        // Growing with you.
+        if stage >= 1 {
+            // A balcony rail round the porch.
+            for x in stride(from: 15, through: 21, by: 2) where x != 19 { cv.vspan(x, 2, 3, 0x8A5A35) }
+            cv.hspan(15, 21, 4, plankLight)
+        }
         if stage >= 2 {
-            let by = 16
-            for y in by..<(by + 6) { for x in 3..<12 { cv.set(x, y, y == by ? 0x8A5A35 : (x == 3 ? 0x8A5A35 : 0xB07A47)) } }
-            cv.blob(7.5, Double(by + 3), 1.4, 1.4, base: lit ? 0xFFD36B : 0x3B4660, light: lit ? 0xFFF0B8 : 0x56627E)
-            for k in 0..<3 { cv.hspan(2 + k, 12 - k, by + 6 + k, k == 2 ? 0x8BD66A : 0x5E9E46) }
+            // A loft on top, its own little shingled roof and a round window with a box of flowers.
+            let by = 18
+            for y in by..<(by + 5) { for x in 2...9 { cv.set(x, y, x == 2 || x == 9 ? beam : (x % 2 == 0 ? plank : plankAlt)) } }
+            cv.blob(5.5, Double(by + 2) + 0.5, 1.5, 1.5, base: lit ? warm : night, light: lit ? warmHi : nightHi)
+            cv.hspan(4, 7, by, 0x6E4428); cv.set(4, by + 1, 0xFF8FB1); cv.set(7, by + 1, 0xFFE45C)
+            for k in 0..<3 { for x in (1 + k)...(10 - k) { cv.set(x, by + 5 + k, k == 2 ? mossLight : ((x + k) % 3 == 0 ? shingleDark : moss)) } }
         }
         if stage >= 3 {
-            let gy = 16 + 9
-            for (x, c) in [(4, 0xFF8FB1), (6, 0x6CC04A), (7, 0xFFE45C), (9, 0x6CC04A), (10, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, gy, c); cv.set(x, gy - 1, 0x5E9E46) }
-            cv.vspan(8, gy - 1, gy + 1, 0x6B4428); cv.set(7, gy + 2, 0x6CC04A); cv.set(9, gy + 2, 0x8BD66A); cv.set(8, gy + 2, 0x8BD66A)   // a sapling
+            // A rooftop garden: a sapling and flowers on the loft.
+            let gy = 26
+            for (x, c) in [(3, 0xFF8FB1), (5, 0xFFE45C), (8, 0xB98CFF)] as [(Int, UInt32)] { cv.set(x, gy, c); cv.set(x, gy - 1, moss) }
+            cv.vspan(6, gy - 1, gy, 0x6B4428); cv.set(6, gy + 1, mossLight); cv.set(5, gy + 1, 0x6CC04A); cv.set(7, gy + 1, mossLight)
+        }
+        if stage >= 4 {
+            // A birdhouse up on the porch post, and a string of lights from the loft down to it.
+            cv.vspan(22, 8, 10, beam)
+            cv.rect(20, 11, 3, 2, 0xC2643A); cv.set(21, 11, 0x3A2A1C); cv.hspan(19, 23, 13, 0x8A5A35); cv.set(21, 14, 0x8A5A35)
+            let bulbs: [UInt32] = lit ? [0xFFE45C, 0xFF8FB1, 0x8FD3FF, 0xB5F27A] : [0x9A8F6A, 0x9A7F88, 0x7F96A6, 0x88A070]
+            for (k, x) in stride(from: 10, through: 19, by: 1).enumerated() {
+                let t = Double(x - 10) / 9
+                let y = Int((22 - t * 9 - sin(t * .pi) * 2.2).rounded())
+                cv.set(x, y, k % 2 == 0 ? bulbs[(k / 2) % bulbs.count] : 0x4A4038)
+            }
         }
         let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
         cv.outline(0.6)
@@ -298,7 +336,7 @@ enum PodArt {
 enum TopStructureArt {
     /// A woven nest hut with a leaf roof, a round door and window, on a twig porch that runs out to the right
     /// (36 × 28 px; the porch top, where Gremlets stand, is 2 px up from the bottom). The window glows when `lit`.
-    static func nestHut(lit: Bool) -> CGImage {
+    static func nestHut(lit: Bool, stage: Int = 0) -> CGImage {
         var cv = PixelCanvas(36, 28)
         // The twig porch.
         for x in 0..<36 { cv.set(x, 0, x % 4 == 1 ? 0x553620 : 0x6B4428); cv.set(x, 1, x % 5 == 2 ? 0xA9743F : 0x8A5A35) }
@@ -318,6 +356,28 @@ enum TopStructureArt {
         // Flowers along the porch, a tiny lantern hanging at its end.
         for (x, c) in [(23, 0xFF8FB1), (25, 0xFFE45C), (28, 0xFFFFFF)] as [(Int, UInt32)] { cv.set(x, 2, 0x5E9E46); cv.set(x, 3, c) }
         cv.vspan(35, 2, 6, 0x6B4428); cv.set(34, 7, 0x6B4428); cv.rect(33, 3, 2, 3, lit ? 0xFFC845 : 0xC9A15A); cv.set(33, 4, lit ? 0xFFF0B8 : 0xE0BE78)
+        // A clay chimney poking up through the leaf roof (it smokes while someone naps inside).
+        cv.rect(15, 21, 2, 4, 0xB0603A); cv.hspan(14, 17, 25, 0x8A4A2E)
+        // Growing with the care they put into it (and the Claude sessions): a step ladder and a fern by the door (1),
+        // bunting along the porch (2), mushrooms and flowers on the roof (3), a string of lights and a birdhouse (4).
+        if stage >= 1 {
+            for y in [2, 4] { cv.hspan(1, 3, y, 0x8A5A35) }; cv.vspan(1, 2, 5, 0x6B4428); cv.vspan(3, 2, 5, 0x6B4428)
+            cv.set(13, 2, 0xC2643A); cv.set(13, 3, 0x5E9E46); cv.set(12, 4, 0x8BD66A); cv.set(14, 4, 0x5E9E46)
+        }
+        if stage >= 2 {
+            let flags: [UInt32] = [0xE8574A, 0xFFE45C, 0x8FD3FF, 0xFF8FB1, 0xB5F27A]
+            for (k, x) in stride(from: 21, through: 33, by: 3).enumerated() { cv.set(x, 8, flags[k % flags.count]); cv.set(x, 7, flags[k % flags.count]); cv.set(x + 1, 8, 0x6B4428) }
+            cv.hspan(20, 34, 9, 0x6B4428)
+        }
+        if stage >= 3 {
+            for (x, c) in [(5, 0xE0453A), (8, 0xFFE45C), (19, 0xFF8FB1)] as [(Int, UInt32)] { cv.set(x, 24, 0xF2E6D0); cv.set(x, 25, c) }
+            cv.set(4, 25, 0xE0453A); cv.set(6, 25, 0xE0453A); cv.set(5, 26, 0xE0453A)
+        }
+        if stage >= 4 {
+            let bulbs: [UInt32] = lit ? [0xFFE45C, 0xFF8FB1, 0x8FD3FF, 0xB5F27A] : [0x9A8F6A, 0x9A7F88, 0x7F96A6, 0x88A070]
+            for x in stride(from: 1, through: 21, by: 2) { cv.set(x, 15 + Int((sin(Double(x) / 21 * .pi) * -1.5).rounded()), bulbs[(x / 2) % bulbs.count]) }
+            cv.rect(29, 10, 3, 2, 0xC2643A); cv.set(30, 10, 0x3A2A1C); cv.hspan(28, 32, 12, 0x8A5A35); cv.vspan(30, 2, 9, 0x6B4428)
+        }
         let white = cv.px.indices.filter { cv.px[$0] == 0xFFFFFF }
         cv.outline(0.62)
         for i in white { cv.px[i] = 0xFFFFFF }

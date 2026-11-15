@@ -204,7 +204,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 - **Built with:** Swift (AppKit + Core Animation) on a platform-independent engine (`GremletsCore`, no AppKit), a
   JavaScript port of the engine for the web, Claude via the Messages API, Claude Code hooks, a Solidity contract
   (testnet), and a free pub/sub relay for the phone link.
-- **Engineering:** 132 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
+- **Engineering:** 228 engine tests (physics, gardens, platforms, stairs, minecarts, ziplines, multi-leg expeditions, the doorway to a linked screen, bonsai growth and placement, kites, a boss-free event
   system, a 10-minute soak test), 2–4% CPU with twenty creatures,
   adaptive frame rate, no permissions needed by default, safe-at-work hiding during calls, loopback-only control
   server with header and Host checks.

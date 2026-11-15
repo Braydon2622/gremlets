@@ -11,3 +11,5 @@ STATUS.md
 PLAN.md
 notes/
 .build-x86/
+.build-public/
+.build-public-x86/

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Gremlets Terrarium</title>
+  <meta name="description" content="An always-on Gremlets home: they start in an empty glass room and build a mossy little world while you work.">
+  <meta name="theme-color" content="#eef3f7">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gremlets">
+  <link rel="stylesheet" href="css/habitat.css">
+  <link rel="stylesheet" href="css/terra.css">
+</head>
+<body class="terra">
+  <canvas id="world" aria-label="The Gremlets' glass terrarium"></canvas>
+  <div id="bubbles" aria-live="polite"></div>
+  <div id="tleaf" aria-live="polite"><span class="sprout">🌱</span><div><b id="tstage"></b><span id="tdoing"></span><em><i id="tbar"></i></em></div><span id="tlink" title="Linked to your Mac"></span></div>
+  <div id="ttoast" role="status"></div>
+  <div id="trecent"></div>
+  <div id="tdim"></div>
+  <div id="tintro" hidden>
+    <div class="sheet" role="dialog" aria-label="Welcome to the Terrarium">
+      <h2>🌿 Your Terrarium</h2>
+      <p>The Gremlets are starting from nothing: an empty glass room. While you work they'll plant moss, build ledges, grow a tree, hang little homes and invite critters, a bit more every day, faster whenever Claude is busy on your Mac. Every finished task plants a flag and gets a cheer.</p>
+      <p>Tap a Gremlet to poke it, hold to pet, drag to toss. Tap the moss to plant a flower.</p>
+      <ol>
+        <li><b>Add to Home Screen</b> (Share → Add to Home Screen) and open it from there: full screen.</li>
+        <li>Keep it on its charger with <b>Settings → Display &amp; Brightness → Auto-Lock → Never</b>.</li>
+        <li>To keep it on just this: <b>Settings → Accessibility → Guided Access</b>, then triple-click the top button.</li>
+      </ol>
+      <button class="btn" id="tintro-ok">Let them start</button>
+    </div>
+  </div>
+  <script type="module" src="js/terra/main.js"></script>
+</body>
+</html>

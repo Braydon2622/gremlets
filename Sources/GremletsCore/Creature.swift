@@ -135,6 +135,8 @@ public final class Creature {
     var animSpeed = 1.0
     /// The Claude-buddy job this Gremlet is on, if any (see Work.swift).
     public internal(set) var job: Job?
+    /// Carrying a Back Office letter (MailRun.swift): the app steers it; the brain leaves it be.
+    public internal(set) var onMail = false
     /// Which animation plays while working ("crouch" = tending, "look", "pet" = happy wiggle, "sleep" = dozing).
     var workPose = "crouch"
     /// Pokes in quick succession (five in a row while gardening digs up a mystery seed).

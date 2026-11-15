@@ -21,6 +21,7 @@
 #   gremlet village-page [folder] a read-only web page of your village to put online (counts only, no project names)
 #   gremlet wrapped [YYYY-MM]    the month with Claude Code as a poster (--sample to preview)
 #   gremlet kite                 a free Gremlet flies a kite for a while
+#   gremlet garden [water|snack|plant N]  the Focus Garden and today's snack (plant N: a test plant at stage N)
 #   gremlet stairs | cart        build a block staircase up to a window / lay a minecart rail along a wide one
 #   gremlet chest | expedition   hide a treasure chest somewhere high (someone goes to fetch it) / someone sets out for the highest point
 #   gremlet moss [minutes]       how overgrown things are (preview: 0 to 300 minutes of Claude work; 0 clears it)
@@ -37,6 +38,8 @@
 #   gremlet jar                  fireflies in the jar on the rain barrel now
 #   gremlet seeds                seeds from a friend for the vegetable patch now
 #   gremlet morningcard          yesterday's postcard in the mailbox now
+#   gremlet home                 everyone waves goodbye and leaves the screen
+#   gremlet family <name>        add every Gremlet in a family (animal, insect, dragon, dino, mythic, spirit, guardian, versionone, versiontwo)
 #   gremlet nudge                the hanging home swings; whoever's inside comes out to wave
 #   gremlet pantry [n]           what's in the pantry (or set it, 0-6), the care points, the house's stage
 #   gremlet ask [idea] [name]    what the right-click menu does: with no idea, lists what each could do now
@@ -105,6 +108,8 @@ case "${1:-}" in
   jar)     call jar; echo ;;
   seeds)   call seeds; echo ;;
   morningcard) call morningcard; echo ;;
+  home)    call home; echo ;;
+  family)  call "family?name=${2:-}"; echo ;;
   nudge)   call nudge; echo ;;
   pantry)  if [ -n "${2:-}" ]; then call "pantry?n=${2}"; else call pantry; fi; echo ;;
   ask)     curl -s -m 2 -G -X POST -H 'X-Gremlets: 1' --data-urlencode "idea=${2:-}" --data-urlencode "name=${3:-}" "${URL}/ask"; echo ;;
@@ -156,6 +161,11 @@ except Exception: print("")')"
     [ -n "$gif" ] && echo "GIF:   $gif" ;;
   meteors|festival|lanterns) call "event?kind=$1" >/dev/null ;;
   grow)    call "grove/feed?tasks=${2:-1}"; echo ;;
+  garden)  case "${2:-}" in
+             water|snack) call "garden?do=$2" ;;
+             plant) call "garden?do=plant&stage=${3:-4}" ;;
+             *) call garden ;;
+           esac; echo ;;
   run)
     shift
     [ $# -gt 0 ] || { echo "usage: gremlet run <command...>" >&2; exit 2; }

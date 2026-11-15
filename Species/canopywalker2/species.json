@@ -1,0 +1,13 @@
+{
+  "description" : "A copper steampunk dome on four brass legs, with a gauge, patched plates and a glowing antenna. Moss hangs off its rim and mushrooms grow on its roof.",
+  "element" : "copper",
+  "family" : "versiontwo",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.90000000000000002,
+  "name" : "Canopywalker",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 40
+}

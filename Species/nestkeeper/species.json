@@ -1,0 +1,13 @@
+{
+  "description" : "A gentle sandstone keeper with a mossy mane. It carries a bird's nest in its hands, and a bonsai grows on its back.",
+  "element" : "sandstone",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.75,
+  "name" : "Nestkeeper",
+  "scale" : 3,
+  "sleepiness" : 1.3,
+  "special" : "leaves",
+  "walkSpeed" : 35
+}

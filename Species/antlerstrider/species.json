@@ -1,0 +1,13 @@
+{
+  "description" : "A small ochre machine high on three slim birch legs, with a moss cap and big mossy antlers.",
+  "element" : "birch",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1.3,
+  "name" : "Antlerstrider",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "leaves",
+  "walkSpeed" : 70
+}

@@ -1,0 +1,13 @@
+{
+  "description" : "A heavy golem of grey boulders with moss melting off its shoulders, coloured pebbles in its chest and one glowing purple eye. A blue bird lives on its shoulder.",
+  "element" : "boulder",
+  "family" : "versiontwo",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.69999999999999996,
+  "name" : "Boulder Golem",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "stomp",
+  "walkSpeed" : 30
+}

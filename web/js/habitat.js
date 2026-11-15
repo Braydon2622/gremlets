@@ -13,12 +13,12 @@ import { IslandArt, Biome, ledgeBiome, ledgeSeed } from './islands.js';
 import { Bonsai, layoutBonsai, renderBonsai, MAX_BRANCHES } from './bonsai.js';
 import { hex, PixelCanvas } from './pixelart.js';
 import { SproutArt } from './sproutart.js';
-import { Terrarium, terrariumMode } from './terrarium.js';
+import { terrariumMode } from './terrarium.js';
 
 const params = new URLSearchParams(location.search);
 const showcase = params.get('showcase') || params.get('nft');
 const MAX = 12;
-const FAMILIES = [['animal', 'Animals'], ['insect', 'Insects & Bugs'], ['dragon', 'Dragons'], ['dino', 'Dinosaurs'], ['mythic', 'Mythical Beasts'], ['spirit', 'Spirits'], ['guardian', 'Guardians']];
+const FAMILIES = [['animal', 'Animals'], ['insect', 'Insects & Bugs'], ['dragon', 'Dragons'], ['dino', 'Dinosaurs'], ['mythic', 'Mythical Beasts'], ['spirit', 'Spirits'], ['guardian', 'Guardians'], ['versionone', 'Gremlets Version One'], ['versiontwo', 'Gremlets Version Two']];
 
 const canvas = document.getElementById('world');
 const ctx = canvas.getContext('2d');
@@ -46,17 +46,18 @@ let platforms = [];
 let scenery = null;
 let index = [];
 
-// The Terrarium (an always-on iPad, terrarium.js) keeps its own clock and changes the sky as the day goes on.
-const terra = !showcase && terrariumMode(params) ? new Terrarium({
-  world, bridge, particles, FX, toScreen: (x, y) => toScreen(x, y), px: () => PX, size: () => ({ w: W, h: H }), ground: () => GROUND,
-  isResident: (c) => !visitors.has(c.id) && c.id !== driven,
-  say: (id, text, secs) => say(id, text, secs),
-  onPhase: (p) => { night = p === 'night'; dusk = p === 'dusk'; document.body.classList.toggle('night', night); document.documentElement.style.background = night ? '#1d2347' : dusk ? '#7f8fd0' : ''; if (W) scenery = drawScenery(); },
-  save: () => saveGarden(),
-}) : null;
-const hour = new Date().getHours();
-let night = terra ? terra.phaseNow() === 'night' : hour >= 20 || hour < 6;
-let dusk = terra ? terra.phaseNow() === 'dusk' : !night && (hour >= 18 || hour < 7);
+// The Terrarium has its own page now (terrarium.html): ?terrarium=1 (and Home Screen icons saved from the old
+// version) go straight there, keeping the link's room and secret.
+if (!showcase && terrariumMode(params)) {
+  const q = new URLSearchParams(location.search); q.delete('terrarium');
+  location.replace('terrarium.html' + (q.toString() ? '?' + q : '') + location.hash);
+}
+const terra = null;
+// ?clock=11:30 pretends it's that hour (the portfolio shows the habitat in daylight); otherwise the real time.
+const clockParam = /[?&]clock=(\d{1,2})/.exec(location.search);
+const hour = clockParam ? +clockParam[1] % 24 : new Date().getHours();
+let night = hour >= 20 || hour < 6;
+let dusk = !night && (hour >= 18 || hour < 7);
 const MONTH = Math.min(12, Math.max(1, +params.get('month') || new Date().getMonth() + 1));   // ?month=1 previews a season
 
 // ---------------------------------------------------------------- layout & scenery

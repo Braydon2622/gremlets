@@ -1,0 +1,13 @@
+{
+  "description" : "A tall cairn of four coloured stones that keeps watch from the hilltop. A bird rests on its top stone.",
+  "element" : "cairn",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.84999999999999998,
+  "name" : "Lookout",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 40
+}

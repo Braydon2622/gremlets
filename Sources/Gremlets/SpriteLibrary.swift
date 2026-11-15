@@ -13,6 +13,8 @@ struct LoadedSpecies {
 ///   1. built-in sheets (app bundle `Resources/Species`, or the repo's `Species/` folder in dev builds)
 ///   2. `~/Library/Application Support/Gremlets/Species/<id>/` for drop-in art
 enum SpriteLibrary {
+    /// Braydon (Nov 10): the Gremlets a touch smaller on the desktop (10%).
+    static let sizeFactor = 0.9
     static var userSpeciesFolder: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Gremlets/Species", isDirectory: true)
@@ -109,7 +111,7 @@ enum SpriteLibrary {
             name: extra["name"] as? String ?? id.capitalized,
             element: extra["element"] as? String ?? "",
             frameWidth: fw, frameHeight: fh,
-            scale: (extra["scale"] as? Double) ?? 3,
+            scale: ((extra["scale"] as? Double) ?? 3) * SpriteLibrary.sizeFactor,
             animations: animations, masks: masks,
             walkSpeed: extra["walkSpeed"] as? Double ?? 70,
             jumpPower: extra["jumpPower"] as? Double ?? 1,

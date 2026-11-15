@@ -2,7 +2,7 @@
   "name": "Gremlets Terrarium",
   "short_name": "Gremlets",
   "description": "A Gremlets home that stays on all day: they live here, sleep at night, and show what Claude is doing on your Mac.",
-  "start_url": "./?terrarium=1",
+  "start_url": "./terrarium.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",

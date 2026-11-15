@@ -299,6 +299,114 @@
       "family" : "spirit",
       "id" : "frostmote",
       "name" : "Frostmote"
+    },
+    {
+      "element" : "sandstone",
+      "family" : "versionone",
+      "id" : "nestkeeper",
+      "name" : "Nestkeeper"
+    },
+    {
+      "element" : "slate",
+      "family" : "versionone",
+      "id" : "bouldergolem",
+      "name" : "Boulder Golem"
+    },
+    {
+      "element" : "cairn",
+      "family" : "versionone",
+      "id" : "lookoutcairn",
+      "name" : "Lookout"
+    },
+    {
+      "element" : "waymarker",
+      "family" : "versionone",
+      "id" : "obelisk",
+      "name" : "Obelisk"
+    },
+    {
+      "element" : "rust",
+      "family" : "versionone",
+      "id" : "canopywalker",
+      "name" : "Canopywalker"
+    },
+    {
+      "element" : "birch",
+      "family" : "versionone",
+      "id" : "antlerstrider",
+      "name" : "Antlerstrider"
+    },
+    {
+      "element" : "carved",
+      "family" : "versionone",
+      "id" : "totemstack",
+      "name" : "Totemstack"
+    },
+    {
+      "element" : "garden",
+      "family" : "versionone",
+      "id" : "bonsaiback",
+      "name" : "Bonsaiback"
+    },
+    {
+      "element" : "slate",
+      "family" : "versionone",
+      "id" : "cairnling",
+      "name" : "Cairnling"
+    },
+    {
+      "element" : "old robot",
+      "family" : "versiontwo",
+      "id" : "nestkeeper2",
+      "name" : "Nestkeeper"
+    },
+    {
+      "element" : "boulder",
+      "family" : "versiontwo",
+      "id" : "bouldergolem2",
+      "name" : "Boulder Golem"
+    },
+    {
+      "element" : "cairn",
+      "family" : "versiontwo",
+      "id" : "lookout2",
+      "name" : "Lookout"
+    },
+    {
+      "element" : "waymarker",
+      "family" : "versiontwo",
+      "id" : "obelisk2",
+      "name" : "Obelisk"
+    },
+    {
+      "element" : "copper",
+      "family" : "versiontwo",
+      "id" : "canopywalker2",
+      "name" : "Canopywalker"
+    },
+    {
+      "element" : "copper",
+      "family" : "versiontwo",
+      "id" : "antlerstrider2",
+      "name" : "Antlerstrider"
+    },
+    {
+      "element" : "carved",
+      "family" : "versiontwo",
+      "id" : "totemstack2",
+      "name" : "Totemstack"
+    },
+    {
+      "element" : "glazed",
+      "family" : "versiontwo",
+      "id" : "bonsaiback2",
+      "name" : "Bonsaiback"
+    },
+    {
+      "element" : "slate",
+      "family" : "versiontwo",
+      "id" : "cairnling2",
+      "name" : "Cairnling"
     }
   ]
 }

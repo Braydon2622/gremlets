@@ -6,3 +6,4 @@ JSC=/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers
 "$JSC" -m web/tests/engine.test.mjs
 "$JSC" -m web/tests/bonsai.test.mjs
 "$JSC" -m web/tests/terrarium.test.mjs
+"$JSC" -m web/tests/terra.test.mjs

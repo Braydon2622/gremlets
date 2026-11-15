@@ -1,0 +1,13 @@
+{
+  "description" : "A low sandstone boulder that carries a whole bonsai tree on its back, plus a tiny stone lantern for night walks.",
+  "element" : "garden",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.69999999999999996,
+  "name" : "Bonsaiback",
+  "scale" : 3,
+  "sleepiness" : 1.3999999999999999,
+  "special" : "leaves",
+  "walkSpeed" : 30
+}

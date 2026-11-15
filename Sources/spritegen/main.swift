@@ -139,7 +139,7 @@ for sp in roster {
     try writePNG(key, to: dir.appendingPathComponent("preview.png"), scale: 5, background: 0xF3EFE6, pad: 6)
     lineup.append(frames[0])
     // 512×512 portrait for NFT metadata / marketplaces: idle frame at 16× on a soft family-coloured background.
-    let bg: [String: UInt32] = ["animal": 0xF4E9D8, "insect": 0xE3F1E0, "dragon": 0xEDE3F6, "dino": 0xE0EEF4, "mythic": 0xF6E3E8]
+    let bg: [String: UInt32] = ["animal": 0xF4E9D8, "insect": 0xE3F1E0, "dragon": 0xEDE3F6, "dino": 0xE0EEF4, "mythic": 0xF6E3E8, "versionone": 0xE6E8D8, "versiontwo": 0xE4ECE0]
     try writePortrait(frames[0], to: dir.appendingPathComponent("portrait.png"), background: bg[sp.family] ?? 0xF3EFE6)
 }
 try writePNG(lineup, to: outDir.appendingPathComponent("lineup.png"), scale: 5, background: 0xF3EFE6, pad: 8, perRow: 10)

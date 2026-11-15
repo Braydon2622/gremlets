@@ -852,6 +852,28 @@ enum SignArt {
             }
             cv.set(7, 8, 0x9AA3AE)
             cv.line(3, 14, 11, 8, 0xE8574A)
+        case .meeting:
+            // A little clock, nearly on the hour.
+            cv.blob(7, 11.5, 4.2, 4.2, base: 0xFFFFFF, shade: 0xD8DEE6)
+            for a in stride(from: 0.0, to: 6.28, by: 0.3) { cv.set(Int((7 + cos(a) * 4.2).rounded()), Int((11.5 + sin(a) * 4.2).rounded()), 0x5A6A7A) }
+            cv.line(7, 11.5, 7, 14.5, 0x2A3440); cv.line(7, 11.5, 9.5, 11.5, 0xE8574A)
+        case .bedtime:
+            // A crescent moon and a little z.
+            cv.blob(6, 11.5, 3.6, 3.6, base: 0xFFE27A, shade: 0xE8C050)
+            cv.blob(7.6, 12.6, 3.0, 3.0, base: 0xF1E4C8)
+            cv.line(10, 14, 12, 14, 0x6A7AB8); cv.line(12, 14, 10, 12, 0x6A7AB8); cv.line(10, 12, 12, 12, 0x6A7AB8)
+        case .hungry:
+            // An empty bowl with a berry thought over it.
+            cv.rect(3, 9, 9, 1, 0x8A5A35); cv.rect(4, 8, 7, 1, 0xB07A4A); cv.rect(5, 7, 5, 1, 0x8A5A35)
+            cv.blob(10.5, 13.5, 1.4, 1.4, base: 0xD9446A, light: 0xF27BA0)
+            cv.set(10, 15, 0x5E9E46)
+            cv.set(7, 12, 0xC8BCA8); cv.set(8, 13, 0xC8BCA8)
+        case .waiting:
+            // An hourglass.
+            cv.rect(4, 15, 7, 1, 0x8A5A35); cv.rect(4, 7, 7, 1, 0x8A5A35)
+            for (i, w) in [5, 3, 1].enumerated() { cv.rect(7 - w / 2, 14 - i, w, 1, 0xBFE3F2) }
+            for (i, w) in [1, 3, 5].enumerated() { cv.rect(7 - w / 2, 10 - i, w, 1, i == 0 ? 0xBFE3F2 : 0xE8C050) }
+            cv.set(7, 11, 0xE8C050)
         }
         cv.outline(0.7)
         return cv.image

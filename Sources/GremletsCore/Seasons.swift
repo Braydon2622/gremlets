@@ -88,6 +88,29 @@ extension World {
         c.driftDown = !isNight && rng.chance(0.6)
     }
 
+    // MARK: Clear nights and rainy days
+
+    /// A clear night: up on the leaf swing or the porch, a Gremlet lies back and watches the sky (the renderer sends
+    /// a shooting star over now and then).
+    public var stargazing: Bool { isNight && (weather?.sky == .clear || weather == nil) && !compact }
+
+    func skyChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
+        guard isFree(c), c.isGrounded, !c.isAsleep, c.mossTask == nil, let owner = c.groundOwner else { return }
+        let up = topStructures.contains { $0.surface.ownerID == owner } || owner == World.notchPorchOwner
+        if stargazing, up, clock >= nextStargazeAt {
+            add("stargaze", 2.2) {
+                self.nextStargazeAt = self.clock + self.rng.range(20, 60)
+                c.idleVariant = "look"
+                c.set(.idle, duration: self.rng.range(15, 35))
+            }
+        }
+        // A rainy day: in out of the wet (the hut, or the porch under the leaf roof).
+        if weather?.sky.isWet == true, !up, let porch = nestPorch, let s = supportingSurface(for: c), s.kind == .windowTop || s.kind == .floor,
+           sameScreen(c.pos, Vec2(porch.minX, porch.y)) {
+            add("shelter", 1.2) { self.startFloat(c, to: Vec2(porch.minX + 24, porch.y), ride: .umbrella) }
+        }
+    }
+
     // MARK: The firefly jar
 
     /// Where the jar stands (on the rain barrel's lid).

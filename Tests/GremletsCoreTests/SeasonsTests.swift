@@ -104,4 +104,22 @@ import Testing
         for _ in 0..<20 { again.patchSaved = "-,-,-"; again.sowPatchNow(ripe: false); for p in again.vegPatch { if let c = p.crop { seen.insert(c) } } }
         #expect(!seen.isDisjoint(with: PatchPlot.Crop.friends))
     }
+
+    @Test func clearNightsForStargazingAndRainyDaysIndoors() throws {
+        let w = world(seed: 807, hour: 23)
+        w.isNight = true
+        let porch = try #require(w.nestPorch)
+        let c = w.spawn(testSpecies(scale: 10), at: Vec2(porch.minX + 40, porch.y + 2))
+        for _ in 0..<(60 * 30) where !(c.isGrounded && c.groundOwner == porch.ownerID && c.mossTask == nil) { w.step(1.0 / 60) }
+        var names: [String] = []
+        w.skyChoices(for: c) { n, _, _ in names.append(n) }
+        #expect(names.contains("stargaze") && w.stargazing)
+        w.liveWeather = LocalWeather(sky: .rain)
+        #expect(!w.stargazing)
+        let d = w.spawn(testSpecies(scale: 10), at: Vec2(300, 522))
+        for _ in 0..<(60 * 30) where !(d.isGrounded && d.groundOwner == 1 && d.mossTask == nil) { w.step(1.0 / 60) }
+        names = []
+        w.skyChoices(for: d) { n, _, _ in names.append(n) }
+        #expect(names.contains("shelter"), "in out of the rain")
+    }
 }

@@ -1,0 +1,13 @@
+{
+  "description" : "A heavy golem of dark slate with mossy shoulders and fists that rest on the ground. A bird lives on its shoulder.",
+  "element" : "slate",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.69999999999999996,
+  "name" : "Boulder Golem",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "stomp",
+  "walkSpeed" : 30
+}

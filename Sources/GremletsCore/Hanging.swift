@@ -212,7 +212,7 @@ extension World {
     func nestChoices(for c: Creature, add: (String, Double, @escaping () -> Void) -> Void) {
         guard !notchHomeShowing, let nest = topStructures.first(where: { $0.kind == .nestHut })?.surface, c.groundOwner == nest.ownerID,
               isFree(c), c.isGrounded, insideNest.count < 2, let door = nestDoorX else { return }
-        add("goInside", (isNight || c.energy < 0.5) ? 2.0 : 0.6) {
+        add("goInside", (isNight || c.energy < 0.5) ? 2.0 : weather?.sky.isWet == true ? 2.6 : 0.6) {
             c.targetX = door; c.facing = door > c.pos.x ? 1 : -1
             c.groveTask = .nestHome
             c.set(.walk, duration: 10)

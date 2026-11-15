@@ -1,0 +1,13 @@
+{
+  "description" : "Three carved blocks stacked into a walking totem, each block with a face of its own.",
+  "element" : "carved",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Totemstack",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 40
+}

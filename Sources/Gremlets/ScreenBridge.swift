@@ -18,7 +18,7 @@ import GremletsCore
 /// NoteSeal), with the key from a pairing secret that travels only inside the QR code / link (its #fragment) or the
 /// friend code, and is kept in the Keychain. Older rooms without a secret still speak plain notes.
 final class ScreenBridge {
-    struct Walk { let species: String; let y: Double; let vx: Double; let vy: Double; let air: Bool; let owner: String? }
+    struct Walk { let species: String; let y: Double; let vx: Double; let vy: Double; let air: Bool; let owner: String?; var gift: String? = nil }
     /// This Mac's lasting id, carried by its Gremlets when they travel, so a friend's Mac knows they're visitors and
     /// sends them home, and this Mac knows its own when they come back.
     let owner: String = {
@@ -61,7 +61,7 @@ final class ScreenBridge {
 
     /// The pairing secret for this room (Keychain), and the note key made from it.
     /// (Read from the Keychain once, then kept in memory.)
-    private lazy var secret: String? = Keychain.get("bridge.secret")
+    private lazy var secret: String? = Secrets.get("bridge.secret")
     private var cachedKey: (room: String, secret: String, key: SymmetricKey)?
     var sealed: Bool { secret != nil }
     private var noteKey: SymmetricKey? {
@@ -91,7 +91,7 @@ final class ScreenBridge {
         let secret = parts.count > 1 ? parts[1].filter { $0.isLetter || $0.isNumber } : ""
         guard room.count >= 8, room.count <= 24, parts.count == 1 || secret.count >= 16 else { return false }
         stop()
-        if secret.isEmpty { Keychain.delete("bridge.secret"); self.secret = nil } else { Keychain.set(secret, for: "bridge.secret"); self.secret = secret }
+        if secret.isEmpty { Secrets.delete("bridge.secret"); self.secret = nil } else { Secrets.set(secret, for: "bridge.secret"); self.secret = secret }
         UserDefaults.standard.set(room, forKey: roomKey)
         UserDefaults.standard.set("left", forKey: sideKey)
         peerSeen = nil
@@ -106,7 +106,7 @@ final class ScreenBridge {
     func create(side: String) {
         stop()
         let s = NoteSeal.newSecret()
-        Keychain.set(s, for: "bridge.secret"); secret = s
+        Secrets.set(s, for: "bridge.secret"); secret = s
         peerIsTerrarium = false
         UserDefaults.standard.set(ScreenBridge.randomCode(12), forKey: roomKey)
         UserDefaults.standard.set(side == "left" ? "left" : "right", forKey: sideKey)
@@ -123,7 +123,9 @@ final class ScreenBridge {
         guard let room else { return nil }
         var base = habitat
         if !base.hasSuffix("/") && !base.contains("?") { base += "/" }
-        return "\(base)?room=\(room)&side=\(opposite)" + (terrarium ? "&terrarium=1" : "") + (secret.map { "#k=\($0)" } ?? "")
+        // The Terrarium is its own page next to the habitat (web/terrarium.html).
+        if terrarium, !base.contains("?") { base += "terrarium.html" }
+        return "\(base)?room=\(room)&side=\(opposite)" + (secret.map { "#k=\($0)" } ?? "")
     }
 
     /// The code a friend's Mac pastes: the room, and the secret when the room is sealed.
@@ -169,7 +171,7 @@ final class ScreenBridge {
 
     func unlink() {
         stop()
-        Keychain.delete("bridge.secret"); secret = nil
+        Secrets.delete("bridge.secret"); secret = nil
         peerIsTerrarium = false
         UserDefaults.standard.removeObject(forKey: roomKey)
         UserDefaults.standard.removeObject(forKey: sideKey)
@@ -203,7 +205,8 @@ final class ScreenBridge {
                 guard note["to"] as? String == self.side, let species = note["species"] as? String, species.count < 40 else { return }
                 func num(_ k: String) -> Double { (note[k] as? NSNumber)?.doubleValue ?? 0 }
                 self.onWalk(Walk(species: species, y: num("y"), vx: num("vx"), vy: num("vy"), air: (note["air"] as? Bool) ?? false,
-                                 owner: (note["owner"] as? String).map { String($0.prefix(24)) }))
+                                 owner: (note["owner"] as? String).map { String($0.prefix(24)) },
+                                 gift: (note["gift"] as? String).flatMap { PatchPlot.Crop(rawValue: $0)?.rawValue }))
                 self.onStatus()
             case "visitor":
                 guard note["to"] as? String == self.side, note["kind"] as? String == "ferry" else { return }
@@ -238,6 +241,9 @@ final class ScreenBridge {
         guard linked, peerIsTerrarium, peerOnline else { return }
         send(note)
     }
+
+    /// The Back Office's latest events, for a Terrarium (same rules as the status).
+    func sendOffice(_ note: [String: Any]) { sendStatus(note) }
 
     /// Something leaves through our doorway; on the other screen it arrives through the opposite edge.
     func cross(_ note: [String: Any]) {

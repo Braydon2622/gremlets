@@ -1,0 +1,13 @@
+{
+  "description" : "A short cairn in a tilted slate hat, with moss on the brim and glowing mushrooms on top.",
+  "element" : "slate",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Cairnling",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 50
+}

@@ -114,58 +114,102 @@ def main():
         check('sealing matches the Mac (Swift test vector)', got['s'] == VECTOR, got['s'])
         check('opens with the right room, not another', got['back'] == '{"type":"status"}' and got['wrong'] is None)
 
-        # 2. Night: the Gremlets go to bed, the screen dims.
+        # 2. It starts as an empty glass room, and they build it up (fast-forwarded).
         page = ctx.new_page()
-        page.goto(f'{site}/?terrarium=1&clock=22:30&debug&relay={relay.url}')
+        page.goto(f'{site}/terrarium.html?speed=200&clock=12:00&debug&relay={relay.url}')
         page.evaluate("localStorage.setItem('gremlets.terrarium.intro', '1')")
         page.reload()
+        check('an empty room to start', wait_for(page, "terra.world.creatures.length === 3") and page.evaluate("terra.model.built().length <= 1"))
+        check('they plant the first seed and the moss comes in', wait_for(page, "terra.model.done('seed') && terra.model.moss > 0", 30))
+        check('they build the first ledge, plank by plank', wait_for(page, "terra.model.done('deck1')", 60))
+        check('the ledge is somewhere to stand, with a vine ladder up', wait_for(page, "terra.world.surfaces.some(s => s.owner === 'deck1') && terra.ladders().some(l => l.id === 'deck1')", 5))
+        page.screenshot(path=f'{SHOTS}/growing.png')
+        # Touch: tapping the moss plants a flower; tapping a Gremlet pokes it.
+        n = page.evaluate('terra.plants.length')
+        x = page.evaluate("Math.round(terra.model.toJSON() && (window.innerWidth / 2))")
+        page.mouse.click(page.evaluate("(() => { const m = terra.model; return Math.round(innerWidth / 2); })()"), IPAD['height'] - 52)
+        check('tapping the moss plants a flower', wait_for(page, f'terra.plants.length > {n}', 5))
+        c = page.evaluate("(() => { const c = terra.world.creatures.find(c => c.isGrounded && !c.hidden); return [c.id, c.pos.x, innerHeight - c.pos.y - c.size.y * 0.5]; })()")
+        page.mouse.click(c[1], c[2])
+        check('tapping a Gremlet pokes it', wait_for(page, f"['react','dizzy','wave','alert','pet'].includes(terra.world.byId({c[0]}).activity) || terra.world.byId({c[0]}).activity === 'react'", 3))
+        page.close()
+
+        # 3. Night: the Gremlets go to bed, the screen dims.
+        page = ctx.new_page()
+        page.goto(f'{site}/terrarium.html?preview=60&clock=22:30&debug&relay={relay.url}')
         check('night sky', wait_for(page, "document.body.classList.contains('night')"))
-        check('screen dims to about a fifth', wait_for(page, "document.getElementById('tdim').style.opacity === '0.8'"))
-        STATES = "gremlets.world.creatures.map(c => c.activity + '/' + c.task).join(' ')"
-        check('they go to sleep', wait_for(page, "gremlets.world.creatures.filter(c => c.activity === 'sleep').length >= 2", 45), page.evaluate(STATES))
-        check('the bar and hints are hidden', page.evaluate("getComputedStyle(document.getElementById('bar')).display === 'none'"))
+        check('the room dims', wait_for(page, "document.getElementById('tdim').style.opacity === '0.75'"))
+        check('they go to bed (in the hanging home, or curled up on the moss)', wait_for(page, "terra.world.creatures.filter(c => c.hidden || c.activity === 'sleep').length >= 2", 60))
         check('installable: manifest and Home Screen tags', page.evaluate("!!document.querySelector('link[rel=manifest]') && !!document.querySelector('meta[name=apple-mobile-web-app-capable]')"))
         page.screenshot(path=f'{SHOTS}/night.png')
         page.close()
 
-        # 3. Linked to the Mac over a sealed room, in the daytime.
+        # 4. Linked to the Mac over a sealed room, in the daytime.
         page = ctx.new_page()
-        page.goto(f'{site}/?terrarium=1&clock=12:00&debug&relay={relay.url}&room={ROOM}&side=left#k={SECRET}')
-        page.evaluate("document.getElementById('tintro')?.remove()")
-        time.sleep(0.8)
-        check('no link dialog over the Terrarium', page.evaluate("document.getElementById('linker').hidden"))
+        page.goto(f'{site}/terrarium.html?preview=60&clock=12:00&debug&relay={relay.url}&room={ROOM}&side=left#k={SECRET}')
         check('link secret kept out of the address bar', SECRET not in page.url and 'room=' not in page.url, page.url)
-        check('connected to the relay', wait_for(page, 'gremlets.bridge.connected'))
-        check('says hello as a Terrarium, sealed', wait_for(page, 'true') and any('"v":2' in p for p in relay.posts) and not any('terrarium' in p for p in relay.posts))
+        check('connected to the relay', wait_for(page, 'terra.bridge.connected'))
+        check('says hello as a Terrarium, sealed', any('"v":2' in p for p in relay.posts) and not any('terrarium' in p for p in relay.posts))
         check('not dimmed by day', page.evaluate("document.getElementById('tdim').style.opacity === '0'"))
 
-        # Plain notes on a sealed room are ignored.
         send(status([{'id': 's9', 'project': 'Sneaky', 'state': 'waiting'}]), sealed=False)
         time.sleep(1.5)
-        check('ignores an unsealed note', page.evaluate('gremlets.terra.sessions.length') == 0)
+        check('ignores an unsealed note', page.evaluate('terra.sessions.length') == 0)
 
         send(status([{'id': 's1', 'project': 'Project 1', 'state': 'waiting'}]))
-        check('a sealed status note arrives', wait_for(page, "gremlets.terra.sessions[0]?.state === 'waiting'"))
-        check('a Gremlet goes to the edge with the lantern', wait_for(page, """(() => { const t = gremlets.terra, c = gremlets.world.creatures.find(o => o.id === t.helpers.get('s1'));
-            return c && c.task === 'lantern' && c.targetX == null && (c.pos.x < 140 || c.pos.x > innerWidth - 140); })()""", 40))
+        check('a sealed status note arrives', wait_for(page, "terra.sessions[0]?.state === 'waiting'"))
+        check('a Gremlet goes to the edge with the lantern', wait_for(page, """(() => { const c = terra.world.byId(terra.helpers.get('s1'));
+            return c && c.task?.kind === 'lantern' && c.targetX == null && (c.pos.x < 140 || c.pos.x > innerWidth - 140); })()""", 40))
         check('the recent strip shows it', wait_for(page, "document.querySelector('#trecent .tcard.waiting')?.textContent.includes('needs you')"))
         page.screenshot(path=f'{SHOTS}/lantern.png')
 
         send(status([{'id': 's1', 'project': 'Project 1', 'state': 'thinking'}, {'id': 's2', 'project': 'Project 2', 'state': 'thinking'}]))
-        check('thinking: two helpers', wait_for(page, 'gremlets.terra.helpers.size === 2'), page.evaluate("JSON.stringify([gremlets.terra.sessions, [...gremlets.terra.helpers], gremlets.world.creatures.length])"))
+        check('thinking: two helpers with thought clouds', wait_for(page, 'terra.helpers.size === 2'))
         time.sleep(1); page.screenshot(path=f'{SHOTS}/thinking.png')
+        before = page.evaluate('terra.model.points')
         send(status([{'id': 's1', 'project': 'Project 1', 'state': 'done'}]))
-        check('done: a flag in the moss', wait_for(page, 'gremlets.terra.flags.size === 1'))
+        check('done: a flag in the moss, a cheer, and a burst of growth', wait_for(page, f'terra.flags.length === 1 && terra.model.tasks === 1 && terra.model.points >= {before} + 5'))
+        send(status([{'id': 's1', 'project': 'Project 1', 'state': 'done'}], recent=[{'project': 'Project 1', 'state': 'done', 'at': page.evaluate('terra.model.lastDoneAt')}]))
+        time.sleep(1.2)
+        check('the same task is not counted twice', page.evaluate('terra.model.tasks') == 1)
         time.sleep(0.6); page.screenshot(path=f'{SHOTS}/done.png')
 
-        # 4. The relay drops; the bridge keeps trying and comes back.
+        # 5. The relay drops; the bridge keeps trying and comes back.
         relay.down = True
-        check('notices the relay went away', wait_for(page, '!gremlets.bridge.connected', 15))
+        check('notices the relay went away', wait_for(page, '!terra.bridge.connected', 15))
         time.sleep(3)
         relay.down = False
-        check('reconnects by itself', wait_for(page, 'gremlets.bridge.connected', 30))
+        check('reconnects by itself', wait_for(page, 'terra.bridge.connected', 30))
         send(status([{'id': 's3', 'project': 'Project 3', 'state': 'thinking'}]))
-        check('and hears the Mac again', wait_for(page, "gremlets.terra.sessions[0]?.id === 's3'"))
+        check('and hears the Mac again', wait_for(page, "terra.sessions[0]?.id === 's3'"))
+        send({'type': 'office', 'events': [{'room': 'railroad', 'kind': 'sale', 'title': 'Pixel mug', 'severity': 'good', 'at': time.time()}]})
+        check('Back Office events join the strip', wait_for(page, "[...document.querySelectorAll('#trecent .tcard.office')].some(c => c.textContent.includes('Pixel mug'))"))
+        # 5b. The big Back Office view (🏢): the building, today's numbers, a lap, rain, fireworks.
+        state = {'rooms': ['workshop', 'railroad', 'aquarium', 'postOffice', 'factory', 'board', 'farm'], 'workers': 2, 'lantern': True, 'flag': True,
+                 'cargo': 3, 'signal': False, 'fish': [{'n': 'BTC', 'p': -5.5, 's': 1.5, 'z': False, 'e': False}, {'n': 'PEPE', 'p': 2, 's': 1, 'z': False, 'e': False}],
+                 'letters': 3, 'unread': 1, 'notes': [True, False, True], 'reminders': ['Gremlets: publish the portfolio'], 'farmGreen': False, 'farmOk': False, 'rain': True, 'level': 5,
+                 'report': {'sales': 1, 'salesTotal': 12.5, 'pnl': -3.5, 'bots': 2, 'messages': 3, 'claudeDone': 4, 'farmTrades': 1, 'farmPnl': -54, 'runs': 0, 'reminders': 1, 'updates': 2}}
+        send({'type': 'office', 'state': state, 'events': [{'room': 'farm', 'kind': 'trade', 'title': 'Trade · long 1', 'severity': 'info', 'amount': -54, 'at': time.time() + 1}]})
+        check('the office state arrives', wait_for(page, "terra.officeView.state?.report?.farmTrades === 1"))
+        page.click('#tofficebtn')
+        check('🏢 opens the Back Office view', wait_for(page, "!document.getElementById('toffice').hidden && terra.officeView.lap !== null"))
+        check('it lists today and the reminders', wait_for(page, "document.querySelector('#toffice .nums').textContent.includes('Racetrack') && document.querySelector('#toffice .rem').textContent.includes('publish')"))
+        time.sleep(1.2)
+        page.screenshot(path=f'{SHOTS}/office-view.png')
+        check('the building is drawn', page.evaluate("(() => { const c = document.querySelector('#toffice canvas'); const d = c.getContext('2d').getImageData(c.width / 2, c.height * 0.7, 1, 1).data; return d[3] > 0 && !(d[0] === 238 && d[1] === 243); })()"))
+        page.click('#tofficebtn')
+        check('🌿 goes back to the Terrarium', wait_for(page, "document.getElementById('toffice').hidden"))
+
+        # 6. Old links (?terrarium=1 on the habitat) land on the new page with their room and secret.
+        old = ctx.new_page()
+        old.goto(f'{site}/?terrarium=1&clock=12:00&relay={relay.url}&room={ROOM}&side=left#k={SECRET}')
+        check('old Terrarium links open the new page', wait_for(old, "location.pathname.endsWith('terrarium.html')", 10))
+        # 7. No Mac: the Back Office demo shows what it does (made-up events).
+        demo = ctx.new_page()
+        demo.goto(f'{site}/terrarium.html?clock=12:00&debug&officeDemo&relay={relay.url}')
+        check('the office demo plays without a Mac', wait_for(demo, "!document.getElementById('toffice').hidden && terra.officeView.events.length >= 2", 15))
+        time.sleep(1.5)
+        demo.screenshot(path=f'{SHOTS}/office-demo.png')
         browser.close()
     print(f'{passed} passed, {failed} failed  (screenshots in {SHOTS})')
     sys.exit(1 if failed else 0)

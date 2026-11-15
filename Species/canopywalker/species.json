@@ -1,0 +1,13 @@
+{
+  "description" : "A rust-red dome on four brass legs. Moss hangs off its rim like curtains, fireflies glow underneath, and mushrooms grow on its roof.",
+  "element" : "rust",
+  "family" : "versionone",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.90000000000000002,
+  "name" : "Canopywalker",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "glow",
+  "walkSpeed" : 40
+}

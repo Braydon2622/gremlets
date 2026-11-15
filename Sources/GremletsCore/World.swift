@@ -102,6 +102,8 @@ public final class World {
     public internal(set) var mossBridges: [MossBridge] = []
     public internal(set) var mossPatches: [MossPatch] = []
     var mossPadSurfaces: [Surface] = []
+    /// The Back Office's roofs (OfficeRoof.swift), set by the app.
+    public internal(set) var officeRoofs: [Surface] = []
     var mossEvents: [MossEvent] = []
     var nextPadID = 0, nextPatchID = 0
     /// Little things growing in the moss (Sprouts.swift).
@@ -185,6 +187,7 @@ public final class World {
     var planEvents: [ClaudePlanEvent] = []
     var nextBoostAt = 180.0
     var lastPose = -100.0
+    var lastMusicDance = -1000.0
     /// The sky ferry (when it's around) and what happened in the mine and the sky lately.
     public internal(set) var ferry: Ferry?
     var nextFerryAt: Double?
@@ -277,6 +280,9 @@ public final class World {
     var nextLanternID = 0, nextLanternAt = 0.0, nextPatchAt = 30.0
     /// Seasons on the porch, the firefly jar and the seed tin (Seasons.swift).
     public var porchLeaves = 0.0, roofSnow = 0.0
+    /// Gremlets whose anniversary with Braydon is today (the app sets it): bunting and a cake on the porch.
+    public var birthdayIDs: Set<Int> = []
+    var nextStargazeAt = 0.0
     public var fireflyJar = 0
     public internal(set) var seedTin: [PatchPlot.Crop] = PatchPlot.Crop.home
     var nextSweepAt = 60.0
@@ -364,7 +370,7 @@ public final class World {
         rebuildVines()
     }
 
-    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces + mossPadSurfaces + notchSurfaces }
+    func setSurfacesDirty() { surfaces = builtSurfaces + iconSurfaces + groveSurfaces + bridgeSurfaces + stairSurfaces + attachedSurfaces + mossPadSurfaces + notchSurfaces + officeRoofs }
 
     // MARK: Creatures
 
@@ -408,7 +414,7 @@ public final class World {
     /// Suggested simulation rate. Lets the platform layer throttle the loop to save CPU when nothing moves.
     public var desiredTickRate: Double {
         if creatures.contains(where: { [.airborne, .dragged, .fly, .run].contains($0.activity) }) { return 60 }
-        if creatures.contains(where: { ![.idle, .sleep].contains($0.activity) }) { return 30 }
+        if creatures.contains(where: { ![.idle, .sleep].contains($0.activity) }) { return 24 }   // walking etc. (24 is smooth for pixel art; 30 cost CPU, Nov 11)
         return 12
     }
 
@@ -709,6 +715,7 @@ public final class World {
                 startFloat(c, to: Vec2((c.pos.x + c.facing * 60).clamped(scr.minX + 30, scr.maxX - 30), scr.minY), ride: .leaf)
                 return
             }
+            if c.onMail, !onFullScreen(c) { c.set(.idle, duration: 0.3); return }   // waiting for its next step
             if headHome(c) { return }
             if onFullScreen(c) { Brain.decideCompact(c, in: self) }
             else if c.job != nil { c.set(.idle, duration: 0.2) } else if c.expedition != nil { expeditionDecide(c) }
@@ -765,7 +772,7 @@ public final class World {
                 c.facing = tx > c.pos.x ? 1 : -1
             }
         }
-        if c.activity == .walk, let tx = c.targetX, c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || (onFullScreen(c) && c.groveTask == nil) {
+        if c.activity == .walk, let tx = c.targetX, c.onMail || c.expedition != nil || c.boost != nil || c.helping != nil || c.mossTask != nil || c.snowmanTask != nil || (onFullScreen(c) && c.groveTask == nil) {
             // On an expedition: straight to the spot (off the edge, if that's where it is), no dithering at ledges.
             if abs(tx - c.pos.x) < 5 { c.targetX = nil; c.set(.idle, duration: 0.05); return }
             c.facing = tx > c.pos.x ? 1 : -1

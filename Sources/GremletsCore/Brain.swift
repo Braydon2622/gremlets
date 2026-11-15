@@ -117,6 +117,9 @@ struct Brain {
         if let target = world.jumpTarget(for: c) {
             add("jumpUp", 1.1 * (0.3 + e)) { world.launch(c, velocity: target) }
         }
+        if let up = world.officeVisit(c) { add("officeRoof", 0.8 * (0.3 + e)) { world.launch(c, velocity: up) } }
+        world.officeRoofChoices(c) { name, w, f in add(name, w, f) }
+        world.officeFloatChoice(c) { name, w, f in add(name, w, f) }
         if c.species.flies {
             add("fly", 0.8 * (0.3 + e)) { world.startFlight(c) }
         }
@@ -212,6 +215,7 @@ struct Brain {
         world.patchChoices(for: c, add: add)
         world.lanternChoices(for: c, add: add)
         world.seasonChoices(for: c, add: add)
+        world.skyChoices(for: c, add: add)
         return choices
     }
 

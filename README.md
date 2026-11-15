@@ -1,8 +1,8 @@
 # Gremlets
 
-Fifty one-of-a-kind pixel creatures that live on your Mac desktop: gentle animals, a few bugs, a tiny
+Sixty eight one-of-a-kind pixel creatures that live on your Mac desktop: gentle animals, a few bugs, a tiny
 dragon, a couple of friendly mythical beasts, gentle nature spirits (a stack of river stones, a lake moss ball, a
-mote of evening light) and old guardian machines that nature reclaimed (one has a meadow growing on its head). They walk along the Dock line, hop and fly up onto
+mote of evening light) and old guardian machines that nature reclaimed (one has a meadow growing on its head), plus the Version One and Version Two families drawn from my vinyl figure designs. They walk along the Dock line, hop and fly up onto
 your app windows, ride along when you drag a window, tumble off when you close it, play tag with each other,
 nap in piles, stand on each other's heads, throw dance parties, and show off a signature move.
 
@@ -212,7 +212,7 @@ nap in piles, stand on each other's heads, throw dance parties, and show off a s
 > 🎥 `gremlet demo` plays a 44-second scripted Claude session on your front window and saves it as a video and a
 > looping GIF in Movies › Gremlets, so a demo is one command away.
 
-![The 50 Gremlets](Species/lineup.png)
+![The 68 Gremlets](Species/lineup.png)
 
 | Family | Count | Some of them |
 |---|---|---|

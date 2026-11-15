@@ -1215,15 +1215,39 @@ final class SpectacleRenderer {
                 _ = helper
             case .boostFailed:
                 break
+            case .danced(let id):
+                if let (si, pt) = at(id, 1.1) { overlay.burst([Effects.note, Effects.sparkle], si: si, at: pt, count: 5, dx: -24...24, dy: 6...36, duration: 1.0) }
+                overlay.showBubble(["♪ I love this one!", "♫ ♪", "Dance break! ♪"].randomElement()!, on: id, seconds: 2.0)
             case .posed(let ids):
                 for id in ids {
                     if let (si, pt) = at(id, 1.1) { overlay.burst([Effects.sparkle, Effects.smallStar], si: si, at: pt, count: 3, dx: -20...20, dy: 4...24, duration: 0.7) }
                 }
                 if let first = ids.randomElement() { overlay.showBubble(["Cheese!", "Get my good side!", "📸 ✌️", "Ready!"].randomElement()!, on: first, seconds: 2.2) }
             case .signUp(let id, let s):
-                overlay.showBubble(s == .battery ? "Battery's getting low! 🔋" : "No internet… 📡", on: id, seconds: 3)
+                let text: String = {
+                    switch s {
+                    case .battery: return "Battery's getting low! 🔋"
+                    case .noSignal: return "No internet… 📡"
+                    case .meeting: return overlay.meetingTitle.map { "\($0) in 5 min! ⏰" } ?? "Meeting in 5 min! ⏰"
+                    case .bedtime: return ["It's getting late… 🌙", "Bedtime soon? 🌙", "We're sleepy… are you? 🌙"].randomElement()!
+                    case .hungry: return ["Snack time? 🍓 (right-click me)", "Got a berry? 🍓", "Tummy's rumbling… 🍓"].randomElement()!
+                    case .waiting: return ["I'll keep your plant safe till you're back 🌱", "Waiting for you… 🌱", "Your seedling misses you 🌱"].randomElement()!
+                    }
+                }()
+                overlay.showBubble(text, on: id, seconds: s == .meeting ? 4.5 : 3)
             case .signDown(let id, let s, let cheer):
-                if cheer { overlay.showBubble(s == .battery ? "Ahh, power! ⚡" : "We're back online!", on: id, seconds: 2.4) }
+                if cheer {
+                    let text: String = {
+                        switch s {
+                        case .battery: return "Ahh, power! ⚡"
+                        case .noSignal: return "We're back online!"
+                        case .hungry: return ["Yum! Thank you! 🍓", "Mmm, berries!", "So good! 💚"].randomElement()!
+                        case .waiting: return ["Welcome back! Let's grow 🌱", "There you are! 🌱"].randomElement()!
+                        default: return "Okay!"
+                        }
+                    }()
+                    overlay.showBubble(text, on: id, seconds: 2.4)
+                }
                 if cheer, let (si, pt) = at(id) { overlay.burst([Effects.sparkle, Effects.star], si: si, at: pt, count: 6, dx: -24...24, dy: 10...40, duration: 0.9) }
             }
         }

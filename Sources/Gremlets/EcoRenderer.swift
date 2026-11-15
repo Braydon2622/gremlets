@@ -23,6 +23,9 @@ final class EcoRenderer {
     private var seasonLayer: (layer: CALayer, key: String)?
     private var jarLayer: (layer: CALayer, glow: CAGradientLayer, key: String)?
     private var nextPetal = 0.0
+    private var vaneLayer: CALayer?
+    private var cakeLayer: CALayer?
+    private var nextStar = 0.0
 
     init(overlay: OverlayController, world: World) { self.overlay = overlay; self.world = world }
 
@@ -79,6 +82,8 @@ final class EcoRenderer {
         for e in lanternLayers.values { e.layer.removeFromSuperlayer(); e.glow.removeFromSuperlayer() }
         lanternLayers.removeAll()
         hiveLayer?.removeFromSuperlayer(); hiveLayer = nil
+        vaneLayer?.removeFromSuperlayer(); vaneLayer = nil
+        cakeLayer?.removeFromSuperlayer(); cakeLayer = nil
         for b in beeLayers { b.removeFromSuperlayer() }
         beeLayers.removeAll()
         seasonLayer?.layer.removeFromSuperlayer(); seasonLayer = nil
@@ -99,6 +104,77 @@ final class EcoRenderer {
         renderHive()
         renderSeason()
         renderJar()
+        renderVane()
+        renderBirthday()
+        renderShootingStars()
+    }
+
+    // MARK: The weather vane, birthdays and shooting stars
+
+    /// A little pinwheel on the hut's roof, spinning with the real wind (still on a calm day).
+    private func renderVane() {
+        guard let nest = world.topStructures.first(where: { $0.kind == .nestHut })?.surface, let (si, pt) = local(Vec2(nest.minX, nest.y)) else {
+            vaneLayer?.removeFromSuperlayer(); vaneLayer = nil; return
+        }
+        let l = vaneLayer ?? { let l = pixelLayer(); l.zPosition = 1.161; l.anchorPoint = CGPoint(x: 0.5, y: 0); return l }()
+        attach(l, si)
+        let wind = world.weather?.windKmh ?? 0
+        let frame = wind < 3 ? 0 : Int(CACurrentMediaTime() * (1.5 + wind / 4)) % 2
+        let img = PorchArt.pinwheel(frame: frame)
+        l.contents = img
+        l.bounds = CGRect(x: 0, y: 0, width: Double(img.width) * artScale, height: Double(img.height) * artScale)
+        let k = CGFloat(artScale)
+        l.position = CGPoint(x: (pt.x - 2 * k + 20 * k + nestSway).rounded(), y: (pt.y - 2 * k + 21 * k).rounded())
+        vaneLayer = l
+    }
+
+    /// Someone's anniversary with you: a cake on the porch (the bunting is in the cake's picture).
+    private func renderBirthday() {
+        guard !world.birthdayIDs.isEmpty, let porch = world.homePorch, let (si, pt) = local(Vec2(porch.minX + 58, porch.y)) else {
+            cakeLayer?.removeFromSuperlayer(); cakeLayer = nil; return
+        }
+        let l = cakeLayer ?? {
+            let l = pixelLayer(); l.zPosition = 1.171; l.anchorPoint = CGPoint(x: 0.5, y: 0)
+            l.contents = PorchArt.cake
+            l.bounds = CGRect(x: 0, y: 0, width: Double(PorchArt.cake.width) * artScale, height: Double(PorchArt.cake.height) * artScale)
+            popIn(l)
+            return l
+        }()
+        attach(l, si)
+        l.position = CGPoint(x: (pt.x + nestSway).rounded(), y: pt.y.rounded() - 1)
+        cakeLayer = l
+        // The candle flickers.
+        if Int(CACurrentMediaTime() * 4) % 7 == 0 { overlay.burst([Effects.sparkle], si: si, at: CGPoint(x: pt.x, y: pt.y + 8 * artScale), count: 1, dx: -2...2, dy: 2...6, duration: 0.4) }
+    }
+
+    /// Clear nights: now and then a shooting star streaks across the top corner (never the middle of the screen).
+    private func renderShootingStars() {
+        let t = CACurrentMediaTime()
+        guard world.stargazing, t >= nextStar, let scr = world.screens.first else { return }
+        nextStar = t + .random(in: 35...110)
+        let right = Bool.random()
+        let start = Vec2(right ? scr.maxX - .random(in: 60...260) : scr.minX + .random(in: 60...260), scr.maxY - .random(in: 20...90))
+        guard let (si, a) = local(start) else { return }
+        let dir: CGFloat = right ? -1 : 1
+        let line = CAShapeLayer()
+        let path = CGMutablePath(); path.move(to: a); path.addLine(to: CGPoint(x: a.x + dir * 130, y: a.y - 55))
+        line.path = path; line.strokeColor = NSColor(red: 1, green: 0.97, blue: 0.85, alpha: 0.95).cgColor; line.lineWidth = 2; line.lineCap = .round
+        line.fillColor = nil; line.zPosition = 1.05; line.strokeStart = 0; line.strokeEnd = 0
+        attach(line, si)
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { line.removeFromSuperlayer() }
+        let end = CABasicAnimation(keyPath: "strokeEnd"); end.fromValue = 0; end.toValue = 1; end.duration = 0.7
+        let startA = CABasicAnimation(keyPath: "strokeStart"); startA.fromValue = 0; startA.toValue = 1; startA.duration = 0.7; startA.beginTime = CACurrentMediaTime() + 0.25
+        startA.fillMode = .backwards
+        line.add(end, forKey: "draw"); line.add(startA, forKey: "tail")
+        line.strokeEnd = 1; line.strokeStart = 1
+        CATransaction.commit()
+        // Whoever's watching notices.
+        let high: Double = scr.maxY - 260
+        let watcher = world.creatures.first { (c: Creature) -> Bool in c.activity == .idle && c.isGrounded && c.pos.y > high }
+        if let c = watcher, Bool.random() {
+            overlay.showBubble(["A shooting star! ✨", "Make a wish!", "Ooh!"].randomElement()!, on: c.id, seconds: 2)
+        }
     }
 
     // MARK: The hive, the seasons, the firefly jar (Seasons.swift)

@@ -1,0 +1,13 @@
+{
+  "description" : "A cairn of coloured stones that keeps watch from the hilltop, its stone arms hanging under a wide slate. A squirrel sits on top as its second pair of eyes.",
+  "element" : "cairn",
+  "family" : "versiontwo",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 0.84999999999999998,
+  "name" : "Lookout",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 40
+}

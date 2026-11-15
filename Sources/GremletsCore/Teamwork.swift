@@ -17,7 +17,7 @@ public struct Boost: Sendable {
     var tries = 0
 }
 
-public enum HeldSign: String, Sendable { case battery, noSignal }
+public enum HeldSign: String, Sendable { case battery, noSignal, meeting, bedtime, hungry, waiting }
 
 public enum MachineSignal: Equatable, Sendable {
     /// The screenshot tool is open (the crosshair or the toolbar is showing): time to pose.
@@ -26,6 +26,19 @@ public enum MachineSignal: Equatable, Sendable {
     case pluggedIn
     case offline
     case online
+    /// A calendar event starts in a few minutes (opt-in: Calendar access).
+    case meetingSoon
+    /// You're still up well past midnight.
+    case lateNight
+    /// Nobody has had a snack today and it's the afternoon.
+    case hungry
+    /// Fed: the bowl sign goes down.
+    case fed
+    /// Focus Garden: you drifted to something distracting mid-session, and came back.
+    case distracted
+    case focusBack
+    /// Music is playing (Music, Spotify…): a little dance now and then.
+    case music
 }
 
 public enum TeamEvent: Equatable, Sendable {
@@ -36,6 +49,7 @@ public enum TeamEvent: Equatable, Sendable {
     case posed([Int])
     case signUp(Int, HeldSign)
     case signDown(Int, HeldSign, cheer: Bool)
+    case danced(Int)
 }
 
 extension World {
@@ -48,7 +62,7 @@ extension World {
     func isFree(_ c: Creature) -> Bool {
         c.job == nil && c.expedition == nil && c.play == nil && c.groveTask == nil && c.stair == nil && c.rail == nil
             && c.building == nil && c.boost == nil && c.helping == nil && c.homeUntil == nil && !c.isAsleep
-            && World.carrierID(c.groundOwner) == nil && c.mossTask == nil && c.climb == nil && c.snowmanTask == nil
+            && World.carrierID(c.groundOwner) == nil && c.mossTask == nil && c.climb == nil && c.snowmanTask == nil && !c.onMail
     }
 
     /// A window top too high for a jump but not for a boost, with room for a friend at its foot.
@@ -206,8 +220,33 @@ extension World {
             raiseSign(c, .noSignal, for: 180)
         case .online:
             for c in creatures where c.sign == .noSignal { lowerSign(c, cheer: true) }
+        case .meetingSoon:
+            guard !creatures.contains(where: { $0.sign == .meeting }), let c = signHolder() else { return }
+            raiseSign(c, .meeting, for: 25)
+        case .lateNight:
+            guard !creatures.contains(where: { $0.sign == .bedtime }), let c = signHolder() else { return }
+            raiseSign(c, .bedtime, for: 18)
+        case .hungry:
+            guard !creatures.contains(where: { $0.sign == .hungry }), let c = signHolder() else { return }
+            raiseSign(c, .hungry, for: 20)
+        case .fed:
+            for c in creatures where c.sign == .hungry { lowerSign(c, cheer: true) }
+        case .distracted:
+            guard !creatures.contains(where: { $0.sign == .waiting }), let c = signHolder() else { return }
+            raiseSign(c, .waiting, for: 600)
+        case .focusBack:
+            for c in creatures where c.sign == .waiting { lowerSign(c, cheer: true) }
+        case .music:
+            guard clock - lastMusicDance > 150 else { return }
+            lastMusicDance = clock
+            let dancers = creatures.filter { $0.isGrounded && isFree($0) && $0.sign == nil }.shuffled(using: &rng).prefix(2)
+            for c in dancers { endSocial(c); startSpecial(c) }
+            if let first = dancers.first { teamEvents.append(.danced(first.id)) }
         }
     }
+
+    /// For `gremlet react music`: dance right away instead of waiting out the gap.
+    public func lastMusicDanceReset() { lastMusicDance = -1000 }
 
     func signHolder() -> Creature? {
         let free = creatures.filter { $0.isGrounded && isFree($0) && $0.sign == nil }

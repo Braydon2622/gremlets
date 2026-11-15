@@ -1,0 +1,13 @@
+{
+  "description" : "Three blocks stacked into a walking totem with painted wings. The top block does the looking, the middle one glows, and moss and a little flower grow on its head.",
+  "element" : "carved",
+  "family" : "versiontwo",
+  "flies" : false,
+  "floats" : false,
+  "jumpPower" : 1,
+  "name" : "Totemstack",
+  "scale" : 3,
+  "sleepiness" : 1,
+  "special" : "sparkle",
+  "walkSpeed" : 40
+}

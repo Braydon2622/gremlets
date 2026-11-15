@@ -142,6 +142,8 @@ export class Bridge {
     if (note.type === 'hello') { this.onStatus(); if (!note.reply) this.send(this.hello({ reply: true })); return; }
     // What Claude is up to on the Mac (not addressed to an edge).
     if (note.type === 'status' && Array.isArray(note.sessions)) { this.onClaude(note); this.onStatus(); return; }
+    // The Back Office's latest events (BACK-OFFICE.md), for the Terrarium's strip.
+    if (note.type === 'office' && Array.isArray(note.events)) { this.onOffice?.(note); this.onStatus(); return; }
     // Notes are addressed to the edge they arrive through, which is our doorway.
     if (note.to !== this.side) return;
     if (note.type === 'walk' && typeof note.species === 'string' && note.species.length < 40) this.onWalk(note);

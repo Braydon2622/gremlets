@@ -293,4 +293,4 @@ let roster: [Species] = [
         $0.bodyDraw = lightBody(0xEAF6FF, 0xA8D8FF)
         $0.flies = true; $0.special = "snow"; $0.walkSpeed = 55
     },
-]
+] + versionOne + versionTwo

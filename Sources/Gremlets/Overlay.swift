@@ -58,6 +58,17 @@ final class OverlayController {
     /// The project bonsai, the ivy and ledges on Claude's windows, and the nursery.
     private(set) var bonsaiFX: BonsaiRenderer!
     private(set) var ecoFX: EcoRenderer!
+    private(set) var gardenFX: FocusGardenRenderer!
+    /// The calendar event the meeting sign is about (shown in its bubble).
+    var meetingTitle: String?
+    /// Up inside the Back Office building's rect (always false in a public build).
+    private func overOfficeBuilding(_ pos: Vec2) -> Bool {
+        return false
+    }
+    /// A clickable spot on the Back Office building (always false in a public build).
+    private func officeSpotHit(_ p: Vec2) -> Bool {
+        return false
+    }
     /// Whether the linked screen is open right now (the log's hollow glows).
     var peerOnline = false
     struct ScreenRef { let frame: CGRect; let root: CALayer; let scale: CGFloat }
@@ -188,6 +199,7 @@ final class OverlayController {
         fx = SpectacleRenderer(overlay: self, world: world)
         bonsaiFX = BonsaiRenderer(overlay: self, world: world)
         ecoFX = EcoRenderer(overlay: self, world: world)
+        gardenFX = FocusGardenRenderer(overlay: self, world: world)
         rebuildScreens()
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.mouseMoved() }
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved], handler: handler) { monitors.append(g) }
@@ -215,6 +227,7 @@ final class OverlayController {
         fx?.rebuild()
         bonsaiFX?.rebuild()
         ecoFX?.rebuild()
+        gardenFX?.rebuild()
     }
 
 
@@ -253,6 +266,11 @@ final class OverlayController {
             // Only touch layer properties that changed; every write dirties the layer tree for the next commit.
             let pos = CGPoint(x: (c.pos.x - origin.x).rounded(), y: (c.pos.y - origin.y).rounded())
             if layer.position != pos { layer.position = pos }
+            // Up on the Back Office's roof (or jumping onto it): in front of the building, not behind it.
+            let overOffice = c.groundOwner == World.officeRoofOwner || c.groundOwner == World.officeBoardOwner
+                || overOfficeBuilding(c.pos)
+            let z: CGFloat = overOffice ? 1.33 : 0
+            if layer.zPosition != z { layer.zPosition = z }
             let flip: CGFloat = c.facing < 0 ? -1 : 1
             // Squash and stretch: stretch when launching or falling fast, squash on landing; spin when tossed.
             var sy: CGFloat = 1
@@ -291,6 +309,7 @@ final class OverlayController {
             fx.render()
             bonsaiFX.render()
             ecoFX.render(peerOnline: peerOnline)
+            gardenFX.render()
             updateBubbles(alive: alive)
             updateProps()
             if compactShown, CACurrentMediaTime() - lastCompactSweep > 0.25 { lastCompactSweep = CACurrentMediaTime(); applyCompact() }
@@ -1875,6 +1894,7 @@ final class OverlayController {
         // (and they hop out of the pointer's way).
         let hot = (world.creature(at: p).map { !World.isNotchOwner($0.groundOwner) && $0.activity != .airborne } ?? false) || propOwner(at: p) != nil || platformOwner(at: p) != nil
             || fx.plant(at: p) != nil || fx.house(at: p) != nil || bonsaiFX.hit(at: p) != nil
+            || (world.creature(at: p) == nil && officeSpotHit(p))
         setClickThrough(hot ? screenIndex(for: p) : nil)
     }
 

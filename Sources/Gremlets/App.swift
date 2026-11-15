@@ -53,6 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var manuallyHidden = false
     private var hideHotKey: HotKey?
     private let focusLog = FocusLogStore()
+    private let garden = FocusGardenModel()
+    private let meetings = MeetingWatcher()
+    private var lastCareCheck = 0.0, lastHungryNudge = -1e9, lastBedtimeNudge = -1e9, lastMusicCheck = 0.0, lastMeetingCheck = 0.0
     private let phone = PhoneLink()
     private let bridge = ScreenBridge()
     private let sense = ScreenSense()
@@ -99,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return b
     }()
 
+
     // MARK: The Terrarium (docs/plans/TERRARIUM.md)
 
     /// What each Claude session is doing, for a Terrarium iPad on the bridge.
@@ -138,6 +142,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        // No windows of its own, so macOS's automatic termination thought it could quietly quit it (Nov 11: it kept
+        // vanishing). It's always meant to be running.
+        ProcessInfo.processInfo.disableAutomaticTermination("Gremlets live on the desktop")
+        ProcessInfo.processInfo.disableSuddenTermination()
+        // No menu bar of our own, but an Edit menu so ⌘X/⌘C/⌘V/⌘A work in text fields (Settings).
+        let main = NSMenu(), editItem = NSMenuItem(), edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit; main.addItem(editItem); NSApp.mainMenu = main
         world.gardenInMoss = true; world.topCornerPerches = true; world.dayFollowsClaude = true; world.crittersOn = true
         // The tidy desktop: no village or road on the floor, no vines up the screen's sides, one small corner plant.
         world.villageOn = false
@@ -327,7 +342,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         perf.tick(now: now, rate: currentRate)
 
         var wanted = movingRecently || overlay.isInteracting ? 60 : world.desiredTickRate
-        if overlay.hasBubbles { wanted = max(wanted, 30) }
+        if overlay.hasBubbles { wanted = max(wanted, 24) }
         if world.spectacle != nil || !world.playBalls.isEmpty || world.ferry != nil || world.merchant != nil || showcase.running || world.creatures.contains(where: { $0.grapple != nil || $0.gliding }) { wanted = 60 }
         if overlay.hasProps { wanted = max(wanted, 12) }   // creations follow their window   // keep a speech bubble following its Gremlet smoothly
         if let cap = presence.maxTickRate(presenceInput()), !overlay.isInteracting { wanted = min(wanted, cap) }
@@ -423,6 +438,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func rebuildMenu() {
         guard statusItem != nil else { return }      // callbacks can fire during launch, before the menu bar item exists
+        // The menu fills itself in fresh each time it opens (menuWillOpen), so it's only built once here: rebuilding
+        // it on every change cost real CPU (Nov 11).
+        guard statusItem.menu == nil else { return }
         let menu = NSMenu()
         menu.delegate = self
         for item in buildMenuItems() { menu.addItem(item) }
@@ -452,7 +470,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let sub = NSMenu()
         // Group the 50 species by family so the menu stays browsable.
         let families: [(String, String)] = [("animal", "Animals"), ("insect", "Insects & Bugs"), ("dragon", "Dragons"),
-                                            ("dino", "Dinosaurs"), ("mythic", "Mythical Beasts"), ("spirit", "Spirits"), ("guardian", "Guardians")]
+                                            ("dino", "Dinosaurs"), ("mythic", "Mythical Beasts"), ("spirit", "Spirits"), ("guardian", "Guardians"), ("versionone", "Gremlets Version One"), ("versiontwo", "Gremlets Version Two")]
         let known = Set(families.map(\.0))
         for (key, title) in families + [("", "Custom")] {
             let members = species.values
@@ -461,6 +479,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard !members.isEmpty else { continue }
             let famItem = NSMenuItem(title: "\(title) (\(members.count))", action: nil, keyEquivalent: "")
             let famMenu = NSMenu()
+            let addAll = NSMenuItem(title: "Add All \(title) (\(members.count))", action: #selector(addFamily(_:)), keyEquivalent: "")
+            addAll.target = self
+            addAll.representedObject = members.map(\.info.id)
+            addAll.toolTip = "Every \(title) Gremlet that isn't out yet drops in at once."
+            famMenu.addItem(addAll)
+            famMenu.addItem(.separator())
             for sp in members {
                 let kind = access.kind(sp.info.id)
                 let item = NSMenuItem(title: "\(sp.info.name)  ·  \(sp.info.element)\(kind == .demo ? "  ·  demo" : "")", action: #selector(addCreature(_:)), keyEquivalent: "")
@@ -492,6 +516,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             remove.submenu = rsub
             menu.addItem(remove)
+            let all = NSMenuItem(title: "Send Everyone Home", action: #selector(sendEveryoneHome), keyEquivalent: "")
+            all.target = self
+            all.toolTip = "Everyone waves goodbye and leaves the screen. Add them back any time from Add a Gremlet."
+            menu.addItem(all)
         }
 
         // Your Gremlets: bond with each one that's out.
@@ -548,6 +576,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             st.toolTip = "Gremlets that keep you company through a focus session grow closer to you."
             focusMenu.addItem(st)
         }
+        // The Focus Garden and the daily snack.
+        focusMenu.addItem(.separator())
+        let g = garden.garden
+        let gl = NSMenuItem(title: g.total == 0 ? "🌱 Focus Garden: finish a session to plant the first seed" : "🌱 Focus Garden: \(g.total) plant\(g.total == 1 ? "" : "s") grown" + (g.plantsOn(FocusGardenModel.today) > 0 ? " · \(g.plantsOn(FocusGardenModel.today)) today" : ""), action: nil, keyEquivalent: "")
+        gl.isEnabled = false
+        gl.toolTip = "Every focus session grows a plant in the planter at the bottom-left of your screen. Wander off to something distracting and it droops until you're back."
+        focusMenu.addItem(gl)
+        if !g.plants.isEmpty {
+            let watered = g.lastWatered == FocusGardenModel.today
+            let w = NSMenuItem(title: watered ? "💧 Watered today" : "💧 Water the Focus Garden", action: watered ? nil : #selector(waterGarden), keyEquivalent: "")
+            w.target = self; w.isEnabled = !watered
+            focusMenu.addItem(w)
+        }
+        let fed = garden.care.fedToday(FocusGardenModel.today), snackStreak = garden.streak
+        let snack = NSMenuItem(title: fed ? "🍓 Snack given today" + (snackStreak > 1 ? " · \(snackStreak)-day streak" : "") : "🍓 Give the Gremlets a snack" + (snackStreak > 0 ? " (keep your \(snackStreak)-day streak)" : ""),
+                               action: #selector(giveSnackFromMenu), keyEquivalent: "")
+        snack.target = self
+        snack.toolTip = "Once a day your Gremlets would love a berry (you can also right-click one → Give a berry). Days in a row build a streak."
+        focusMenu.addItem(snack)
         let ic = NSMenuItem(title: "Play with Desktop Icons", action: #selector(toggleIcons), keyEquivalent: "")
         ic.target = self
         ic.state = icons.enabled ? .on : .off
@@ -561,6 +608,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         chat.target = self
         chat.toolTip = "Talk with any of your Gremlets (or double-click one). Replies come from Claude when you add an API key."
         more.addItem(chat)
+        let meet = NSMenuItem(title: "Meeting Heads-Up (Calendar)", action: #selector(toggleMeetings), keyEquivalent: "")
+        meet.target = self
+        meet.state = meetings.enabled ? .on : .off
+        meet.toolTip = "Five minutes before a calendar event, a Gremlet holds up a little clock. macOS asks once for Calendar access; only start times and titles are read, on this Mac."
+        settings.addItem(meet)
         let bud = NSMenuItem(title: "Help with Claude Code", action: #selector(toggleBuddy), keyEquivalent: "")
         bud.target = self
         bud.state = buddy.enabled ? .on : .off
@@ -1008,7 +1060,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             world.setBond(bonds.bond(c.species.id).strength, forSpecies: c.species.id)
         }
         bonds.save()
-        focus.onFocusStart = { [weak self] in self?.world.focusMode = true; self?.rebuildMenu() }
+        overlay.gardenFX.model = garden
+        focus.onFocusStart = { [weak self] in
+            guard let self else { return }
+            self.world.focusMode = true
+            self.garden.begin(minutes: self.focus.focusMinutes)
+            if let id = self.world.say() { self.overlay.showBubble("I planted a seed in the Focus Garden. Let's grow it! 🌱", on: id, seconds: 4) }
+            self.rebuildMenu()
+        }
         focus.onBreakStart = { [weak self] in
             guard let self else { return }
             // A finished session: log it, and every Gremlet that kept you company grows a little closer.
@@ -1022,7 +1081,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
             self.bonds.save()
-            self.world.receive(.pass); self.schedule(rate: 60); self.rebuildMenu()
+            self.world.receive(.pass); self.schedule(rate: 60)
+            self.plantFinished(self.garden.finish())
+            self.rebuildMenu()
         }
         focus.onBreakEnd = { [weak self] in self?.world.receive(.done); self?.rebuildMenu() }
         let server = ControlServer { [weak self] method, path, query in
@@ -1127,6 +1188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             updatePresence()
             return (200, #"{"ok":true}"#)
         case "unfocus":
+            plantFinished(garden.finish(minFocusSeconds: 300))
             focus.stop(); world.focusMode = false; rebuildMenu()
         case "chat/state":
             return (200, chatState(query["name"]))
@@ -1275,6 +1337,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard world.spawnBird() else { return (409, #"{"ok":false,"error":"one's already here"}"#) }
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
+        case "family":
+            // gremlet family <key>: Add a Gremlet ▸ <family> ▸ Add All (key: animal, guardian, versiontwo, …).
+            let key = query["name"] ?? ""
+            let ids = species.values.filter { $0.info.family == key }.map(\.info.id).sorted()
+            guard !ids.isEmpty else { return (404, #"{"ok":false,"error":"no family by that name"}"#) }
+            let n = addAll(ids)
+            return (200, #"{"ok":true,"added":\#(n)}"#)
+        case "home":
+            // gremlet home: everyone waves goodbye and leaves the screen, same as the menu's Send Everyone Home.
+            let n = sendAllHome()
+            return (200, #"{"ok":true,"sent":\#(n)}"#)
         case "nudge":
             guard world.nudgeHome() else { return (409, #"{"ok":false,"error":"no hanging home showing (or just nudged)"}"#) }
             schedule(rate: 60)
@@ -1389,6 +1462,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             let w = world.weather
             return (200, #"{"ok":true,"sky":"\#(w?.sky.rawValue ?? "off")","wind_kmh":\#(Int(w?.windKmh ?? 0)),"snow":\#(Int(world.snowDepth * 100)),"snowmen":\#(world.snowmen.count),"place":"\#(weatherService.place?.name ?? "")"}"#)
+        case "garden":
+            switch query["do"] ?? "" {
+            case "water": waterGarden()
+            case "plant":   // a test plant (gremlet garden plant [stage]) without waiting out a session
+                let stage = Int(query["stage"] ?? "") ?? 4
+                garden.begin(minutes: 1)
+                _ = garden.advance(Double(stage) * 15, distracted: false)
+                plantFinished(garden.finish())
+            case "snack": giveSnackFromMenu()
+            default: break
+            }
+            schedule(rate: 60)
+            return (200, garden.statusJSON)
         case "boost":
             guard world.startBoostWithAnyone() else { return (409, #"{"ok":false,"error":"no pair free near a window just out of jumping reach"}"#) }
             schedule(rate: 60)
@@ -1402,9 +1488,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "plugged": sig = .pluggedIn
             case "offline": sig = .offline
             case "online": sig = .online
+            case "meeting": overlay.meetingTitle = "Team sync"; sig = .meetingSoon
+            case "bedtime": sig = .lateNight
+            case "hungry": sig = .hungry
+            case "fed": sig = .fed
+            case "music": world.lastMusicDanceReset(); sig = .music
+            case "distracted": sig = .distracted
+            case "back": sig = .focusBack
             default: sig = nil
             }
-            guard let sig else { return (400, #"{"ok":false,"error":"name must be screenshot, battery, plugged, offline or online"}"#) }
+            guard let sig else { return (400, #"{"ok":false,"error":"name must be screenshot, battery, plugged, offline, online, meeting, bedtime, hungry, fed, music, distracted or back"}"#) }
             world.machineSignal(sig)
             schedule(rate: 60)
             return (200, #"{"ok":true}"#)
@@ -1593,6 +1686,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    @objc private func sendEveryoneHome() { sendAllHome() }
+
+    /// Everyone waves goodbye, then leaves the screen (like Send One Home, all at once). Returns how many.
+    @discardableResult
+    private func sendAllHome() -> Int {
+        let leaving = world.creatures.map(\.id)
+        guard !leaving.isEmpty else { return 0 }
+        for id in leaving { world.sayGoodbye(id) }
+        schedule(rate: 60)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+            guard let self else { return }
+            for id in leaving where self.world.creatures.contains(where: { $0.id == id }) { self.world.remove(id) }
+            self.overlay.render()
+            self.saveRoster()
+            self.rebuildMenu()
+        }
+        return leaving.count
+    }
+
+    /// Add a Gremlet ▸ <family> ▸ Add All: every one in the family that isn't out yet drops in, spread across the screen.
+    @objc private func addFamily(_ sender: NSMenuItem) {
+        guard let ids = sender.representedObject as? [String] else { return }
+        addAll(ids)
+    }
+
+    @discardableResult
+    private func addAll(_ ids: [String]) -> Int {
+        let out = Set(world.creatures.map(\.species.id))
+        let todo = ids.filter { !out.contains($0) && species[$0] != nil }
+        guard !todo.isEmpty else { return 0 }
+        let m = NSEvent.mouseLocation
+        let vf = (NSScreen.screens.first { $0.frame.contains(m) } ?? NSScreen.main)?.visibleFrame ?? .zero
+        var added = 0
+        for (i, id) in todo.enumerated() {
+            guard let sp = species[id], admit(id) else { break }
+            let x = Double(vf.minX) + Double(vf.width) * (Double(i) + 0.5) / Double(todo.count)
+            world.spawn(sp.info, at: Vec2(x, Double(vf.maxY) - sp.info.pointSize.y - 4))
+            bonds.markSeenToday(id)
+            world.setBond(bonds.bond(id).strength, forSpecies: id)
+            added += 1
+        }
+        guard added > 0 else { return 0 }
+        saveRoster()
+        rebuildMenu()
+        schedule(rate: 60)
+        return added
+    }
+
     @objc private func toggleHidden() {
         manuallyHidden.toggle()
         updatePresence()
@@ -1640,6 +1781,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Anniversaries: a flower crown all day, and a line in the scrapbook.
         if Int(CACurrentMediaTime()) % 20 == 0 {
             let crowned = Set(world.creatures.filter { bonds.isAnniversary($0.species.id) }.map(\.id))
+            world.birthdayIDs = crowned
             for c in world.creatures where crowned.contains(c.id) && !world.crowned.contains(c.id) {
                 let line = "\(c.species.name): \(bonds.daysTogether(c.species.id)) days together"
                 if !(dayLog[Date()].anniversaries ?? []).contains(line) {
@@ -1679,6 +1821,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             world.requestEvent(.meteors)
         }
         focus.update()
+        careTick(elapsed)
         buddy.tick()
         dailyMoments()
         if icons.enabled && Int(Date().timeIntervalSince1970) % 15 == 0 { icons.refresh() }
@@ -1738,6 +1881,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func stopFocus() {
+        plantFinished(garden.finish(minFocusSeconds: 300))
         focus.stop()
         world.focusMode = false
         world.receive(.wake)
@@ -1859,6 +2003,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let idea = Idea(rawValue: raw) else { return }
         if world.ask(c, idea) {
             overlay.ecoFX.handle(world.drainEcoEvents())
+            if idea == .snack { snackGiven(by: id) }
             if [.snack].contains(idea) == false, Int.random(in: 0..<2) == 0 {
                 overlay.showBubble(["On it!", "Okay!", "Ooh, yes!", "Can do!"].randomElement()!, on: id, seconds: 1.4)
             }
@@ -1880,6 +2025,101 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Good morning the first time you're around each day; a recap of the day in the evening.
+    // MARK: Focus Garden, daily care, real life
+
+    /// A finished focus session's plant goes into the garden, with a little cheer.
+    private func plantFinished(_ p: FocusPlant?) {
+        guard let p else { return }
+        let name = FocusGardenModel.plantNames[p.kind]
+        let words = p.stage >= 4 ? "Your \(name) bloomed! 🌼" : p.stage >= 2 ? "Your \(name) is growing! 🌿" : "A little \(name) sprout. Every session counts 🌱"
+        if let id = world.say() { overlay.showBubble(words, on: id, seconds: 4) }
+        overlay.gardenFX.burst([Effects.petal, Effects.sparkle, Effects.leaf])
+    }
+
+    /// A berry was given (right-click → Give a berry, or the menu): today's care, and the streak.
+    private func snackGiven(by id: Int) {
+        let first = !garden.care.fedToday(FocusGardenModel.today)
+        let milestone = garden.fed()
+        world.machineSignal(.fed)
+        if let m = milestone {
+            overlay.showBubble("\(m)-day snack streak! You're the best 💚", on: id, seconds: 4)
+            if let c = world.creatures.first(where: { $0.id == id }), let (si, pt) = overlay.localPoint(c, dy: 20) {
+                overlay.burst([Effects.heart, Effects.star, Effects.sparkle], si: si, at: pt, count: 12, dx: -40...40, dy: 10...70, duration: 1.4)
+            }
+            world.receive(.dance)
+        } else if first {
+            let s = garden.streak
+            overlay.showBubble(s > 1 ? "Yum! \(s) days in a row 🍓" : "Yum, thank you! 🍓", on: id, seconds: 2.6)
+        }
+        rebuildMenu()
+    }
+
+    /// About once a second: the focus run, and every so often the care nudges, music, meetings and bedtime.
+    private func careTick(_ dt: Double) {
+        let t = CACurrentMediaTime()
+        if focus.isFocusing, garden.run != nil {
+            let f = RealLife.frontmost()
+            let me = f.bundleID == Bundle.main.bundleIdentifier
+            let distracted = !me && !presence.isAway && Distraction.isDistracting(bundleID: f.bundleID, title: f.title)
+            switch garden.advance(min(dt, 5), distracted: distracted) {
+            case 1:
+                world.machineSignal(.distracted)
+                if !world.creatures.contains(where: { $0.sign == .waiting }), let id = world.say() {
+                    overlay.showBubble("Your seedling is waiting for you 🌱", on: id, seconds: 3)
+                }
+            case -1: world.machineSignal(.focusBack)
+            default: break
+            }
+        }
+        let quiet = paused || presence.isHidden || presence.isAway || focus.isFocusing || inCall
+        // Music: a little dance every couple of minutes while a music app is playing.
+        if t - lastMusicCheck >= 6 {
+            lastMusicCheck = t
+            if !quiet, RealLife.musicPlaying() { world.machineSignal(.music) }
+        }
+        // A calendar event in five minutes (opt-in).
+        if t - lastMeetingCheck >= 30 {
+            lastMeetingCheck = t
+            if !presence.isHidden, let title = meetings.upcoming() {
+                overlay.meetingTitle = title
+                world.machineSignal(.meetingSoon)
+            }
+        }
+        guard t - lastCareCheck >= 60 else { return }
+        lastCareCheck = t
+        let hour = FocusGardenModel.hour, active = world.userActive && idleSeconds < 120
+        // Hungry: not fed by the afternoon. At most every couple of hours, and only while you're around.
+        if !quiet, active, garden.hungry, t - lastHungryNudge > 2 * 3600 {
+            lastHungryNudge = t
+            world.machineSignal(.hungry)
+        }
+        // Still up after midnight: a gentle moon sign, at most every 45 minutes.
+        if !quiet, active, hour < 4, t - lastBedtimeNudge > 45 * 60 {
+            lastBedtimeNudge = t
+            world.machineSignal(.lateNight)
+        }
+    }
+
+    @objc private func giveSnackFromMenu() {
+        guard let c = world.creatures.first(where: { world.ideas(for: $0).contains(.snack) }) else {
+            if let id = world.say() { overlay.showBubble("Wake us up first! 😴", on: id, seconds: 2) }
+            return
+        }
+        if world.ask(c, .snack) { overlay.ecoFX.handle(world.drainEcoEvents()); snackGiven(by: c.id) }
+    }
+
+    @objc private func waterGarden() {
+        garden.water()
+        overlay.gardenFX.burst([Effects.rain, Effects.sparkle, Effects.bubble])
+        if let id = world.say() { overlay.showBubble(["Ahh, the plants love that 💧", "Fresh water! 🌿", "The garden says thank you 💧"].randomElement()!, on: id, seconds: 2.6) }
+        rebuildMenu()
+    }
+
+    @objc private func toggleMeetings() {
+        meetings.enabled.toggle()
+        rebuildMenu()
+    }
+
     private func dailyMoments() {
         guard world.userActive, !presence.isHidden, let c = world.creatures.filter({ $0.isGrounded && $0.job == nil }).randomElement(),
               let sp = species[c.species.id] else { return }
@@ -2272,7 +2512,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Ours carry our id; a visitor carries its own home's, so it's recognised there as coming home.
         let owner = guests.removeValue(forKey: c.id) ?? bridge.owner
         guestSince[c.id] = nil
-        bridge.cross(["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air, "owner": owner])
+        var note: [String: Any] = ["type": "walk", "species": c.species.id, "y": y, "vx": Int(c.vel.x), "vy": Int(c.vel.y), "air": air, "owner": owner]
+        // Off to a friend's Mac with something from the pantry now and then: a gift from the patch.
+        if bridge.peerIsMac, owner == bridge.owner, world.pantry >= 2, Double.random(in: 0...1) < 0.5 {
+            world.pantry -= 1
+            note["gift"] = (world.seedTin.randomElement() ?? .carrot).rawValue
+            saveMoss()
+        }
+        bridge.cross(note)
         let wasGuest = owner != bridge.owner
         let edgeX = (world.door ?? 1) > 0 ? main.maxX - 14 : main.minX + 14
         overlay.sparkle(at: Vec2(edgeX, c.pos.y + c.size.y * 0.5))
@@ -2339,6 +2586,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             world.postcard = (bridge.peerIsMac ? "a friend's Mac" : "your iPad", w.species)
         }
         // (or a visitor arriving from a friend's Mac: a guest, sent home with its own tag when it leaves).
+        // A friend's Gremlet brought something from their patch: into the pantry with it.
+        if let gift = w.gift, let o = w.owner, o != bridge.owner, world.pantry < World.pantryMax {
+            world.pantry += 1
+            saveMoss()
+            let emoji = ["carrot": "🥕", "radish": "🌱", "peas": "🫛", "strawberry": "🍓", "pumpkin": "🎃", "tomato": "🍅"][gift] ?? "🧺"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.overlay.showBubble("A gift from my patch: \(gift) \(emoji)", on: c.id, seconds: 3.5) }
+        }
         if let o = w.owner, o != bridge.owner {
             guests[c.id] = o
             guestSince[c.id] = CACurrentMediaTime()

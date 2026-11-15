@@ -98,6 +98,28 @@ enum PorchArt {
         return img
     }
 
+    /// A pinwheel on a stick (7 × 9 px), two frames to spin.
+    static func pinwheel(frame: Int) -> CGImage {
+        let key = "pin\(frame)"
+        if let c = cache[key] { return c }
+        let rows = frame == 0 ? ["...r...", "..rR...", "y..R..b", "yyYoBbb", "y..G..b", "...Gg..", "...g...", "...s...", "...s..."]
+                              : ["r.....b", "rR...Bb", ".R...B.", "...o...", ".Y...G.", "yY...Gg", "y.....g", "...s...", "...s..."]
+        let img = PropArt.image(PropArt.grid(rows, ["r": 0xE0453A, "R": 0xF06A5A, "y": 0xF5B82E, "Y": 0xFFE45C, "b": 0x3F8CC9, "B": 0x6FB8F0,
+                                                     "g": 0x4C8A3A, "G": 0x6CC04A, "o": 0x6B4428, "s": 0x6B4428]))
+        cache[key] = img
+        return img
+    }
+
+    /// A birthday cake (7 × 6 px): pink icing, a candle, a cherry, on a little plate.
+    static let cake: CGImage = PropArt.image(PropArt.grid([
+        "...f...",
+        "...c...",
+        ".PpPpP.",
+        ".wwwww.",
+        ".PpPpP.",
+        "ddddddd",
+    ], ["f": 0xFFC845, "c": 0xF6EFDF, "P": 0xFF8FB1, "p": 0xFFB6D9, "w": 0xF2E6D0, "d": 0xB8C2CC]))
+
     /// The beehive (5 × 7 px): a little straw skep hanging from its loop.
     static let hive: CGImage = PropArt.image(PropArt.grid([
         "..s..",

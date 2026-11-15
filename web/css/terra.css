@@ -1,0 +1,66 @@
+/* The Terrarium (terrarium.html). */
+html, body.terra { background: #eef3f7; }
+body.terra { transition: transform 2s ease; overflow: hidden; }
+body.terra #world { cursor: pointer; }
+#tdim { position: fixed; inset: -20px; pointer-events: none; z-index: 40; background: #000; opacity: 0; transition: opacity 60s linear; }
+#tleaf {
+  position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; z-index: 20; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55); color: #33443a; font-size: 12px; font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(150, 175, 160, 0.35), 0 4px 14px rgba(60, 90, 80, 0.08); backdrop-filter: blur(6px);
+}
+#tleaf .sprout { font-size: 18px; }
+#tleaf b { display: block; font-size: 13px; color: #2c5a32; }
+#tleaf div > span { display: block; opacity: 0.75; font-weight: 500; max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tleaf em { display: block; height: 4px; width: 140px; margin-top: 4px; border-radius: 3px; background: rgba(90, 165, 78, 0.18); overflow: hidden; }
+#tleaf i { display: block; height: 100%; width: 0; background: #5aa54e; border-radius: 3px; transition: width 1s ease; }
+#tlink { width: 8px; height: 8px; border-radius: 50%; background: #c8d2d8; margin-left: 4px; }
+#tlink.on { background: #5aa54e; }
+body.night #tleaf { background: rgba(40, 46, 70, 0.6); color: #d8dcef; box-shadow: 0 0 0 1px rgba(150, 160, 210, 0.25); }
+body.night #tleaf b { color: #a8d8a0; }
+#ttoast {
+  position: fixed; top: max(14px, env(safe-area-inset-top)); left: 50%; z-index: 21; pointer-events: none;
+  transform: translate(-50%, -12px); opacity: 0; transition: opacity 0.4s, transform 0.4s;
+  padding: 7px 14px; border-radius: 12px; background: rgba(255, 253, 248, 0.92); color: #33443a; font-weight: 600; font-size: 13px;
+  box-shadow: 0 0 0 1px rgba(150, 175, 160, 0.35), 0 6px 20px rgba(60, 90, 80, 0.12); white-space: nowrap;
+}
+#ttoast.on { opacity: 1; transform: translate(-50%, 0); }
+#trecent { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(8px, env(safe-area-inset-bottom)); z-index: 30; display: flex; gap: 8px; pointer-events: none; max-width: calc(100vw - 24px); overflow: hidden; }
+.tcard { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 10px 4px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.7); color: #33443a; font-size: 12px; font-weight: 600; box-shadow: 0 0 0 1px rgba(150, 175, 160, 0.45); }
+body.night .tcard { background: rgba(40, 44, 70, 0.7); color: #e8e4f4; box-shadow: 0 0 0 1px rgba(160, 170, 220, 0.25); }
+.tcard img { width: 18px; height: 18px; image-rendering: pixelated; }
+.tcard span { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.tcard small { opacity: 0.6; }
+.tcard.waiting { box-shadow: 0 0 0 2px rgba(255, 200, 69, 0.85); }
+#tintro { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(40, 60, 70, 0.25); padding: 16px; }
+#tintro[hidden] { display: none; }
+#tintro .sheet { max-width: 480px; background: #fffdf8; border-radius: 16px; padding: 22px 24px; box-shadow: 0 10px 40px rgba(0,0,0,.18); }
+#tintro h2 { margin: 0 0 8px; }
+#tintro p, #tintro li { font-weight: 500; line-height: 1.45; }
+#tintro ol { padding-left: 20px; }
+
+.tcard .ticon { font-size: 13px; width: 18px; text-align: center; }
+.tcard.office.urgent { box-shadow: 0 0 0 2px rgba(224, 69, 58, 0.7); }
+.tcard.office.good { box-shadow: 0 0 0 1px rgba(95, 175, 74, 0.8); }
+
+/* The Back Office view (🏢). */
+#tofficebtn { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); z-index: 70; width: 44px; height: 44px; border-radius: 14px; border: 0; font-size: 22px; background: rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 1px rgba(150, 175, 160, 0.35), 0 4px 14px rgba(60, 90, 80, 0.12); backdrop-filter: blur(6px); }
+#toffice { position: fixed; inset: 0; z-index: 65; background: #eef3f7; }
+#toffice[hidden] { display: none; }
+#toffice canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#toffice aside { position: absolute; left: max(14px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); width: min(320px, 40vw); max-height: 86vh; overflow: auto; padding: 14px 16px; border-radius: 16px; background: rgba(255, 253, 248, 0.86); color: #33443a; box-shadow: 0 0 0 1px rgba(201, 161, 90, 0.5), 0 8px 26px rgba(60, 50, 30, 0.12); backdrop-filter: blur(6px); }
+#toffice h2 { margin: 0 0 8px; font-size: 18px; }
+#toffice h3 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.55; }
+#toffice .nums div { display: grid; grid-template-columns: 26px 1fr; column-gap: 4px; margin: 4px 0; }
+#toffice .nums span { grid-row: span 2; font-size: 18px; }
+#toffice .nums b { font-size: 13px; }
+#toffice .nums small { font-size: 12px; opacity: 0.75; }
+#toffice ul { list-style: none; margin: 0; padding: 0; font-size: 12px; font-weight: 500; }
+#toffice li { padding: 3px 0; border-bottom: 1px solid rgba(201, 161, 90, 0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#toffice li.good { color: #2c6a28; } #toffice li.urgent { color: #a3322a; } #toffice li.warn { color: #8a5a10; }
+#toffice .rot { margin-top: 12px; border: 0; border-radius: 10px; padding: 7px 10px; font: inherit; font-size: 12px; font-weight: 600; background: rgba(90, 165, 78, 0.15); color: #2c5a32; }
+#toffice .wait { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; color: #5a6a62; font-weight: 600; }
+#toffice.live .wait { display: none; }
+@media (max-width: 700px) { #toffice aside { width: auto; right: 14px; max-height: 40vh; } }
+#toffice .wait .demo { margin-left: 8px; border: 0; border-radius: 10px; padding: 7px 12px; font: inherit; font-weight: 700; background: #5aa54e; color: #fff; }
+#toffice.demo-on aside h2::after { content: ' · demo'; font-weight: 500; opacity: 0.55; }

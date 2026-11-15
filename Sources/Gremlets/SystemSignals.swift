@@ -81,6 +81,22 @@ enum SystemSignals {
         return audioProperty(device, kAudioDevicePropertyDeviceIsRunningSomewhere, &running) && running != 0
     }
 
+    /// True if this process is playing audio right now (macOS 14.2+: per process; older: the default output is busy).
+    static func isPlayingAudio(pid target: pid_t) -> Bool {
+        let system = AudioObjectID(kAudioObjectSystemObject)
+        if #available(macOS 14.2, *) {
+            for process in audioArray(system, kAudioHardwarePropertyProcessObjectList) {
+                var pid: pid_t = 0, output: UInt32 = 0
+                guard audioProperty(process, kAudioProcessPropertyPID, &pid), pid == target else { continue }
+                return audioProperty(process, kAudioProcessPropertyIsRunningOutput, &output) && output != 0
+            }
+            return false
+        }
+        var device = AudioObjectID(0), running: UInt32 = 0
+        guard audioProperty(system, kAudioHardwarePropertyDefaultOutputDevice, &device), device != 0 else { return false }
+        return audioProperty(device, kAudioDevicePropertyDeviceIsRunningSomewhere, &running) && running != 0
+    }
+
     /// Full path of a process's executable ("" if it can't be read).
     private static func executablePath(_ pid: pid_t) -> String {
         var buf = [CChar](repeating: 0, count: 4096)

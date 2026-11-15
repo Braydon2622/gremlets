@@ -118,8 +118,12 @@ extension World {
         default:
             break
         }
+        return startAsked(c, idea.choices)
+    }
+
+    private func startAsked(_ c: Creature, _ choices: Set<String>) -> Bool {
         guard askable(c) else { return false }
-        let picks = askChoices(c).filter { idea.choices.contains($0.name) }
+        let picks = askChoices(c).filter { choices.contains($0.name) }
         guard !picks.isEmpty else { return false }
         // Drop whatever it was doing.
         if c.stair != nil { abandonStairs(c) }
